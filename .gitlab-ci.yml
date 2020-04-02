@@ -1,0 +1,57 @@
+include:
+  - 'https://raw.githubusercontent.com/JuliaGPU/gitlab-ci/master/templates/v6.yml'
+
+image: ubuntu:latest
+
+variables:
+  JULIA_DEBUG: 'oneL0'
+  LD_LIBRARY_PATH: '/usr/local/lib'
+
+.test_oneapi:
+  extends: .test
+  script:
+    - wget -nv -N -P downloads/ https://github.com/intel/compute-runtime/releases/download/20.12.16259/intel-gmmlib_19.4.1_amd64.deb
+    - wget -nv -N -P downloads/ https://github.com/intel/compute-runtime/releases/download/20.12.16259/intel-igc-core_1.0.3586_amd64.deb
+    - wget -nv -N -P downloads/ https://github.com/intel/compute-runtime/releases/download/20.12.16259/intel-igc-opencl_1.0.3586_amd64.deb
+    - wget -nv -N -P downloads/ https://github.com/intel/compute-runtime/releases/download/20.12.16259/intel-opencl_20.12.16259_amd64.deb
+    - wget -nv -N -P downloads/ https://github.com/intel/compute-runtime/releases/download/20.12.16259/intel-ocloc_20.12.16259_amd64.deb
+    - wget -nv -N -P downloads/ https://github.com/intel/compute-runtime/releases/download/20.12.16259/intel-level-zero-gpu_0.8.16259_amd64.deb
+    - wget -nv -N -P downloads/ https://github.com/oneapi-src/level-zero/releases/download/v0.91.10/level-zero_0.91.10+u18.04_amd64.deb
+    - cd downloads && dpkg -i intel-gmmlib_19.4.1_amd64.deb intel-igc-core_1.0.3586_amd64.deb intel-igc-opencl_1.0.3586_amd64.deb intel-opencl_20.12.16259_amd64.deb intel-ocloc_20.12.16259_amd64.deb intel-level-zero-gpu_0.8.16259_amd64.deb level-zero_0.91.10+u18.04_amd64.deb
+    - julia --project --color=yes -e 'using Pkg;
+                                      Pkg.instantiate();
+                                      Pkg.build();
+                                      Pkg.test(; coverage=true);'
+
+
+# Julia versions
+
+julia:1.3:
+  extends:
+    - .julia:1.3
+    - .test_oneapi
+  tags:
+    - intel
+
+julia:1.4:
+  extends:
+    - .julia:1.4
+    - .test_oneapi
+  tags:
+    - intel
+
+julia:nightly:
+  extends:
+    - .julia:nightly
+    - .test_oneapi
+  allow_failure: true
+  tags:
+    - intel
+
+
+# other tasks
+
+coverage:
+  extends:
+    - .julia:1.3
+    - .coverage

@@ -3,7 +3,7 @@ module oneL0
 using CEnum
 using CUDAapi
 
-const libze = "libze_loader.so"
+const libze = "libze_loader.so.0.91"
 
 # core API
 include("libze_common.jl")
