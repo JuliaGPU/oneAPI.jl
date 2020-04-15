@@ -24,7 +24,13 @@ include("barriers.jl")
 # wrappers
 
 function __init__()
-    zeInit(ZE_INIT_FLAG_NONE)
+    res = unsafe_zeInit(ZE_INIT_FLAG_NONE)
+    if res == RESULT_ERROR_UNINITIALIZED
+        # https://github.com/oneapi-src/level-zero/issues/7#issuecomment-606701224
+        error("No oneAPI driver implementation found.")
+    elseif res !== RESULT_SUCCESS
+        throw_api_error(res)
+    end
 end
 
 end
