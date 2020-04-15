@@ -7,7 +7,7 @@
 
 using Clang
 
-function wrap(name, headers...; library="lib$name()", include_dirs=dirname.(headers),
+function wrap(name, headers...; library="lib$name", include_dirs=dirname.(headers),
                                 defines=[], undefines=[])
     clang_args = String[]
     append!(clang_args, map(dir->"-I$dir", include_dirs))
@@ -299,7 +299,7 @@ function process(name, headers...; kwargs...)
 end
 
 function main()
-    process("ze", "/usr/include/level_zero/ze_api.h")
+    process("ze", "/usr/include/level_zero/ze_api.h"; library="libze_loader")
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
