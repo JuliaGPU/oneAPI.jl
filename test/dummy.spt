@@ -1,0 +1,33 @@
+119734787 65536 393230 12 0 
+2 Capability Addresses 
+2 Capability Kernel 
+5 ExtInstImport 1 "OpenCL.std"
+3 MemoryModel 1 2 
+4 EntryPoint 6 4 "foo"
+4 EntryPoint 6 8 "bar"
+9 String 11 "kernel_arg_type.bar.int,"
+3 Source 3 102000 
+4 Name 5 "entry"
+3 Name 9 "a"
+4 Name 10 "entry"
+4 TypeInt 6 32 0 
+2 TypeVoid 2 
+3 TypeFunction 3 2 
+4 TypeFunction 7 2 6 
+
+
+5 Function 2 4 0 3 
+
+2 Label 5 
+1 Return 
+
+1 FunctionEnd 
+
+5 Function 2 8 0 7 
+3 FunctionParameter 6 9 
+
+2 Label 10 
+1 Return 
+
+1 FunctionEnd 
+

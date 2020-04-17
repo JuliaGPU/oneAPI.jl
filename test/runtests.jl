@@ -2,7 +2,7 @@ using Test
 using oneL0
 
 
-# drivers
+## drivers
 
 drvs = drivers()
 @assert !isempty(drvs)
@@ -11,7 +11,7 @@ drv = first(drvs)
 api_version(drv)
 
 
-# devices
+## devices
 
 devs = devices(drv)
 @assert !isempty(devs)
@@ -27,7 +27,7 @@ image_properties(dev)
 p2p_properties(dev, dev)
 
 
-# commands
+## commands
 
 queue = ZeCommandQueue(dev)
 
@@ -39,7 +39,7 @@ synchronize(queue)
 reset(list)
 
 
-# events
+## events
 
 ZeEventPool(drv, 1)
 ZeEventPool(drv, 1, dev)
@@ -68,10 +68,60 @@ signal(timed_event)
 @test context_time(timed_event).start != nothing
 
 
-# barriers
+## barriers
 
 append_barrier!(list)
 append_barrier!(list, event)
 append_barrier!(list, event, event)
 
 #device_barrier(dev)    # unsupported
+
+
+## modules
+
+data = read(joinpath(@__DIR__, "dummy.spv"))
+mod = ZeModule(dev, data)
+
+@test length(kernels(mod)) == 2
+@test haskey(kernels(mod), "foo")
+@test !haskey(kernels(mod), "baz")
+kernel = kernels(mod)["foo"]
+
+suggest_groupsize(kernel, 1024)
+groupsize!(kernel, 1)
+groupsize!(kernel, (1,))
+groupsize!(kernel, (1, 1))
+groupsize!(kernel, (1, 1, 1))
+
+kernel = kernels(mod)["bar"]
+arguments(kernel)[1] = Int32(42)
+
+attrs = attributes(kernel)
+@test !attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS]
+@test !attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_SHARED_ACCESS]
+@test isempty(attrs[oneL0.ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE])
+
+props = properties(kernel)
+@test props.numKernelArgs == 1
+@test props.name == "bar"
+@test props.requiredGroupSize isa oneL0.ZeDim3
+
+# kernel execution
+
+append_launch!(list, kernel, 1)
+
+queue = ZeCommandQueue(dev)
+list = ZeCommandList(dev)
+
+pool = ZeEventPool(drv, 2)
+signal_event = pool[1]
+wait_event = pool[2]
+
+append_launch!(list, kernel, 1, signal_event, wait_event)
+close(list)
+execute!(queue, [list])
+@test !query(signal_event)
+
+signal(wait_event)
+synchronize(queue)
+@test query(signal_event)

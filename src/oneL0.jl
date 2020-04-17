@@ -20,6 +20,7 @@ include("devices.jl")
 include("commands.jl")
 include("events.jl")
 include("barriers.jl")
+include("modules.jl")
 
 # wrappers
 
