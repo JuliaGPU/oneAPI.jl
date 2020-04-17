@@ -57,7 +57,8 @@ Base.unsafe_convert(::Type{ze_event_handle_t}, event::ZeEvent) = event.handle
 signal(event::ZeEvent) = zeEventHostSignal(event)
 append_signal!(list::ZeCommandList, event::ZeEvent) = zeCommandListAppendSignalEvent(list, event)
 
-Base.wait(event::ZeEvent, timeout=0) = zeEventHostSynchronize(event, timeout)
+Base.wait(event::ZeEvent, timeout::Number=typemax(UInt32)) =
+    zeEventHostSynchronize(event, timeout)
 append_wait!(list::ZeCommandList, events::ZeEvent...) =
     zeCommandListAppendWaitOnEvents(list, length(events), [events...])
 

@@ -25,7 +25,8 @@ end
 
 Base.unsafe_convert(::Type{ze_command_queue_handle_t}, queue::ZeCommandQueue) = queue.handle
 
-synchronize(queue::ZeCommandQueue, timeout=0) = zeCommandQueueSynchronize(queue, timeout)
+synchronize(queue::ZeCommandQueue, timeout::Number=typemax(UInt32)) =
+    zeCommandQueueSynchronize(queue, timeout)
 
 
 # list
