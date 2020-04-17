@@ -5,14 +5,16 @@ export ZeEventPool
 mutable struct ZeEventPool
     handle::ze_event_pool_handle_t
 
-    ZeEventPool(drv::ZeDriver; kwargs...) = ZeEventPool(drv, devices(drv)...; kwargs...)
+    # https://github.com/intel/compute-runtime/issues/294
+    ZeEventPool(drv::ZeDriver, size::Integer; kwargs...) =
+        ZeEventPool(drv, size, devices(drv)...; kwargs...)
 
-    function ZeEventPool(drv::ZeDriver, devs::ZeDevice...;
-                         flags=ZE_EVENT_POOL_FLAG_DEFAULT, max_events=10)
+    function ZeEventPool(drv::ZeDriver, size::Integer, devs::ZeDevice...;
+                         flags=ZE_EVENT_POOL_FLAG_DEFAULT)
         desc_ref = Ref(ze_event_pool_desc_t(
             ZE_EVENT_POOL_DESC_VERSION_CURRENT,
             ze_event_pool_flag_t(flags),
-            max_events
+            size
         ))
         handle_ref = Ref{ze_event_pool_handle_t}()
         zeEventPoolCreate(drv, desc_ref, length(devs), [devs...], handle_ref)
@@ -26,6 +28,8 @@ end
 
 Base.unsafe_convert(::Type{ze_event_pool_handle_t}, pool::ZeEventPool) = pool.handle
 
+Base.getindex(pool::ZeEventPool, i::Integer) = ZeEvent(pool, i)
+
 
 # event
 
@@ -34,17 +38,18 @@ export ZeEvent, append_wait!, signal, append_signal!, append_reset!, query,
 
 mutable struct ZeEvent
     handle::ze_event_handle_t
+    pool::ZeEventPool
 
-    function ZeEvent(pool)
+    function ZeEvent(pool, index::Integer)
         desc_ref = Ref(ze_event_desc_t(
             ZE_EVENT_DESC_VERSION_CURRENT,
-            5,
+            index-1,
             ZE_EVENT_SCOPE_FLAG_NONE,
             ZE_EVENT_SCOPE_FLAG_HOST
         ))
         handle_ref = Ref{ze_event_handle_t}()
         zeEventCreate(pool, desc_ref, handle_ref)
-        obj = new(handle_ref[])
+        obj = new(handle_ref[], pool)
         finalizer(obj) do obj
             zeEventDestroy(obj)
         end

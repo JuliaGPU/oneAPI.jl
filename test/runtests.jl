@@ -40,10 +40,12 @@ reset(list)
 
 # events
 
-ZeEventPool(drv)
-pool = ZeEventPool(drv, dev)
+ZeEventPool(drv, 1)
+ZeEventPool(drv, 1, dev)
 
-event = ZeEvent(pool)
+pool = ZeEventPool(drv, 1)
+
+event = pool[1]
 @test !query(event)
 
 signal(event)
@@ -56,8 +58,8 @@ append_wait!(list, event)
 reset(event)
 append_reset!(list, event)
 
-timed_pool = ZeEventPool(drv; flags=oneL0.ZE_EVENT_POOL_FLAG_TIMESTAMP)
-timed_event = ZeEvent(timed_pool)
+timed_pool = ZeEventPool(drv, 1; flags=oneL0.ZE_EVENT_POOL_FLAG_TIMESTAMP)
+timed_event = timed_pool[1]
 @test global_time(timed_event).start == nothing
 @test context_time(timed_event).start == nothing
 signal(timed_event)
