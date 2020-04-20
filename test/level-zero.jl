@@ -2,7 +2,8 @@
 
 using oneAPI.oneL0
 
-## driver
+
+@testset "driver" begin
 
 drvs = drivers()
 @assert !isempty(drvs)
@@ -10,8 +11,12 @@ drv = first(drvs)
 
 api_version(drv)
 
+end
 
-## device
+drv = first(drivers())
+
+
+@testset "device" begin
 
 devs = devices(drv)
 @assert !isempty(devs)
@@ -26,8 +31,12 @@ cache_properties(dev)
 image_properties(dev)
 p2p_properties(dev, dev)
 
+end
 
-## command
+dev = first(devices(drv))
+
+
+@testset "command" begin
 
 queue = ZeCommandQueue(dev)
 
@@ -45,8 +54,10 @@ execute!(queue) do list
     @test list isa ZeCommandList
 end
 
+end
 
-## event
+
+@testset "event" begin
 
 ZeEventPool(drv, 1)
 ZeEventPool(drv, 1, dev)
@@ -57,14 +68,20 @@ event = pool[1]
 @test !query(event)
 
 signal(event)
-append_signal!(list, event)
+ZeCommandList(dev) do list
+    append_signal!(list, event)
+end
 @test query(event)
 
 wait(event, 1)
-append_wait!(list, event)
+ZeCommandList(dev) do list
+    append_wait!(list, event)
+end
 
 reset(event)
-append_reset!(list, event)
+ZeCommandList(dev) do list
+    append_reset!(list, event)
+end
 
 timed_pool = ZeEventPool(drv, 1; flags=oneL0.ZE_EVENT_POOL_FLAG_TIMESTAMP)
 timed_event = timed_pool[1]
@@ -74,17 +91,26 @@ signal(timed_event)
 @test global_time(timed_event).start != nothing
 @test context_time(timed_event).start != nothing
 
+end
 
-## barrier
 
-append_barrier!(list)
-append_barrier!(list, event)
-append_barrier!(list, event, event)
+@testset "barrier" begin
+
+pool = ZeEventPool(drv, 1)
+event = pool[1]
+
+ZeCommandList(dev) do list
+    append_barrier!(list)
+    append_barrier!(list, event)
+    append_barrier!(list, event, event)
+end
 
 #device_barrier(dev)    # unsupported
 
+end
 
-## module
+
+@testset "module" begin
 
 data = read(joinpath(@__DIR__, "dummy.spv"))
 mod = ZeModule(dev, data)
@@ -113,28 +139,34 @@ props = properties(kernel)
 @test props.name == "bar"
 @test props.requiredGroupSize isa oneL0.ZeDim3
 
-# kernel execution
 
-append_launch!(list, kernel, 1)
+@testset "kernel execution" begin
+
+ZeCommandList(dev) do list
+    append_launch!(list, kernel, 1)
+end
 
 queue = ZeCommandQueue(dev)
-list = ZeCommandList(dev)
 
 pool = ZeEventPool(drv, 2)
 signal_event = pool[1]
 wait_event = pool[2]
 
-append_launch!(list, kernel, 1, signal_event, wait_event)
-close(list)
-execute!(queue, [list])
+execute!(queue) do list
+    append_launch!(list, kernel, 1, signal_event, wait_event)
+end
 @test !query(signal_event)
 
 signal(wait_event)
 synchronize(queue)
 @test query(signal_event)
 
+end
 
-## memory
+end
+
+
+@testset "memory" begin
 
 buf = device_alloc(dev, 1024)
 props = properties(buf)
@@ -162,8 +194,10 @@ ptr = convert(Ptr{Cvoid}, buf)
 @test lookup_alloc(drv, ptr) isa typeof(buf)
 free(buf)
 
+end
 
-## copy
+
+@testset "copy" begin
 
 src = rand(Int, 1024)
 
@@ -183,5 +217,8 @@ end
 synchronize(queue)
 
 @test chk == src
+
+end
+
 
 end
