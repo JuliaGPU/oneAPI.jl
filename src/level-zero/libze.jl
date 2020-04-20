@@ -642,13 +642,13 @@ end
 
 @checked function zeCommandListAppendMemoryPrefetch(hCommandList, ptr, size)
     ccall((:zeCommandListAppendMemoryPrefetch, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, Csize_t),
+          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
           hCommandList, ptr, size)
 end
 
 @checked function zeCommandListAppendMemAdvise(hCommandList, hDevice, ptr, size, advice)
     ccall((:zeCommandListAppendMemAdvise, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, ze_device_handle_t, Ptr{Cvoid}, Csize_t,
+          (ze_command_list_handle_t, ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t,
            ze_memory_advice_t),
           hCommandList, hDevice, ptr, size, advice)
 end

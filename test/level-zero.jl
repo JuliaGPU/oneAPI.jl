@@ -56,6 +56,8 @@ end
 
 end
 
+queue = ZeCommandQueue(dev)
+
 
 @testset "event" begin
 
@@ -148,8 +150,6 @@ ZeCommandList(dev) do list
     append_launch!(list, kernel, 1)
 end
 
-queue = ZeCommandQueue(dev)
-
 pool = ZeEventPool(drv, 2)
 signal_event = pool[1]
 wait_event = pool[2]
@@ -201,24 +201,38 @@ end
 
 @testset "copy" begin
 
-src = rand(Int, 1024)
+let src = rand(Int, 1024)
 
-dst = device_alloc(dev, sizeof(src))
+    dst = device_alloc(dev, sizeof(src))
 
-queue = ZeCommandQueue(dev)
-execute!(queue) do list
-    append_copy!(list, pointer(dst), pointer(src), sizeof(src))
+    execute!(queue) do list
+        append_copy!(list, pointer(dst), pointer(src), sizeof(src))
+    end
+    synchronize(queue)
+
+    chk = ones(Int, length(src))
+
+    execute!(queue) do list
+        append_copy!(list, pointer(chk), pointer(dst), sizeof(src))
+    end
+    synchronize(queue)
+
+    @test chk == src
+
+    free(dst)
 end
-synchronize(queue)
 
-chk = ones(Int, length(src))
+let buf = shared_alloc(drv, dev, 1024)
 
-execute!(queue) do list
-    append_copy!(list, pointer(chk), pointer(dst), sizeof(src))
+    execute!(queue) do list
+        append_prefetch!(list, pointer(buf), sizeof(buf))
+
+        append_advise!(list, dev, pointer(buf), sizeof(buf),
+                       oneL0.ZE_MEMORY_ADVICE_SET_READ_MOSTLY)
+    end
+
+    free(buf)
 end
-synchronize(queue)
-
-@test chk == src
 
 end
 
