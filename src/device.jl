@@ -2,6 +2,8 @@ export ZeDevice, properties, compute_properties, kernel_properties, memory_prope
 
 struct ZeDevice
     handle::ze_device_handle_t
+
+    driver::ZeDriver
 end
 
 Base.unsafe_convert(::Type{ze_device_handle_t}, dev::ZeDevice) = dev.handle
@@ -29,7 +31,7 @@ end
 ## properties
 
 function properties(dev::ZeDevice)
-    props_ref = Ref{_ze_device_properties_t}()
+    props_ref = Ref{ze_device_properties_t}()
     unsafe_store!(convert(Ptr{ze_device_properties_version_t},
                           Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
                   ZE_DEVICE_PROPERTIES_VERSION_CURRENT)
@@ -202,6 +204,8 @@ export devices
 struct ZeDevices
     handles::Vector{ze_device_handle_t}
 
+    driver::ZeDriver
+
     function ZeDevices(drv::ZeDriver)
         count_ref = Ref{UInt32}(0)
         zeDeviceGet(drv, count_ref, C_NULL)
@@ -209,7 +213,7 @@ struct ZeDevices
         handles = Vector{ze_device_handle_t}(undef, count_ref[])
         zeDeviceGet(drv, count_ref, handles)
 
-        new(handles)
+        new(handles, drv)
     end
 end
 
@@ -218,7 +222,7 @@ devices(drv) = ZeDevices(drv)
 Base.eltype(::ZeDevices) = ZeDevice
 
 function Base.iterate(iter::ZeDevices, i=1)
-    i >= length(iter) + 1 ? nothing : (ZeDevice(iter.handles[i]), i+1)
+    i >= length(iter) + 1 ? nothing : (ZeDevice(iter.handles[i], iter.driver), i+1)
 end
 
 Base.length(iter::ZeDevices) = length(iter.handles)

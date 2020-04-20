@@ -125,3 +125,32 @@ execute!(queue, [list])
 signal(wait_event)
 synchronize(queue)
 @test query(signal_event)
+
+
+## memory
+
+buf = device_alloc(dev, 1024)
+props = properties(buf)
+@test props.type == oneL0.ZE_MEMORY_TYPE_DEVICE
+@test_throws ArgumentError convert(Ptr{Cvoid}, buf)
+ptr = convert(ZePtr{Cvoid}, buf)
+@test lookup_alloc(drv, ptr) isa typeof(buf)
+free(buf)
+
+buf = host_alloc(drv, 1024)
+props = properties(buf)
+@test props.type == oneL0.ZE_MEMORY_TYPE_HOST
+ptr = convert(ZePtr{Cvoid}, buf)
+@test lookup_alloc(drv, ptr) isa typeof(buf)
+ptr = convert(Ptr{Cvoid}, buf)
+@test lookup_alloc(drv, ptr) isa typeof(buf)
+free(buf)
+
+buf = shared_alloc(drv, dev, 1024)
+props = properties(buf)
+@test props.type == oneL0.ZE_MEMORY_TYPE_SHARED
+ptr = convert(ZePtr{Cvoid}, buf)
+@test lookup_alloc(drv, ptr) isa typeof(buf)
+ptr = convert(Ptr{Cvoid}, buf)
+@test lookup_alloc(drv, ptr) isa typeof(buf)
+free(buf)

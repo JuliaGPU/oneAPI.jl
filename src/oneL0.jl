@@ -12,6 +12,7 @@ include("libze.jl")
 include("libze_aliases.jl")
 
 include("utils.jl")
+include("pointer.jl")
 
 # wrappers
 include("common.jl")
@@ -22,6 +23,7 @@ include("cmdlist.jl")
 include("event.jl")
 include("barrier.jl")
 include("module.jl")
+include("memory.jl")
 
 # wrappers
 
