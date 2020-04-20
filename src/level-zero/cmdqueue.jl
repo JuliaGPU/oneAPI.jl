@@ -5,7 +5,7 @@ export ZeCommandQueue, synchronize
 mutable struct ZeCommandQueue
     handle::ze_command_queue_handle_t
 
-    dev::ZeDevice
+    device::ZeDevice
     ordinal::Int
 
     function ZeCommandQueue(dev::ZeDevice, ordinal=0;

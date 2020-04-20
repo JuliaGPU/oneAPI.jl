@@ -37,6 +37,14 @@ execute!(queue, [list])
 synchronize(queue)
 reset(list)
 
+list = ZeCommandList(dev) do list
+    @test list isa ZeCommandList
+end
+
+execute!(queue) do list
+    @test list isa ZeCommandList
+end
+
 
 ## event
 
