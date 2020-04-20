@@ -32,7 +32,6 @@ p2p_properties(dev, dev)
 queue = ZeCommandQueue(dev)
 
 list = ZeCommandList(dev)
-append_barrier!(list)   # can't execute empty list
 close(list)
 execute!(queue, [list])
 synchronize(queue)
