@@ -5,16 +5,16 @@ using CUDAapi
 
 using oneAPI_Level_Zero_jll
 
+include("utils.jl")
+include("pointer.jl")
+
 # core API
 include("libze_common.jl")
-include("pointer.jl")
 include("error.jl")
 include("libze.jl")
 include("libze_aliases.jl")
 
-include("utils.jl")
-
-# wrappers
+# core wrappers
 include("common.jl")
 include("driver.jl")
 include("device.jl")
@@ -25,8 +25,6 @@ include("barrier.jl")
 include("module.jl")
 include("memory.jl")
 include("copy.jl")
-
-# wrappers
 
 function __init__()
     res = unsafe_zeInit(ZE_INIT_FLAG_NONE)
