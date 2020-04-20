@@ -19,18 +19,17 @@ Base.pointer(buf::Buffer) = buf.ptr
 Base.sizeof(buf::Buffer) = buf.bytesize
 
 # ccall integration
-Base.cconvert(P::Type{<:Ptr},   buf::Buffer) = convert(P, buf)
-Base.cconvert(P::Type{<:ZePtr}, buf::Buffer) = convert(P, buf)
+#
+# taking the pointer of a buffer means returning the underlying pointer,
+# and not the pointer of the buffer object itself.
+Base.unsafe_convert(P::Type{<:Ptr},   buf::Buffer) = convert(P, buf)
+Base.unsafe_convert(P::Type{<:ZePtr}, buf::Buffer) = convert(P, buf)
 
-# in some cases, we now it's valid to pass this pointer regardless of where it resides.
-# TODO: encode this in the wrappers by using PtrOrZePtr
-unsafe_pointer(buf::Buffer) = reinterpret(Ptr{Cvoid}, pointer(buf))
-
-free(buf::Buffer) = zeDriverFreeMem(buf.drv, unsafe_pointer(buf))
+free(buf::Buffer) = zeDriverFreeMem(buf.drv, pointer(buf))
 
 function Base.show(io::IO, ::MIME"text/plain", buf::Buffer)
     print(io, Base.format_bytes(sizeof(buf)), " ", nameof(typeof(buf)),
-          " at 0x", string(UInt(unsafe_pointer(buf)), base=16))
+          " at 0x", string(UInt(pointer(buf)), base=16))
 end
 
 
@@ -168,7 +167,7 @@ function properties(buf::Buffer)
     unsafe_store!(convert(Ptr{ze_memory_allocation_properties_version_t},
                           Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
                   ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT)
-    zeDriverGetMemAllocProperties(buf.drv, unsafe_pointer(buf), props_ref, dev_ref)
+    zeDriverGetMemAllocProperties(buf.drv, pointer(buf), props_ref, dev_ref)
 
     props = props_ref[]
     return (
@@ -188,7 +187,7 @@ end
 function lookup_alloc(drv::ZeDriver, ptr::Union{Ptr,ZePtr})
     base_ref = Ref{Ptr{Cvoid}}()
     bytesize_ref = Ref{Csize_t}()
-    zeDriverGetMemAddressRange(drv, reinterpret(Ptr{Cvoid}, ptr), base_ref, bytesize_ref)
+    zeDriverGetMemAddressRange(drv, ptr, base_ref, bytesize_ref)
 
     buf = UnknownBuffer(base_ref[], bytesize_ref[], drv)
     props = properties(buf)

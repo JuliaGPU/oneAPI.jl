@@ -7,12 +7,12 @@ using oneAPI_Level_Zero_jll
 
 # core API
 include("libze_common.jl")
+include("pointer.jl")
 include("error.jl")
 include("libze.jl")
 include("libze_aliases.jl")
 
 include("utils.jl")
-include("pointer.jl")
 
 # wrappers
 include("common.jl")

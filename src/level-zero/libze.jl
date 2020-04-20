@@ -518,26 +518,26 @@ end
 
 @checked function zeDriverFreeMem(hDriver, ptr)
     ccall((:zeDriverFreeMem, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{Cvoid}),
+          (ze_driver_handle_t, PtrOrZePtr{Cvoid}),
           hDriver, ptr)
 end
 
 @checked function zeDriverGetMemAllocProperties(hDriver, ptr, pMemAllocProperties, phDevice)
     ccall((:zeDriverGetMemAllocProperties, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{Cvoid}, Ptr{ze_memory_allocation_properties_t},
+          (ze_driver_handle_t, PtrOrZePtr{Cvoid}, Ptr{ze_memory_allocation_properties_t},
            Ptr{ze_device_handle_t}),
           hDriver, ptr, pMemAllocProperties, phDevice)
 end
 
 @checked function zeDriverGetMemAddressRange(hDriver, ptr, pBase, pSize)
     ccall((:zeDriverGetMemAddressRange, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{Cvoid}, Ptr{Ptr{Cvoid}}, Ptr{Csize_t}),
+          (ze_driver_handle_t, PtrOrZePtr{Cvoid}, Ptr{Ptr{Cvoid}}, Ptr{Csize_t}),
           hDriver, ptr, pBase, pSize)
 end
 
 @checked function zeDriverGetMemIpcHandle(hDriver, ptr, pIpcHandle)
     ccall((:zeDriverGetMemIpcHandle, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{Cvoid}, Ptr{ze_ipc_mem_handle_t}),
+          (ze_driver_handle_t, PtrOrZePtr{Cvoid}, Ptr{ze_ipc_mem_handle_t}),
           hDriver, ptr, pIpcHandle)
 end
 
@@ -550,7 +550,7 @@ end
 
 @checked function zeDriverCloseMemIpcHandle(hDriver, ptr)
     ccall((:zeDriverCloseMemIpcHandle, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{Cvoid}),
+          (ze_driver_handle_t, PtrOrZePtr{Cvoid}),
           hDriver, ptr)
 end
 
