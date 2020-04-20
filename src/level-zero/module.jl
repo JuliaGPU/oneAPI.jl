@@ -228,6 +228,12 @@ function Base.get(dict::ZeKernelAttributeDict, attr::ze_kernel_attribute_t, def)
     return conv(data)
 end
 
+function Base.setindex!(dict::ZeKernelAttributeDict, value, attr::ze_kernel_attribute_t)
+    typ, conv = known_attributes[attr]
+    # NOTE: needs better handling of non-isbits values, but no attrs are like that
+    zeKernelSetAttribute(dict.kernel, attr, sizeof(value), Base.RefValue(convert(typ, value)))
+end
+
 
 ## properties
 

@@ -133,6 +133,8 @@ attrs = attributes(kernel)
 @test !attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS]
 @test !attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_SHARED_ACCESS]
 @test isempty(attrs[oneL0.ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE])
+attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS] = true
+@test attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS]
 
 props = properties(kernel)
 @test props.numKernelArgs == 1
