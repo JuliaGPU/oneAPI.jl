@@ -2,7 +2,7 @@ using Test
 using oneL0
 
 
-## drivers
+## driver
 
 drvs = drivers()
 @assert !isempty(drvs)
@@ -11,7 +11,7 @@ drv = first(drvs)
 api_version(drv)
 
 
-## devices
+## device
 
 devs = devices(drv)
 @assert !isempty(devs)
@@ -27,7 +27,7 @@ image_properties(dev)
 p2p_properties(dev, dev)
 
 
-## commands
+## command
 
 queue = ZeCommandQueue(dev)
 
@@ -39,7 +39,7 @@ synchronize(queue)
 reset(list)
 
 
-## events
+## event
 
 ZeEventPool(drv, 1)
 ZeEventPool(drv, 1, dev)
@@ -68,7 +68,7 @@ signal(timed_event)
 @test context_time(timed_event).start != nothing
 
 
-## barriers
+## barrier
 
 append_barrier!(list)
 append_barrier!(list, event)
@@ -77,7 +77,7 @@ append_barrier!(list, event, event)
 #device_barrier(dev)    # unsupported
 
 
-## modules
+## module
 
 data = read(joinpath(@__DIR__, "dummy.spv"))
 mod = ZeModule(dev, data)

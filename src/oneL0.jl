@@ -15,12 +15,13 @@ include("utils.jl")
 
 # wrappers
 include("common.jl")
-include("drivers.jl")
-include("devices.jl")
-include("commands.jl")
-include("events.jl")
-include("barriers.jl")
-include("modules.jl")
+include("driver.jl")
+include("device.jl")
+include("cmdqueue.jl")
+include("cmdlist.jl")
+include("event.jl")
+include("barrier.jl")
+include("module.jl")
 
 # wrappers
 

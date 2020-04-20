@@ -88,6 +88,6 @@ version = "1.0.3586+2"
 
 [[oneAPI_Level_Zero_jll]]
 deps = ["Libdl", "NEO_jll", "Pkg"]
-git-tree-sha1 = "3be5628bd8c736a1132648e2431fdb4d9e25a690"
+git-tree-sha1 = "9491282ab853e3e9ac3b67e3cfc6b55c0ec4962f"
 uuid = "0038a6a5-a77d-50b4-8f67-3bd55e463950"
-version = "0.91.10+1"
+version = "0.91.10+2"
