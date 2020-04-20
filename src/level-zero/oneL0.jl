@@ -24,6 +24,7 @@ include("event.jl")
 include("barrier.jl")
 include("module.jl")
 include("memory.jl")
+include("copy.jl")
 
 # wrappers
 

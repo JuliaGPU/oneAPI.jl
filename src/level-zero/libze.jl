@@ -586,7 +586,7 @@ end
 
 @checked function zeCommandListAppendMemoryCopy(hCommandList, dstptr, srcptr, size, hEvent)
     ccall((:zeCommandListAppendMemoryCopy, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{Cvoid}, Csize_t, ze_event_handle_t),
+          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, PtrOrZePtr{Cvoid}, Csize_t, ze_event_handle_t),
           hCommandList, dstptr, srcptr, size, hEvent)
 end
 

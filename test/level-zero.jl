@@ -162,4 +162,26 @@ ptr = convert(Ptr{Cvoid}, buf)
 @test lookup_alloc(drv, ptr) isa typeof(buf)
 free(buf)
 
+
+## copy
+
+src = rand(Int, 1024)
+
+dst = device_alloc(dev, sizeof(src))
+
+queue = ZeCommandQueue(dev)
+execute!(queue) do list
+    append_copy!(list, pointer(dst), pointer(src), sizeof(src))
+end
+synchronize(queue)
+
+chk = ones(Int, length(src))
+
+execute!(queue) do list
+    append_copy!(list, pointer(chk), pointer(dst), sizeof(src))
+end
+synchronize(queue)
+
+@test chk == src
+
 end
