@@ -593,7 +593,7 @@ end
 @checked function zeCommandListAppendMemoryFill(hCommandList, ptr, pattern, pattern_size,
                                                 size, hEvent)
     ccall((:zeCommandListAppendMemoryFill, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{Cvoid}, Csize_t, Csize_t,
+          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, PtrOrZePtr{Cvoid}, Csize_t, Csize_t,
            ze_event_handle_t),
           hCommandList, ptr, pattern, pattern_size, size, hEvent)
 end

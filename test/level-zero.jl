@@ -202,22 +202,26 @@ end
 @testset "copy" begin
 
 let src = rand(Int, 1024)
+    chk = ones(Int, length(src))
 
     dst = device_alloc(dev, sizeof(src))
 
     execute!(queue) do list
         append_copy!(list, pointer(dst), pointer(src), sizeof(src))
-    end
-    synchronize(queue)
-
-    chk = ones(Int, length(src))
-
-    execute!(queue) do list
+        append_barrier!(list)
         append_copy!(list, pointer(chk), pointer(dst), sizeof(src))
     end
     synchronize(queue)
-
     @test chk == src
+
+    execute!(queue) do list
+        pattern = [42]
+        append_fill!(list, pointer(dst), pointer(pattern), sizeof(pattern), sizeof(src))
+        append_barrier!(list)
+        append_copy!(list, pointer(chk), pointer(dst), sizeof(src))
+    end
+    synchronize(queue)
+    @test all(isequal(42), chk)
 
     free(dst)
 end
