@@ -21,8 +21,9 @@ include("device/opencl/work_item.jl")
 include("device/opencl/math.jl")
 
 # host functionality
-include("compiler.jl")
 include("context.jl")
+include("compiler.jl")
+include("execution.jl")
 include("memory.jl")
 include("array.jl")
 include("reflection.jl")

@@ -4,6 +4,7 @@ export ZeModule
 
 mutable struct ZeModule
     handle::ze_module_handle_t
+    device::ZeDevice
 
     function ZeModule(dev, image)
         log_ref = C_NULL
@@ -23,7 +24,7 @@ mutable struct ZeModule
         ))
         handle_ref = Ref{ze_module_handle_t}()
         zeModuleCreate(dev, desc_ref, handle_ref, log_ref)
-        obj = new(handle_ref[])
+        obj = new(handle_ref[], dev)
 
         # read the log
         @debug begin

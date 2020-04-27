@@ -86,6 +86,16 @@ Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} = pointer(x)
 Base.unsafe_convert(::Type{ZePtr{S}}, x::oneArray{T}) where {S,T} = convert(ZePtr{S}, Base.unsafe_convert(ZePtr{T}, x))
 
 
+## interop with GPU arrays
+
+function Base.convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) where {T,N}
+  oneDeviceArray{T,N,AS.Global}(a.dims, DevicePtr{T,AS.Global}(pointer(a)))
+end
+
+Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
+  convert(oneDeviceArray{T,N,AS.Global}, xs)
+
+
 ## interop with CPU arrays
 
 # We don't convert isbits types in `adapt`, since they are already
