@@ -86,8 +86,8 @@ function global_time(event)
     zeEventGetTimestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_START, start_ref)
     stop_ref = Ref{UInt64}()
     zeEventGetTimestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_END, stop_ref)
-    (start = start_ref[] == UInt64(0)-1 ? nothing : Int(start_ref[]),
-     stop  = stop_ref[] == UInt64(0)-1 ?  nothing : Int(stop_ref[]))
+    (start = start_ref[] == -1%UInt32 ? nothing : Int(start_ref[]),
+     stop  = stop_ref[] == -1%UInt32 ?  nothing : Int(stop_ref[]))
 end
 
 function context_time(event)
@@ -95,6 +95,6 @@ function context_time(event)
     zeEventGetTimestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_START, start_ref)
     stop_ref = Ref{UInt64}()
     zeEventGetTimestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_END, stop_ref)
-    (start = start_ref[] == UInt64(0)-1 ? nothing : Int(start_ref[]),
-     stop  = stop_ref[] == UInt64(0)-1 ?  nothing : Int(stop_ref[]))
+    (start = start_ref[] == -1%UInt32 ? nothing : Int(start_ref[]),
+     stop  = stop_ref[] == -1%UInt32 ?  nothing : Int(stop_ref[]))
 end
