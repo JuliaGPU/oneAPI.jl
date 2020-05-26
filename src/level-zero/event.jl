@@ -13,7 +13,7 @@ mutable struct ZeEventPool
                          flags=ZE_EVENT_POOL_FLAG_DEFAULT)
         desc_ref = Ref(ze_event_pool_desc_t(
             ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-            ze_event_pool_flag_t(flags),
+            flags,
             size
         ))
         handle_ref = Ref{ze_event_pool_handle_t}()
