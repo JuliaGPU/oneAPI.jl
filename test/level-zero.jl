@@ -172,6 +172,7 @@ end
 
 buf = device_alloc(dev, 1024)
 props = properties(buf)
+@test props.device == dev
 @test props.type == oneL0.ZE_MEMORY_TYPE_DEVICE
 @test_throws ArgumentError convert(Ptr{Cvoid}, buf)
 ptr = convert(ZePtr{Cvoid}, buf)

@@ -171,8 +171,7 @@ function properties(buf::Buffer)
 
     props = props_ref[]
     return (
-        # https://github.com/intel/compute-runtime/issues/297
-        #device=ZeDevice(dev_ref[], buf.drv),
+        device=ZeDevice(dev_ref[], buf.drv),
         type=props.type,
         id=props.id,
     )
