@@ -5,10 +5,6 @@ export ZeEventPool
 mutable struct ZeEventPool
     handle::ze_event_pool_handle_t
 
-    # https://github.com/intel/compute-runtime/issues/294
-    ZeEventPool(drv::ZeDriver, size::Integer; kwargs...) =
-        ZeEventPool(drv, size, devices(drv)...; kwargs...)
-
     function ZeEventPool(drv::ZeDriver, size::Integer, devs::ZeDevice...;
                          flags=ZE_EVENT_POOL_FLAG_DEFAULT)
         desc_ref = Ref(ze_event_pool_desc_t(
@@ -17,7 +13,7 @@ mutable struct ZeEventPool
             size
         ))
         handle_ref = Ref{ze_event_pool_handle_t}()
-        zeEventPoolCreate(drv, desc_ref, length(devs), [devs...], handle_ref)
+        zeEventPoolCreate(drv, desc_ref, length(devs), isempty(devs) ? C_NULL : [devs...], handle_ref)
         obj = new(handle_ref[])
         finalizer(obj) do obj
             zeEventPoolDestroy(obj)
