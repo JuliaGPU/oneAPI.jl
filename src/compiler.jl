@@ -1,36 +1,20 @@
-## target
+struct oneAPICompilerParams <: AbstractCompilerParams end
 
-struct oneAPICompilerTarget <: CompositeCompilerTarget
-    parent::SPIRVCompilerTarget
+oneAPICompilerJob = CompilerJob{SPIRVCompilerTarget,oneAPICompilerParams}
 
-    oneAPICompilerTarget() = new(SPIRVCompilerTarget())
-end
-
-Base.parent(target::oneAPICompilerTarget) = target.parent
+GPUCompiler.runtime_module(::oneAPICompilerJob) = oneAPI
 
 # TODO: eagerly lower these using the translator API
-GPUCompiler.isintrinsic(target::oneAPICompilerTarget, fn::String) =
-    GPUCompiler.isintrinsic(target.parent, fn) || in(fn, opencl_builtins)
+GPUCompiler.isintrinsic(job::oneAPICompilerJob, fn::String) =
+    invoke(GPUCompiler.isintrinsic,
+           Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(fn)},
+           job, fn) ||
+    in(fn, opencl_builtins)
 
-GPUCompiler.runtime_module(target::oneAPICompilerTarget) = oneAPI
-
-
-## job
-
-struct oneAPICompilerJob <: CompositeCompilerJob
-    parent::SPIRVCompilerJob
-end
-
-oneAPICompilerJob(target::AbstractCompilerTarget, source::FunctionSpec) =
-    oneAPICompilerJob(SPIRVCompilerJob(target, source))
-
-Base.similar(job::oneAPICompilerJob, source::FunctionSpec) =
-    oneAPICompilerJob(similar(job.parent, source))
-
-Base.parent(job::oneAPICompilerJob) = job.parent
-
-function GPUCompiler.process_module!(job::oneAPICompilerJob, mod::LLVM.Module)
-    GPUCompiler.process_module!(job.parent, mod)
+function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module)
+    invoke(GPUCompiler.finish_module!,
+           Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod)},
+           job, mod)
 
     # OpenCL 2.0
     push!(metadata(mod), "opencl.ocl.version",
@@ -42,6 +26,3 @@ function GPUCompiler.process_module!(job::oneAPICompilerJob, mod::LLVM.Module)
          MDNode([ConstantInt(Int32(1), JuliaContext()),
                  ConstantInt(Int32(5), JuliaContext())]))
 end
-
-GPUCompiler.mcgen(job::oneAPICompilerJob, mod::LLVM.Module, f::LLVM.Function, format) =
-    GPUCompiler.mcgen(job.parent, mod, f, format)

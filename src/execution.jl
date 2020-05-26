@@ -115,8 +115,9 @@ end
 
 function _compile(spec::FunctionSpec; kwargs...)
     dev = device()
-    target = oneAPICompilerTarget()
-    job = oneAPICompilerJob(target, spec; kwargs...)
+    target = SPIRVCompilerTarget(; kwargs...)
+    params = oneAPICompilerParams()
+    job = CompilerJob(target, source, params)
     image, kernel_fn, undefined_fns = GPUCompiler.compile(:obj, job; strict=true)
 
     # JIT into an executable kernel object
