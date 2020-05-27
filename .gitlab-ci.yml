@@ -20,6 +20,21 @@ julia:nightly:
     - intel
 
 
+# special tests
+
+debug:
+  extends:
+    - .julia:1.4
+    - .test
+  tags:
+    - intel
+  script:
+    - julia --project -g2 -e 'using Pkg;
+                              Pkg.instantiate();
+                              Pkg.build();
+                              Pkg.test(; coverage=true);'
+
+
 # other tasks
 
 coverage:
