@@ -4,6 +4,8 @@
 # executed in the wrong context, ownership should always be encoded in each object.
 # the accessors below should only be used to determine initial ownership.
 
+export driver, driver!, device, device!, global_queue
+
 function driver()
     get!(task_local_storage(), :ZeDriver) do
         first(drivers())
