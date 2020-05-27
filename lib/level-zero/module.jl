@@ -7,10 +7,10 @@ mutable struct ZeModule
     device::ZeDevice
 
     function ZeModule(dev, image)
-        log_ref = C_NULL
-        @debug begin
+        log_ref = if isdebug(:ZeModule)
             log_ref = Ref{ze_module_build_log_handle_t}()
-            "JIT compiling code" # FIXME: remove this useless message
+        else
+            C_NULL
         end
 
         # compile the module
@@ -27,7 +27,7 @@ mutable struct ZeModule
         obj = new(handle_ref[], dev)
 
         # read the log
-        @debug begin
+        if log_ref !== C_NULL
             log_size_ref = Ref{Csize_t}(0)
             zeModuleBuildLogGetString(log_ref[], log_size_ref, C_NULL)
             log_buf = Vector{UInt8}(undef, log_size_ref[])
@@ -35,11 +35,9 @@ mutable struct ZeModule
             zeModuleBuildLogDestroy(log_ref[])
 
             log = String(log_buf)[1:end-1] # strip null terminator
-            if isempty(log)
-                """Build log is empty""" # FIXME: remove this useless message
-            else
-                """Build log:
-                   $log"""
+            if !isempty(log)
+                @debug """Build log:
+                          $log"""
             end
         end
 
