@@ -9,7 +9,7 @@ using LLVM.Interop
 export oneL0
 
 # libraries
-include("level-zero/oneL0.jl")
+include("../lib/level-zero/oneL0.jl")
 using .oneL0
 
 # device functionality
