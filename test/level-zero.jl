@@ -227,8 +227,9 @@ let src = rand(Int, 1024)
     free(dst)
 end
 
-let buf = shared_alloc(drv, dev, 1024)
-
+for buf in [device_alloc(dev, 1024),
+            host_alloc(drv, 1024),
+            shared_alloc(drv, dev, 1024)]
     execute!(queue) do list
         append_prefetch!(list, pointer(buf), sizeof(buf))
 

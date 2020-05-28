@@ -32,7 +32,7 @@ macro oneapi(ex...)
                 local $kernel_args = map($kernel_convert, ($(var_exprs...),))
                 local $kernel_tt = Tuple{Core.Typeof.($kernel_args)...}
                 local $kernel = $compile($f, $kernel_tt; $(compiler_kwargs...))
-                $call($kernel, $kernel_args...; $(call_kwargs...))
+                $kernel($kernel_args...; $(call_kwargs...))
             end
         end)
 
@@ -98,6 +98,8 @@ abstract type AbstractKernel{F,TT} end
     end
 end
 
+(kernel::AbstractKernel)(args...; kwargs...) = call(kernel, args...; kwargs...)
+
 
 ## host-side kernels
 
@@ -113,7 +115,7 @@ function compile(f::Core.Function, tt::Type=Tuple{}; name=nothing, kwargs...)
     GPUCompiler.cached_compilation(_compile, spec, env; kwargs...)::HostKernel{f,tt}
 end
 
-function _compile(spec::FunctionSpec; kwargs...)
+function _compile(source::FunctionSpec; kwargs...)
     dev = device()
     target = SPIRVCompilerTarget(; kwargs...)
     params = oneAPICompilerParams()
@@ -124,7 +126,7 @@ function _compile(spec::FunctionSpec; kwargs...)
     mod = ZeModule(dev, image)
     kernel = kernels(mod)[kernel_fn]
 
-    return HostKernel{spec.f,spec.tt}(kernel)
+    return HostKernel{source.f,source.tt}(kernel)
 end
 
 @inline function _call(kernel::HostKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
@@ -135,7 +137,7 @@ end
 
     groupsize!(kernel.fun, items)
     execute!(queue) do list
-        append_launch!(list, kernel, groups)
+        append_launch!(list, kernel.fun, groups)
     end
 end
 
