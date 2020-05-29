@@ -11,6 +11,9 @@ drv = first(drvs)
 
 api_version(drv)
 
+properties(drv)
+ipc_properties(drv)
+
 end
 
 drv = first(drivers())

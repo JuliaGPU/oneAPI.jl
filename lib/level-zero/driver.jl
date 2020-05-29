@@ -1,4 +1,4 @@
-export ZeDriver, api_version, properties
+export ZeDriver, api_version, properties, ipc_properties
 
 struct ZeDriver
     handle::ze_driver_handle_t
@@ -42,3 +42,36 @@ end
 Base.length(iter::ZeDrivers) = length(iter.handles)
 
 Base.IteratorSize(::ZeDrivers) = Base.HasLength()
+
+
+## properties
+
+function properties(drv::ZeDriver)
+    props_ref = Ref{ze_driver_properties_t}()
+    unsafe_store!(convert(Ptr{ze_driver_properties_version_t},
+                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
+                  ZE_DRIVER_PROPERTIES_VERSION_CURRENT)
+    zeDriverGetProperties(drv, props_ref)
+
+    props = props_ref[]
+    return (
+        uuid=Base.UUID(reinterpret(UInt128, [props.uuid.id...])[1]),
+        driverVersion=VersionNumber((props.driverVersion & 0xFF000000) >> 24,
+                                    (props.driverVersion & 0x00FF0000) >> 16,
+                                    props.driverVersion & 0x0000FFFF),
+    )
+end
+
+function ipc_properties(drv::ZeDriver)
+    props_ref = Ref{ze_driver_ipc_properties_t}()
+    unsafe_store!(convert(Ptr{ze_driver_ipc_properties_version_t},
+                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
+                  ZE_DRIVER_IPC_PROPERTIES_VERSION_CURRENT)
+    zeDriverGetIPCProperties(drv, props_ref)
+
+    props = props_ref[]
+    return (
+        memsSupported=Bool(props.memsSupported),
+        eventsSupported=Bool(props.eventsSupported),
+    )
+end
