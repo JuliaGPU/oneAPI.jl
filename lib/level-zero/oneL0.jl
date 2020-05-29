@@ -25,6 +25,7 @@ include("barrier.jl")
 include("module.jl")
 include("memory.jl")
 include("copy.jl")
+include("residency.jl")
 
 function __init__()
     res = unsafe_zeInit(ZE_INIT_FLAG_NONE)

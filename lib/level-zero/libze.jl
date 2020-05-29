@@ -367,13 +367,13 @@ end
 
 @checked function zeDeviceMakeMemoryResident(hDevice, ptr, size)
     ccall((:zeDeviceMakeMemoryResident, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{Cvoid}, Csize_t),
+          (ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
           hDevice, ptr, size)
 end
 
 @checked function zeDeviceEvictMemory(hDevice, ptr, size)
     ccall((:zeDeviceEvictMemory, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{Cvoid}, Csize_t),
+          (ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
           hDevice, ptr, size)
 end
 

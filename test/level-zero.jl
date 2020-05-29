@@ -246,4 +246,20 @@ end
 end
 
 
+
+@testset "residency" begin
+
+for buf in [device_alloc(dev, 1024),
+            host_alloc(drv, 1024),
+            shared_alloc(drv, dev, 1024)]
+    make_resident(dev, buf)
+    evict(dev, buf)
+    make_resident(dev, buf, 1024)
+    evict(dev, buf, 1024)
+    free(buf)
+end
+
+end
+
+
 end
