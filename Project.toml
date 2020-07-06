@@ -10,7 +10,12 @@ CUDAapi = "3895d2a7-ec45-59b8-82bb-cfc6a382f9b3"
 GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 GPUCompiler = "61eb1bfa-7361-4325-ad38-22787b887f55"
 LLVM = "929cbde3-209d-540e-8aea-75f648917ca0"
+SPIRV_LLVM_Translator_jll = "4a5d46fc-d8cf-5151-a261-86b458210efb"
+SPIRV_Tools_jll = "6ac6d60f-d740-5983-97d7-a4482c0689f4"
 oneAPI_Level_Zero_jll = "0038a6a5-a77d-50b4-8f67-3bd55e463950"
+
+[compat]
+GPUCompiler = "0.5"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

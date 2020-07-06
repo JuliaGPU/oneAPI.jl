@@ -2,9 +2,13 @@ module oneAPI
 
 using GPUArrays
 using Adapt
+
 using GPUCompiler
+
 using LLVM
 using LLVM.Interop
+
+using SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll
 
 export oneL0
 

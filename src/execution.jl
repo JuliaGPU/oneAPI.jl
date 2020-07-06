@@ -120,7 +120,7 @@ function _compile(source::FunctionSpec; kwargs...)
     target = SPIRVCompilerTarget(; kwargs...)
     params = oneAPICompilerParams()
     job = CompilerJob(target, source, params)
-    image, kernel_fn, undefined_fns = GPUCompiler.compile(:obj, job; strict=true)
+    image, kernel_fn, undefined_fns = GPUCompiler.compile(:obj, job)
 
     # JIT into an executable kernel object
     mod = ZeModule(dev, image)
