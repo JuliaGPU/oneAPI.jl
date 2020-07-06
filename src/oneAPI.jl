@@ -13,6 +13,7 @@ using SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll
 export oneL0
 
 # libraries
+include("../lib/utils/APIUtils.jl")
 include("../lib/level-zero/oneL0.jl")
 using .oneL0
 

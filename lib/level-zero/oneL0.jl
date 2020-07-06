@@ -1,7 +1,8 @@
 module oneL0
 
+using ..APIUtils
+
 using CEnum
-using CUDAapi
 
 using oneAPI_Level_Zero_jll
 
