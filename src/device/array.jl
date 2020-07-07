@@ -10,28 +10,28 @@ export oneDeviceArray, oneDeviceVector, oneDeviceMatrix
 
 struct oneDeviceArray{T,N,A} <: AbstractArray{T,N}
     shape::Dims{N}
-    ptr::DevicePtr{T,A}
+    ptr::LLVMPtr{T,A}
 
     # inner constructors, fully parameterized, exact types (ie. Int not <:Integer)
-    oneDeviceArray{T,N,A}(shape::Dims{N}, ptr::DevicePtr{T,A}) where {T,A,N} = new(shape,ptr)
+    oneDeviceArray{T,N,A}(shape::Dims{N}, ptr::LLVMPtr{T,A}) where {T,A,N} = new(shape,ptr)
 end
 
 const oneDeviceVector = oneDeviceArray{T,1,A} where {T,A}
 const oneDeviceMatrix = oneDeviceArray{T,2,A} where {T,A}
 
 # outer constructors, non-parameterized
-oneDeviceArray(dims::NTuple{N,<:Integer}, p::DevicePtr{T,A})                where {T,A,N} = oneDeviceArray{T,N,A}(dims, p)
-oneDeviceArray(len::Integer,              p::DevicePtr{T,A})                where {T,A}   = oneDeviceVector{T,A}((len,), p)
+oneDeviceArray(dims::NTuple{N,<:Integer}, p::LLVMPtr{T,A})                where {T,A,N} = oneDeviceArray{T,N,A}(dims, p)
+oneDeviceArray(len::Integer,              p::LLVMPtr{T,A})                where {T,A}   = oneDeviceVector{T,A}((len,), p)
 
 # outer constructors, partially parameterized
-oneDeviceArray{T}(dims::NTuple{N,<:Integer},   p::DevicePtr{T,A}) where {T,A,N} = oneDeviceArray{T,N,A}(dims, p)
-oneDeviceArray{T}(len::Integer,                p::DevicePtr{T,A}) where {T,A}   = oneDeviceVector{T,A}((len,), p)
-oneDeviceArray{T,N}(dims::NTuple{N,<:Integer}, p::DevicePtr{T,A}) where {T,A,N} = oneDeviceArray{T,N,A}(dims, p)
-oneDeviceVector{T}(len::Integer,               p::DevicePtr{T,A}) where {T,A}   = oneDeviceVector{T,A}((len,), p)
+oneDeviceArray{T}(dims::NTuple{N,<:Integer},   p::LLVMPtr{T,A}) where {T,A,N} = oneDeviceArray{T,N,A}(dims, p)
+oneDeviceArray{T}(len::Integer,                p::LLVMPtr{T,A}) where {T,A}   = oneDeviceVector{T,A}((len,), p)
+oneDeviceArray{T,N}(dims::NTuple{N,<:Integer}, p::LLVMPtr{T,A}) where {T,A,N} = oneDeviceArray{T,N,A}(dims, p)
+oneDeviceVector{T}(len::Integer,               p::LLVMPtr{T,A}) where {T,A}   = oneDeviceVector{T,A}((len,), p)
 
 # outer constructors, fully parameterized
-oneDeviceArray{T,N,A}(dims::NTuple{N,<:Integer}, p::DevicePtr{T,A}) where {T,A,N} = oneDeviceArray{T,N,A}(Int.(dims), p)
-oneDeviceVector{T,A}(len::Integer,               p::DevicePtr{T,A}) where {T,A}   = oneDeviceVector{T,A}((Int(len),), p)
+oneDeviceArray{T,N,A}(dims::NTuple{N,<:Integer}, p::LLVMPtr{T,A}) where {T,A,N} = oneDeviceArray{T,N,A}(Int.(dims), p)
+oneDeviceVector{T,A}(len::Integer,               p::LLVMPtr{T,A}) where {T,A}   = oneDeviceVector{T,A}((Int(len),), p)
 
 
 ## getters
@@ -47,7 +47,7 @@ Base.length(g::oneDeviceArray) = prod(g.shape)
 
 ## conversions
 
-Base.unsafe_convert(::Type{DevicePtr{T,A}}, a::oneDeviceArray{T,N,A}) where {T,A,N} = pointer(a)
+Base.unsafe_convert(::Type{LLVMPtr{T,A}}, a::oneDeviceArray{T,N,A}) where {T,A,N} = pointer(a)
 
 
 ## indexing intrinsics
@@ -126,7 +126,7 @@ Base.show(io::IO, a::oneDeviceArray) =
 Base.show(io::IO, mime::MIME"text/plain", a::oneDeviceArray) = show(io, a)
 
 @inline function Base.unsafe_view(A::oneDeviceVector{T}, I::Vararg{Base.ViewIndex,1}) where {T}
-    ptr = pointer(A) + (I[1].start-1)*sizeof(T)
+    ptr = pointer(A, I[1].start)
     len = I[1].stop - I[1].start + 1
     return oneDeviceArray(len, ptr)
 end

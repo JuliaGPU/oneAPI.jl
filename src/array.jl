@@ -89,7 +89,7 @@ Base.unsafe_convert(::Type{ZePtr{S}}, x::oneArray{T}) where {S,T} = convert(ZePt
 ## interop with GPU arrays
 
 function Base.convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) where {T,N}
-  oneDeviceArray{T,N,AS.Global}(a.dims, DevicePtr{T,AS.Global}(pointer(a)))
+  oneDeviceArray{T,N,AS.Global}(a.dims, reinterpret(LLVMPtr{T,AS.Global}, pointer(a)))
 end
 
 Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =

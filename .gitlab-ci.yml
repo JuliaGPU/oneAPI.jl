@@ -4,13 +4,6 @@ include:
 
 # Julia versions
 
-julia:1.4:
-  extends:
-    - .julia:1.4
-    - .test
-  tags:
-    - intel
-
 julia:1.5:
   extends:
     - .julia:1.5
@@ -23,7 +16,7 @@ julia:1.5:
 
 debug:
   extends:
-    - .julia:1.4
+    - .julia:1.5
     - .test
   tags:
     - intel
@@ -38,5 +31,5 @@ debug:
 
 coverage:
   extends:
-    - .julia:1.4
+    - .julia:1.5
     - .coverage
