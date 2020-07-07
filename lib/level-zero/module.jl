@@ -228,8 +228,9 @@ function Base.get(dict::ZeKernelAttributeDict, attr::ze_kernel_attribute_t, def)
         zeKernelGetAttribute(dict.kernel, attr, size_ref, data)
         data
     else
+        size_ref = Ref{UInt32}(sizeof(typ))
         ref = Ref{typ}()
-        zeKernelGetAttribute(dict.kernel, attr, C_NULL, ref)
+        zeKernelGetAttribute(dict.kernel, attr, size_ref, ref)
         ref[]
     end
     return conv(data)
