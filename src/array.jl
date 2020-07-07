@@ -3,7 +3,7 @@
 export oneArray
 
 mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
-  ptr::ZePtr{T}
+  buf::oneL0.DeviceBuffer
   dims::Dims{N}
 
   dev::ZeDevice
@@ -16,11 +16,9 @@ end
 function oneArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N}
     dev = device()
     buf = device_alloc(dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
-    ptr = convert(ZePtr{T}, buf)
 
-    obj = oneArray{T,N}(ptr, dims, dev)
+    obj = oneArray{T,N}(buf, dims, dev)
     finalizer(obj) do obj
-        buf = lookup_alloc(dev.driver, pointer(obj))
         free(buf)
     end
     return obj
@@ -49,8 +47,8 @@ Base.elsize(::Type{<:oneArray{T}}) where {T} = sizeof(T)
 Base.size(x::oneArray) = x.dims
 Base.sizeof(x::oneArray) = Base.elsize(x) * length(x)
 
-Base.pointer(x::oneArray) = x.ptr
-Base.pointer(x::oneArray, i::Integer) = x.ptr + (i-1) * Base.elsize(x)
+Base.pointer(x::oneArray{T}) where {T} = convert(ZePtr{T}, x.buf)
+Base.pointer(x::oneArray, i::Integer) = pointer(x) + (i-1) * Base.elsize(x)
 
 
 ## interop with other arrays
@@ -92,8 +90,10 @@ function Base.convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) w
   oneDeviceArray{T,N,AS.Global}(a.dims, reinterpret(LLVMPtr{T,AS.Global}, pointer(a)))
 end
 
-Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
+function Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
+  make_resident(xs.dev, xs.buf)
   convert(oneDeviceArray{T,N,AS.Global}, xs)
+end
 
 
 ## interop with CPU arrays
