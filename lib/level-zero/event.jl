@@ -41,7 +41,7 @@ mutable struct ZeEvent
             ZE_EVENT_DESC_VERSION_CURRENT,
             index-1,
             ZE_EVENT_SCOPE_FLAG_NONE,
-            ZE_EVENT_SCOPE_FLAG_HOST
+            ZE_EVENT_SCOPE_FLAG_NONE
         ))
         handle_ref = Ref{ze_event_handle_t}()
         zeEventCreate(pool, desc_ref, handle_ref)
