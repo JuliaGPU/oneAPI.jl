@@ -45,8 +45,7 @@ end
 struct KernelAdaptor end
 
 # convert oneL0 host pointers to device pointers
- # TODO: use ordinary ptr?
-Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} = reinterpret(LLVMPtr{T,AS.Generic}, p)
+Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} = reinterpret(Ptr{T}, p)
 
 # Base.RefValue isn't GPU compatible, so provide a compatible alternative
 struct ZeRefValue{T} <: Ref{T}
