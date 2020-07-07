@@ -88,13 +88,16 @@ ZeCommandList(dev) do list
     append_reset!(list, event)
 end
 
-timed_pool = ZeEventPool(drv, 1; flags=oneL0.ZE_EVENT_POOL_FLAG_TIMESTAMP)
-timed_event = timed_pool[1]
-@test global_time(timed_event).start == nothing
-@test context_time(timed_event).start == nothing
-signal(timed_event)
-@test global_time(timed_event).start != nothing
-@test context_time(timed_event).start != nothing
+if get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "0") != "1"
+    # https://github.com/oneapi-src/level-zero/issues/29
+    timed_pool = ZeEventPool(drv, 1; flags=oneL0.ZE_EVENT_POOL_FLAG_TIMESTAMP)
+    timed_event = timed_pool[1]
+    @test global_time(timed_event).start == nothing
+    @test context_time(timed_event).start == nothing
+    signal(timed_event)
+    @test global_time(timed_event).start != nothing
+    @test context_time(timed_event).start != nothing
+end
 
 end
 
@@ -137,7 +140,10 @@ arguments(kernel)[1] = Int32(42)
 attrs = attributes(kernel)
 @test !attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS]
 @test !attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_SHARED_ACCESS]
-@test isempty(attrs[oneL0.ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE])
+if get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "0") != "1"
+    # https://github.com/oneapi-src/level-zero/issues/28
+    @test isempty(attrs[oneL0.ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE])
+end
 attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS] = true
 @test attrs[oneL0.ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS]
 
