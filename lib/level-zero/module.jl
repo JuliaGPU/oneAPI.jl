@@ -6,25 +6,33 @@ mutable struct ZeModule
     handle::ze_module_handle_t
     device::ZeDevice
 
-    function ZeModule(dev, image)
+    function ZeModule(dev, image; build_flags="")
         log_ref = if isdebug(:ZeModule)
             log_ref = Ref{ze_module_build_log_handle_t}()
         else
             C_NULL
         end
 
-        # compile the module
-        desc_ref = Ref(ze_module_desc_t(
-            ZE_MODULE_DESC_VERSION_CURRENT,
-            ZE_MODULE_FORMAT_IL_SPIRV,
-            sizeof(image),
-            pointer(image),
+        constants = Ref(ze_module_constants_t(
+            0,
             C_NULL,
             C_NULL
         ))
-        handle_ref = Ref{ze_module_handle_t}()
-        zeModuleCreate(dev, desc_ref, handle_ref, log_ref)
-        obj = new(handle_ref[], dev)
+
+        # compile the module
+        GC.@preserve image build_flags constants begin
+            desc_ref = Ref(ze_module_desc_t(
+                ZE_MODULE_DESC_VERSION_CURRENT,
+                ZE_MODULE_FORMAT_IL_SPIRV,
+                sizeof(image),
+                pointer(image),
+                pointer(build_flags),
+                Base.unsafe_convert(Ptr{ze_module_constants_t}, constants)
+            ))
+            handle_ref = Ref{ze_module_handle_t}()
+            zeModuleCreate(dev, desc_ref, handle_ref, log_ref)
+            obj = new(handle_ref[], dev)
+        end
 
         # read the log
         if log_ref !== C_NULL
