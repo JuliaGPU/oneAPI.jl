@@ -26,6 +26,21 @@ debug:
                               Pkg.build();
                               Pkg.test(; coverage=true);'
 
+validation:
+  extends:
+    - .julia:1.5
+    - .test
+  tags:
+    - intel
+  variables:
+    ZE_ENABLE_VALIDATION_LAYER: '1'
+    ZE_ENABLE_PARAMETER_VALIDATION: '1'
+  script:
+    - julia --project -g2 -e 'using Pkg;
+                              Pkg.instantiate();
+                              Pkg.build();
+                              Pkg.test(; coverage=true);'
+
 
 # other tasks
 
