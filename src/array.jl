@@ -175,8 +175,8 @@ end
 
 zeros(T::Type, dims...) = fill!(oneArray{T}(undef, dims...), 0)
 ones(T::Type, dims...) = fill!(oneArray{T}(undef, dims...), 1)
-zeros(dims...) = zeros(Float32, dims...)
-ones(dims...) = ones(Float32, dims...)
+zeros(dims...) = zeros(Float64, dims...)
+ones(dims...) = ones(Float64, dims...)
 fill(v, dims...) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 fill(v, dims::Dims) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 
