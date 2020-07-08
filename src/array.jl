@@ -185,8 +185,3 @@ function Base.fill!(A::oneArray{T}, val) where T
   unsafe_fill!(A.dev, pointer(A), pointer(B), length(A))
   A
 end
-
-
-## GPUArrays interfaces
-
-GPUArrays.device(x::oneArray) = x.dev

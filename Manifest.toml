@@ -32,7 +32,9 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[GPUArrays]]
 deps = ["AbstractFFTs", "Adapt", "LinearAlgebra", "Printf", "Random", "Serialization"]
-git-tree-sha1 = "ae20accf251c6da038fe33cbc2c53d5af7f51344"
+git-tree-sha1 = "9cecac0469693e6af5dff7b4ae172ca7e9e724f0"
+repo-rev = "3b9b11bc65f3444135a267a0b78e07cab7faa2a1"
+repo-url = "https://github.com/JuliaGPU/GPUArrays.jl.git"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 version = "4.0.0"
 

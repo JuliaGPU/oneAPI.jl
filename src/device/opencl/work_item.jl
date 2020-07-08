@@ -10,6 +10,8 @@ export get_work_dim,
 # NOTE: these functions now unsafely truncate to Int to avoid top bit checks.
 #       we should probably use range metadata instead.
 
+# TODO: 1-indexed dimension selection?
+
 get_work_dim() = @builtin_ccall("get_work_dim", Cuint, ()) % Int
 
 get_global_size(dimindx::Integer=0) = @builtin_ccall("get_global_size", Csize_t, (Cuint,), dimindx) % Int

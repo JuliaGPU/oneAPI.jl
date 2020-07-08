@@ -32,6 +32,7 @@ include("compiler.jl")
 include("execution.jl")
 include("memory.jl")
 include("array.jl")
+include("gpuarrays.jl")
 include("reflection.jl")
 
 end
