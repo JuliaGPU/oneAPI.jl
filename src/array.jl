@@ -139,6 +139,12 @@ Base.similar(a::oneArray{T,N}) where {T,N} = oneArray{T,N}(undef, size(a))
 Base.similar(a::oneArray{T}, dims::Base.Dims{N}) where {T,N} = oneArray{T,N}(undef, dims)
 Base.similar(a::oneArray, ::Type{T}, dims::Base.Dims{N}) where {T,N} = oneArray{T,N}(undef, dims)
 
+function Base.copy(a::oneArray{T,N}) where {T,N}
+  buf = device_alloc(a.dev, sizeof(a), Base.datatype_alignment(T))
+  b = oneArray{T,N}(buf, a.dims, a.dev)
+  copyto!(b, a)
+end
+
 
 ## array interface
 
@@ -173,6 +179,17 @@ oneArray{T,N}(xs::oneArray{T,N}) where {T,N} = xs
 ## conversions
 
 Base.convert(::Type{T}, x::T) where T <: oneArray = x
+
+function Base._reshape(parent::oneArray, dims::Dims)
+  n = length(parent)
+  prod(dims) == n || throw(DimensionMismatch("parent has $n elements, which is incompatible with size $dims"))
+  return oneArray{eltype(parent),length(dims)}(parent.buf, dims, parent)
+end
+function Base._reshape(parent::oneArray{T,1}, dims::Tuple{Int}) where T
+  n = length(parent)
+  prod(dims) == n || throw(DimensionMismatch("parent has $n elements, which is incompatible with size $dims"))
+  return parent
+end
 
 
 ## interop with C libraries

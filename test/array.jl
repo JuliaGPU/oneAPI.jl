@@ -17,3 +17,22 @@ import Adapt
   @test collect(oneAPI.fill(0, 2, 2)) == zeros(2, 2)
   @test collect(oneAPI.fill(1, 2, 2)) == ones(2, 2)
 end
+
+@testset "adapt" begin
+  A = rand(Float32, 3, 3)
+  dA = oneArray(A)
+  @test Adapt.adapt(Array, dA) == A
+  @test Adapt.adapt(oneArray, A) isa oneArray
+  @test Array(Adapt.adapt(oneArray, A)) == A
+end
+
+@testset "reshape" begin
+  A = [1 2 3 4
+       5 6 7 8]
+  gA = reshape(oneArray(A),1,8)
+  _A = reshape(A,1,8)
+  _gA = Array(gA)
+  @test all(_A .== _gA)
+  A = [1,2,3,4]
+  gA = reshape(oneArray(A),4)
+end
