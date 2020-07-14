@@ -24,6 +24,7 @@ include("device/array.jl")
 include("device/runtime.jl")
 include("device/opencl/utils.jl")
 include("device/opencl/work_item.jl")
+include("device/opencl/printf.jl")
 include("device/opencl/math.jl")
 
 # host functionality

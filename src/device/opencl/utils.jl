@@ -1,5 +1,5 @@
 
-const opencl_builtins = String[]
+const opencl_builtins = String["printf"]
 
 # OpenCL functions need to be mangled according to the C++ Itanium spec. We implement a very
 # limited version of that spec here, just enough to support OpenCL built-ins.
