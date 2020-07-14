@@ -14,7 +14,7 @@ macro oneapi(ex...)
 
     # group keyword argument
     compiler_kwargs, call_kwargs, other_kwargs =
-        split_kwargs(kwargs, [], [:groups, :items, :queue])
+        split_kwargs(kwargs, [:name], [:groups, :items, :queue])
     if !isempty(other_kwargs)
         key,val = first(other_kwargs).args
         throw(ArgumentError("Unsupported keyword argument '$key'"))
