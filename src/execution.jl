@@ -14,7 +14,7 @@ macro oneapi(ex...)
 
     # group keyword argument
     compiler_kwargs, call_kwargs, other_kwargs =
-        split_kwargs(kwargs, [:name], [:groups, :items, :queue])
+        split_kwargs(kwargs, [:name], [:groups, :items, :config, :queue])
     if !isempty(other_kwargs)
         key,val = first(other_kwargs).args
         throw(ArgumentError("Unsupported keyword argument '$key'"))
@@ -129,15 +129,23 @@ function _compile(source::FunctionSpec; kwargs...)
     return HostKernel{source.f,source.tt}(kernel)
 end
 
-@inline function _call(kernel::HostKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
+@inline function _call(kernel::HostKernel, tt, args...; config=nothing, kwargs...)
+    if config !== nothing
+        _call(kernel.fun, tt, args...; kwargs..., config(kernel)...)
+    else
+        _call(kernel.fun, tt, args...; kwargs...)
+    end
+end
+
+@inline function _call(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
                        queue::ZeCommandQueue=global_queue(device()))
     for (i, arg) in enumerate(args)
-        arguments(kernel.fun)[i] = arg
+        arguments(kernel)[i] = arg
     end
 
-    groupsize!(kernel.fun, items)
+    groupsize!(kernel, items)
     execute!(queue) do list
-        append_launch!(list, kernel.fun, groups)
+        append_launch!(list, kernel, groups)
     end
 end
 

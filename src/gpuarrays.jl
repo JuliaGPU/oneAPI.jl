@@ -12,6 +12,18 @@ struct oneArrayBackend <: AbstractGPUBackend end
 
 struct oneKernelContext <: AbstractKernelContext end
 
+function GPUArrays.gpu_call(::oneArrayBackend, f, args, total_threads::Int;
+                            name::Union{String,Nothing})
+    function configurator(kernel)
+        items = suggest_groupsize(kernel.fun, total_threads).x
+        groups = cld(total_threads, items)
+
+        return (items=items, groups=groups)
+    end
+
+    @oneapi config=configurator name=name f(oneKernelContext(), args...)
+end
+
 function GPUArrays.gpu_call(::oneArrayBackend, f, args, threads::Int, blocks::Int;
                             name::Union{String,Nothing})
     @oneapi items=threads groups=blocks name=name f(oneKernelContext(), args...)
