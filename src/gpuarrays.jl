@@ -58,6 +58,11 @@ GPUArrays.griddim(ctx::oneKernelContext) = oneAPI.get_num_groups(0)
     oneDeviceArray(dims, LLVMPtr{T, onePI.AS.Local}(ptr))
 end
 
+# synchronization
+
+@inline GPUArrays.synchronize_threads(::oneKernelContext) = oneAPI.barrier()
+
+
 
 #
 # Host abstractions
