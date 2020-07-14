@@ -40,6 +40,7 @@ include("compiler/reflection.jl")
 # array abstraction
 include("memory.jl")
 include("array.jl")
+include("broadcast.jl")
 include("gpuarrays.jl")
 
 end
