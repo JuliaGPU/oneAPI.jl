@@ -7,21 +7,107 @@ mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
   dims::Dims{N}
 
   dev::ZeDevice
+
+  # ownership
+  parent::Union{Nothing,oneArray}
+  refcount::Int
+  freed::Bool
+
+  # primary array
+  function oneArray{T,N}(buf, dims, dev) where {T,N}
+    obj = new(buf, dims, dev, nothing, 0, false)
+    retain(obj)
+    finalizer(unsafe_free!, obj)
+    return obj
+  end
+
+  # derived array
+  function oneArray{T,N}(buf, dims::Dims{N}, parent::oneArray) where {T,N}
+    self = new(buf, dims, parent.dev, parent, 0, false)
+    retain(self)
+    retain(parent)
+    finalizer(unsafe_free!, self)
+    return self
+  end
+end
+
+function unsafe_free!(xs::oneArray)
+  # this call should only have an effect once, becuase both the user and the GC can call it
+  xs.freed && return
+  _unsafe_free!(xs)
+  xs.freed = true
+  return
+end
+
+function _unsafe_free!(xs::oneArray)
+  @assert xs.refcount >= 0
+  if release(xs)
+    if xs.parent === nothing
+      # primary array with all references gone
+      free(xs.buf)
+    else
+      # derived object
+      _unsafe_free!(xs.parent)
+    end
+  end
+
+  return
+end
+
+@inline function retain(a::oneArray)
+  a.refcount += 1
+  return
+end
+
+@inline function release(a::oneArray)
+  a.refcount -= 1
+  return a.refcount == 0
+end
+
+Base.parent(A::oneArray) = something(A.parent, A)
+
+function Base.dataids(A::oneArray)
+  if A.parent === nothing
+    (UInt(pointer(A)),)
+  else
+    (Base.dataids(parent(A))..., UInt(pointer(A)),)
+  end
+end
+
+function Base.unaliascopy(A::oneArray)
+  if A.parent === nothing
+    copy(A)
+  else
+    offset = pointer(A) - pointer(A.parent)
+    new_parent = Base.unaliascopy(A.parent)
+    typeof(A)(pointer(new_parent) + offset, A.dims, new_parent, A.pooled, A.ctx)
+  end
+end
+
+# optimized alias detection for views
+function Base.mightalias(A::oneArray, B::oneArray)
+    if parent(A) !== parent(B)
+        # We cannot do any better than the usual dataids check
+        return invoke(Base.mightalias, Tuple{AbstractArray, AbstractArray}, A, B)
+    end
+
+    rA = pointer(A):pointer(A)+sizeof(A)
+    rB = pointer(B):pointer(B)+sizeof(B)
+    return first(rA) <= first(rB) < last(rA) || first(rB) <= first(rA) < last(rB)
 end
 
 
-## constructors
+## convenience constructors
+
+oneVector{T} = oneArray{T,1}
+oneMatrix{T} = oneArray{T,2}
+oneVecOrMat{T} = Union{oneVector{T},oneMatrix{T}}
 
 # type and dimensionality specified, accepting dims as tuples of Ints
 function oneArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N}
     dev = device()
     buf = device_alloc(dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
-
-    obj = oneArray{T,N}(buf, dims, dev)
-    finalizer(obj) do obj
-        free(buf)
-    end
-    return obj
+    oneArray{T,N}(buf, dims, dev)
 end
 
 # type and dimensionality specified, accepting dims as series of Ints
@@ -34,6 +120,20 @@ oneArray{T}(::UndefInitializer, dims::Integer...) where {T} =
 
 # empty vector constructor
 oneArray{T,1}() where {T} = oneArray{T,1}(undef, 0)
+
+# do-block constructors
+for (ctor, tvars) in (:oneArray => (), :(oneArray{T}) => (:T,), :(oneArray{T,N}) => (:T, :N))
+  @eval begin
+    function $ctor(f::Function, args...) where {$(tvars...)}
+      xs = $ctor(args...)
+      try
+        f(xs)
+      finally
+        unsafe_free!(xs)
+      end
+    end
+  end
+end
 
 Base.similar(a::oneArray{T,N}) where {T,N} = oneArray{T,N}(undef, size(a))
 Base.similar(a::oneArray{T}, dims::Base.Dims{N}) where {T,N} = oneArray{T,N}(undef, dims)

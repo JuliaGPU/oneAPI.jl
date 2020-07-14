@@ -72,7 +72,5 @@ GPUArrays.device(A::oneArray) = A.dev
 
 GPUArrays.backend(::Type{<:oneArray}) = oneArrayBackend()
 
-# TODO: ownership
-# TODO: make this `dims::Dims{N}`
 GPUArrays.unsafe_reinterpret(::Type{T}, A::oneArray, size::NTuple{N, Integer}) where {T, N} =
-  oneArray{T,N}(A.buf, size, A.dev)
+  oneArray{T,N}(A.buf, size, A)
