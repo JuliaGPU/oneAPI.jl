@@ -13,12 +13,12 @@ using SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll
 
 export oneL0
 
-# libraries
+# core library
 include("../lib/utils/APIUtils.jl")
 include("../lib/level-zero/oneL0.jl")
 using .oneL0
 
-# device functionality
+# device functionality (needs to be loaded first, because of generated functions)
 include("device/pointer.jl")
 include("device/array.jl")
 include("device/runtime.jl")
@@ -29,13 +29,17 @@ include("device/opencl/memory.jl")
 include("device/opencl/printf.jl")
 include("device/opencl/math.jl")
 
-# host functionality
+# essential stuff
 include("context.jl")
-include("compiler.jl")
-include("execution.jl")
+
+# compiler implementation
+include("compiler/gpucompiler.jl")
+include("compiler/execution.jl")
+include("compiler/reflection.jl")
+
+# array abstraction
 include("memory.jl")
 include("array.jl")
 include("gpuarrays.jl")
-include("reflection.jl")
 
 end
