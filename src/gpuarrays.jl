@@ -43,6 +43,12 @@ GPUArrays.blockdim(ctx::oneKernelContext) = oneAPI.get_local_size(0)
 GPUArrays.threadidx(ctx::oneKernelContext) = oneAPI.get_local_id(0)
 GPUArrays.griddim(ctx::oneKernelContext) = oneAPI.get_num_groups(0)
 
+# math
+
+@inline GPUArrays.cos(ctx::oneKernelContext, x) = oneAPI.cos(x)
+@inline GPUArrays.sin(ctx::oneKernelContext, x) = oneAPI.sin(x)
+@inline GPUArrays.sqrt(ctx::oneKernelContext, x) = oneAPI.sqrt(x)
+@inline GPUArrays.log(ctx::oneKernelContext, x) = oneAPI.log(x)
 
 
 #
