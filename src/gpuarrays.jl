@@ -41,7 +41,7 @@ end
 GPUArrays.blockidx(ctx::oneKernelContext) = oneAPI.get_group_id(0)
 GPUArrays.blockdim(ctx::oneKernelContext) = oneAPI.get_local_size(0)
 GPUArrays.threadidx(ctx::oneKernelContext) = oneAPI.get_local_id(0)
-GPUArrays.griddim(ctx::oneKernelContext) = CUDA.get_num_groups(0)
+GPUArrays.griddim(ctx::oneKernelContext) = oneAPI.get_num_groups(0)
 
 
 
