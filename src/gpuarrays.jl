@@ -50,6 +50,14 @@ GPUArrays.griddim(ctx::oneKernelContext) = oneAPI.get_num_groups(0)
 @inline GPUArrays.sqrt(ctx::oneKernelContext, x) = oneAPI.sqrt(x)
 @inline GPUArrays.log(ctx::oneKernelContext, x) = oneAPI.log(x)
 
+# memory
+
+@inline function GPUArrays.LocalMemory(::oneKernelContext, ::Type{T}, ::Val{dims}, ::Val{id}
+                                      ) where {T, dims, id}
+    ptr = oneAPI.emit_localmemory(Val(id), T, Val(prod(dims)))
+    oneDeviceArray(dims, LLVMPtr{T, onePI.AS.Local}(ptr))
+end
+
 
 #
 # Host abstractions
