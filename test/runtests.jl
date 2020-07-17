@@ -18,5 +18,6 @@ oneAPI.allowscalar(false)
 
 include("level-zero.jl")
 include("array.jl")
+include("examples.jl")
 
 end
