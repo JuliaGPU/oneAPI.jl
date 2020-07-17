@@ -40,9 +40,9 @@ version = "4.0.0"
 
 [[GPUCompiler]]
 deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "dfcab904fb0486390cc4cbbb59f6fe1e8e6bc4a6"
+git-tree-sha1 = "6f46f295e8e504fce363caf2a28a2a56270681c0"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.5.0"
+version = "0.5.3"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -74,9 +74,9 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[NEO_jll]]
 deps = ["Libdl", "Pkg", "gmmlib_jll", "libigc_jll"]
-git-tree-sha1 = "660ee0df50083621d5d4872efa6b029a89a3a1f3"
+git-tree-sha1 = "f804ebd8055056a78d928810b927ffa34c89e1dc"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
-version = "20.24.17065+0"
+version = "20.27.17231+0"
 
 [[OrderedCollections]]
 git-tree-sha1 = "293b70ac1780f9584c89268a6e2a560d938a7065"
@@ -135,15 +135,15 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[gmmlib_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "0e73c0c39bfafebc52e2d523a1e99aefe6cce73d"
+git-tree-sha1 = "7c26d20f758ce9c52f1911ac329af8e732902b31"
 uuid = "09858cae-167c-5acb-9302-fddc6874d481"
-version = "20.1.1+3"
+version = "20.2.2+0"
 
 [[libigc_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "b94744860a1ae034a28324275b24795aef6ba803"
+git-tree-sha1 = "95781de56286893dcbb346cb9472d7c41f861ead"
 uuid = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-version = "1.0.4154+0"
+version = "1.0.4241+0"
 
 [[oneAPI_Level_Zero_jll]]
 deps = ["Libdl", "NEO_jll", "Pkg"]
