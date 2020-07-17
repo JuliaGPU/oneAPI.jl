@@ -30,7 +30,7 @@ macro oneapi(ex...)
         quote
             GC.@preserve $(vars...) begin
                 local $kernel_args = map($kernel_convert, ($(var_exprs...),))
-                local $kernel_tt = Tuple{Core.Typeof.($kernel_args)...}
+                local $kernel_tt = Tuple{map(Core.Typeof, $kernel_args)...}
                 local $kernel = $compile($f, $kernel_tt; $(compiler_kwargs...))
                 $kernel($kernel_args...; $(call_kwargs...))
             end
