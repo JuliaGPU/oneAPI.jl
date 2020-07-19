@@ -104,9 +104,9 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[SPIRV_LLVM_Translator_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "9ff6a3f54f15b678a300d80afef4afc4fb18e8ad"
+git-tree-sha1 = "5dbe75cd9371c20fd4274382eedec410d2b41af8"
 uuid = "4a5d46fc-d8cf-5151-a261-86b458210efb"
-version = "9.0.0+1"
+version = "8.0.0+1"
 
 [[SPIRV_Tools_jll]]
 deps = ["Libdl", "Pkg"]
