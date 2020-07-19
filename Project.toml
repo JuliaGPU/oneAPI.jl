@@ -17,6 +17,7 @@ oneAPI_Level_Zero_jll = "0038a6a5-a77d-50b4-8f67-3bd55e463950"
 
 [compat]
 Adapt = "2.0"
+CEnum = "0.4"
 GPUCompiler = "0.5"
 LLVM = "2"
 julia = "1.5"
