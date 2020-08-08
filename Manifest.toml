@@ -22,9 +22,9 @@ version = "0.4.1"
 
 [[DataStructures]]
 deps = ["InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "edad9434967fdc0a2631a65d902228400642120c"
+git-tree-sha1 = "88d48e133e6d3dd68183309877eac74393daa7eb"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.17.19"
+version = "0.17.20"
 
 [[Dates]]
 deps = ["Printf"]
@@ -38,9 +38,9 @@ version = "5.0.0"
 
 [[GPUCompiler]]
 deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "6f46f295e8e504fce363caf2a28a2a56270681c0"
+git-tree-sha1 = "d6db068d8373bb45ac17e14744cc1d3681d0dbc7"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.5.3"
+version = "0.5.5"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
