@@ -4,7 +4,7 @@
 
 @checked function zeInit(flags)
     ccall((:zeInit, libze_loader), ze_result_t,
-          (ze_init_flag_t,),
+          (ze_init_flags_t,),
           flags)
 end
 
@@ -26,16 +26,16 @@ end
           hDriver, pDriverProperties)
 end
 
-@checked function zeDriverGetIPCProperties(hDriver, pIPCProperties)
-    ccall((:zeDriverGetIPCProperties, libze_loader), ze_result_t,
+@checked function zeDriverGetIpcProperties(hDriver, pIpcProperties)
+    ccall((:zeDriverGetIpcProperties, libze_loader), ze_result_t,
           (ze_driver_handle_t, Ptr{ze_driver_ipc_properties_t}),
-          hDriver, pIPCProperties)
+          hDriver, pIpcProperties)
 end
 
-@checked function zeDriverGetExtensionFunctionAddress(hDriver, pFuncName, pfunc)
-    ccall((:zeDriverGetExtensionFunctionAddress, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Cstring, Ptr{Ptr{Cvoid}}),
-          hDriver, pFuncName, pfunc)
+@checked function zeDriverGetExtensionProperties(hDriver, pCount, pExtensionProperties)
+    ccall((:zeDriverGetExtensionProperties, libze_loader), ze_result_t,
+          (ze_driver_handle_t, Ptr{UInt32}, Ptr{ze_driver_extension_properties_t}),
+          hDriver, pCount, pExtensionProperties)
 end
 
 @checked function zeDeviceGet(hDriver, pCount, phDevices)
@@ -62,10 +62,17 @@ end
           hDevice, pComputeProperties)
 end
 
-@checked function zeDeviceGetKernelProperties(hDevice, pKernelProperties)
-    ccall((:zeDeviceGetKernelProperties, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_device_kernel_properties_t}),
-          hDevice, pKernelProperties)
+@checked function zeDeviceGetModuleProperties(hDevice, pModuleProperties)
+    ccall((:zeDeviceGetModuleProperties, libze_loader), ze_result_t,
+          (ze_device_handle_t, Ptr{ze_device_module_properties_t}),
+          hDevice, pModuleProperties)
+end
+
+@checked function zeDeviceGetCommandQueueGroupProperties(hDevice, pCount,
+                                                         pCommandQueueGroupProperties)
+    ccall((:zeDeviceGetCommandQueueGroupProperties, libze_loader), ze_result_t,
+          (ze_device_handle_t, Ptr{UInt32}, Ptr{ze_command_queue_group_properties_t}),
+          hDevice, pCount, pCommandQueueGroupProperties)
 end
 
 @checked function zeDeviceGetMemoryProperties(hDevice, pCount, pMemProperties)
@@ -80,16 +87,22 @@ end
           hDevice, pMemAccessProperties)
 end
 
-@checked function zeDeviceGetCacheProperties(hDevice, pCacheProperties)
+@checked function zeDeviceGetCacheProperties(hDevice, pCount, pCacheProperties)
     ccall((:zeDeviceGetCacheProperties, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_device_cache_properties_t}),
-          hDevice, pCacheProperties)
+          (ze_device_handle_t, Ptr{UInt32}, Ptr{ze_device_cache_properties_t}),
+          hDevice, pCount, pCacheProperties)
 end
 
 @checked function zeDeviceGetImageProperties(hDevice, pImageProperties)
     ccall((:zeDeviceGetImageProperties, libze_loader), ze_result_t,
           (ze_device_handle_t, Ptr{ze_device_image_properties_t}),
           hDevice, pImageProperties)
+end
+
+@checked function zeDeviceGetExternalMemoryProperties(hDevice, pExternalMemoryProperties)
+    ccall((:zeDeviceGetExternalMemoryProperties, libze_loader), ze_result_t,
+          (ze_device_handle_t, Ptr{ze_device_external_memory_properties_t}),
+          hDevice, pExternalMemoryProperties)
 end
 
 @checked function zeDeviceGetP2PProperties(hDevice, hPeerDevice, pP2PProperties)
@@ -104,17 +117,35 @@ end
           hDevice, hPeerDevice, value)
 end
 
-@checked function zeDeviceSetLastLevelCacheConfig(hDevice, CacheConfig)
-    ccall((:zeDeviceSetLastLevelCacheConfig, libze_loader), ze_result_t,
-          (ze_device_handle_t, ze_cache_config_t),
-          hDevice, CacheConfig)
+@checked function zeDeviceGetStatus(hDevice)
+    ccall((:zeDeviceGetStatus, libze_loader), ze_result_t,
+          (ze_device_handle_t,),
+          hDevice)
 end
 
-@checked function zeCommandQueueCreate(hDevice, desc, phCommandQueue)
+@checked function zeContextCreate(hDriver, desc, phContext)
+    ccall((:zeContextCreate, libze_loader), ze_result_t,
+          (ze_driver_handle_t, Ptr{ze_context_desc_t}, Ptr{ze_context_handle_t}),
+          hDriver, desc, phContext)
+end
+
+@checked function zeContextDestroy(hContext)
+    ccall((:zeContextDestroy, libze_loader), ze_result_t,
+          (ze_context_handle_t,),
+          hContext)
+end
+
+@checked function zeContextGetStatus(hContext)
+    ccall((:zeContextGetStatus, libze_loader), ze_result_t,
+          (ze_context_handle_t,),
+          hContext)
+end
+
+@checked function zeCommandQueueCreate(hContext, hDevice, desc, phCommandQueue)
     ccall((:zeCommandQueueCreate, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_command_queue_desc_t},
+          (ze_context_handle_t, ze_device_handle_t, Ptr{ze_command_queue_desc_t},
            Ptr{ze_command_queue_handle_t}),
-          hDevice, desc, phCommandQueue)
+          hContext, hDevice, desc, phCommandQueue)
 end
 
 @checked function zeCommandQueueDestroy(hCommandQueue)
@@ -133,20 +164,22 @@ end
 
 @checked function zeCommandQueueSynchronize(hCommandQueue, timeout)
     ccall((:zeCommandQueueSynchronize, libze_loader), ze_result_t,
-          (ze_command_queue_handle_t, UInt32),
+          (ze_command_queue_handle_t, UInt64),
           hCommandQueue, timeout)
 end
 
-@checked function zeCommandListCreate(hDevice, desc, phCommandList)
+@checked function zeCommandListCreate(hContext, hDevice, desc, phCommandList)
     ccall((:zeCommandListCreate, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_command_list_desc_t}, Ptr{ze_command_list_handle_t}),
-          hDevice, desc, phCommandList)
+          (ze_context_handle_t, ze_device_handle_t, Ptr{ze_command_list_desc_t},
+           Ptr{ze_command_list_handle_t}),
+          hContext, hDevice, desc, phCommandList)
 end
 
-@checked function zeCommandListCreateImmediate(hDevice, altdesc, phCommandList)
+@checked function zeCommandListCreateImmediate(hContext, hDevice, altdesc, phCommandList)
     ccall((:zeCommandListCreateImmediate, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_command_queue_desc_t}, Ptr{ze_command_list_handle_t}),
-          hDevice, altdesc, phCommandList)
+          (ze_context_handle_t, ze_device_handle_t, Ptr{ze_command_queue_desc_t},
+           Ptr{ze_command_list_handle_t}),
+          hContext, hDevice, altdesc, phCommandList)
 end
 
 @checked function zeCommandListDestroy(hCommandList)
@@ -167,22 +200,13 @@ end
           hCommandList)
 end
 
-@checked function zeImageGetProperties(hDevice, desc, pImageProperties)
-    ccall((:zeImageGetProperties, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_image_desc_t}, Ptr{ze_image_properties_t}),
-          hDevice, desc, pImageProperties)
-end
-
-@checked function zeImageCreate(hDevice, desc, phImage)
-    ccall((:zeImageCreate, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_image_desc_t}, Ptr{ze_image_handle_t}),
-          hDevice, desc, phImage)
-end
-
-@checked function zeImageDestroy(hImage)
-    ccall((:zeImageDestroy, libze_loader), ze_result_t,
-          (ze_image_handle_t,),
-          hImage)
+@checked function zeCommandListAppendWriteGlobalTimestamp(hCommandList, dstptr,
+                                                          hSignalEvent, numWaitEvents,
+                                                          phWaitEvents)
+    ccall((:zeCommandListAppendWriteGlobalTimestamp, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, Ptr{UInt64}, ze_event_handle_t, UInt32,
+           Ptr{ze_event_handle_t}),
+          hCommandList, dstptr, hSignalEvent, numWaitEvents, phWaitEvents)
 end
 
 @checked function zeCommandListAppendBarrier(hCommandList, hSignalEvent, numWaitEvents,
@@ -203,23 +227,335 @@ end
           phWaitEvents)
 end
 
-@checked function zeDeviceSystemBarrier(hDevice)
-    ccall((:zeDeviceSystemBarrier, libze_loader), ze_result_t,
-          (ze_device_handle_t,),
-          hDevice)
+@checked function zeContextSystemBarrier(hContext, hDevice)
+    ccall((:zeContextSystemBarrier, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t),
+          hContext, hDevice)
 end
 
-@checked function zeModuleCreate(hDevice, desc, phModule, phBuildLog)
+@checked function zeCommandListAppendMemoryCopy(hCommandList, dstptr, srcptr, size,
+                                                hSignalEvent, numWaitEvents, phWaitEvents)
+    ccall((:zeCommandListAppendMemoryCopy, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{Cvoid}, Csize_t, ze_event_handle_t,
+           UInt32, Ptr{ze_event_handle_t}),
+          hCommandList, dstptr, srcptr, size, hSignalEvent, numWaitEvents, phWaitEvents)
+end
+
+@checked function zeCommandListAppendMemoryFill(hCommandList, ptr, pattern, pattern_size,
+                                                size, hSignalEvent, numWaitEvents,
+                                                phWaitEvents)
+    ccall((:zeCommandListAppendMemoryFill, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{Cvoid}, Csize_t, Csize_t,
+           ze_event_handle_t, UInt32, Ptr{ze_event_handle_t}),
+          hCommandList, ptr, pattern, pattern_size, size, hSignalEvent, numWaitEvents,
+          phWaitEvents)
+end
+
+@checked function zeCommandListAppendMemoryCopyRegion(hCommandList, dstptr, dstRegion,
+                                                      dstPitch, dstSlicePitch, srcptr,
+                                                      srcRegion, srcPitch, srcSlicePitch,
+                                                      hSignalEvent, numWaitEvents,
+                                                      phWaitEvents)
+    ccall((:zeCommandListAppendMemoryCopyRegion, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{ze_copy_region_t}, UInt32, UInt32,
+           Ptr{Cvoid}, Ptr{ze_copy_region_t}, UInt32, UInt32, ze_event_handle_t, UInt32,
+           Ptr{ze_event_handle_t}),
+          hCommandList, dstptr, dstRegion, dstPitch, dstSlicePitch, srcptr, srcRegion,
+          srcPitch, srcSlicePitch, hSignalEvent, numWaitEvents, phWaitEvents)
+end
+
+@checked function zeCommandListAppendMemoryCopyFromContext(hCommandList, dstptr,
+                                                           hContextSrc, srcptr, size,
+                                                           hSignalEvent, numWaitEvents,
+                                                           phWaitEvents)
+    ccall((:zeCommandListAppendMemoryCopyFromContext, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, Ptr{Cvoid}, ze_context_handle_t, Ptr{Cvoid}, Csize_t,
+           ze_event_handle_t, UInt32, Ptr{ze_event_handle_t}),
+          hCommandList, dstptr, hContextSrc, srcptr, size, hSignalEvent, numWaitEvents,
+          phWaitEvents)
+end
+
+@checked function zeCommandListAppendImageCopy(hCommandList, hDstImage, hSrcImage,
+                                               hSignalEvent, numWaitEvents, phWaitEvents)
+    ccall((:zeCommandListAppendImageCopy, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, ze_image_handle_t, ze_image_handle_t,
+           ze_event_handle_t, UInt32, Ptr{ze_event_handle_t}),
+          hCommandList, hDstImage, hSrcImage, hSignalEvent, numWaitEvents, phWaitEvents)
+end
+
+@checked function zeCommandListAppendImageCopyRegion(hCommandList, hDstImage, hSrcImage,
+                                                     pDstRegion, pSrcRegion, hSignalEvent,
+                                                     numWaitEvents, phWaitEvents)
+    ccall((:zeCommandListAppendImageCopyRegion, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, ze_image_handle_t, ze_image_handle_t,
+           Ptr{ze_image_region_t}, Ptr{ze_image_region_t}, ze_event_handle_t, UInt32,
+           Ptr{ze_event_handle_t}),
+          hCommandList, hDstImage, hSrcImage, pDstRegion, pSrcRegion, hSignalEvent,
+          numWaitEvents, phWaitEvents)
+end
+
+@checked function zeCommandListAppendImageCopyToMemory(hCommandList, dstptr, hSrcImage,
+                                                       pSrcRegion, hSignalEvent,
+                                                       numWaitEvents, phWaitEvents)
+    ccall((:zeCommandListAppendImageCopyToMemory, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, Ptr{Cvoid}, ze_image_handle_t,
+           Ptr{ze_image_region_t}, ze_event_handle_t, UInt32, Ptr{ze_event_handle_t}),
+          hCommandList, dstptr, hSrcImage, pSrcRegion, hSignalEvent, numWaitEvents,
+          phWaitEvents)
+end
+
+@checked function zeCommandListAppendImageCopyFromMemory(hCommandList, hDstImage, srcptr,
+                                                         pDstRegion, hSignalEvent,
+                                                         numWaitEvents, phWaitEvents)
+    ccall((:zeCommandListAppendImageCopyFromMemory, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, ze_image_handle_t, Ptr{Cvoid},
+           Ptr{ze_image_region_t}, ze_event_handle_t, UInt32, Ptr{ze_event_handle_t}),
+          hCommandList, hDstImage, srcptr, pDstRegion, hSignalEvent, numWaitEvents,
+          phWaitEvents)
+end
+
+@checked function zeCommandListAppendMemoryPrefetch(hCommandList, ptr, size)
+    ccall((:zeCommandListAppendMemoryPrefetch, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, Ptr{Cvoid}, Csize_t),
+          hCommandList, ptr, size)
+end
+
+@checked function zeCommandListAppendMemAdvise(hCommandList, hDevice, ptr, size, advice)
+    ccall((:zeCommandListAppendMemAdvise, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, ze_device_handle_t, Ptr{Cvoid}, Csize_t,
+           ze_memory_advice_t),
+          hCommandList, hDevice, ptr, size, advice)
+end
+
+@checked function zeEventPoolCreate(hContext, desc, numDevices, phDevices, phEventPool)
+    ccall((:zeEventPoolCreate, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{ze_event_pool_desc_t}, UInt32,
+           Ptr{ze_device_handle_t}, Ptr{ze_event_pool_handle_t}),
+          hContext, desc, numDevices, phDevices, phEventPool)
+end
+
+@checked function zeEventPoolDestroy(hEventPool)
+    ccall((:zeEventPoolDestroy, libze_loader), ze_result_t,
+          (ze_event_pool_handle_t,),
+          hEventPool)
+end
+
+@checked function zeEventCreate(hEventPool, desc, phEvent)
+    ccall((:zeEventCreate, libze_loader), ze_result_t,
+          (ze_event_pool_handle_t, Ptr{ze_event_desc_t}, Ptr{ze_event_handle_t}),
+          hEventPool, desc, phEvent)
+end
+
+@checked function zeEventDestroy(hEvent)
+    ccall((:zeEventDestroy, libze_loader), ze_result_t,
+          (ze_event_handle_t,),
+          hEvent)
+end
+
+@checked function zeEventPoolGetIpcHandle(hEventPool, phIpc)
+    ccall((:zeEventPoolGetIpcHandle, libze_loader), ze_result_t,
+          (ze_event_pool_handle_t, Ptr{ze_ipc_event_pool_handle_t}),
+          hEventPool, phIpc)
+end
+
+@checked function zeEventPoolOpenIpcHandle(hContext, hIpc, phEventPool)
+    ccall((:zeEventPoolOpenIpcHandle, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_ipc_event_pool_handle_t, Ptr{ze_event_pool_handle_t}),
+          hContext, hIpc, phEventPool)
+end
+
+@checked function zeEventPoolCloseIpcHandle(hEventPool)
+    ccall((:zeEventPoolCloseIpcHandle, libze_loader), ze_result_t,
+          (ze_event_pool_handle_t,),
+          hEventPool)
+end
+
+@checked function zeCommandListAppendSignalEvent(hCommandList, hEvent)
+    ccall((:zeCommandListAppendSignalEvent, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, ze_event_handle_t),
+          hCommandList, hEvent)
+end
+
+@checked function zeCommandListAppendWaitOnEvents(hCommandList, numEvents, phEvents)
+    ccall((:zeCommandListAppendWaitOnEvents, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, UInt32, Ptr{ze_event_handle_t}),
+          hCommandList, numEvents, phEvents)
+end
+
+@checked function zeEventHostSignal(hEvent)
+    ccall((:zeEventHostSignal, libze_loader), ze_result_t,
+          (ze_event_handle_t,),
+          hEvent)
+end
+
+@checked function zeEventHostSynchronize(hEvent, timeout)
+    ccall((:zeEventHostSynchronize, libze_loader), ze_result_t,
+          (ze_event_handle_t, UInt64),
+          hEvent, timeout)
+end
+
+@checked function zeEventQueryStatus(hEvent)
+    ccall((:zeEventQueryStatus, libze_loader), ze_result_t,
+          (ze_event_handle_t,),
+          hEvent)
+end
+
+@checked function zeCommandListAppendEventReset(hCommandList, hEvent)
+    ccall((:zeCommandListAppendEventReset, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, ze_event_handle_t),
+          hCommandList, hEvent)
+end
+
+@checked function zeEventHostReset(hEvent)
+    ccall((:zeEventHostReset, libze_loader), ze_result_t,
+          (ze_event_handle_t,),
+          hEvent)
+end
+
+@checked function zeEventQueryKernelTimestamp(hEvent, dstptr)
+    ccall((:zeEventQueryKernelTimestamp, libze_loader), ze_result_t,
+          (ze_event_handle_t, Ptr{ze_kernel_timestamp_result_t}),
+          hEvent, dstptr)
+end
+
+@checked function zeCommandListAppendQueryKernelTimestamps(hCommandList, numEvents,
+                                                           phEvents, dstptr, pOffsets,
+                                                           hSignalEvent, numWaitEvents,
+                                                           phWaitEvents)
+    ccall((:zeCommandListAppendQueryKernelTimestamps, libze_loader), ze_result_t,
+          (ze_command_list_handle_t, UInt32, Ptr{ze_event_handle_t}, Ptr{Cvoid},
+           Ptr{Csize_t}, ze_event_handle_t, UInt32, Ptr{ze_event_handle_t}),
+          hCommandList, numEvents, phEvents, dstptr, pOffsets, hSignalEvent, numWaitEvents,
+          phWaitEvents)
+end
+
+@checked function zeFenceCreate(hCommandQueue, desc, phFence)
+    ccall((:zeFenceCreate, libze_loader), ze_result_t,
+          (ze_command_queue_handle_t, Ptr{ze_fence_desc_t}, Ptr{ze_fence_handle_t}),
+          hCommandQueue, desc, phFence)
+end
+
+@checked function zeFenceDestroy(hFence)
+    ccall((:zeFenceDestroy, libze_loader), ze_result_t,
+          (ze_fence_handle_t,),
+          hFence)
+end
+
+@checked function zeFenceHostSynchronize(hFence, timeout)
+    ccall((:zeFenceHostSynchronize, libze_loader), ze_result_t,
+          (ze_fence_handle_t, UInt64),
+          hFence, timeout)
+end
+
+@checked function zeFenceQueryStatus(hFence)
+    ccall((:zeFenceQueryStatus, libze_loader), ze_result_t,
+          (ze_fence_handle_t,),
+          hFence)
+end
+
+@checked function zeFenceReset(hFence)
+    ccall((:zeFenceReset, libze_loader), ze_result_t,
+          (ze_fence_handle_t,),
+          hFence)
+end
+
+@checked function zeImageGetProperties(hDevice, desc, pImageProperties)
+    ccall((:zeImageGetProperties, libze_loader), ze_result_t,
+          (ze_device_handle_t, Ptr{ze_image_desc_t}, Ptr{ze_image_properties_t}),
+          hDevice, desc, pImageProperties)
+end
+
+@checked function zeImageCreate(hContext, hDevice, desc, phImage)
+    ccall((:zeImageCreate, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t, Ptr{ze_image_desc_t},
+           Ptr{ze_image_handle_t}),
+          hContext, hDevice, desc, phImage)
+end
+
+@checked function zeImageDestroy(hImage)
+    ccall((:zeImageDestroy, libze_loader), ze_result_t,
+          (ze_image_handle_t,),
+          hImage)
+end
+
+@checked function zeMemAllocShared(hContext, device_desc, host_desc, size, alignment,
+                                   hDevice, pptr)
+    ccall((:zeMemAllocShared, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{ze_device_mem_alloc_desc_t},
+           Ptr{ze_host_mem_alloc_desc_t}, Csize_t, Csize_t, ze_device_handle_t,
+           Ptr{Ptr{Cvoid}}),
+          hContext, device_desc, host_desc, size, alignment, hDevice, pptr)
+end
+
+@checked function zeMemAllocDevice(hContext, device_desc, size, alignment, hDevice, pptr)
+    ccall((:zeMemAllocDevice, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{ze_device_mem_alloc_desc_t}, Csize_t, Csize_t,
+           ze_device_handle_t, Ptr{Ptr{Cvoid}}),
+          hContext, device_desc, size, alignment, hDevice, pptr)
+end
+
+@checked function zeMemAllocHost(hContext, host_desc, size, alignment, pptr)
+    ccall((:zeMemAllocHost, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{ze_host_mem_alloc_desc_t}, Csize_t, Csize_t,
+           Ptr{Ptr{Cvoid}}),
+          hContext, host_desc, size, alignment, pptr)
+end
+
+@checked function zeMemFree(hContext, ptr)
+    ccall((:zeMemFree, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}),
+          hContext, ptr)
+end
+
+@checked function zeMemGetAllocProperties(hContext, ptr, pMemAllocProperties, phDevice)
+    ccall((:zeMemGetAllocProperties, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Ptr{ze_memory_allocation_properties_t},
+           Ptr{ze_device_handle_t}),
+          hContext, ptr, pMemAllocProperties, phDevice)
+end
+
+@checked function zeMemGetAddressRange(hContext, ptr, pBase, pSize)
+    ccall((:zeMemGetAddressRange, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Ptr{Ptr{Cvoid}}, Ptr{Csize_t}),
+          hContext, ptr, pBase, pSize)
+end
+
+@checked function zeMemGetIpcHandle(hContext, ptr, pIpcHandle)
+    ccall((:zeMemGetIpcHandle, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Ptr{ze_ipc_mem_handle_t}),
+          hContext, ptr, pIpcHandle)
+end
+
+@checked function zeMemOpenIpcHandle(hContext, hDevice, handle, flags, pptr)
+    ccall((:zeMemOpenIpcHandle, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t, ze_ipc_mem_handle_t,
+           ze_ipc_memory_flags_t, Ptr{Ptr{Cvoid}}),
+          hContext, hDevice, handle, flags, pptr)
+end
+
+@checked function zeMemCloseIpcHandle(hContext, ptr)
+    ccall((:zeMemCloseIpcHandle, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}),
+          hContext, ptr)
+end
+
+@checked function zeModuleCreate(hContext, hDevice, desc, phModule, phBuildLog)
     ccall((:zeModuleCreate, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_module_desc_t}, Ptr{ze_module_handle_t},
-           Ptr{ze_module_build_log_handle_t}),
-          hDevice, desc, phModule, phBuildLog)
+          (ze_context_handle_t, ze_device_handle_t, Ptr{ze_module_desc_t},
+           Ptr{ze_module_handle_t}, Ptr{ze_module_build_log_handle_t}),
+          hContext, hDevice, desc, phModule, phBuildLog)
 end
 
 @checked function zeModuleDestroy(hModule)
     ccall((:zeModuleDestroy, libze_loader), ze_result_t,
           (ze_module_handle_t,),
           hModule)
+end
+
+@checked function zeModuleDynamicLink(numModules, phModules, phLinkLog)
+    ccall((:zeModuleDynamicLink, libze_loader), ze_result_t,
+          (UInt32, Ptr{ze_module_handle_t}, Ptr{ze_module_build_log_handle_t}),
+          numModules, phModules, phLinkLog)
 end
 
 @checked function zeModuleBuildLogDestroy(hModuleBuildLog)
@@ -240,16 +576,22 @@ end
           hModule, pSize, pModuleNativeBinary)
 end
 
-@checked function zeModuleGetGlobalPointer(hModule, pGlobalName, pptr)
+@checked function zeModuleGetGlobalPointer(hModule, pGlobalName, pSize, pptr)
     ccall((:zeModuleGetGlobalPointer, libze_loader), ze_result_t,
-          (ze_module_handle_t, Cstring, Ptr{Ptr{Cvoid}}),
-          hModule, pGlobalName, pptr)
+          (ze_module_handle_t, Cstring, Ptr{Csize_t}, Ptr{Ptr{Cvoid}}),
+          hModule, pGlobalName, pSize, pptr)
 end
 
 @checked function zeModuleGetKernelNames(hModule, pCount, pNames)
     ccall((:zeModuleGetKernelNames, libze_loader), ze_result_t,
           (ze_module_handle_t, Ptr{UInt32}, Ptr{Cstring}),
           hModule, pCount, pNames)
+end
+
+@checked function zeModuleGetProperties(hModule, pModuleProperties)
+    ccall((:zeModuleGetProperties, libze_loader), ze_result_t,
+          (ze_module_handle_t, Ptr{ze_module_properties_t}),
+          hModule, pModuleProperties)
 end
 
 @checked function zeKernelCreate(hModule, desc, phKernel)
@@ -297,28 +639,40 @@ end
           hKernel, argIndex, argSize, pArgValue)
 end
 
-@checked function zeKernelSetAttribute(hKernel, attr, size, pValue)
-    ccall((:zeKernelSetAttribute, libze_loader), ze_result_t,
-          (ze_kernel_handle_t, ze_kernel_attribute_t, UInt32, Ptr{Cvoid}),
-          hKernel, attr, size, pValue)
+@checked function zeKernelSetIndirectAccess(hKernel, flags)
+    ccall((:zeKernelSetIndirectAccess, libze_loader), ze_result_t,
+          (ze_kernel_handle_t, ze_kernel_indirect_access_flags_t),
+          hKernel, flags)
 end
 
-@checked function zeKernelGetAttribute(hKernel, attr, pSize, pValue)
-    ccall((:zeKernelGetAttribute, libze_loader), ze_result_t,
-          (ze_kernel_handle_t, ze_kernel_attribute_t, Ptr{UInt32}, Ptr{Cvoid}),
-          hKernel, attr, pSize, pValue)
+@checked function zeKernelGetIndirectAccess(hKernel, pFlags)
+    ccall((:zeKernelGetIndirectAccess, libze_loader), ze_result_t,
+          (ze_kernel_handle_t, Ptr{ze_kernel_indirect_access_flags_t}),
+          hKernel, pFlags)
 end
 
-@checked function zeKernelSetIntermediateCacheConfig(hKernel, CacheConfig)
-    ccall((:zeKernelSetIntermediateCacheConfig, libze_loader), ze_result_t,
-          (ze_kernel_handle_t, ze_cache_config_t),
-          hKernel, CacheConfig)
+@checked function zeKernelGetSourceAttributes(hKernel, pSize, pString)
+    ccall((:zeKernelGetSourceAttributes, libze_loader), ze_result_t,
+          (ze_kernel_handle_t, Ptr{UInt32}, Ptr{Cstring}),
+          hKernel, pSize, pString)
+end
+
+@checked function zeKernelSetCacheConfig(hKernel, flags)
+    ccall((:zeKernelSetCacheConfig, libze_loader), ze_result_t,
+          (ze_kernel_handle_t, ze_cache_config_flags_t),
+          hKernel, flags)
 end
 
 @checked function zeKernelGetProperties(hKernel, pKernelProperties)
     ccall((:zeKernelGetProperties, libze_loader), ze_result_t,
           (ze_kernel_handle_t, Ptr{ze_kernel_properties_t}),
           hKernel, pKernelProperties)
+end
+
+@checked function zeKernelGetName(hKernel, pSize, pName)
+    ccall((:zeKernelGetName, libze_loader), ze_result_t,
+          (ze_kernel_handle_t, Ptr{Csize_t}, Cstring),
+          hKernel, pSize, pName)
 end
 
 @checked function zeCommandListAppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs,
@@ -365,125 +719,35 @@ end
           hSignalEvent, numWaitEvents, phWaitEvents)
 end
 
-@checked function zeDeviceMakeMemoryResident(hDevice, ptr, size)
-    ccall((:zeDeviceMakeMemoryResident, libze_loader), ze_result_t,
-          (ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
-          hDevice, ptr, size)
+@checked function zeContextMakeMemoryResident(hContext, hDevice, ptr, size)
+    ccall((:zeContextMakeMemoryResident, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t, Ptr{Cvoid}, Csize_t),
+          hContext, hDevice, ptr, size)
 end
 
-@checked function zeDeviceEvictMemory(hDevice, ptr, size)
-    ccall((:zeDeviceEvictMemory, libze_loader), ze_result_t,
-          (ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
-          hDevice, ptr, size)
+@checked function zeContextEvictMemory(hContext, hDevice, ptr, size)
+    ccall((:zeContextEvictMemory, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t, Ptr{Cvoid}, Csize_t),
+          hContext, hDevice, ptr, size)
 end
 
-@checked function zeDeviceMakeImageResident(hDevice, hImage)
-    ccall((:zeDeviceMakeImageResident, libze_loader), ze_result_t,
-          (ze_device_handle_t, ze_image_handle_t),
-          hDevice, hImage)
+@checked function zeContextMakeImageResident(hContext, hDevice, hImage)
+    ccall((:zeContextMakeImageResident, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t, ze_image_handle_t),
+          hContext, hDevice, hImage)
 end
 
-@checked function zeDeviceEvictImage(hDevice, hImage)
-    ccall((:zeDeviceEvictImage, libze_loader), ze_result_t,
-          (ze_device_handle_t, ze_image_handle_t),
-          hDevice, hImage)
+@checked function zeContextEvictImage(hContext, hDevice, hImage)
+    ccall((:zeContextEvictImage, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t, ze_image_handle_t),
+          hContext, hDevice, hImage)
 end
 
-@checked function zeEventPoolCreate(hDriver, desc, numDevices, phDevices, phEventPool)
-    ccall((:zeEventPoolCreate, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{ze_event_pool_desc_t}, UInt32, Ptr{ze_device_handle_t},
-           Ptr{ze_event_pool_handle_t}),
-          hDriver, desc, numDevices, phDevices, phEventPool)
-end
-
-@checked function zeEventPoolDestroy(hEventPool)
-    ccall((:zeEventPoolDestroy, libze_loader), ze_result_t,
-          (ze_event_pool_handle_t,),
-          hEventPool)
-end
-
-@checked function zeEventCreate(hEventPool, desc, phEvent)
-    ccall((:zeEventCreate, libze_loader), ze_result_t,
-          (ze_event_pool_handle_t, Ptr{ze_event_desc_t}, Ptr{ze_event_handle_t}),
-          hEventPool, desc, phEvent)
-end
-
-@checked function zeEventDestroy(hEvent)
-    ccall((:zeEventDestroy, libze_loader), ze_result_t,
-          (ze_event_handle_t,),
-          hEvent)
-end
-
-@checked function zeEventPoolGetIpcHandle(hEventPool, phIpc)
-    ccall((:zeEventPoolGetIpcHandle, libze_loader), ze_result_t,
-          (ze_event_pool_handle_t, Ptr{ze_ipc_event_pool_handle_t}),
-          hEventPool, phIpc)
-end
-
-@checked function zeEventPoolOpenIpcHandle(hDriver, hIpc, phEventPool)
-    ccall((:zeEventPoolOpenIpcHandle, libze_loader), ze_result_t,
-          (ze_driver_handle_t, ze_ipc_event_pool_handle_t, Ptr{ze_event_pool_handle_t}),
-          hDriver, hIpc, phEventPool)
-end
-
-@checked function zeEventPoolCloseIpcHandle(hEventPool)
-    ccall((:zeEventPoolCloseIpcHandle, libze_loader), ze_result_t,
-          (ze_event_pool_handle_t,),
-          hEventPool)
-end
-
-@checked function zeCommandListAppendSignalEvent(hCommandList, hEvent)
-    ccall((:zeCommandListAppendSignalEvent, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, ze_event_handle_t),
-          hCommandList, hEvent)
-end
-
-@checked function zeCommandListAppendWaitOnEvents(hCommandList, numEvents, phEvents)
-    ccall((:zeCommandListAppendWaitOnEvents, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, UInt32, Ptr{ze_event_handle_t}),
-          hCommandList, numEvents, phEvents)
-end
-
-@checked function zeEventHostSignal(hEvent)
-    ccall((:zeEventHostSignal, libze_loader), ze_result_t,
-          (ze_event_handle_t,),
-          hEvent)
-end
-
-@checked function zeEventHostSynchronize(hEvent, timeout)
-    ccall((:zeEventHostSynchronize, libze_loader), ze_result_t,
-          (ze_event_handle_t, UInt32),
-          hEvent, timeout)
-end
-
-@checked function zeEventQueryStatus(hEvent)
-    ccall((:zeEventQueryStatus, libze_loader), ze_result_t,
-          (ze_event_handle_t,),
-          hEvent)
-end
-
-@checked function zeCommandListAppendEventReset(hCommandList, hEvent)
-    ccall((:zeCommandListAppendEventReset, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, ze_event_handle_t),
-          hCommandList, hEvent)
-end
-
-@checked function zeEventHostReset(hEvent)
-    ccall((:zeEventHostReset, libze_loader), ze_result_t,
-          (ze_event_handle_t,),
-          hEvent)
-end
-
-@checked function zeEventGetTimestamp(hEvent, timestampType, dstptr)
-    ccall((:zeEventGetTimestamp, libze_loader), ze_result_t,
-          (ze_event_handle_t, ze_event_timestamp_type_t, Ptr{Cvoid}),
-          hEvent, timestampType, dstptr)
-end
-
-@checked function zeSamplerCreate(hDevice, desc, phSampler)
+@checked function zeSamplerCreate(hContext, hDevice, desc, phSampler)
     ccall((:zeSamplerCreate, libze_loader), ze_result_t,
-          (ze_device_handle_t, Ptr{ze_sampler_desc_t}, Ptr{ze_sampler_handle_t}),
-          hDevice, desc, phSampler)
+          (ze_context_handle_t, ze_device_handle_t, Ptr{ze_sampler_desc_t},
+           Ptr{ze_sampler_handle_t}),
+          hContext, hDevice, desc, phSampler)
 end
 
 @checked function zeSamplerDestroy(hSampler)
@@ -492,163 +756,59 @@ end
           hSampler)
 end
 
-@checked function zeDriverAllocSharedMem(hDriver, device_desc, host_desc, size, alignment,
-                                         hDevice, pptr)
-    ccall((:zeDriverAllocSharedMem, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{ze_device_mem_alloc_desc_t},
-           Ptr{ze_host_mem_alloc_desc_t}, Csize_t, Csize_t, ze_device_handle_t,
-           Ptr{Ptr{Cvoid}}),
-          hDriver, device_desc, host_desc, size, alignment, hDevice, pptr)
+@checked function zeVirtualMemReserve(hContext, pStart, size, pptr)
+    ccall((:zeVirtualMemReserve, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Csize_t, Ptr{Ptr{Cvoid}}),
+          hContext, pStart, size, pptr)
 end
 
-@checked function zeDriverAllocDeviceMem(hDriver, device_desc, size, alignment, hDevice,
-                                         pptr)
-    ccall((:zeDriverAllocDeviceMem, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{ze_device_mem_alloc_desc_t}, Csize_t, Csize_t,
-           ze_device_handle_t, Ptr{Ptr{Cvoid}}),
-          hDriver, device_desc, size, alignment, hDevice, pptr)
+@checked function zeVirtualMemFree(hContext, ptr, size)
+    ccall((:zeVirtualMemFree, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Csize_t),
+          hContext, ptr, size)
 end
 
-@checked function zeDriverAllocHostMem(hDriver, host_desc, size, alignment, pptr)
-    ccall((:zeDriverAllocHostMem, libze_loader), ze_result_t,
-          (ze_driver_handle_t, Ptr{ze_host_mem_alloc_desc_t}, Csize_t, Csize_t,
-           Ptr{Ptr{Cvoid}}),
-          hDriver, host_desc, size, alignment, pptr)
+@checked function zeVirtualMemQueryPageSize(hContext, hDevice, size, pagesize)
+    ccall((:zeVirtualMemQueryPageSize, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t, Csize_t, Ptr{Csize_t}),
+          hContext, hDevice, size, pagesize)
 end
 
-@checked function zeDriverFreeMem(hDriver, ptr)
-    ccall((:zeDriverFreeMem, libze_loader), ze_result_t,
-          (ze_driver_handle_t, PtrOrZePtr{Cvoid}),
-          hDriver, ptr)
+@checked function zePhysicalMemCreate(hContext, hDevice, desc, phPhysicalMemory)
+    ccall((:zePhysicalMemCreate, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_device_handle_t, Ptr{ze_physical_mem_desc_t},
+           Ptr{ze_physical_mem_handle_t}),
+          hContext, hDevice, desc, phPhysicalMemory)
 end
 
-@checked function zeDriverGetMemAllocProperties(hDriver, ptr, pMemAllocProperties, phDevice)
-    ccall((:zeDriverGetMemAllocProperties, libze_loader), ze_result_t,
-          (ze_driver_handle_t, PtrOrZePtr{Cvoid}, Ptr{ze_memory_allocation_properties_t},
-           Ptr{ze_device_handle_t}),
-          hDriver, ptr, pMemAllocProperties, phDevice)
+@checked function zePhysicalMemDestroy(hContext, hPhysicalMemory)
+    ccall((:zePhysicalMemDestroy, libze_loader), ze_result_t,
+          (ze_context_handle_t, ze_physical_mem_handle_t),
+          hContext, hPhysicalMemory)
 end
 
-@checked function zeDriverGetMemAddressRange(hDriver, ptr, pBase, pSize)
-    ccall((:zeDriverGetMemAddressRange, libze_loader), ze_result_t,
-          (ze_driver_handle_t, PtrOrZePtr{Cvoid}, Ptr{Ptr{Cvoid}}, Ptr{Csize_t}),
-          hDriver, ptr, pBase, pSize)
+@checked function zeVirtualMemMap(hContext, ptr, size, hPhysicalMemory, offset, access)
+    ccall((:zeVirtualMemMap, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Csize_t, ze_physical_mem_handle_t, Csize_t,
+           ze_memory_access_attribute_t),
+          hContext, ptr, size, hPhysicalMemory, offset, access)
 end
 
-@checked function zeDriverGetMemIpcHandle(hDriver, ptr, pIpcHandle)
-    ccall((:zeDriverGetMemIpcHandle, libze_loader), ze_result_t,
-          (ze_driver_handle_t, PtrOrZePtr{Cvoid}, Ptr{ze_ipc_mem_handle_t}),
-          hDriver, ptr, pIpcHandle)
+@checked function zeVirtualMemUnmap(hContext, ptr, size)
+    ccall((:zeVirtualMemUnmap, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Csize_t),
+          hContext, ptr, size)
 end
 
-@checked function zeDriverOpenMemIpcHandle(hDriver, hDevice, handle, flags, pptr)
-    ccall((:zeDriverOpenMemIpcHandle, libze_loader), ze_result_t,
-          (ze_driver_handle_t, ze_device_handle_t, ze_ipc_mem_handle_t,
-           ze_ipc_memory_flag_t, Ptr{Ptr{Cvoid}}),
-          hDriver, hDevice, handle, flags, pptr)
+@checked function zeVirtualMemSetAccessAttribute(hContext, ptr, size, access)
+    ccall((:zeVirtualMemSetAccessAttribute, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Csize_t, ze_memory_access_attribute_t),
+          hContext, ptr, size, access)
 end
 
-@checked function zeDriverCloseMemIpcHandle(hDriver, ptr)
-    ccall((:zeDriverCloseMemIpcHandle, libze_loader), ze_result_t,
-          (ze_driver_handle_t, PtrOrZePtr{Cvoid}),
-          hDriver, ptr)
-end
-
-@checked function zeFenceCreate(hCommandQueue, desc, phFence)
-    ccall((:zeFenceCreate, libze_loader), ze_result_t,
-          (ze_command_queue_handle_t, Ptr{ze_fence_desc_t}, Ptr{ze_fence_handle_t}),
-          hCommandQueue, desc, phFence)
-end
-
-@checked function zeFenceDestroy(hFence)
-    ccall((:zeFenceDestroy, libze_loader), ze_result_t,
-          (ze_fence_handle_t,),
-          hFence)
-end
-
-@checked function zeFenceHostSynchronize(hFence, timeout)
-    ccall((:zeFenceHostSynchronize, libze_loader), ze_result_t,
-          (ze_fence_handle_t, UInt32),
-          hFence, timeout)
-end
-
-@checked function zeFenceQueryStatus(hFence)
-    ccall((:zeFenceQueryStatus, libze_loader), ze_result_t,
-          (ze_fence_handle_t,),
-          hFence)
-end
-
-@checked function zeFenceReset(hFence)
-    ccall((:zeFenceReset, libze_loader), ze_result_t,
-          (ze_fence_handle_t,),
-          hFence)
-end
-
-@checked function zeCommandListAppendMemoryCopy(hCommandList, dstptr, srcptr, size, hEvent)
-    ccall((:zeCommandListAppendMemoryCopy, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, PtrOrZePtr{Cvoid}, Csize_t, ze_event_handle_t),
-          hCommandList, dstptr, srcptr, size, hEvent)
-end
-
-@checked function zeCommandListAppendMemoryFill(hCommandList, ptr, pattern, pattern_size,
-                                                size, hEvent)
-    ccall((:zeCommandListAppendMemoryFill, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, PtrOrZePtr{Cvoid}, Csize_t, Csize_t,
-           ze_event_handle_t),
-          hCommandList, ptr, pattern, pattern_size, size, hEvent)
-end
-
-@checked function zeCommandListAppendMemoryCopyRegion(hCommandList, dstptr, dstRegion,
-                                                      dstPitch, dstSlicePitch, srcptr,
-                                                      srcRegion, srcPitch, srcSlicePitch,
-                                                      hEvent)
-    ccall((:zeCommandListAppendMemoryCopyRegion, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{ze_copy_region_t}, UInt32, UInt32,
-           Ptr{Cvoid}, Ptr{ze_copy_region_t}, UInt32, UInt32, ze_event_handle_t),
-          hCommandList, dstptr, dstRegion, dstPitch, dstSlicePitch, srcptr, srcRegion,
-          srcPitch, srcSlicePitch, hEvent)
-end
-
-@checked function zeCommandListAppendImageCopy(hCommandList, hDstImage, hSrcImage, hEvent)
-    ccall((:zeCommandListAppendImageCopy, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, ze_image_handle_t, ze_image_handle_t,
-           ze_event_handle_t),
-          hCommandList, hDstImage, hSrcImage, hEvent)
-end
-
-@checked function zeCommandListAppendImageCopyRegion(hCommandList, hDstImage, hSrcImage,
-                                                     pDstRegion, pSrcRegion, hEvent)
-    ccall((:zeCommandListAppendImageCopyRegion, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, ze_image_handle_t, ze_image_handle_t,
-           Ptr{ze_image_region_t}, Ptr{ze_image_region_t}, ze_event_handle_t),
-          hCommandList, hDstImage, hSrcImage, pDstRegion, pSrcRegion, hEvent)
-end
-
-@checked function zeCommandListAppendImageCopyToMemory(hCommandList, dstptr, hSrcImage,
-                                                       pSrcRegion, hEvent)
-    ccall((:zeCommandListAppendImageCopyToMemory, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, ze_image_handle_t,
-           Ptr{ze_image_region_t}, ze_event_handle_t),
-          hCommandList, dstptr, hSrcImage, pSrcRegion, hEvent)
-end
-
-@checked function zeCommandListAppendImageCopyFromMemory(hCommandList, hDstImage, srcptr,
-                                                         pDstRegion, hEvent)
-    ccall((:zeCommandListAppendImageCopyFromMemory, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, ze_image_handle_t, Ptr{Cvoid},
-           Ptr{ze_image_region_t}, ze_event_handle_t),
-          hCommandList, hDstImage, srcptr, pDstRegion, hEvent)
-end
-
-@checked function zeCommandListAppendMemoryPrefetch(hCommandList, ptr, size)
-    ccall((:zeCommandListAppendMemoryPrefetch, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
-          hCommandList, ptr, size)
-end
-
-@checked function zeCommandListAppendMemAdvise(hCommandList, hDevice, ptr, size, advice)
-    ccall((:zeCommandListAppendMemAdvise, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t,
-           ze_memory_advice_t),
-          hCommandList, hDevice, ptr, size, advice)
+@checked function zeVirtualMemGetAccessAttribute(hContext, ptr, size, access, outSize)
+    ccall((:zeVirtualMemGetAccessAttribute, libze_loader), ze_result_t,
+          (ze_context_handle_t, Ptr{Cvoid}, Csize_t, Ptr{ze_memory_access_attribute_t},
+           Ptr{Csize_t}),
+          hContext, ptr, size, access, outSize)
 end
