@@ -5,10 +5,6 @@
 # Device functionality
 #
 
-## device properties
-
-GPUArrays.threads(dev::ZeDevice) = compute_properties(dev).maxTotalGroupSize
-
 
 ## execution
 
