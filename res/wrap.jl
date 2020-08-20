@@ -228,6 +228,8 @@ end
 # Main application
 #
 
+using oneAPI_Level_Zero_Headers_jll
+
 function process(name, headers...; kwargs...)
     output_file, common_file, aliases_file = wrap(name, headers...; kwargs...)
 
@@ -299,7 +301,7 @@ function process(name, headers...; kwargs...)
 end
 
 function main()
-    process("ze", "/usr/include/level_zero/ze_api.h"; library="libze_loader")
+    process("ze", oneAPI_Level_Zero_Headers_jll.ze_api; library="libze_loader")
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
