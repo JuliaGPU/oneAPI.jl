@@ -4,7 +4,8 @@ using ..APIUtils
 
 using CEnum
 
-using oneAPI_Level_Zero_jll
+using NEO_jll
+using oneAPI_Level_Zero_Loader_jll
 
 include("utils.jl")
 include("pointer.jl")
