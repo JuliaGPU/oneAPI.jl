@@ -209,7 +209,8 @@ function source_attributes(kernel::ZeKernel)
     zeKernelGetSourceAttributes(kernel, size_ref, C_NULL)
 
     data = Vector{UInt8}(undef, size_ref[])
-    zeKernelGetSourceAttributes(kernel, size_ref, pointer(data))
+    ptr_ref = Ref{Cstring}(pointer(data))
+    zeKernelGetSourceAttributes(kernel, size_ref, ptr_ref)
     str = String(data)
 
     # the attribute string is null-terminated, with attributes separated by space

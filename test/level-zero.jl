@@ -160,9 +160,8 @@ arguments(kernel)[1] = Int32(42)
 indirect_access!(kernel, oneL0.ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE)
 @test indirect_access(kernel) == oneL0.ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE
 
-# FIXME: this often segfaults within NEO
-# attrs = source_attributes(kernel)
-# @test isempty(attrs)
+attrs = source_attributes(kernel)
+@test isempty(attrs)
 
 props = properties(kernel)
 @test props.numKernelArgs == 1
