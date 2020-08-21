@@ -116,6 +116,7 @@ function compile(f::Core.Function, tt::Type=Tuple{}; name=nothing, kwargs...)
 end
 
 function _compile(source::FunctionSpec; kwargs...)
+    ctx = context()
     dev = device()
     target = SPIRVCompilerTarget(; kwargs...)
     params = oneAPICompilerParams()
@@ -123,7 +124,7 @@ function _compile(source::FunctionSpec; kwargs...)
     image, kernel_fn, undefined_fns = GPUCompiler.compile(:obj, job)
 
     # JIT into an executable kernel object
-    mod = ZeModule(dev, image)
+    mod = ZeModule(ctx, dev, image)
     kernel = kernels(mod)[kernel_fn]
 
     return HostKernel{source.f,source.tt}(kernel)
@@ -138,7 +139,7 @@ end
 end
 
 @inline function _call(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
-                       queue::ZeCommandQueue=global_queue(device()))
+                       queue::ZeCommandQueue=global_queue(context(), device()))
     for (i, arg) in enumerate(args)
         arguments(kernel)[i] = arg
     end

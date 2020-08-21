@@ -6,6 +6,7 @@ mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
   buf::oneL0.DeviceBuffer
   dims::Dims{N}
 
+  ctx::ZeContext
   dev::ZeDevice
 
   # ownership
@@ -14,8 +15,8 @@ mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
   freed::Bool
 
   # primary array
-  function oneArray{T,N}(buf, dims, dev) where {T,N}
-    obj = new(buf, dims, dev, nothing, 0, false)
+  function oneArray{T,N}(buf, dims, ctx, dev) where {T,N}
+    obj = new(buf, dims, ctx, dev, nothing, 0, false)
     retain(obj)
     finalizer(unsafe_free!, obj)
     return obj
@@ -23,7 +24,7 @@ mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
 
   # derived array
   function oneArray{T,N}(buf, dims::Dims{N}, parent::oneArray) where {T,N}
-    self = new(buf, dims, parent.dev, parent, 0, false)
+    self = new(buf, dims, parent.ctx, parent.dev, parent, 0, false)
     retain(self)
     retain(parent)
     finalizer(unsafe_free!, self)
@@ -105,9 +106,10 @@ oneVecOrMat{T} = Union{oneVector{T},oneMatrix{T}}
 
 # type and dimensionality specified, accepting dims as tuples of Ints
 function oneArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N}
+    ctx = context()
     dev = device()
-    buf = device_alloc(dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
-    oneArray{T,N}(buf, dims, dev)
+    buf = device_alloc(ctx, dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
+    oneArray{T,N}(buf, dims, ctx, dev)
 end
 
 # type and dimensionality specified, accepting dims as series of Ints
@@ -208,7 +210,7 @@ function Base.convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) w
 end
 
 function Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
-  make_resident(xs.dev, xs.buf)
+  make_resident(xs.ctx, xs.dev, xs.buf)
   convert(oneDeviceArray{T,N,AS.Global}, xs)
 end
 
@@ -235,7 +237,7 @@ function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::Array{T}, soffs::I
   @boundscheck checkbounds(dest, doffs+n-1)
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
-  unsafe_copyto!(dest.dev, dest, doffs, src, soffs, n)
+  unsafe_copyto!(dest.ctx, dest.dev, dest, doffs, src, soffs, n)
   return dest
 end
 
@@ -245,7 +247,7 @@ function Base.copyto!(dest::Array{T}, doffs::Integer, src::oneArray{T}, soffs::I
   @boundscheck checkbounds(dest, doffs+n-1)
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
-  unsafe_copyto!(src.dev, dest, doffs, src, soffs, n)
+  unsafe_copyto!(src.ctx, src.dev, dest, doffs, src, soffs, n)
   return dest
 end
 
@@ -256,12 +258,12 @@ function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::oneArray{T}, soffs
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
   # TODO: which device to use here?
-  unsafe_copyto!(dest.dev, dest, doffs, src, soffs, n)
+  unsafe_copyto!(dest.ctx, dest.dev, dest, doffs, src, soffs, n)
   return dest
 end
 
-function Base.unsafe_copyto!(dev::ZeDevice, dest::oneArray{T}, doffs, src::Array{T}, soffs, n) where T
-  GC.@preserve src dest unsafe_copyto!(dev, pointer(dest, doffs), pointer(src, soffs), n)
+function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dest::oneArray{T}, doffs, src::Array{T}, soffs, n) where T
+  GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
     error("Not implemented")
@@ -269,8 +271,8 @@ function Base.unsafe_copyto!(dev::ZeDevice, dest::oneArray{T}, doffs, src::Array
   return dest
 end
 
-function Base.unsafe_copyto!(dev::ZeDevice, dest::Array{T}, doffs, src::oneArray{T}, soffs, n) where T
-  GC.@preserve src dest unsafe_copyto!(dev, pointer(dest, doffs), pointer(src, soffs), n)
+function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dest::Array{T}, doffs, src::oneArray{T}, soffs, n) where T
+  GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
     error("Not implemented")
@@ -278,8 +280,8 @@ function Base.unsafe_copyto!(dev::ZeDevice, dest::Array{T}, doffs, src::oneArray
   return dest
 end
 
-function Base.unsafe_copyto!(dev::ZeDevice, dest::oneArray{T}, doffs, src::oneArray{T}, soffs, n) where T
-  GC.@preserve src dest unsafe_copyto!(dev, pointer(dest, doffs), pointer(src, soffs), n)
+function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dest::oneArray{T}, doffs, src::oneArray{T}, soffs, n) where T
+  GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
     error("Not implemented")
@@ -299,6 +301,6 @@ fill(v, dims::Dims) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 
 function Base.fill!(A::oneArray{T}, val) where T
   B = [convert(T, val)]
-  unsafe_fill!(A.dev, pointer(A), pointer(B), length(A))
+  unsafe_fill!(A.ctx, A.dev, pointer(A), pointer(B), length(A))
   A
 end

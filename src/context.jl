@@ -4,7 +4,7 @@
 # executed in the wrong context, ownership should always be encoded in each object.
 # the accessors below should only be used to determine initial ownership.
 
-export driver, driver!, device, device!, global_queue
+export driver, driver!, device, device!, context, context!, global_queue
 
 function driver()
     get!(task_local_storage(), :ZeDriver) do
@@ -27,13 +27,27 @@ function device!(drv::ZeDevice)
     task_local_storage(:ZeDevice, drv)
 end
 
+const global_contexts = Dict{ZeDriver,ZeContext}()
+
+function context()
+    get!(task_local_storage(), :ZeContext) do
+        get!(global_contexts, driver()) do
+            ZeContext(driver())
+        end
+    end
+end
+
+function context!(ctx::ZeContext)
+    task_local_storage(:ZeContext, ctx)
+end
+
 # the global queue can be used as a default queue to execute operations on,
 # guaranteeing expected semantics when using a device on a Julia task.
 
-function global_queue(dev::ZeDevice)
-    # NOTE: dev purposefully does not default to device() to stress that objects should
-    #       track device ownership, and not rely on the currently active device.
-    get!(task_local_storage(), (:ZeCommandQueue, dev)) do
-        ZeCommandQueue(dev)
+function global_queue(ctx::ZeContext, dev::ZeDevice)
+    # NOTE: dev purposefully does not default to context() or device() to stress that
+    #       objects should track ownership, and not rely on implicit global state.
+    get!(task_local_storage(), (:ZeCommandQueue, ctx, dev)) do
+        ZeCommandQueue(ctx, dev)
     end
 end
