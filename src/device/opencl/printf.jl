@@ -28,31 +28,33 @@ end
     arg_exprs = [:( argspec[$i] ) for i in 1:length(argspec)]
     arg_types = [argspec...]
 
-    T_void = LLVM.VoidType(JuliaContext())
-    T_int32 = LLVM.Int32Type(JuliaContext())
-    T_pint8 = LLVM.PointerType(LLVM.Int8Type(JuliaContext()))
+    JuliaContext() do ctx
+        T_void = LLVM.VoidType(ctx)
+        T_int32 = LLVM.Int32Type(ctx)
+        T_pint8 = LLVM.PointerType(LLVM.Int8Type(ctx))
 
-    # create functions
-    param_types = LLVMType[convert.(LLVMType, arg_types)...]
-    llvm_f, _ = create_function(T_int32, param_types)
-    mod = LLVM.parent(llvm_f)
+        # create functions
+        param_types = LLVMType[convert(LLVMType, typ, ctx) for typ in arg_types]
+        llvm_f, _ = create_function(T_int32, param_types)
+        mod = LLVM.parent(llvm_f)
 
-    # generate IR
-    Builder(JuliaContext()) do builder
-        entry = BasicBlock(llvm_f, "entry", JuliaContext())
-        position!(builder, entry)
+        # generate IR
+        Builder(ctx) do builder
+            entry = BasicBlock(llvm_f, "entry", ctx)
+            position!(builder, entry)
 
-        str = globalstring_ptr!(builder, String(fmt))
+            str = globalstring_ptr!(builder, String(fmt))
 
-        # invoke printf and return
-        printf_typ = LLVM.FunctionType(T_int32, [T_pint8]; vararg=true)
-        printf = LLVM.Function(mod, "printf", printf_typ)
-        push!(function_attributes(printf), EnumAttribute("nobuiltin"))
-        chars = call!(builder, printf, [str, parameters(llvm_f)...])
+            # invoke printf and return
+            printf_typ = LLVM.FunctionType(T_int32, [T_pint8]; vararg=true)
+            printf = LLVM.Function(mod, "printf", printf_typ)
+            push!(function_attributes(printf), EnumAttribute("nobuiltin"))
+            chars = call!(builder, printf, [str, parameters(llvm_f)...])
 
-        ret!(builder, chars)
+            ret!(builder, chars)
+        end
+
+        arg_tuple = Expr(:tuple, arg_exprs...)
+        call_function(llvm_f, Int32, Tuple{arg_types...}, arg_tuple)
     end
-
-    arg_tuple = Expr(:tuple, arg_exprs...)
-    call_function(llvm_f, Int32, Tuple{arg_types...}, arg_tuple)
 end

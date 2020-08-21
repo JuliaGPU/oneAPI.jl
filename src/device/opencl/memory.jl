@@ -20,35 +20,37 @@ end
 
 # get a pointer to local memory, with known (static) or zero length (dynamic shared memory)
 @generated function emit_localmemory(::Val{id}, ::Type{T}, ::Val{len}=Val(0)) where {id,T,len}
-    eltyp = convert(LLVMType, T)
+    JuliaContext() do ctx
+        eltyp = convert(LLVMType, T, ctx)
 
-    T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local})
+        T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local}, ctx)
 
-    # create a function
-    llvm_f, _ = create_function(T_ptr)
+        # create a function
+        llvm_f, _ = create_function(T_ptr)
 
-    # create the global variable
-    mod = LLVM.parent(llvm_f)
-    gv_typ = LLVM.ArrayType(eltyp, len)
-    gv = GlobalVariable(mod, gv_typ, GPUCompiler.safe_name(string(id)), AS.Local)
-    if len > 0
-        linkage!(gv, LLVM.API.LLVMInternalLinkage)
-        initializer!(gv, null(gv_typ))
+        # create the global variable
+        mod = LLVM.parent(llvm_f)
+        gv_typ = LLVM.ArrayType(eltyp, len)
+        gv = GlobalVariable(mod, gv_typ, GPUCompiler.safe_name(string(id)), AS.Local)
+        if len > 0
+            linkage!(gv, LLVM.API.LLVMInternalLinkage)
+            initializer!(gv, null(gv_typ))
+        end
+        # TODO: Make the alignment configurable
+        alignment!(gv, Base.datatype_alignment(T))
+
+        # generate IR
+        Builder(ctx) do builder
+            entry = BasicBlock(llvm_f, "entry", ctx)
+            position!(builder, entry)
+
+            ptr = gep!(builder, gv, [ConstantInt(0, ctx),
+                                    ConstantInt(0, ctx)])
+
+            val = ptrtoint!(builder, ptr, T_ptr)
+            ret!(builder, val)
+        end
+
+        call_function(llvm_f, LLVMPtr{T,AS.Local})
     end
-    # TODO: Make the alignment configurable
-    alignment!(gv, Base.datatype_alignment(T))
-
-    # generate IR
-    Builder(JuliaContext()) do builder
-        entry = BasicBlock(llvm_f, "entry", JuliaContext())
-        position!(builder, entry)
-
-        ptr = gep!(builder, gv, [ConstantInt(0, JuliaContext()),
-                                 ConstantInt(0, JuliaContext())])
-
-        val = ptrtoint!(builder, ptr, T_ptr)
-        ret!(builder, val)
-    end
-
-    call_function(llvm_f, LLVMPtr{T,AS.Local})
 end

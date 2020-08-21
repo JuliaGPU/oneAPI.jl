@@ -29,6 +29,12 @@ Once you have installed Julia, proceed by entering the package manager REPL mode
 pkg> add https://github.com/JuliaGPU/oneAPI.jl
 ```
 
+**NOTE**: Since this package is in heavy development, the `master` branch may depend on
+other unreleased dependencies (e.g., the `master` branch of LLVM.jl). For that reason, the
+repository contains a Manifest.toml capturing a known-good set of packages. To use the
+manifest, develop the package instead and activate its environment (refer to the Julia
+documentation for more details).
+
 This installation will take a couple of minutes to download necessary binaries, such as the
 oneAPI loader, several SPIR-V tools, etc. For now, the oneAPI.jl package also depends on
 [the Intel implementation](https://github.com/intel/compute-runtime) of the oneAPI spec.

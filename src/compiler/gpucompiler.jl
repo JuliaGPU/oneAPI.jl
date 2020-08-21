@@ -15,14 +15,15 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module)
     invoke(GPUCompiler.finish_module!,
            Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod)},
            job, mod)
+    ctx = LLVM.context(mod)
 
     # OpenCL 2.0
     push!(metadata(mod), "opencl.ocl.version",
-         MDNode([ConstantInt(Int32(2), JuliaContext()),
-                 ConstantInt(Int32(0), JuliaContext())]))
+         MDNode([ConstantInt(Int32(2), ctx),
+                 ConstantInt(Int32(0), ctx)]))
 
     # SPIR-V 1.5
     push!(metadata(mod), "opencl.spirv.version",
-         MDNode([ConstantInt(Int32(1), JuliaContext()),
-                 ConstantInt(Int32(5), JuliaContext())]))
+         MDNode([ConstantInt(Int32(1), ctx),
+                 ConstantInt(Int32(5), ctx)]))
 end
