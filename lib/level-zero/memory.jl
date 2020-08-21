@@ -25,7 +25,7 @@ Base.sizeof(buf::Buffer) = buf.bytesize
 Base.unsafe_convert(P::Type{<:Ptr},   buf::Buffer) = convert(P, buf)
 Base.unsafe_convert(P::Type{<:ZePtr}, buf::Buffer) = convert(P, buf)
 
-free(buf::Buffer) = zeDriverFreeMem(buf.drv, pointer(buf))
+free(buf::Buffer) = zeMemFree(buf.context, buf)
 
 function Base.show(io::IO, ::MIME"text/plain", buf::Buffer)
     print(io, Base.format_bytes(sizeof(buf)), " ", nameof(typeof(buf)),
@@ -44,7 +44,7 @@ the device that owns it.
 struct DeviceBuffer <: Buffer
     ptr::ZePtr{Cvoid}
     bytesize::Int
-    drv::ZeDriver
+    context::ZeContext
 end
 
 Base.similar(buf::DeviceBuffer, ptr::ZePtr{Cvoid}=pointer(buf),
@@ -58,17 +58,17 @@ Base.convert(::Type{ZePtr{T}}, buf::DeviceBuffer) where {T} =
     convert(ZePtr{T}, pointer(buf))
 
 
-function device_alloc(dev::ZeDevice, bytesize::Integer, alignment::Integer=1;
-                      flags=ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, ordinal::Integer=0)
+function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer, alignment::Integer=1;
+                      flags=0, ordinal::Integer=0)
     desc_ref = Ref(ze_device_mem_alloc_desc_t(
-        ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
+        ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC, C_NULL,
         flags, ordinal
     ))
 
     ptr_ref = Ref{Ptr{Cvoid}}()
-    zeDriverAllocDeviceMem(dev.driver, desc_ref, bytesize, alignment, dev, ptr_ref)
+    zeMemAllocDevice(ctx, desc_ref, bytesize, alignment, dev, ptr_ref)
 
-    return DeviceBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, dev.driver)
+    return DeviceBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx)
 end
 
 
@@ -87,7 +87,7 @@ kernel attribute, or by calling zeDeviceMakeMemoryResident.
 struct HostBuffer <: Buffer
     ptr::Ptr{Cvoid}
     bytesize::Int
-    drv::ZeDriver
+    context::ZeContext
 end
 
 Base.similar(buf::HostBuffer, ptr::Ptr{Cvoid}=pointer(buf),
@@ -101,17 +101,16 @@ Base.convert(::Type{ZePtr{T}}, buf::HostBuffer) where {T} =
     reinterpret(ZePtr{T}, pointer(buf))
 
 
-function host_alloc(drv::ZeDriver, bytesize::Integer, alignment::Integer=1;
-                    flags=ZE_HOST_MEM_ALLOC_FLAG_DEFAULT)
+function host_alloc(ctx::ZeContext, bytesize::Integer, alignment::Integer=1; flags=0)
     desc_ref = Ref(ze_host_mem_alloc_desc_t(
-        ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT,
+        ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC, C_NULL,
         flags
     ))
 
     ptr_ref = Ref{Ptr{Cvoid}}()
-    zeDriverAllocHostMem(drv, desc_ref, bytesize, alignment, ptr_ref)
+    zeMemAllocHost(ctx, desc_ref, bytesize, alignment, ptr_ref)
 
-    return HostBuffer(ptr_ref[], bytesize, drv)
+    return HostBuffer(ptr_ref[], bytesize, ctx)
 end
 
 
@@ -125,7 +124,7 @@ A managed buffer that is shared between the host and one or more devices.
 struct SharedBuffer <: Buffer
     ptr::ZePtr{Cvoid}
     bytesize::Int
-    drv::ZeDriver
+    context::ZeContext
 end
 
 Base.similar(buf::SharedBuffer, ptr::ZePtr{Cvoid}=pointer(buf),
@@ -139,23 +138,23 @@ Base.convert(::Type{ZePtr{T}}, buf::SharedBuffer) where {T} =
     convert(ZePtr{T}, pointer(buf))
 
 
-function shared_alloc(drv::ZeDriver, dev::Union{Nothing,ZeDevice}, bytesize::Integer,
-                      alignment::Integer=1; host_flags=ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,
-                      device_flags=ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, ordinal::Integer=0)
+function shared_alloc(ctx::ZeContext, dev::Union{Nothing,ZeDevice}, bytesize::Integer,
+                      alignment::Integer=1; host_flags=0,
+                      device_flags=0, ordinal::Integer=0)
     device_desc_ref = Ref(ze_device_mem_alloc_desc_t(
-        ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT,
+        ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC, C_NULL,
         device_flags, ordinal
     ))
     host_desc_ref = Ref(ze_host_mem_alloc_desc_t(
-        ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT,
+        ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC, C_NULL,
         host_flags
     ))
 
     ptr_ref = Ref{Ptr{Cvoid}}()
-    zeDriverAllocSharedMem(drv, device_desc_ref, host_desc_ref, bytesize, alignment,
-                           something(dev, C_NULL), ptr_ref)
+    zeMemAllocShared(ctx, device_desc_ref, host_desc_ref, bytesize, alignment,
+                     something(dev, C_NULL), ptr_ref)
 
-    return SharedBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, drv)
+    return SharedBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx)
 end
 
 
@@ -164,14 +163,11 @@ end
 function properties(buf::Buffer)
     props_ref = Ref{ze_memory_allocation_properties_t}()
     dev_ref = Ref{ze_device_handle_t}(C_NULL)
-    unsafe_store!(convert(Ptr{ze_memory_allocation_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT)
-    zeDriverGetMemAllocProperties(buf.drv, pointer(buf), props_ref, dev_ref)
+    zeMemGetAllocProperties(buf.context, pointer(buf), props_ref, dev_ref)
 
     props = props_ref[]
     return (
-        device=ZeDevice(dev_ref[], buf.drv),
+        device=ZeDevice(dev_ref[], buf.context.driver),
         type=props.type,
         id=props.id,
     )
@@ -180,22 +176,22 @@ end
 struct UnknownBuffer <: Buffer
     ptr::Ptr{Cvoid}
     bytesize::Int
-    drv::ZeDriver
+    context::ZeContext
 end
 
-function lookup_alloc(drv::ZeDriver, ptr::Union{Ptr,ZePtr})
+function lookup_alloc(ctx::ZeContext, ptr::Union{Ptr,ZePtr})
     base_ref = Ref{Ptr{Cvoid}}()
     bytesize_ref = Ref{Csize_t}()
-    zeDriverGetMemAddressRange(drv, ptr, base_ref, bytesize_ref)
+    zeMemGetAddressRange(ctx, ptr, base_ref, bytesize_ref)
 
-    buf = UnknownBuffer(base_ref[], bytesize_ref[], drv)
+    buf = UnknownBuffer(base_ref[], bytesize_ref[], ctx)
     props = properties(buf)
     return if props.type == ZE_MEMORY_TYPE_HOST
-        HostBuffer(pointer(buf), sizeof(buf), buf.drv)
+        HostBuffer(pointer(buf), sizeof(buf), ctx)
     elseif props.type == ZE_MEMORY_TYPE_DEVICE
-        DeviceBuffer(reinterpret(ZePtr{Cvoid}, pointer(buf)), sizeof(buf), buf.drv)
+        DeviceBuffer(reinterpret(ZePtr{Cvoid}, pointer(buf)), sizeof(buf), ctx)
     elseif props.type == ZE_MEMORY_TYPE_SHARED
-        SharedBuffer(reinterpret(ZePtr{Cvoid}, pointer(buf)), sizeof(buf), buf.drv)
+        SharedBuffer(reinterpret(ZePtr{Cvoid}, pointer(buf)), sizeof(buf), ctx)
     else
         buf
     end

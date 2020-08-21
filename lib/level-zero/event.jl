@@ -5,16 +5,18 @@ export ZeEventPool
 mutable struct ZeEventPool
     handle::ze_event_pool_handle_t
 
-    function ZeEventPool(drv::ZeDriver, size::Integer, devs::ZeDevice...;
-                         flags=ZE_EVENT_POOL_FLAG_DEFAULT)
+    context::ZeContext
+
+    function ZeEventPool(ctx::ZeContext, size::Integer, devs::ZeDevice...;
+                         flags=0)
         desc_ref = Ref(ze_event_pool_desc_t(
-            ZE_EVENT_POOL_DESC_VERSION_CURRENT,
+            ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, C_NULL,
             flags,
             size
         ))
         handle_ref = Ref{ze_event_pool_handle_t}()
-        zeEventPoolCreate(drv, desc_ref, length(devs), isempty(devs) ? C_NULL : [devs...], handle_ref)
-        obj = new(handle_ref[])
+        zeEventPoolCreate(ctx, desc_ref, length(devs), isempty(devs) ? C_NULL : [devs...], handle_ref)
+        obj = new(handle_ref[], ctx)
         finalizer(obj) do obj
             zeEventPoolDestroy(obj)
         end
@@ -29,8 +31,7 @@ Base.getindex(pool::ZeEventPool, i::Integer) = ZeEvent(pool, i)
 
 # event
 
-export ZeEvent, append_wait!, signal, append_signal!, append_reset!, query,
-       global_time, context_time
+export ZeEvent, append_wait!, signal, append_signal!, append_reset!, query, kernel_timestamp
 
 mutable struct ZeEvent
     handle::ze_event_handle_t
@@ -38,10 +39,10 @@ mutable struct ZeEvent
 
     function ZeEvent(pool, index::Integer)
         desc_ref = Ref(ze_event_desc_t(
-            ZE_EVENT_DESC_VERSION_CURRENT,
+            ZE_STRUCTURE_TYPE_EVENT_DESC, C_NULL,
             index-1,
-            ZE_EVENT_SCOPE_FLAG_NONE,
-            ZE_EVENT_SCOPE_FLAG_NONE
+            0,
+            0
         ))
         handle_ref = Ref{ze_event_handle_t}()
         zeEventCreate(pool, desc_ref, handle_ref)
@@ -77,20 +78,24 @@ function query(event::ZeEvent)
     end
 end
 
-function global_time(event)
-    start_ref = Ref{UInt64}()
-    zeEventGetTimestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_START, start_ref)
-    stop_ref = Ref{UInt64}()
-    zeEventGetTimestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_END, stop_ref)
-    (start = start_ref[] == -1%UInt32 ? nothing : Int(start_ref[]),
-     stop  = stop_ref[] == -1%UInt32 ?  nothing : Int(stop_ref[]))
-end
+function kernel_timestamp(event)
+    timestamp_ref = Ref{ze_kernel_timestamp_result_t}()
+    zeEventQueryKernelTimestamp(event, timestamp_ref)
 
-function context_time(event)
-    start_ref = Ref{UInt64}()
-    zeEventGetTimestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_START, start_ref)
-    stop_ref = Ref{UInt64}()
-    zeEventGetTimestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_END, stop_ref)
-    (start = start_ref[] == -1%UInt32 ? nothing : Int(start_ref[]),
-     stop  = stop_ref[] == -1%UInt32 ?  nothing : Int(stop_ref[]))
+    # TODO: convert using ze_device_properties_t.timerResolution
+    # TODO: mask by ze_device_properties_t.kernelTimestampValidBits
+    # https://spec.oneapi.com/level-zero/latest/core/PROG.html#kernel-timestamp-events
+    # but how to get the device?
+
+    timestamp = timestamp_ref[]
+    return (;
+        :global => (
+            start = timestamp._global.kernelStart == -1%UInt32 ? nothing : Int(timestamp._global.kernelStart),
+            stop  = timestamp._global.kernelEnd == -1%UInt32 ?   nothing : Int(timestamp._global.kernelEnd)
+        ),
+        :context => (
+            start = timestamp.context.kernelStart == -1%UInt32 ? nothing : Int(timestamp.context.kernelStart),
+            stop  = timestamp.context.kernelEnd == -1%UInt32 ?   nothing : Int(timestamp.context.kernelEnd)
+        )
+    )
 end

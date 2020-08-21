@@ -4,9 +4,11 @@ export ZeModule
 
 mutable struct ZeModule
     handle::ze_module_handle_t
+
+    context::ZeContext
     device::ZeDevice
 
-    function ZeModule(dev, image; build_flags="")
+    function ZeModule(ctx::ZeContext, dev::ZeDevice, image; build_flags="")
         log_ref = if isdebug(:ZeModule)
             log_ref = Ref{ze_module_build_log_handle_t}()
         else
@@ -22,7 +24,7 @@ mutable struct ZeModule
         # compile the module
         GC.@preserve image build_flags constants begin
             desc_ref = Ref(ze_module_desc_t(
-                ZE_MODULE_DESC_VERSION_CURRENT,
+                ZE_STRUCTURE_TYPE_MODULE_DESC, C_NULL,
                 ZE_MODULE_FORMAT_IL_SPIRV,
                 sizeof(image),
                 pointer(image),
@@ -30,8 +32,8 @@ mutable struct ZeModule
                 Base.unsafe_convert(Ptr{ze_module_constants_t}, constants)
             ))
             handle_ref = Ref{ze_module_handle_t}()
-            zeModuleCreate(dev, desc_ref, handle_ref, log_ref)
-            obj = new(handle_ref[], dev)
+            zeModuleCreate(ctx, dev, desc_ref, handle_ref, log_ref)
+            obj = new(handle_ref[], ctx, dev)
         end
 
         # read the log
@@ -70,8 +72,8 @@ mutable struct ZeKernel
     function ZeKernel(mod, name)
         GC.@preserve name begin
             desc_ref = Ref(ze_kernel_desc_t(
-                ZE_KERNEL_DESC_VERSION_CURRENT,
-                ZE_KERNEL_FLAG_NONE,
+                ZE_STRUCTURE_TYPE_KERNEL_DESC, C_NULL,
+                0,
                 pointer(name)
             ))
             handle_ref = Ref{ze_kernel_handle_t}()
@@ -192,54 +194,26 @@ end
 
 ## attributes
 
-export attributes
+export indirect_access, indirect_access!, source_attributes
 
-struct ZeKernelAttributeDict <: AbstractDict{ze_kernel_attribute_t,Any}
-    kernel::ZeKernel
+function indirect_access(kernel::ZeKernel)
+    flags_ref = Ref{ze_kernel_indirect_access_flags_t}()
+    zeKernelGetIndirectAccess(kernel, flags_ref)
+    return flags_ref[]
 end
 
-attributes(kernel::ZeKernel) = ZeKernelAttributeDict(kernel)
+indirect_access!(kernel::ZeKernel, flags) = zeKernelSetIndirectAccess(kernel, flags)
 
-# list of known attributes, their type, and how to convert them to something Julia
-const known_attributes = Dict(
-    ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS    => (ze_bool_t,  Bool),
-    ZE_KERNEL_ATTR_INDIRECT_DEVICE_ACCESS  => (ze_bool_t,  Bool),
-    ZE_KERNEL_ATTR_INDIRECT_SHARED_ACCESS  => (ze_bool_t,  Bool),
-    ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE        => (Any,        val->split(String(val)[1:end-1])),
-)
+function source_attributes(kernel::ZeKernel)
+    size_ref = Ref{UInt32}(0)
+    zeKernelGetSourceAttributes(kernel, size_ref, C_NULL)
 
-function Base.iterate(dict::ZeKernelAttributeDict, i=1)
-    iter = iterate(known_attributes, i)
-    iter === nothing && return nothing
-    (attr, _), i = iter
-    (Pair{ze_kernel_attribute_t,Any}(attr, dict[attr]), i+1)
-end
+    data = Vector{UInt8}(undef, size_ref[])
+    zeKernelGetSourceAttributes(kernel, size_ref, pointer(data))
+    str = String(data)
 
-Base.length(::ZeKernelAttributeDict) = length(known_attributes)
-
-function Base.get(dict::ZeKernelAttributeDict, attr::ze_kernel_attribute_t, def)
-    haskey(known_attributes, attr) || return def
-    typ, conv = known_attributes[attr]
-    data = if typ == Any
-        # untyped attribute, fetch the size and return an array of bytes
-        size_ref = Ref{UInt32}(0)
-        zeKernelGetAttribute(dict.kernel, attr, size_ref, C_NULL)
-        data = Vector{UInt8}(undef, size_ref[])
-        zeKernelGetAttribute(dict.kernel, attr, size_ref, data)
-        data
-    else
-        size_ref = Ref{UInt32}(sizeof(typ))
-        ref = Ref{typ}()
-        zeKernelGetAttribute(dict.kernel, attr, size_ref, ref)
-        ref[]
-    end
-    return conv(data)
-end
-
-function Base.setindex!(dict::ZeKernelAttributeDict, value, attr::ze_kernel_attribute_t)
-    typ, conv = known_attributes[attr]
-    # NOTE: needs better handling of non-isbits values, but no attrs are like that
-    zeKernelSetAttribute(dict.kernel, attr, sizeof(value), Base.RefValue(convert(typ, value)))
+    # the attribute string is null-terminated, with attributes separated by space
+    return split(str[1:end-1])
 end
 
 
@@ -249,18 +223,23 @@ export properties
 
 function properties(kernel::ZeKernel)
     props_ref = Ref{ze_kernel_properties_t}()
-    unsafe_store!(convert(Ptr{ze_kernel_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_KERNEL_PROPERTIES_VERSION_CURRENT)
     zeKernelGetProperties(kernel, props_ref)
 
     props = props_ref[]
     return (
-        name=String([props.name[1:findfirst(isequal(0), props.name)-1]...]),
         numKernelArgs=Int(props.numKernelArgs),
         requiredGroupSize=ZeDim3(props.requiredGroupSizeX,
                                  props.requiredGroupSizeY,
                                  props.requiredGroupSizeZ),
+        requiredNumSubGroups=Int(props.requiredNumSubGroups),
+        requiredSubgroupSize=Int(props.requiredSubgroupSize),
+        maxSubgroupSize=Int(props.maxSubgroupSize),
+        maxNumSubgroups=Int(props.maxNumSubgroups),
+        localMemSize=Int(props.localMemSize),
+        privateMemSize=Int(props.privateMemSize),
+        spillMemSize=Int(props.spillMemSize),
+        kernel_uuid=Base.UUID(reinterpret(UInt128, [props.uuid.kid...])[1]),
+        module_uuid=Base.UUID(reinterpret(UInt128, [props.uuid.mid...])[1]),
     )
 end
 

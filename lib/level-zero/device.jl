@@ -1,4 +1,4 @@
-export ZeDevice, properties, compute_properties, kernel_properties, memory_properties, memory_access_properties, cache_properties, image_properties, p2p_properties
+export ZeDevice, properties, compute_properties, module_properties, memory_properties, memory_access_properties, cache_properties, image_properties, p2p_properties
 
 struct ZeDevice
     handle::ze_device_handle_t
@@ -32,9 +32,6 @@ end
 
 function properties(dev::ZeDevice)
     props_ref = Ref{ze_device_properties_t}()
-    unsafe_store!(convert(Ptr{ze_device_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_DEVICE_PROPERTIES_VERSION_CURRENT)
     zeDeviceGetProperties(dev, props_ref)
 
     props = props_ref[]
@@ -42,15 +39,11 @@ function properties(dev::ZeDevice)
         type=props.type,
         vendorId=UInt16(props.vendorId),
         deviceId=UInt16(props.deviceId),
-        uuid=Base.UUID(reinterpret(UInt128, [props.uuid.id...])[1]),
-        subdeviceId=Bool(props.isSubdevice) ? props.subdeviceId : nothing,
+        flags=props.flags,
+        subdeviceId=(props.flags&ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE == 0) ? nothing : props.subdeviceId,
         coreClockRate=Int(props.coreClockRate),
-        unifiedMemorySupported=Bool(props.unifiedMemorySupported),
-        eccMemorySupported=Bool(props.eccMemorySupported),
-        onDemandPageFaultsSupported=Bool(props.onDemandPageFaultsSupported),
-        maxCommandQueues=Int(props.maxCommandQueues),
-        numAsyncComputeEngines=Int(props.numAsyncComputeEngines),
-        numAsyncCopyEngines=Int(props.numAsyncCopyEngines),
+        maxMemAllocSize=Int(props.maxMemAllocSize),
+        maxHardwareContexts=Int(props.maxHardwareContexts),
         maxCommandQueuePriority=Int(props.maxCommandQueuePriority),
         numThreadsPerEU=Int(props.numThreadsPerEU),
         physicalEUSimdWidth=Int(props.physicalEUSimdWidth),
@@ -58,15 +51,15 @@ function properties(dev::ZeDevice)
         numSubslicesPerSlice=Int(props.numSubslicesPerSlice),
         numSlices=Int(props.numSlices),
         timerResolution=Int(props.timerResolution),
+        timestampValidBits=Int(props.timestampValidBits),
+        kernelTimestampValidBits=Int(props.kernelTimestampValidBits),
+        uuid=Base.UUID(reinterpret(UInt128, [props.uuid.id...])[1]),
         name=String([props.name[1:findfirst(isequal(0), props.name)-1]...]),
     )
 end
 
 function compute_properties(dev::ZeDevice)
     props_ref = Ref{ze_device_compute_properties_t}()
-    unsafe_store!(convert(Ptr{ze_device_compute_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT)
     zeDeviceGetComputeProperties(dev, props_ref)
 
     props = props_ref[]
@@ -83,28 +76,20 @@ function compute_properties(dev::ZeDevice)
     )
 end
 
-function kernel_properties(dev::ZeDevice)
-    props_ref = Ref{ze_device_kernel_properties_t}()
-    ccall(:memset, Ptr{Cvoid}, (Ptr{Cvoid}, Cint, Csize_t), props_ref, 0,
-          sizeof(ze_device_kernel_properties_t)) # oneapi-src/level-zero#8
-    unsafe_store!(convert(Ptr{ze_device_kernel_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_DEVICE_KERNEL_PROPERTIES_VERSION_CURRENT)
-    zeDeviceGetKernelProperties(dev, props_ref)
+function module_properties(dev::ZeDevice)
+    props_ref = Ref{ze_device_module_properties_t}()
+    zeDeviceGetModuleProperties(dev, props_ref)
 
     props = props_ref[]
     return (
         spirvVersionSupported=props.spirvVersionSupported==0 ? nothing : unmake_version(props.spirvVersionSupported),
-        nativeKernelSupported=Base.UUID(reinterpret(UInt128, [props.nativeKernelSupported.id...])[1]),
-        fp16Supported=Bool(props.fp16Supported),
-        fp64Supported=Bool(props.fp64Supported),
-        int64AtomicsSupported=Bool(props.int64AtomicsSupported),
-        dp4aSupported=Bool(props.dp4aSupported),
-        halfFpCapabilities=Int(props.halfFpCapabilities),
-        singleFpCapabilities=Int(props.singleFpCapabilities),
-        doubleFpCapabilities=Int(props.doubleFpCapabilities),
+        flags=props.flags,
+        fp16flags=props.fp16flags,
+        fp32flags=props.fp32flags,
+        fp64flags=props.fp64flags,
         maxArgumentsSize=Int(props.maxArgumentsSize),
         printfBufferSize=Int(props.printfBufferSize),
+        nativeKernelSupported=Base.UUID(reinterpret(UInt128, [props.nativeKernelSupported.id...])[1]),
     )
 end
 
@@ -113,11 +98,6 @@ function memory_properties(dev::ZeDevice)
     zeDeviceGetMemoryProperties(dev, count_ref, C_NULL)
 
     all_props = Vector{ze_device_memory_properties_t}(undef, count_ref[])
-    for i in 1:count_ref[]
-        unsafe_store!(convert(Ptr{ze_device_memory_properties_version_t},
-                              pointer(all_props, i)),
-                      ZE_DEVICE_MEMORY_PROPERTIES_VERSION_CURRENT)
-    end
     zeDeviceGetMemoryProperties(dev, count_ref, all_props)
 
     return [(maxClockRate=Int(props.maxClockRate),
@@ -128,9 +108,6 @@ end
 
 function memory_access_properties(dev::ZeDevice)
     props_ref = Ref{ze_device_memory_access_properties_t}()
-    unsafe_store!(convert(Ptr{ze_device_memory_access_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_DEVICE_MEMORY_ACCESS_PROPERTIES_VERSION_CURRENT)
     zeDeviceGetMemoryAccessProperties(dev, props_ref)
 
     props = props_ref[]
@@ -144,33 +121,23 @@ function memory_access_properties(dev::ZeDevice)
 end
 
 function cache_properties(dev::ZeDevice)
-    props_ref = Ref{ze_device_cache_properties_t}()
-    unsafe_store!(convert(Ptr{ze_device_cache_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_DEVICE_CACHE_PROPERTIES_VERSION_CURRENT)
-    zeDeviceGetCacheProperties(dev, props_ref)
+    count_ref = Ref{UInt32}(0)
+    zeDeviceGetCacheProperties(dev, count_ref, C_NULL)
 
-    props = props_ref[]
-    return (
-        intermediateCacheControlSupported=Bool(props.intermediateCacheControlSupported),
-        intermediateCacheSize=Int(props.intermediateCacheSize),
-        intermediateCachelineSize=Int(props.intermediateCachelineSize),
-        lastLevelCacheSizeControlSupported=Bool(props.lastLevelCacheSizeControlSupported),
-        lastLevelCacheSize=Int(props.lastLevelCacheSize),
-        lastLevelCachelineSize=Int(props.lastLevelCachelineSize),
-    )
+    all_props = Vector{ze_device_cache_properties_t}(undef, count_ref[])
+    zeDeviceGetCacheProperties(dev, count_ref, all_props)
+
+    return [(flags=props.flags,
+             cacheSize=Int(props.cacheSize),
+            ) for props in all_props[1:count_ref[]]]
 end
 
 function image_properties(dev::ZeDevice)
     props_ref = Ref{ze_device_image_properties_t}()
-    unsafe_store!(convert(Ptr{ze_device_image_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_DEVICE_IMAGE_PROPERTIES_VERSION_CURRENT)
     zeDeviceGetImageProperties(dev, props_ref)
 
     props = props_ref[]
     return (
-        supported=Bool(props.supported),
         maxImageDims1D=Int(props.maxImageDims1D),
         maxImageDims2D=Int(props.maxImageDims2D),
         maxImageDims3D=Int(props.maxImageDims3D),
@@ -184,15 +151,11 @@ end
 
 function p2p_properties(dev1, dev2::ZeDevice)
     props_ref = Ref{ze_device_p2p_properties_t}()
-    unsafe_store!(convert(Ptr{ze_device_p2p_properties_version_t},
-                          Base.unsafe_convert(Ptr{Cvoid}, props_ref)),
-                  ZE_DEVICE_P2P_PROPERTIES_VERSION_CURRENT)
     zeDeviceGetP2PProperties(dev1, dev2, props_ref)
 
     props = props_ref[]
     return (
-        accessSupported=Bool(props.accessSupported),
-        atomicsSupported=Bool(props.atomicsSupported),
+        flags=props.flags,
     )
 end
 

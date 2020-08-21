@@ -236,7 +236,7 @@ end
 @checked function zeCommandListAppendMemoryCopy(hCommandList, dstptr, srcptr, size,
                                                 hSignalEvent, numWaitEvents, phWaitEvents)
     ccall((:zeCommandListAppendMemoryCopy, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{Cvoid}, Csize_t, ze_event_handle_t,
+          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, PtrOrZePtr{Cvoid}, Csize_t, ze_event_handle_t,
            UInt32, Ptr{ze_event_handle_t}),
           hCommandList, dstptr, srcptr, size, hSignalEvent, numWaitEvents, phWaitEvents)
 end
@@ -245,7 +245,7 @@ end
                                                 size, hSignalEvent, numWaitEvents,
                                                 phWaitEvents)
     ccall((:zeCommandListAppendMemoryFill, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{Cvoid}, Csize_t, Csize_t,
+          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, PtrOrZePtr{Cvoid}, Csize_t, Csize_t,
            ze_event_handle_t, UInt32, Ptr{ze_event_handle_t}),
           hCommandList, ptr, pattern, pattern_size, size, hSignalEvent, numWaitEvents,
           phWaitEvents)
@@ -257,8 +257,8 @@ end
                                                       hSignalEvent, numWaitEvents,
                                                       phWaitEvents)
     ccall((:zeCommandListAppendMemoryCopyRegion, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, Ptr{ze_copy_region_t}, UInt32, UInt32,
-           Ptr{Cvoid}, Ptr{ze_copy_region_t}, UInt32, UInt32, ze_event_handle_t, UInt32,
+          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, Ptr{ze_copy_region_t}, UInt32, UInt32,
+           PtrOrZePtr{Cvoid}, Ptr{ze_copy_region_t}, UInt32, UInt32, ze_event_handle_t, UInt32,
            Ptr{ze_event_handle_t}),
           hCommandList, dstptr, dstRegion, dstPitch, dstSlicePitch, srcptr, srcRegion,
           srcPitch, srcSlicePitch, hSignalEvent, numWaitEvents, phWaitEvents)
@@ -269,7 +269,7 @@ end
                                                            hSignalEvent, numWaitEvents,
                                                            phWaitEvents)
     ccall((:zeCommandListAppendMemoryCopyFromContext, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, ze_context_handle_t, Ptr{Cvoid}, Csize_t,
+          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, ze_context_handle_t, PtrOrZePtr{Cvoid}, Csize_t,
            ze_event_handle_t, UInt32, Ptr{ze_event_handle_t}),
           hCommandList, dstptr, hContextSrc, srcptr, size, hSignalEvent, numWaitEvents,
           phWaitEvents)
@@ -316,13 +316,13 @@ end
 
 @checked function zeCommandListAppendMemoryPrefetch(hCommandList, ptr, size)
     ccall((:zeCommandListAppendMemoryPrefetch, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, Ptr{Cvoid}, Csize_t),
+          (ze_command_list_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
           hCommandList, ptr, size)
 end
 
 @checked function zeCommandListAppendMemAdvise(hCommandList, hDevice, ptr, size, advice)
     ccall((:zeCommandListAppendMemAdvise, libze_loader), ze_result_t,
-          (ze_command_list_handle_t, ze_device_handle_t, Ptr{Cvoid}, Csize_t,
+          (ze_command_list_handle_t, ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t,
            ze_memory_advice_t),
           hCommandList, hDevice, ptr, size, advice)
 end
@@ -503,39 +503,39 @@ end
 
 @checked function zeMemFree(hContext, ptr)
     ccall((:zeMemFree, libze_loader), ze_result_t,
-          (ze_context_handle_t, Ptr{Cvoid}),
+          (ze_context_handle_t, PtrOrZePtr{Cvoid}),
           hContext, ptr)
 end
 
 @checked function zeMemGetAllocProperties(hContext, ptr, pMemAllocProperties, phDevice)
     ccall((:zeMemGetAllocProperties, libze_loader), ze_result_t,
-          (ze_context_handle_t, Ptr{Cvoid}, Ptr{ze_memory_allocation_properties_t},
+          (ze_context_handle_t, PtrOrZePtr{Cvoid}, Ptr{ze_memory_allocation_properties_t},
            Ptr{ze_device_handle_t}),
           hContext, ptr, pMemAllocProperties, phDevice)
 end
 
 @checked function zeMemGetAddressRange(hContext, ptr, pBase, pSize)
     ccall((:zeMemGetAddressRange, libze_loader), ze_result_t,
-          (ze_context_handle_t, Ptr{Cvoid}, Ptr{Ptr{Cvoid}}, Ptr{Csize_t}),
+          (ze_context_handle_t, PtrOrZePtr{Cvoid}, Ptr{Ptr{Cvoid}}, Ptr{Csize_t}),
           hContext, ptr, pBase, pSize)
 end
 
 @checked function zeMemGetIpcHandle(hContext, ptr, pIpcHandle)
     ccall((:zeMemGetIpcHandle, libze_loader), ze_result_t,
-          (ze_context_handle_t, Ptr{Cvoid}, Ptr{ze_ipc_mem_handle_t}),
+          (ze_context_handle_t, PtrOrZePtr{Cvoid}, Ptr{ze_ipc_mem_handle_t}),
           hContext, ptr, pIpcHandle)
 end
 
 @checked function zeMemOpenIpcHandle(hContext, hDevice, handle, flags, pptr)
     ccall((:zeMemOpenIpcHandle, libze_loader), ze_result_t,
           (ze_context_handle_t, ze_device_handle_t, ze_ipc_mem_handle_t,
-           ze_ipc_memory_flags_t, Ptr{Ptr{Cvoid}}),
+           ze_ipc_memory_flags_t, PtrOrZePtr{Ptr{Cvoid}}),
           hContext, hDevice, handle, flags, pptr)
 end
 
 @checked function zeMemCloseIpcHandle(hContext, ptr)
     ccall((:zeMemCloseIpcHandle, libze_loader), ze_result_t,
-          (ze_context_handle_t, Ptr{Cvoid}),
+          (ze_context_handle_t, PtrOrZePtr{Cvoid}),
           hContext, ptr)
 end
 
@@ -721,13 +721,13 @@ end
 
 @checked function zeContextMakeMemoryResident(hContext, hDevice, ptr, size)
     ccall((:zeContextMakeMemoryResident, libze_loader), ze_result_t,
-          (ze_context_handle_t, ze_device_handle_t, Ptr{Cvoid}, Csize_t),
+          (ze_context_handle_t, ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
           hContext, hDevice, ptr, size)
 end
 
 @checked function zeContextEvictMemory(hContext, hDevice, ptr, size)
     ccall((:zeContextEvictMemory, libze_loader), ze_result_t,
-          (ze_context_handle_t, ze_device_handle_t, Ptr{Cvoid}, Csize_t),
+          (ze_context_handle_t, ze_device_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
           hContext, hDevice, ptr, size)
 end
 
@@ -764,7 +764,7 @@ end
 
 @checked function zeVirtualMemFree(hContext, ptr, size)
     ccall((:zeVirtualMemFree, libze_loader), ze_result_t,
-          (ze_context_handle_t, Ptr{Cvoid}, Csize_t),
+          (ze_context_handle_t, PtrOrZePtr{Cvoid}, Csize_t),
           hContext, ptr, size)
 end
 

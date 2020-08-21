@@ -4,6 +4,8 @@ using ..APIUtils
 
 using CEnum
 
+using Printf
+
 using NEO_jll
 using oneAPI_Level_Zero_Loader_jll
 
@@ -20,6 +22,7 @@ include("libze_aliases.jl")
 include("common.jl")
 include("driver.jl")
 include("device.jl")
+include("context.jl")
 include("cmdqueue.jl")
 include("cmdlist.jl")
 include("event.jl")
@@ -30,7 +33,7 @@ include("copy.jl")
 include("residency.jl")
 
 function __init__()
-    res = unsafe_zeInit(ZE_INIT_FLAG_NONE)
+    res = unsafe_zeInit(0)
     if res == RESULT_ERROR_UNINITIALIZED
         # https://github.com/oneapi-src/level-zero/issues/7#issuecomment-606701224
         error("No oneAPI driver implementation found.")
