@@ -72,9 +72,11 @@ The level zero wrappers are available in the `oneL0` submodule, and expose all f
 of the underlying APIs with user-friendly wrappers:
 
 ```julia
-julia> using oneAPI.oneL0
+julia> using oneAPI, oneAPI.oneL0
 
 julia> drv = first(drivers());
+
+julia> ctx = ZeContext(drv);
 
 julia> dev = first(devices(drv))
 ZeDevice(GPU, vendor 0x8086, device 0x1912): Intel(R) Gen9
@@ -82,7 +84,7 @@ ZeDevice(GPU, vendor 0x8086, device 0x1912): Intel(R) Gen9
 julia> compute_properties(dev)
 (maxTotalGroupSize = 256, maxGroupSizeX = 256, maxGroupSizeY = 256, maxGroupSizeZ = 256, maxGroupCountX = 4294967295, maxGroupCountY = 4294967295, maxGroupCountZ = 4294967295, maxSharedLocalMemory = 65536, subGroupSizes = (8, 16, 32))
 
-julia> queue = ZeCommandQueue(dev);
+julia> queue = ZeCommandQueue(ctx, dev);
 
 julia> execute!(queue) do list
          append_barrier!(list)
