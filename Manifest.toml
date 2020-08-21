@@ -72,9 +72,7 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[NEO_jll]]
 deps = ["Libdl", "Pkg", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "8090fd0858dab87979d23653c44ee9c84280e522"
-repo-rev = "master"
-repo-url = "https://github.com/maleadt/NEO_jll.jl"
+git-tree-sha1 = "477a4c8a952c58cb33ad113d382b7a15ef7a00a7"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
 version = "20.32.17625+0"
 
@@ -147,16 +145,12 @@ version = "1.0.4560+0"
 
 [[oneAPI_Level_Zero_Headers_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "fcd0809d6bc8300f6a98e5a77e87d81536f0426b"
-repo-rev = "master"
-repo-url = "https://github.com/maleadt/oneAPI_Level_Zero_Headers_jll.jl"
+git-tree-sha1 = "b496aa98b3fbb01e310197195112db7dfa26239f"
 uuid = "f4bc562b-d309-54f8-9efb-476e56f0410d"
 version = "1.0.0+0"
 
 [[oneAPI_Level_Zero_Loader_jll]]
 deps = ["Libdl", "Pkg", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "4f711c70d642d50e7b3ac7662369f60bb2385a7d"
-repo-rev = "master"
-repo-url = "https://github.com/maleadt/oneAPI_Level_Zero_Loader_jll.jl"
+git-tree-sha1 = "99963afa56b768090e33dc70a35502a9fbbe5341"
 uuid = "13eca655-d68d-5b81-8367-6d99d727ab01"
 version = "1.0.0+0"
