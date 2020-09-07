@@ -28,9 +28,9 @@ version = "3.15.0"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "88a93640bb3345436284ff089b383c34427f4117"
+git-tree-sha1 = "6189e66c78a2d840db5ee530ac2326505b3cc7ae"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.2"
+version = "0.18.4"
 
 [[Dates]]
 deps = ["Printf"]
@@ -89,9 +89,9 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[NEO_jll]]
 deps = ["Libdl", "Pkg", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "477a4c8a952c58cb33ad113d382b7a15ef7a00a7"
+git-tree-sha1 = "79f2ba034028d6570f7683886bd8e9b5fa02584e"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
-version = "20.32.17625+0"
+version = "20.34.17727+1"
 
 [[OrderedCollections]]
 git-tree-sha1 = "293b70ac1780f9584c89268a6e2a560d938a7065"
@@ -166,15 +166,15 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[gmmlib_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "81ab583bc76097adc4ac0bc5d3def2ba2515a21d"
+git-tree-sha1 = "8813f9183033caed79c5f1dbf854223983cd26bc"
 uuid = "09858cae-167c-5acb-9302-fddc6874d481"
-version = "20.2.3+0"
+version = "20.2.4+0"
 
 [[libigc_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "34202faf0ba3d3ca72b0a9cb5249b8609e09f1e7"
+git-tree-sha1 = "c6c6574a46826a4c725fa3722f36ef227b64655d"
 uuid = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-version = "1.0.4560+0"
+version = "1.0.4756+0"
 
 [[oneAPI_Level_Zero_Headers_jll]]
 deps = ["Libdl", "Pkg"]
