@@ -8,9 +8,9 @@ version = "0.5.0"
 
 [[Adapt]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "0fac443759fa829ed8066db6cf1077d888bb6573"
+git-tree-sha1 = "95f8bda0555209f122bc796b0382ea4a3a121720"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "2.0.2"
+version = "2.1.0"
 
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -22,15 +22,15 @@ version = "0.4.1"
 
 [[Compat]]
 deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
-git-tree-sha1 = "215f1c81cfd1c5416cd78740bff8ef59b24cd7c0"
+git-tree-sha1 = "7c7f4cda0d58ec999189d70f5ee500348c4b4df1"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "3.15.0"
+version = "3.16.0"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "a88a67acbf3b61057371f315cadd027c8bce6d6d"
+git-tree-sha1 = "0347f23484a96d56e7096eb1f55c6975be34b11a"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.5"
+version = "0.18.6"
 
 [[Dates]]
 deps = ["Printf"]
@@ -46,9 +46,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[GPUArrays]]
 deps = ["AbstractFFTs", "Adapt", "LinearAlgebra", "Printf", "Random", "Serialization"]
-git-tree-sha1 = "600f45500060894487832c2f00c203fe3e0cb264"
+git-tree-sha1 = "d3a68bdf4868f3922f5b9bcb2cbf2776d5c0ecf5"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "5.1.0"
+version = "5.2.0"
 
 [[GPUCompiler]]
 deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "TimerOutputs", "UUIDs"]
@@ -94,9 +94,9 @@ uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
 version = "20.34.17727+1"
 
 [[OrderedCollections]]
-git-tree-sha1 = "293b70ac1780f9584c89268a6e2a560d938a7065"
+git-tree-sha1 = "16c08bf5dba06609fe45e30860092d6fa41fde7b"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-version = "1.3.0"
+version = "1.3.1"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
