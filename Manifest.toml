@@ -46,15 +46,15 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[GPUArrays]]
 deps = ["AbstractFFTs", "Adapt", "LinearAlgebra", "Printf", "Random", "Serialization"]
-git-tree-sha1 = "d3a68bdf4868f3922f5b9bcb2cbf2776d5c0ecf5"
+git-tree-sha1 = "da6398282abd2a8c0dc3e55b49d984fcc2c582e5"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "5.2.0"
+version = "5.2.1"
 
 [[GPUCompiler]]
 deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "c24978f4722e39510d2225db8823be74db4f7ecb"
+git-tree-sha1 = "f269c216673226805f087f40663cd6be35b3c485"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.7.1"
+version = "0.7.2"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
