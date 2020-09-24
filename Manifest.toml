@@ -8,9 +8,9 @@ version = "0.5.0"
 
 [[Adapt]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "95f8bda0555209f122bc796b0382ea4a3a121720"
+git-tree-sha1 = "841151462b0fdeeb8f2d86ce43796ef59aa4a9ad"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "2.1.0"
+version = "2.2.0"
 
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -46,15 +46,15 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[GPUArrays]]
 deps = ["AbstractFFTs", "Adapt", "LinearAlgebra", "Printf", "Random", "Serialization"]
-git-tree-sha1 = "da6398282abd2a8c0dc3e55b49d984fcc2c582e5"
+git-tree-sha1 = "ebcd8ffdf35bc719461d16c8e0da97b83183ca4c"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "5.2.1"
+version = "6.0.0"
 
 [[GPUCompiler]]
 deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "f269c216673226805f087f40663cd6be35b3c485"
+git-tree-sha1 = "1b19d415fc3581ff0ed2f57875fca16b5190060a"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.7.2"
+version = "0.7.3"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
