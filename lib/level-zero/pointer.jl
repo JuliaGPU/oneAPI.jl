@@ -4,7 +4,7 @@ export ZePtr, ZE_NULL, PtrOrZePtr
 
 
 #
-# device pointer
+# Device pointer
 #
 
 """
@@ -56,6 +56,11 @@ Base.cconvert(::Type{<:ZePtr}, x) = x
 # fallback for unsafe_convert
 Base.unsafe_convert(::Type{P}, x::ZePtr) where {P<:ZePtr} = convert(P, x)
 
+# from arrays
+Base.unsafe_convert(::Type{ZePtr{S}}, a::AbstractArray{T}) where {S,T} =
+    convert(CuPtr{S}, Base.unsafe_convert(CuPtr{T}, a))
+Base.unsafe_convert(::Type{ZePtr{T}}, a::AbstractArray{T}) where {T} =
+    error("conversion to pointer not defined for $(typeof(a))")
 
 ## limited pointer arithmetic & comparison
 
@@ -73,7 +78,7 @@ Base.:(+)(x::Integer, y::ZePtr) = y + x
 
 
 #
-# device or host pointer
+# Host or device pointer
 #
 
 """
@@ -110,15 +115,98 @@ function Base.cconvert(::Type{PtrOrZePtr{T}}, val) where {T}
 end
 
 function Base.unsafe_convert(::Type{PtrOrZePtr{T}}, val) where {T}
-    # FIXME: this is expensive; optimize using isapplicable?
-    ptr = try
+    ptr = if Core.Compiler.return_type(Base.unsafe_convert,
+                                       Tuple{Type{Ptr{T}}, typeof(val)}) !== Union{}
         Base.unsafe_convert(Ptr{T}, val)
-    catch
-        try
-            Base.unsafe_convert(ZePtr{T}, val)
-        catch
-            throw(ArgumentError("cannot convert to either a host or device pointer"))
-        end
+    elseif Core.Compiler.return_type(Base.unsafe_convert,
+                                     Tuple{Type{ZePtr{T}}, typeof(val)}) !== Union{}
+        Base.unsafe_convert(ZePtr{T}, val)
+    else
+        throw(ArgumentError("cannot convert to either a host or device pointer"))
     end
+
     return Base.bitcast(PtrOrZePtr{T}, ptr)
 end
+
+
+#
+# Device reference objects
+#
+
+if sizeof(Ptr{Cvoid}) == 8
+    primitive type ZeRef{T} 64 end
+else
+    primitive type ZeRef{T} 32 end
+end
+
+# general methods for ZeRef{T} type
+Base.eltype(x::Type{<:ZeRef{T}}) where {T} = @isdefined(T) ? T : Any
+
+Base.convert(::Type{ZeRef{T}}, x::ZeRef{T}) where {T} = x
+
+# conversion or the actual ccall
+Base.unsafe_convert(::Type{ZeRef{T}}, x::ZeRef{T}) where {T} = Base.bitcast(ZeRef{T}, Base.unsafe_convert(ZePtr{T}, x))
+Base.unsafe_convert(::Type{ZeRef{T}}, x) where {T} = Base.bitcast(ZeRef{T}, Base.unsafe_convert(ZePtr{T}, x))
+
+# ZeRef from literal pointer
+Base.convert(::Type{ZeRef{T}}, x::ZePtr{T}) where {T} = x
+
+# indirect constructors using ZeRef
+ZeRef(x::Any) = ZeRefArray(ZeArray([x]))
+ZeRef{T}(x) where {T} = ZeRefArray{T}(ZeArray(T[x]))
+ZeRef{T}() where {T} = ZeRefArray(ZeArray{T}(undef, 1))
+Base.convert(::Type{ZeRef{T}}, x) where {T} = ZeRef{T}(x)
+
+
+## ZeRef object backed by a CUDA array at index i
+
+struct ZeRefArray{T,A<:AbstractArray{T}} <: Ref{T}
+    x::A
+    i::Int
+    ZeRefArray{T,A}(x,i) where {T,A<:AbstractArray{T}} = new(x,i)
+end
+ZeRefArray{T}(x::AbstractArray{T}, i::Int=1) where {T} = ZeRefArray{T,typeof(x)}(x, i)
+ZeRefArray(x::AbstractArray{T}, i::Int=1) where {T} = ZeRefArray{T}(x, i)
+Base.convert(::Type{ZeRef{T}}, x::AbstractArray{T}) where {T} = ZeRefArray(x, 1)
+
+function Base.unsafe_convert(P::Type{ZePtr{T}}, b::ZeRefArray{T}) where T
+    return pointer(b.x, b.i)
+end
+function Base.unsafe_convert(P::Type{ZePtr{Any}}, b::ZeRefArray{Any})
+    return convert(P, pointer(b.x, b.i))
+end
+Base.unsafe_convert(::Type{ZePtr{Cvoid}}, b::ZeRefArray{T}) where {T} =
+    convert(ZePtr{Cvoid}, Base.unsafe_convert(ZePtr{T}, b))
+
+
+## Union with all ZeRef 'subtypes'
+
+const ZeRefs{T} = Union{ZePtr{T}, ZeRefArray{T}}
+
+
+## RefOrZeRef
+
+if sizeof(Ptr{Cvoid}) == 8
+    primitive type RefOrZeRef{T} 64 end
+else
+    primitive type RefOrZeRef{T} 32 end
+end
+
+Base.convert(::Type{RefOrZeRef{T}}, x::Union{RefOrZeRef{T}, Ref{T}, ZeRef{T}, ZeRefs{T}}) where {T} = x
+
+# prefer conversion to CPU ref: this is generally cheaper
+Base.convert(::Type{RefOrZeRef{T}}, x) where {T} = Ref{T}(x)
+Base.unsafe_convert(::Type{RefOrZeRef{T}}, x::Ref{T}) where {T} =
+    Base.bitcast(RefOrZeRef{T}, Base.unsafe_convert(Ptr{T}, x))
+Base.unsafe_convert(::Type{RefOrZeRef{T}}, x) where {T} =
+    Base.bitcast(RefOrZeRef{T}, Base.unsafe_convert(Ptr{T}, x))
+
+# support conversion from GPU ref
+Base.unsafe_convert(::Type{RefOrZeRef{T}}, x::ZeRefs{T}) where {T} =
+    Base.bitcast(RefOrZeRef{T}, Base.unsafe_convert(ZePtr{T}, x))
+
+# support conversion from arrays
+Base.convert(::Type{RefOrZeRef{T}}, x::Array{T}) where {T} = convert(Ref{T}, x)
+Base.convert(::Type{RefOrZeRef{T}}, x::AbstractArray{T}) where {T} = convert(ZeRef{T}, x)
+Base.unsafe_convert(P::Type{RefOrZeRef{T}}, b::ZeRefArray{T}) where T =
+    Base.bitcast(RefOrZeRef{T}, Base.unsafe_convert(ZeRef{T}, b))

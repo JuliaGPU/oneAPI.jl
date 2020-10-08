@@ -47,6 +47,9 @@ Base.dataids(A::oneArray) = (UInt(pointer(A)),)
 
 Base.unaliascopy(A::oneArray) = copy(A)
 
+device(a::oneArray) = a.dev
+context(a::oneArray) = a.ctx
+
 
 ## convenience constructors
 
@@ -143,8 +146,6 @@ oneWrappedVecOrMat{T} = Union{oneWrappedVector{T}, oneWrappedMatrix{T}}
   return A
 end
 
-oneArray{T,N}(xs::AbstractArray{S,N}) where {T,N,S} = oneArray{T,N}(map(T, xs))
-
 # underspecified constructors
 oneArray{T}(xs::AbstractArray{S,N}) where {T,N,S} = oneArray{T,N}(xs)
 (::Type{oneArray{T,N} where T})(x::AbstractArray{S,N}) where {S,N} = oneArray{S,N}(x)
@@ -167,13 +168,13 @@ Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} = convert(ZePtr{
 
 ## interop with GPU arrays
 
-function Base.convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) where {T,N}
+function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) where {T,N}
   oneDeviceArray{T,N,AS.Global}(a.dims, reinterpret(LLVMPtr{T,AS.Global}, pointer(a)))
 end
 
 function Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
-  make_resident(xs.ctx, xs.dev, xs.buf)
-  convert(oneDeviceArray{T,N,AS.Global}, xs)
+  make_resident(context(xs), device(xs), xs.buf)
+  Base.unsafe_convert(oneDeviceArray{T,N,AS.Global}, xs)
 end
 
 
@@ -195,36 +196,49 @@ Base.collect(x::oneArray{T,N}) where {T,N} = copyto!(Array{T,N}(undef, size(x)),
 
 function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::Array{T}, soffs::Integer,
                       n::Integer) where T
+  n==0 && return dest
   @boundscheck checkbounds(dest, doffs)
   @boundscheck checkbounds(dest, doffs+n-1)
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
-  unsafe_copyto!(dest.ctx, dest.dev, dest, doffs, src, soffs, n)
+  unsafe_copyto!(context(dest), device(dest), dest, doffs, src, soffs, n)
   return dest
 end
 
-function Base.copyto!(dest::Array{T}, doffs::Integer, src::oneArray{T}, soffs::Integer,
+Base.copyto!(dest::oneDenseArray{T}, src::Array{T}) where {T} =
+    copyto!(dest, 1, src, 1, length(src))
+
+function Base.copyto!(dest::Array{T}, doffs::Integer, src::oneDenseArray{T}, soffs::Integer,
                       n::Integer) where T
+  n==0 && return dest
   @boundscheck checkbounds(dest, doffs)
   @boundscheck checkbounds(dest, doffs+n-1)
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
-  unsafe_copyto!(src.ctx, src.dev, dest, doffs, src, soffs, n)
+  unsafe_copyto!(context(src), device(src), dest, doffs, src, soffs, n)
   return dest
 end
 
-function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::oneArray{T}, soffs::Integer,
+Base.copyto!(dest::Array{T}, src::oneDenseArray{T}) where {T} =
+    copyto!(dest, 1, src, 1, length(src))
+
+function Base.copyto!(dest::oneDenseArray{T}, doffs::Integer, src::oneDenseArray{T}, soffs::Integer,
                       n::Integer) where T
+  n==0 && return dest
   @boundscheck checkbounds(dest, doffs)
   @boundscheck checkbounds(dest, doffs+n-1)
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
-  # TODO: which device to use here?
-  unsafe_copyto!(dest.ctx, dest.dev, dest, doffs, src, soffs, n)
+  @assert device(dest) == device(src) && context(dest) == context(src)
+  unsafe_copyto!(context(dest), device(dest), dest, doffs, src, soffs, n)
   return dest
 end
 
-function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dest::oneArray{T}, doffs, src::Array{T}, soffs, n) where T
+Base.copyto!(dest::oneDenseArray{T}, src::oneDenseArray{T}) where {T} =
+    copyto!(dest, 1, src, 1, length(src))
+
+function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
+                             dest::oneDenseArray{T}, doffs, src::Array{T}, soffs, n) where T
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -233,7 +247,8 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dest::oneArray{T}, d
   return dest
 end
 
-function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dest::Array{T}, doffs, src::oneArray{T}, soffs, n) where T
+function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
+                             dest::Array{T}, doffs, src::oneDenseArray{T}, soffs, n) where T
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -242,7 +257,8 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dest::Array{T}, doff
   return dest
 end
 
-function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dest::oneArray{T}, doffs, src::oneArray{T}, soffs, n) where T
+function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
+                             dest::oneDenseArray{T}, doffs, src::oneDenseArray{T}, soffs, n) where T
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -261,7 +277,7 @@ ones(dims...) = ones(Float64, dims...)
 fill(v, dims...) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 fill(v, dims::Dims) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 
-function Base.fill!(A::oneArray{T}, val) where T
+function Base.fill!(A::oneDenseArray{T}, val) where T
   B = [convert(T, val)]
   unsafe_fill!(A.ctx, A.dev, pointer(A), pointer(B), length(A))
   A
@@ -282,19 +298,35 @@ end
     Base.unsafe_view(Base._maybe_reshape_parent(A, Base.index_ndims(J_gpu...)), J_gpu...)
 end
 
-function Base.unsafe_convert(::Type{ZePtr{T}}, V::SubArray{T,N,P,<:Tuple{Vararg{Base.RangeIndex}}}) where {T,N,P<:oneArray}
+device(a::SubArray) = device(parent(a))
+context(a::SubArray) = context(parent(a))
+
+# contiguous subarrays
+function Base.unsafe_convert(::Type{ZePtr{T}}, V::SubArray{T,N,P,<:Tuple{Vararg{Base.RangeIndex}}}) where {T,N,P}
     return Base.unsafe_convert(ZePtr{T}, parent(V)) +
            Base._memory_offset(V.parent, map(first, V.indices)...)
 end
 
+# reshaped subarrays
+function Base.unsafe_convert(::Type{ZePtr{T}}, V::SubArray{T,N,P,<:Tuple{Vararg{Union{Base.RangeIndex,Base.ReshapedUnitRange}}}}) where {T,N,P}
+   return Base.unsafe_convert(ZePtr{T}, parent(V)) +
+          (Base.first_index(V)-1)*sizeof(T)
+end
+
 
 ## reshape
+
+device(a::Base.ReshapedArray) = device(parent(a))
+context(a::Base.ReshapedArray) = context(parent(a))
 
 Base.unsafe_convert(::Type{ZePtr{T}}, a::Base.ReshapedArray{T}) where {T} =
   Base.unsafe_convert(ZePtr{T}, parent(a))
 
 
 ## reinterpret
+
+device(a::Base.ReinterpretArray) = device(parent(a))
+context(a::Base.ReinterpretArray) = context(parent(a))
 
 Base.unsafe_convert(::Type{ZePtr{T}}, a::Base.ReinterpretArray{T,N,S} where N) where {T,S} =
   ZePtr{T}(Base.unsafe_convert(ZePtr{S}, parent(a)))
