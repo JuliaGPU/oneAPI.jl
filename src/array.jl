@@ -2,100 +2,50 @@
 
 export oneArray
 
+@enum ArrayState begin
+  ARRAY_UNMANAGED
+  ARRAY_MANAGED
+  ARRAY_FREED
+end
+
 mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
   buf::oneL0.DeviceBuffer
   dims::Dims{N}
 
+  state::ArrayState
+
   ctx::ZeContext
   dev::ZeDevice
 
-  # ownership
-  parent::Union{Nothing,oneArray}
-  refcount::Int
-  freed::Bool
-
-  # primary array
-  function oneArray{T,N}(buf, dims, ctx, dev) where {T,N}
-    obj = new(buf, dims, ctx, dev, nothing, 0, false)
-    retain(obj)
+  function oneArray{T,N}(::UndefInitializer, dims::Dims{N})  where {T,N}
+    Base.isbitsunion(T) && error("oneArray does not yet support union bits types")
+    Base.isbitstype(T)  || error("oneArray only supports bits types") # allocatedinline on 1.3+
+    ctx = context()
+    dev = device()
+    buf = device_alloc(ctx, dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
+    obj = new{T,N}(buf, dims, ARRAY_MANAGED, ctx, dev)
     finalizer(unsafe_free!, obj)
     return obj
-  end
-
-  # derived array
-  function oneArray{T,N}(buf, dims::Dims{N}, parent::oneArray) where {T,N}
-    self = new(buf, dims, parent.ctx, parent.dev, parent, 0, false)
-    retain(self)
-    retain(parent)
-    finalizer(unsafe_free!, self)
-    return self
   end
 end
 
 function unsafe_free!(xs::oneArray)
   # this call should only have an effect once, becuase both the user and the GC can call it
-  xs.freed && return
-  _unsafe_free!(xs)
-  xs.freed = true
-  return
-end
-
-function _unsafe_free!(xs::oneArray)
-  @assert xs.refcount >= 0
-  if release(xs)
-    if xs.parent === nothing
-      # primary array with all references gone
-      free(xs.buf)
-    else
-      # derived object
-      _unsafe_free!(xs.parent)
-    end
+  if xs.state == ARRAY_FREED
+    return
+  elseif xs.state == ARRAY_UNMANAGED
+    throw(ArgumentError("Cannot free an unmanaged buffer."))
   end
+
+  free(xs.buf)
+  xs.state = ARRAY_FREED
 
   return
 end
 
-@inline function retain(a::oneArray)
-  a.refcount += 1
-  return
-end
+Base.dataids(A::oneArray) = (UInt(pointer(A)),)
 
-@inline function release(a::oneArray)
-  a.refcount -= 1
-  return a.refcount == 0
-end
-
-Base.parent(A::oneArray) = something(A.parent, A)
-
-function Base.dataids(A::oneArray)
-  if A.parent === nothing
-    (UInt(pointer(A)),)
-  else
-    (Base.dataids(parent(A))..., UInt(pointer(A)),)
-  end
-end
-
-function Base.unaliascopy(A::oneArray)
-  if A.parent === nothing
-    copy(A)
-  else
-    offset = pointer(A) - pointer(A.parent)
-    new_parent = Base.unaliascopy(A.parent)
-    typeof(A)(pointer(new_parent) + offset, A.dims, new_parent, A.pooled, A.ctx)
-  end
-end
-
-# optimized alias detection for views
-function Base.mightalias(A::oneArray, B::oneArray)
-    if parent(A) !== parent(B)
-        # We cannot do any better than the usual dataids check
-        return invoke(Base.mightalias, Tuple{AbstractArray, AbstractArray}, A, B)
-    end
-
-    rA = pointer(A):pointer(A)+sizeof(A)
-    rB = pointer(B):pointer(B)+sizeof(B)
-    return first(rA) <= first(rB) < last(rA) || first(rB) <= first(rA) < last(rB)
-end
+Base.unaliascopy(A::oneArray) = copy(A)
 
 
 ## convenience constructors
@@ -103,14 +53,6 @@ end
 oneVector{T} = oneArray{T,1}
 oneMatrix{T} = oneArray{T,2}
 oneVecOrMat{T} = Union{oneVector{T},oneMatrix{T}}
-
-# type and dimensionality specified, accepting dims as tuples of Ints
-function oneArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N}
-    ctx = context()
-    dev = device()
-    buf = device_alloc(ctx, dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
-    oneArray{T,N}(buf, dims, ctx, dev)
-end
 
 # type and dimensionality specified, accepting dims as series of Ints
 oneArray{T,N}(::UndefInitializer, dims::Integer...) where {T,N} = oneArray{T,N}(undef, dims)
@@ -142,9 +84,8 @@ Base.similar(a::oneArray{T}, dims::Base.Dims{N}) where {T,N} = oneArray{T,N}(und
 Base.similar(a::oneArray, ::Type{T}, dims::Base.Dims{N}) where {T,N} = oneArray{T,N}(undef, dims)
 
 function Base.copy(a::oneArray{T,N}) where {T,N}
-  buf = device_alloc(a.dev, sizeof(a), Base.datatype_alignment(T))
-  b = oneArray{T,N}(buf, a.dims, a.dev)
-  copyto!(b, a)
+  b = similar(a)
+  @inbounds copyto!(b, a)
 end
 
 
@@ -155,8 +96,43 @@ Base.elsize(::Type{<:oneArray{T}}) where {T} = sizeof(T)
 Base.size(x::oneArray) = x.dims
 Base.sizeof(x::oneArray) = Base.elsize(x) * length(x)
 
-Base.pointer(x::oneArray{T}) where {T} = convert(ZePtr{T}, x.buf)
-Base.pointer(x::oneArray, i::Integer) = pointer(x) + (i-1) * Base.elsize(x)
+
+## derived types
+
+export oneDenseArray, oneDenseVector, oneDenseMatrix, oneDenseVecOrMat,
+       oneDenseArray, oneDenseVector, oneDenseMatrix, oneDenseVecOrMat,
+       oneWrappedArray, oneWrappedVector, oneWrappedMatrix, oneWrappedVecOrMat
+
+oneContiguousSubArray{T,N,A<:oneArray} = Base.FastContiguousSubArray{T,N,A}
+
+# dense arrays: stored contiguously in memory
+oneDenseReinterpretArray{T,N,A<:Union{oneArray,oneContiguousSubArray}} = Base.ReinterpretArray{T,N,S,A} where S
+oneDenseReshapedArray{T,N,A<:Union{oneArray,oneContiguousSubArray,oneDenseReinterpretArray}} = Base.ReshapedArray{T,N,A}
+DenseSuboneArray{T,N,A<:Union{oneArray,oneDenseReshapedArray,oneDenseReinterpretArray}} = Base.FastContiguousSubArray{T,N,A}
+oneDenseArray{T,N} = Union{oneArray{T,N}, DenseSuboneArray{T,N}, oneDenseReshapedArray{T,N}, oneDenseReinterpretArray{T,N}}
+oneDenseVector{T} = oneDenseArray{T,1}
+oneDenseMatrix{T} = oneDenseArray{T,2}
+oneDenseVecOrMat{T} = Union{oneDenseVector{T}, oneDenseMatrix{T}}
+
+# strided arrays
+oneStridedSubArray{T,N,A<:Union{oneArray,oneDenseReshapedArray,oneDenseReinterpretArray},
+                  I<:Tuple{Vararg{Union{Base.RangeIndex, Base.ReshapedUnitRange,
+                                        Base.AbstractCartesianIndex}}}} = SubArray{T,N,A,I}
+oneStridedArray{T,N} = Union{oneArray{T,N}, oneStridedSubArray{T,N}, oneDenseReshapedArray{T,N}, oneDenseReinterpretArray{T,N}}
+oneStridedVector{T} = oneStridedArray{T,1}
+oneStridedMatrix{T} = oneStridedArray{T,2}
+oneStridedVecOrMat{T} = Union{oneStridedVector{T}, oneStridedMatrix{T}}
+
+Base.pointer(x::oneStridedArray{T}) where {T} = Base.unsafe_convert(ZePtr{T}, x)
+@inline function Base.pointer(x::oneStridedArray{T}, i::Integer) where T
+    Base.unsafe_convert(ZePtr{T}, x) + Base._memory_offset(x, i)
+end
+
+# wrapped arrays: can be used in kernels
+oneWrappedArray{T,N} = Union{oneArray{T,N}, WrappedArray{T,N,oneArray,oneArray{T,N}}}
+oneWrappedVector{T} = oneWrappedArray{T,1}
+oneWrappedMatrix{T} = oneWrappedArray{T,2}
+oneWrappedVecOrMat{T} = Union{oneWrappedVector{T}, oneWrappedMatrix{T}}
 
 
 ## interop with other arrays
@@ -182,25 +158,11 @@ oneArray{T,N}(xs::oneArray{T,N}) where {T,N} = xs
 
 Base.convert(::Type{T}, x::T) where T <: oneArray = x
 
-function Base._reshape(parent::oneArray, dims::Dims)
-  n = length(parent)
-  prod(dims) == n || throw(DimensionMismatch("parent has $n elements, which is incompatible with size $dims"))
-  return oneArray{eltype(parent),length(dims)}(parent.buf, dims, parent)
-end
-function Base._reshape(parent::oneArray{T,1}, dims::Tuple{Int}) where T
-  n = length(parent)
-  prod(dims) == n || throw(DimensionMismatch("parent has $n elements, which is incompatible with size $dims"))
-  return parent
-end
-
 
 ## interop with C libraries
 
 Base.unsafe_convert(::Type{Ptr{T}}, x::oneArray{T}) where {T} = throw(ArgumentError("cannot take the host address of a $(typeof(x))"))
-Base.unsafe_convert(::Type{Ptr{S}}, x::oneArray{T}) where {S,T} = throw(ArgumentError("cannot take the host address of a $(typeof(x))"))
-
-Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} = pointer(x)
-Base.unsafe_convert(::Type{ZePtr{S}}, x::oneArray{T}) where {S,T} = convert(ZePtr{S}, Base.unsafe_convert(ZePtr{T}, x))
+Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} = convert(ZePtr{T}, x.buf)
 
 
 ## interop with GPU arrays
@@ -304,3 +266,35 @@ function Base.fill!(A::oneArray{T}, val) where T
   unsafe_fill!(A.ctx, A.dev, pointer(A), pointer(B), length(A))
   A
 end
+
+
+## views
+
+@inline function Base.view(A::oneArray, I::Vararg{Any,N}) where {N}
+    J = to_indices(A, I)
+    @boundscheck begin
+        # Base's boundscheck accesses the indices, so make sure they reside on the CPU.
+        # this is expensive, but it's a bounds check after all.
+        J_cpu = map(j->adapt(Array, j), J)
+        checkbounds(A, J_cpu...)
+    end
+    J_gpu = map(j->adapt(oneArray, j), J)
+    Base.unsafe_view(Base._maybe_reshape_parent(A, Base.index_ndims(J_gpu...)), J_gpu...)
+end
+
+function Base.unsafe_convert(::Type{ZePtr{T}}, V::SubArray{T,N,P,<:Tuple{Vararg{Base.RangeIndex}}}) where {T,N,P<:oneArray}
+    return Base.unsafe_convert(ZePtr{T}, parent(V)) +
+           Base._memory_offset(V.parent, map(first, V.indices)...)
+end
+
+
+## reshape
+
+Base.unsafe_convert(::Type{ZePtr{T}}, a::Base.ReshapedArray{T}) where {T} =
+  Base.unsafe_convert(ZePtr{T}, parent(a))
+
+
+## reinterpret
+
+Base.unsafe_convert(::Type{ZePtr{T}}, a::Base.ReinterpretArray{T,N,S} where N) where {T,S} =
+  ZePtr{T}(Base.unsafe_convert(ZePtr{S}, parent(a)))
