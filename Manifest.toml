@@ -52,13 +52,15 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[GPUArrays]]
 deps = ["AbstractFFTs", "Adapt", "LinearAlgebra", "Printf", "Random", "Serialization"]
-git-tree-sha1 = "da6398282abd2a8c0dc3e55b49d984fcc2c582e5"
+git-tree-sha1 = "e39817aafb64a0794817a1e5126d042d0b26f700"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "5.2.1"
+version = "6.0.1"
 
 [[GPUCompiler]]
-deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "1b19d415fc3581ff0ed2f57875fca16b5190060a"
+deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "Scratch", "Serialization", "TimerOutputs", "UUIDs"]
+git-tree-sha1 = "8b4f39f74d89d3d9de68b5fc5b090858838caf6d"
+repo-rev = "bc13183"
+repo-url = "https://github.com/JuliaGPU/GPUCompiler.jl.git"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
 version = "0.7.3"
 
@@ -139,6 +141,12 @@ deps = ["Libdl", "Pkg"]
 git-tree-sha1 = "f459073ffe7b1247ea784df16b7059ed54bf0734"
 uuid = "6ac6d60f-d740-5983-97d7-a4482c0689f4"
 version = "2020.2.0+1"
+
+[[Scratch]]
+deps = ["Dates"]
+git-tree-sha1 = "ad4b278adb62d185bbcb6864dc24959ab0627bf6"
+uuid = "6c6a2e73-6563-6170-7368-637461726353"
+version = "1.0.3"
 
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"

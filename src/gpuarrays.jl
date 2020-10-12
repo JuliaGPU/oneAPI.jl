@@ -64,9 +64,4 @@ end
 # Host abstractions
 #
 
-GPUArrays.device(A::oneArray) = A.dev
-
 GPUArrays.backend(::Type{<:oneArray}) = oneArrayBackend()
-
-GPUArrays.unsafe_reinterpret(::Type{T}, A::oneArray, size::NTuple{N, Integer}) where {T, N} =
-  oneArray{T,N}(A.buf, size, A)

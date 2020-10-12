@@ -125,12 +125,6 @@ Base.show(io::IO, a::oneDeviceArray) =
 
 Base.show(io::IO, mime::MIME"text/plain", a::oneDeviceArray) = show(io, a)
 
-@inline function Base.unsafe_view(A::oneDeviceVector{T}, I::Vararg{Base.ViewIndex,1}) where {T}
-    ptr = pointer(A, I[1].start)
-    len = I[1].stop - I[1].start + 1
-    return oneDeviceArray(len, ptr)
-end
-
 @inline function Base.iterate(A::oneDeviceArray, i=1)
     if (i % UInt) - 1 < length(A)
         (@inbounds A[i], i + 1)

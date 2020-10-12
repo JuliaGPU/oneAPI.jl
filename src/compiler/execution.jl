@@ -31,7 +31,7 @@ macro oneapi(ex...)
             GC.@preserve $(vars...) begin
                 local $kernel_args = map($kernel_convert, ($(var_exprs...),))
                 local $kernel_tt = Tuple{map(Core.Typeof, $kernel_args)...}
-                local $kernel = $compile($f, $kernel_tt; $(compiler_kwargs...))
+                local $kernel = $zefunction($f, $kernel_tt; $(compiler_kwargs...))
                 $kernel($kernel_args...; $(call_kwargs...))
             end
         end)
@@ -107,23 +107,26 @@ struct HostKernel{F,TT} <: AbstractKernel{F,TT}
     fun::ZeKernel
 end
 
-function compile(f::Core.Function, tt::Type=Tuple{}; name=nothing, kwargs...)
-    dev = device()
-    env = hash(dev)
-
+function zefunction(f::Core.Function, tt::Type=Tuple{}; name=nothing, kwargs...)
     spec = FunctionSpec(f, tt, true, name)
-    GPUCompiler.cached_compilation(_compile, spec, env; kwargs...)::HostKernel{f,tt}
+    cache = get!(()->Dict{UInt,Any}(), zefunction_cache, device)
+    GPUCompiler.cached_compilation(cache, zefunction_compile, zefunction_link,
+                                   spec; kwargs...)::HostKernel{f,tt}
 end
 
-function _compile(source::FunctionSpec; kwargs...)
-    ctx = context()
-    dev = device()
+const zefunction_cache = Dict{Any,Any}()
+
+function zefunction_compile(source::FunctionSpec; kwargs...)
     target = SPIRVCompilerTarget(; kwargs...)
     params = oneAPICompilerParams()
     job = CompilerJob(target, source, params)
-    image, kernel_fn, undefined_fns = GPUCompiler.compile(:obj, job)
+    return GPUCompiler.compile(:obj, job)
+end
 
-    # JIT into an executable kernel object
+# JIT into an executable kernel object
+function zefunction_link(source::FunctionSpec, (image, kernel_fn, undefined_fns); kwargs...)
+    ctx = context()
+    dev = device()
     mod = ZeModule(ctx, dev, image)
     kernel = kernels(mod)[kernel_fn]
 
