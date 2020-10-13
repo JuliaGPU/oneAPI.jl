@@ -140,9 +140,9 @@ oneWrappedVecOrMat{T} = Union{oneWrappedVector{T}, oneWrappedMatrix{T}}
 
 ## interop with other arrays
 
-@inline function oneArray{T,N}(xs::AbstractArray{T,N}) where {T,N}
+@inline function oneArray{T,N}(xs::AbstractArray{<:Any,N}) where {T,N}
   A = oneArray{T,N}(undef, size(xs))
-  copyto!(A, xs)
+  copyto!(A, convert(Array{T}, xs))
   return A
 end
 
