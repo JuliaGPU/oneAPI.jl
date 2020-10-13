@@ -3,8 +3,14 @@ export make_resident, evict
 
 ## memory
 
-make_resident(ctx::ZeContext, dev::ZeDevice, buf::AbstractBuffer, size=sizeof(buf)) =
-    zeContextMakeMemoryResident(ctx, dev, buf, size)
+function make_resident(ctx::ZeContext, dev::ZeDevice, buf::AbstractBuffer, size=sizeof(buf))
+    if pointer(buf) != ZE_NULL
+        zeContextMakeMemoryResident(ctx, dev, buf, size)
+    end
+end
 
-evict(ctx::ZeContext, dev::ZeDevice, buf::AbstractBuffer, size=sizeof(buf)) =
-    zeContextEvictMemory(ctx, dev, buf, size)
+function evict(ctx::ZeContext, dev::ZeDevice, buf::AbstractBuffer, size=sizeof(buf))
+    if pointer(buf) != ZE_NULL
+        zeContextEvictMemory(ctx, dev, buf, size)
+    end
+end
