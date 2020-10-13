@@ -8,8 +8,8 @@ mutable struct ZeModule
     context::ZeContext
     device::ZeDevice
 
-    function ZeModule(ctx::ZeContext, dev::ZeDevice, image; build_flags="")
-        log_ref = if isdebug(:ZeModule)
+    function ZeModule(ctx::ZeContext, dev::ZeDevice, image; build_flags="", log::Bool=true)
+        log_ref = if log
             log_ref = Ref{ze_module_build_log_handle_t}()
         else
             C_NULL
@@ -32,8 +32,7 @@ mutable struct ZeModule
                 Base.unsafe_convert(Ptr{ze_module_constants_t}, constants)
             ))
             handle_ref = Ref{ze_module_handle_t}()
-            zeModuleCreate(ctx, dev, desc_ref, handle_ref, log_ref)
-            obj = new(handle_ref[], ctx, dev)
+            res = unsafe_zeModuleCreate(ctx, dev, desc_ref, handle_ref, log_ref)
         end
 
         # read the log
@@ -46,15 +45,25 @@ mutable struct ZeModule
 
             log = String(log_buf)[1:end-1] # strip null terminator
             if !isempty(log)
-                @debug """Build log:
-                          $log"""
+                if res == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE
+                    @error """Module compilation failed:
+                              $log"""
+                else
+                    @debug """Build log:
+                              $log"""
+                end
             end
         end
 
+        if res != RESULT_SUCCESS
+            throw_api_error(res)
+        end
+
+        obj = new(handle_ref[], ctx, dev)
         finalizer(obj) do obj
             zeModuleDestroy(obj)
         end
-        obj
+        return obj
     end
 end
 
