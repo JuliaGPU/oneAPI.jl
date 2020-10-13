@@ -188,7 +188,7 @@ arguments(kernel::ZeKernel) = ZeKernelArgumentList(kernel)
 
 function Base.setindex!(args::ZeKernelArgumentList, value::Any, index::Integer)
     @assert isbits(value)
-    zeKernelSetArgumentValue(args.kernel, index-1, sizeof(value), Base.RefValue(value))
+    zeKernelSetArgumentValue(args.kernel, index-1, Core.sizeof(value), Base.RefValue(value))
 end
 
 
