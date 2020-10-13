@@ -20,4 +20,33 @@ include("level-zero.jl")
 include("array.jl")
 include("examples.jl")
 
+@testset "GPUArrays.jl" begin
+
+tests = [
+  "base",
+  "broadcasting",
+  "constructors",
+  "conversions",
+  "indexing multidimensional",
+  "indexing scalar",
+  "input output",
+  "interface",
+  "iterator constructors",
+# "linear algebra",             # driver error
+# "mapreduce derivatives"       # mapreduce missing
+# "mapreduce essentials",
+  "math",
+  "random",
+# "uniformscaling",             # gpu_malloc missing
+  "value constructors",
+]
+
+for test in tests
+    @testset "$test" begin
+        TestSuite.tests[test](oneArray)
+    end
+end
+
+end
+
 end
