@@ -52,19 +52,15 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[GPUArrays]]
 deps = ["AbstractFFTs", "Adapt", "LinearAlgebra", "Printf", "Random", "Serialization"]
-git-tree-sha1 = "cdaa201dfe69471c4cbf25ed4421dd2ba6b448bc"
-repo-rev = "ca079ee"
-repo-url = "https://github.com/JuliaGPU/GPUArrays.jl.git"
+git-tree-sha1 = "3b314a595df913db9b3ebf1cb95b4109a2ec185e"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "6.0.1"
+version = "6.1.0"
 
 [[GPUCompiler]]
 deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "Scratch", "Serialization", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "b9ec04d143708466f752496b9863d6888eb7220a"
-repo-rev = "2c3656b71305e6b7ac0c5395b469ed49aafccbbe"
-repo-url = "https://github.com/JuliaGPU/GPUCompiler.jl.git"
+git-tree-sha1 = "b9ae66778079798404bd06449c83c457aae96403"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.7.3"
+version = "0.8.1"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
