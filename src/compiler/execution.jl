@@ -1,11 +1,11 @@
-export @oneapi, kernel_convert
+export @oneapi, zefunction, kernel_convert
 
 macro oneapi(ex...)
     call = ex[end]
     kwargs = ex[1:end-1]
 
     # destructure the kernel call
-    Meta.isexpr(call, :call) || throw(ArgumentError("second argument to @cuda should be a function call"))
+    Meta.isexpr(call, :call) || throw(ArgumentError("second argument to @oneapi should be a function call"))
     f = call.args[1]
     args = call.args[2:end]
 
@@ -76,7 +76,12 @@ abstract type AbstractKernel{F,TT} end
     args = (:F, (:( args[$i] ) for i in 1:length(args))...)
 
     # filter out ghost arguments that shouldn't be passed
-    to_pass = map(!isghosttype, sig.parameters)
+    predicate = if VERSION >= v"1.5.0-DEV.581"
+        dt -> isghosttype(dt) || Core.Compiler.isconstType(dt)
+    else
+        dt -> isghosttype(dt)
+    end
+    to_pass = map(!predicate, sig.parameters)
     call_t =                  Type[x[1] for x in zip(sig.parameters,  to_pass) if x[2]]
     call_args = Union{Expr,Symbol}[x[1] for x in zip(args, to_pass)            if x[2]]
 

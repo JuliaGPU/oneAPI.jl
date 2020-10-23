@@ -154,6 +154,11 @@ oneArray(A::AbstractArray{T,N}) where {T,N} = oneArray{T,N}(A)
 # idempotency
 oneArray{T,N}(xs::oneArray{T,N}) where {T,N} = xs
 
+# Level Zero references
+oneL0.ZeRef(x::Any) = oneL0.ZeRefArray(oneArray([x]))
+oneL0.ZeRef{T}(x) where {T} = oneL0.ZeRefArray{T}(oneArray(T[x]))
+oneL0.ZeRef{T}() where {T} = oneL0.ZeRefArray(oneArray{T}(undef, 1))
+
 
 ## conversions
 

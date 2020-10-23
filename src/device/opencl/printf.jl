@@ -9,7 +9,7 @@
     # > automatically promoted to double. Therefore, varargs functions will never receive
     # > arguments of type char, short int, or float.
 
-    if arg == Cchar || arg == Cshort
+    if arg == Cchar || arg == Cshort || arg == Cuchar || arg == Cushort
         return :(Cint(arg))
     elseif arg == Cfloat
         return :(Cdouble(arg))
@@ -58,3 +58,150 @@ end
         call_function(llvm_f, Int32, Tuple{arg_types...}, arg_tuple)
     end
 end
+
+
+## print-like functionality
+
+# simple conversions, defining an expression and the resulting argument type. nothing fancy,
+# `@print` pretty directly maps to `@printf`; we should just support `write(::IO)`.
+const print_conversions = Dict(
+    Float32     => (x->:(Float64($x)),             Float64),
+    Ptr{<:Any}  => (x->:(convert(Ptr{Cvoid}, $x)), Ptr{Cvoid}),
+    Bool        => (x->:(Int32($x)),               Int32),
+)
+
+# format specifiers
+const print_specifiers = Dict(
+    # integers
+    Int16       => "%hd",
+    Int32       => "%d",
+    Int64       => Sys.iswindows() ? "%lld" : "%ld",
+    UInt16      => "%hu",
+    UInt32      => "%u",
+    UInt64      => Sys.iswindows() ? "%llu" : "%lu",
+
+    # floating-point
+    Float64     => "%f",
+
+    # other
+    Cchar       => "%c",
+    Ptr{Cvoid}  => "%p",
+)
+
+@generated function _print(parts...)
+    fmt = ""
+    args = Expr[]
+
+    for i in 1:length(parts)
+        part = :(parts[$i])
+        T = parts[i]
+
+        # put literals directly in the format string
+        if T <: Val
+            fmt *= string(T.parameters[1])
+            continue
+        end
+
+        # try to convert arguments if they are not supported directly
+        if !haskey(print_specifiers, T)
+            for Tmatch in keys(print_conversions)
+                if T <: Tmatch
+                    conv, T = print_conversions[Tmatch]
+                    part = conv(part)
+                    break
+                end
+            end
+        end
+
+        # render the argument
+        if haskey(print_specifiers, T)
+            fmt *= print_specifiers[T]
+            push!(args, part)
+        elseif T <: String
+            @error("@print does not support non-literal strings")
+        else
+            @error("@print does not support values of type $T")
+        end
+    end
+
+    quote
+        Base.@_inline_meta
+        @printf($fmt, $(args...))
+    end
+end
+
+"""
+    @print(xs...)
+    @println(xs...)
+
+Print a textual representation of values `xs` to standard output from the GPU. The
+functionality builds on `@printf`, and is intended as a more use friendly alternative of
+that API. However, that also means there's only limited support for argument types, handling
+16/32/64 signed and unsigned integers, 32 and 64-bit floating point numbers, `Cchar`s and
+pointers. For more complex output, use `@printf` directly.
+
+Limited string interpolation is also possible:
+
+```julia
+    @print("Hello, World ", 42, "\\n")
+    @print "Hello, World \$(42)\\n"
+```
+"""
+macro print(parts...)
+    args = Union{Val,Expr,Symbol}[]
+
+    parts = [parts...]
+    while true
+        isempty(parts) && break
+
+        part = popfirst!(parts)
+
+        # handle string interpolation
+        if isa(part, Expr) && part.head == :string
+            parts = vcat(part.args, parts)
+            continue
+        end
+
+        # expose literals to the generator by using Val types
+        if isbits(part) # literal numbers, etc
+            push!(args, Val(part))
+        elseif isa(part, QuoteNode) # literal symbols
+            push!(args, Val(part.value))
+        elseif isa(part, String) # literal strings need to be interned
+            push!(args, Val(Symbol(part)))
+        else # actual values that will be passed to printf
+            push!(args, part)
+        end
+    end
+
+    quote
+        _print($(map(esc, args)...))
+    end
+end
+
+@doc (@doc @print) ->
+macro println(parts...)
+    esc(quote
+        oneAPI.@print($(parts...), "\n")
+    end)
+end
+
+"""
+    @show(ex)
+
+GPU analog of `Base.@show`. It comes with the same type restrictions as [`@printf`](@ref).
+
+```julia
+@show threadIdx().x
+```
+"""
+macro show(ex)
+    val = gensym("val")
+    s = string(ex)
+    quote
+        $val = $(esc(ex))
+        oneAPI.@println($(Expr(:string, s, " = ", val)))
+        $val
+    end
+end
+
