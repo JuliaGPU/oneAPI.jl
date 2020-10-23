@@ -1,6 +1,6 @@
 # pointer types
 
-export ZePtr, ZE_NULL, PtrOrZePtr
+export ZePtr, ZE_NULL, PtrOrZePtr, ZeRef, RefOrZeRef
 
 
 #
@@ -152,9 +152,6 @@ Base.unsafe_convert(::Type{ZeRef{T}}, x) where {T} = Base.bitcast(ZeRef{T}, Base
 Base.convert(::Type{ZeRef{T}}, x::ZePtr{T}) where {T} = x
 
 # indirect constructors using ZeRef
-ZeRef(x::Any) = ZeRefArray(ZeArray([x]))
-ZeRef{T}(x) where {T} = ZeRefArray{T}(ZeArray(T[x]))
-ZeRef{T}() where {T} = ZeRefArray(ZeArray{T}(undef, 1))
 Base.convert(::Type{ZeRef{T}}, x) where {T} = ZeRef{T}(x)
 
 

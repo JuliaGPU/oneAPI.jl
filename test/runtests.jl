@@ -16,9 +16,11 @@ testf(f, xs...; kwargs...) = TestSuite.compare(f, oneArray, xs...; kwargs...)
 
 oneAPI.allowscalar(false)
 
+include("util.jl")
+
 include("level-zero.jl")
+include("execution.jl")
 include("array.jl")
-include("examples.jl")
 
 @testset "GPUArrays.jl" begin
 
@@ -48,5 +50,7 @@ for test in tests
 end
 
 end
+
+include("examples.jl")
 
 end

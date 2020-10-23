@@ -4,7 +4,7 @@
 # executed in the wrong context, ownership should always be encoded in each object.
 # the accessors below should only be used to determine initial ownership.
 
-export driver, driver!, device, device!, context, context!, global_queue
+export driver, driver!, device, device!, context, context!, global_queue, synchronize
 
 function driver()
     get!(task_local_storage(), :ZeDriver) do
@@ -51,3 +51,5 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
         ZeCommandQueue(ctx, dev)
     end
 end
+
+oneL0.synchronize() = oneL0.synchronize(global_queue(context(), device()))
