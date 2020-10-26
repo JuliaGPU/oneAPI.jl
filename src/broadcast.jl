@@ -31,6 +31,9 @@ const device_intrinsics = :[
     ldexp, lgamma, log, log10, log1p, log2, logb, mad, maxmag, minmag, nan, nextafter,
     pow, pown, powr, remainder, rint, rootn, round, rsqrt, sin, sinh, sinpi, sqrt,
     tan, tanh, tanpi, tgamma, trunc,
+    # integer
+    abs_diff, add_sat, hadd, rhadd, clz, mad_hi, mad_sat, mul_hi, rotate,
+    sub_sat, popcount].args
 
 for f in device_intrinsics
   isdefined(Base, f) || continue

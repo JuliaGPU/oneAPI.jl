@@ -28,6 +28,7 @@ include("device/opencl/synchronization.jl")
 include("device/opencl/memory.jl")
 include("device/opencl/printf.jl")
 include("device/opencl/math.jl")
+include("device/opencl/integer.jl")
 
 # essential stuff
 include("context.jl")
