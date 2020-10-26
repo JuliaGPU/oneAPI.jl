@@ -1,10 +1,9 @@
 # Math Functions
 
-
 # TODO: vector types
-const generic_types = [:Cfloat,:Cdouble]
-const generic_types_float = [:Cfloat]
-const generic_types_double = [:Cdouble]
+const generic_types = [Cfloat,Cdouble]
+const generic_types_float = [Cfloat]
+const generic_types_double = [Cdouble]
 
 
 # generically typed
@@ -44,7 +43,7 @@ exp2(x::$gentype) = @builtin_ccall("exp2", $gentype, ($gentype,), x)
 exp10(x::$gentype) = @builtin_ccall("exp10", $gentype, ($gentype,), x)
 expm1(x::$gentype) = @builtin_ccall("expm1", $gentype, ($gentype,), x)
 
-fabs(x::$gentype) = @builtin_ccall("fabs", $gentype, ($gentype,), x)
+abs(x::$gentype) = @builtin_ccall("fabs", $gentype, ($gentype,), x)
 
 fdim(x::$gentype, y::$gentype) = @builtin_ccall("fdim", $gentype, ($gentype, $gentype), x, y)
 
@@ -112,7 +111,7 @@ end
 
 for gentypef in generic_types_float
 
-if gentypef !== :Cfloat
+if gentypef !== Cfloat
 @eval begin
 fmax(x::$gentypef, y::Cfloat) = @builtin_ccall("fmax", $gentypef, ($gentypef, Cfloat), x, y)
 fmin(x::$gentypef, y::Cfloat) = @builtin_ccall("fmin", $gentypef, ($gentypef, Cfloat), x, y)
@@ -126,7 +125,7 @@ end
 
 for gentyped in generic_types_double
 
-if gentyped !== :Cdouble
+if gentyped !== Cdouble
 @eval begin
 fmin(x::$gentyped, y::Cdouble) = @builtin_ccall("fmin", $gentyped, ($gentyped, Cdouble), x, y)
 fmax(x::$gentyped, y::Cdouble) = @builtin_ccall("fmax", $gentyped, ($gentyped, Cdouble), x, y)
@@ -134,6 +133,7 @@ end
 end
 
 end
+
 
 # specifically typed
 
@@ -181,3 +181,9 @@ rootn(x::Cfloat, y::Cint) = @builtin_ccall("rootn", Cfloat, (Cfloat, Cint), x, y
 
 
 # TODO: half and native
+
+
+# temporary extensions
+
+@inline abs(x::Complex{Float64}) = hypot(x.re, x.im)
+@inline abs(x::Complex{Float32}) = hypot(x.re, x.im)

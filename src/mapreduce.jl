@@ -90,6 +90,9 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     Base.check_reducedims(R, A)
     length(A) == 0 && return R # isempty(::Broadcasted) iterates
 
+    f = zefunc(f)
+    op = zefunc(op)
+
     # add singleton dimensions to the output container, if needed
     if ndims(R) < ndims(A)
         dims = Base.fill_to_length(size(R), 1, Val(ndims(A)))
@@ -131,8 +134,8 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
 
     # group size is restricted by local memory
     max_lmem_elements = compute_properties(device()).maxSharedLocalMemory ÷ sizeof(T)
-    max_items = min(compute_properties(device()).maxTotalGroupSize,
-                    compute_items(max_lmem_elements ÷ 2))
+    max_items = Base.min(compute_properties(device()).maxTotalGroupSize,
+                         compute_items(max_lmem_elements ÷ 2))
     # TODO: dynamic local memory to avoid two compilations
 
     # let the driver suggest a group size

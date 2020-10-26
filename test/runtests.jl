@@ -34,9 +34,9 @@ tests = [
   "input output",
   "interface",
   "iterator constructors",
-# "linear algebra",             # driver error
+# "linear algebra",             # 128-bit mulwide
   "mapreduce essentials",
-# "mapreduce derivatives",      # unsupported fabs
+# "mapreduce derivatives",      # 128-bit mulwide
   "math",
   "random",
 # "uniformscaling",             # gpu_malloc missing
