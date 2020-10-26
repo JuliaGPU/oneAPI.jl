@@ -41,6 +41,7 @@ include("compiler/reflection.jl")
 include("memory.jl")
 include("array.jl")
 include("broadcast.jl")
+include("mapreduce.jl")
 include("gpuarrays.jl")
 include("random.jl")
 

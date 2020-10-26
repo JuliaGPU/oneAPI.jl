@@ -35,8 +35,8 @@ tests = [
   "interface",
   "iterator constructors",
 # "linear algebra",             # driver error
-# "mapreduce derivatives"       # mapreduce missing
-# "mapreduce essentials",
+  "mapreduce essentials",
+# "mapreduce derivatives",      # unsupported fabs
   "math",
   "random",
 # "uniformscaling",             # gpu_malloc missing
