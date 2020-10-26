@@ -1,10 +1,9 @@
 # Math Functions
 
-
 # TODO: vector types
-const generic_types = [:Cfloat,:Cdouble]
-const generic_types_float = [:Cfloat]
-const generic_types_double = [:Cdouble]
+const generic_types = [Cfloat,Cdouble]
+const generic_types_float = [Cfloat]
+const generic_types_double = [Cdouble]
 
 
 # generically typed
@@ -112,7 +111,7 @@ end
 
 for gentypef in generic_types_float
 
-if gentypef !== :Cfloat
+if gentypef !== Cfloat
 @eval begin
 fmax(x::$gentypef, y::Cfloat) = @builtin_ccall("fmax", $gentypef, ($gentypef, Cfloat), x, y)
 fmin(x::$gentypef, y::Cfloat) = @builtin_ccall("fmin", $gentypef, ($gentypef, Cfloat), x, y)
@@ -126,7 +125,7 @@ end
 
 for gentyped in generic_types_double
 
-if gentyped !== :Cdouble
+if gentyped !== Cdouble
 @eval begin
 fmin(x::$gentyped, y::Cdouble) = @builtin_ccall("fmin", $gentyped, ($gentyped, Cdouble), x, y)
 fmax(x::$gentyped, y::Cdouble) = @builtin_ccall("fmax", $gentyped, ($gentyped, Cdouble), x, y)

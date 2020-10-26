@@ -14,15 +14,28 @@ macro builtin_ccall(name, ret, argtypes, args...)
     # TODO: generalize for use with other intrinsics? do we need to mangle those?
     mangled = "_Z$(length(name))$name"
     for t in argtypes
-        mangled *= if t == :Cint
+        # with `@eval @builtin_ccall`, we get actual types in the ast, otherwise symbols
+        t = isa(t, Symbol) ? eval(t) : t
+
+        mangled *= if t == Cint
             'i'
-        elseif t == :Cuint
+        elseif t == Cuint
             'j'
-        elseif t == :Culong
+        elseif t == Clong
+            'l'
+        elseif t == Culong
             'm'
-        elseif t == :Cfloat
+        elseif t == Cshort
+            's'
+        elseif t == Cushort
+            't'
+        elseif t == Cchar
+            'c'
+        elseif t == Cuchar
+            'h'
+        elseif t == Cfloat
             'f'
-        elseif t == :Cdouble
+        elseif t == Cdouble
             'd'
         else
             error("Unknown type $t")
