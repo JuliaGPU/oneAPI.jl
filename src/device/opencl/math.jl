@@ -44,7 +44,7 @@ exp2(x::$gentype) = @builtin_ccall("exp2", $gentype, ($gentype,), x)
 exp10(x::$gentype) = @builtin_ccall("exp10", $gentype, ($gentype,), x)
 expm1(x::$gentype) = @builtin_ccall("expm1", $gentype, ($gentype,), x)
 
-fabs(x::$gentype) = @builtin_ccall("fabs", $gentype, ($gentype,), x)
+abs(x::$gentype) = @builtin_ccall("fabs", $gentype, ($gentype,), x)
 
 fdim(x::$gentype, y::$gentype) = @builtin_ccall("fdim", $gentype, ($gentype, $gentype), x, y)
 
@@ -135,6 +135,7 @@ end
 
 end
 
+
 # specifically typed
 
 # frexp(x::Cfloat{n}, Cint{n} *exp) = @builtin_ccall("frexp", Cfloat{n}, (Cfloat{n}, Cint{n} *), x, exp)
@@ -181,3 +182,9 @@ rootn(x::Cfloat, y::Cint) = @builtin_ccall("rootn", Cfloat, (Cfloat, Cint), x, y
 
 
 # TODO: half and native
+
+
+# temporary extensions
+
+@inline abs(x::Complex{Float64}) = hypot(x.re, x.im)
+@inline abs(x::Complex{Float32}) = hypot(x.re, x.im)
