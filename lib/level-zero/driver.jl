@@ -14,10 +14,7 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", drv::ZeDriver)
     props = properties(drv)
-    print(io, "ZeDriver(")
-    @printf(io, "%p", drv.handle)   # FIXME: print UUID once available
-    print(io, ", version $(props.driverVersion)")
-    print(io, ")")
+    print(io, "ZeDriver($(props.uuid), version $(props.driverVersion))")
 end
 
 
@@ -60,8 +57,7 @@ function properties(drv::ZeDriver)
 
     props = props_ref[]
     return (
-        # https://github.com/intel/compute-runtime/issues/321
-        # uuid=Base.UUID(reinterpret(UInt128, [props.uuid.id...])[1]),
+        uuid=Base.UUID(reinterpret(UInt128, [props.uuid.id...])[1]),
         driverVersion=VersionNumber((props.driverVersion & 0xFF000000) >> 24,
                                     (props.driverVersion & 0x00FF0000) >> 16,
                                     props.driverVersion & 0x0000FFFF),
