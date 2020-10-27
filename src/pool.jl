@@ -14,6 +14,16 @@ function allocate(ctx, dev, bytes::Int, alignment::Int)
     return buf
 end
 
+function alias(ctx, dev, ptr)
+    # 0-byte allocations shouldn't hit the pool
+    ptr == ZE_NULL && return
+
+    buf, refcount = allocated[(ctx,ptr)]
+    allocated[(ctx,ptr)] = buf, refcount+1
+
+    return
+end
+
 function release(ctx, dev, ptr)
     # 0-byte allocations shouldn't hit the pool
     ptr == ZE_NULL && return

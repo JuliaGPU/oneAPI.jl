@@ -40,15 +40,21 @@ function unsafe_free!(xs::oneArray)
   release(context(xs), device(xs), xs.ptr)
   xs.state = ARRAY_FREED
 
+  # the object is dead, so we can also wipe the pointer
+  xs.ptr = ZE_NULL
+
   return
 end
+
+device(a::oneArray) = a.dev
+context(a::oneArray) = a.ctx
+
+
+## alias detection
 
 Base.dataids(A::oneArray) = (UInt(pointer(A)),)
 
 Base.unaliascopy(A::oneArray) = copy(A)
-
-device(a::oneArray) = a.dev
-context(a::oneArray) = a.ctx
 
 
 ## convenience constructors
@@ -174,13 +180,16 @@ Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} = convert(ZePtr{
 
 ## interop with GPU arrays
 
-function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) where {T,N}
-  oneDeviceArray{T,N,AS.Global}(a.dims, reinterpret(LLVMPtr{T,AS.Global}, pointer(a)))
+function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneDenseArray{T,N}) where {T,N}
+  oneDeviceArray{T,N,AS.Global}(size(a), reinterpret(LLVMPtr{T,AS.Global}, pointer(a)))
 end
 
-function Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
+Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
   Base.unsafe_convert(oneDeviceArray{T,N,AS.Global}, xs)
-end
+
+# we materialize ReshapedArray/ReinterpretArray/SubArray/... directly as a device array
+Adapt.adapt_structure(::KernelAdaptor, xs::oneDenseArray{T,N}) where {T,N} =
+  Base.unsafe_convert(oneDeviceArray{T,N,AS.Global}, xs)
 
 
 ## interop with CPU arrays
