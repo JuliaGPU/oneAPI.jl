@@ -14,6 +14,8 @@ testf(f, xs...; kwargs...) = TestSuite.compare(f, oneArray, xs...; kwargs...)
 
 @testset "oneAPI" begin
 
+oneAPI.versioninfo()
+
 oneAPI.allowscalar(false)
 
 include("util.jl")

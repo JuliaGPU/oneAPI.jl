@@ -46,5 +46,6 @@ include("broadcast.jl")
 include("mapreduce.jl")
 include("gpuarrays.jl")
 include("random.jl")
+include("utils.jl")
 
 end
