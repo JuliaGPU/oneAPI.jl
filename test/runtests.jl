@@ -34,9 +34,9 @@ tests = [
   "input output",
   "interface",
   "iterator constructors",
-# "linear algebra",             # 128-bit mulwide
+  "linear algebra",
   "mapreduce essentials",
-# "mapreduce derivatives",      # 128-bit mulwide
+  "mapreduce derivatives",
   "math",
   "random",
 # "uniformscaling",             # gpu_malloc missing
