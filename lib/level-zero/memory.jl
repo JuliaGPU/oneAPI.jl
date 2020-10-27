@@ -19,9 +19,7 @@ Base.convert(T::Type{<:Union{Ptr,ZePtr}}, buf::AbstractBuffer) =
 Base.unsafe_convert(P::Type{<:Union{Ptr,ZePtr}}, buf::AbstractBuffer) = convert(P, buf)
 
 function free(buf::AbstractBuffer)
-    if pointer(buf) != ZE_NULL
-        zeMemFree(context(buf), buf)
-    end
+    zeMemFree(context(buf), buf)
 end
 
 
@@ -42,8 +40,6 @@ end
 
 function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer, alignment::Integer=1;
                       flags=0, ordinal::Integer=0)
-    bytesize == 0 && return DeviceBuffer(ZE_NULL, 0, ctx)
-
     desc_ref = Ref(ze_device_mem_alloc_desc_t(
         ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC, C_NULL,
         flags, ordinal
@@ -85,8 +81,6 @@ struct HostBuffer <: AbstractBuffer
 end
 
 function host_alloc(ctx::ZeContext, bytesize::Integer, alignment::Integer=1; flags=0)
-    bytesize == 0 && return HostBuffer(ZE_NULL, 0, ctx)
-
     desc_ref = Ref(ze_host_mem_alloc_desc_t(
         ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC, C_NULL,
         flags
@@ -129,8 +123,6 @@ end
 function shared_alloc(ctx::ZeContext, dev::Union{Nothing,ZeDevice}, bytesize::Integer,
                       alignment::Integer=1; host_flags=0,
                       device_flags=0, ordinal::Integer=0)
-    bytesize == 0 && return SharedBuffer(ZE_NULL, 0, ctx)
-
     device_desc_ref = Ref(ze_device_mem_alloc_desc_t(
         ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC, C_NULL,
         device_flags, ordinal
