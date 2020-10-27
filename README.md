@@ -23,17 +23,11 @@ You need to use Julia 1.5 or higher, and it is strongly advised to use [the offi
 binaries](https://julialang.org/downloads/). For now, only Linux is supported.
 
 Once you have installed Julia, proceed by entering the package manager REPL mode by pressing
-`]` and adding the (currently unregistered) oneAPI package:
+`]` and adding theoneAPI package:
 
 ```
-pkg> add https://github.com/JuliaGPU/oneAPI.jl
+pkg> add oneAPI
 ```
-
-**NOTE**: Since this package is in heavy development, the `master` branch may depend on
-other unreleased dependencies (e.g., the `master` branch of LLVM.jl). For that reason, the
-repository contains a Manifest.toml capturing a known-good set of packages. To use the
-manifest, develop the package instead and activate its environment (refer to the Julia
-documentation for more details).
 
 This installation will take a couple of minutes to download necessary binaries, such as the
 oneAPI loader, several SPIR-V tools, etc. For now, the oneAPI.jl package also depends on
@@ -175,4 +169,13 @@ julia> a .+ 1
  1.87436  1.23285
 ```
 
-All this functionality is in heavy development, and should be considered a proof of concept.
+
+## Status
+
+The current version of oneAPI.jl supports most of oneAPI Level Zero interface, has good
+kernel programming capabilties, and as a demonstration of that it fully implements the
+GPUArrays.jl array interfaces. This results in a full-featured GPU array type.
+
+However, the package has not been extensively tested, and performance issues might be
+present. There is no integration with vendor libraries like oneMKL or oneDNN, and as a
+result certain operations (like matrix multiplication) will be unavailable or slow.
