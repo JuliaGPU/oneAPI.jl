@@ -37,6 +37,7 @@ struct DeviceBuffer <: AbstractBuffer
     ptr::ZePtr{Cvoid}
     bytesize::Int
     context::ZeContext
+    device::ZeDevice
 end
 
 function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer, alignment::Integer=1;
@@ -51,7 +52,7 @@ function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer, alignmen
     ptr_ref = Ref{Ptr{Cvoid}}()
     zeMemAllocDevice(ctx, desc_ref, bytesize, alignment, dev, ptr_ref)
 
-    return DeviceBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx)
+    return DeviceBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx, dev)
 end
 
 Base.pointer(buf::DeviceBuffer) = buf.ptr
@@ -122,6 +123,7 @@ struct SharedBuffer <: AbstractBuffer
     ptr::ZePtr{Cvoid}
     bytesize::Int
     context::ZeContext
+    device::Union{Nothing,ZeDevice}
 end
 
 function shared_alloc(ctx::ZeContext, dev::Union{Nothing,ZeDevice}, bytesize::Integer,
@@ -142,7 +144,7 @@ function shared_alloc(ctx::ZeContext, dev::Union{Nothing,ZeDevice}, bytesize::In
     zeMemAllocShared(ctx, device_desc_ref, host_desc_ref, bytesize, alignment,
                      something(dev, C_NULL), ptr_ref)
 
-    return SharedBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx)
+    return SharedBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx, dev)
 end
 
 Base.pointer(buf::SharedBuffer) = buf.ptr
@@ -197,9 +199,9 @@ function lookup_alloc(ctx::ZeContext, ptr::Union{Ptr,ZePtr})
     return if props.type == ZE_MEMORY_TYPE_HOST
         HostBuffer(pointer(buf), sizeof(buf), ctx)
     elseif props.type == ZE_MEMORY_TYPE_DEVICE
-        DeviceBuffer(reinterpret(ZePtr{Cvoid}, pointer(buf)), sizeof(buf), ctx)
+        DeviceBuffer(reinterpret(ZePtr{Cvoid}, pointer(buf)), sizeof(buf), ctx, props.device)
     elseif props.type == ZE_MEMORY_TYPE_SHARED
-        SharedBuffer(reinterpret(ZePtr{Cvoid}, pointer(buf)), sizeof(buf), ctx)
+        SharedBuffer(reinterpret(ZePtr{Cvoid}, pointer(buf)), sizeof(buf), ctx, props.device)
     else
         buf
     end
