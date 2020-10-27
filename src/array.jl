@@ -9,7 +9,7 @@ export oneArray
 end
 
 mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
-  buf::oneL0.DeviceBuffer
+  ptr::ZePtr{Nothing}
   dims::Dims{N}
 
   state::ArrayState
@@ -22,8 +22,8 @@ mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
     Base.isbitstype(T)  || error("oneArray only supports bits types") # allocatedinline on 1.3+
     ctx = context()
     dev = device()
-    buf = device_alloc(ctx, dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
-    obj = new{T,N}(buf, dims, ARRAY_MANAGED, ctx, dev)
+    ptr = allocate(ctx, dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
+    obj = new{T,N}(ptr, dims, ARRAY_MANAGED, ctx, dev)
     finalizer(unsafe_free!, obj)
     return obj
   end
@@ -37,18 +37,24 @@ function unsafe_free!(xs::oneArray)
     throw(ArgumentError("Cannot free an unmanaged buffer."))
   end
 
-  free(xs.buf)
+  release(context(xs), device(xs), xs.ptr)
   xs.state = ARRAY_FREED
+
+  # the object is dead, so we can also wipe the pointer
+  xs.ptr = ZE_NULL
 
   return
 end
 
+device(a::oneArray) = a.dev
+context(a::oneArray) = a.ctx
+
+
+## alias detection
+
 Base.dataids(A::oneArray) = (UInt(pointer(A)),)
 
 Base.unaliascopy(A::oneArray) = copy(A)
-
-device(a::oneArray) = a.dev
-context(a::oneArray) = a.ctx
 
 
 ## convenience constructors
@@ -167,20 +173,23 @@ Base.convert(::Type{T}, x::T) where T <: oneArray = x
 
 ## interop with C libraries
 
-Base.unsafe_convert(::Type{Ptr{T}}, x::oneArray{T}) where {T} = throw(ArgumentError("cannot take the host address of a $(typeof(x))"))
-Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} = convert(ZePtr{T}, x.buf)
+Base.unsafe_convert(::Type{Ptr{T}}, x::oneArray{T}) where {T} =
+  throw(ArgumentError("cannot take the host address of a $(typeof(x))"))
+Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} = convert(ZePtr{T}, x.ptr)
 
 
 ## interop with GPU arrays
 
-function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) where {T,N}
-  oneDeviceArray{T,N,AS.Global}(a.dims, reinterpret(LLVMPtr{T,AS.Global}, pointer(a)))
+function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneDenseArray{T,N}) where {T,N}
+  oneDeviceArray{T,N,AS.Global}(size(a), reinterpret(LLVMPtr{T,AS.Global}, pointer(a)))
 end
 
-function Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
-  make_resident(context(xs), device(xs), xs.buf)
+Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
   Base.unsafe_convert(oneDeviceArray{T,N,AS.Global}, xs)
-end
+
+# we materialize ReshapedArray/ReinterpretArray/SubArray/... directly as a device array
+Adapt.adapt_structure(::KernelAdaptor, xs::oneDenseArray{T,N}) where {T,N} =
+  Base.unsafe_convert(oneDeviceArray{T,N,AS.Global}, xs)
 
 
 ## interop with CPU arrays
