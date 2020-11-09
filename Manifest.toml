@@ -58,9 +58,9 @@ version = "6.1.1"
 
 [[GPUCompiler]]
 deps = ["DataStructures", "InteractiveUtils", "LLVM", "Libdl", "Scratch", "Serialization", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "6dd9eb9900cc759456007553bcb74f82b03e7301"
+git-tree-sha1 = "c853c810b52a80f9aad79ab109207889e57f41ef"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.8.2"
+version = "0.8.3"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -73,9 +73,9 @@ version = "1.1.3"
 
 [[LLVM]]
 deps = ["CEnum", "Libdl", "Printf", "Unicode"]
-git-tree-sha1 = "70070a0131f17fcffc5fc004f5f73f037bd217c5"
+git-tree-sha1 = "4eb5a1e702fee0d81c15ab673d7c77ef9023d509"
 uuid = "929cbde3-209d-540e-8aea-75f648917ca0"
-version = "3.2.0"
+version = "3.3.0"
 
 [[LibGit2]]
 deps = ["Printf"]
