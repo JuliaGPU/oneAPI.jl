@@ -9,8 +9,12 @@ steps:
       - JuliaCI/julia#v0.1:
           version: 1.5
       - JuliaCI/julia-test#v0.1: ~
-      - JuliaCI/julia-coverage#v0.1:
+      - JuliaCI/julia-coverage#v0.2:
           codecov: true
+          dirs:
+            - src
+            - lib
+            - examples
     agents:
       queue: "juliagpu"
       intel: "*"
@@ -24,8 +28,12 @@ steps:
           version: 1.5
       - JuliaCI/julia-test#v0.1:
           julia_args: "-g2"
-      - JuliaCI/julia-coverage#v0.1:
+      - JuliaCI/julia-coverage#v0.2:
           codecov: true
+          dirs:
+            - src
+            - lib
+            - examples
     env:
       ZE_ENABLE_VALIDATION_LAYER: '1'
       ZE_ENABLE_PARAMETER_VALIDATION: '1'
