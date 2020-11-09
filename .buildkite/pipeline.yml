@@ -1,0 +1,34 @@
+env:
+  SECRET_CODECOV_TOKEN: "yntJkCem6sRQ0KJhGXH86nluF8SaNL+GyVz/ITMKSMRdKn0dI+Mr3u/PUoJWmSKs6WpBh9Ki5b+CBoBQRHtpM9ND92qtHGd7CECrZIH/kJ+1QCds6qqoAfFE63u+taGOyHt4SKonVHuRmmupnwcjSeSOP32hMdlJ0Rp1TBo1qwI6tg5SLmj/b9sX4azO/C6L2JMJMN2yfy6TX97xGkgkiIFCitmAkLpa9L2GlkTkzkSt2tIGbNA6pwf15PHc4fqZlFhO+UJL9G16QIU5Xc4RtFxWfS7FulH2MG5wUkQ9o5QPffi/ccHpIXcwz1o6lllvxp64IhjYSHBgHgUB4ids6A=="
+
+steps:
+  # Julia versions
+
+  - label: "Julia 1.5"
+    plugins:
+      - JuliaCI/julia#v0.1:
+          version: 1.5
+      - JuliaCI/julia-test#v0.1: ~
+      - JuliaCI/julia-coverage#v0.1:
+          codecov: true
+    agents:
+      queue: "juliagpu"
+      intel: "*"
+
+
+  # Special tests
+
+  - label: "debug"
+    plugins:
+      - JuliaCI/julia#v0.1:
+          version: 1.5
+      - JuliaCI/julia-test#v0.1:
+          julia_args: "-g2"
+      - JuliaCI/julia-coverage#v0.1:
+          codecov: true
+    env:
+      ZE_ENABLE_VALIDATION_LAYER: '1'
+      ZE_ENABLE_PARAMETER_VALIDATION: '1'
+    agents:
+      queue: "juliagpu"
+      intel: "*"
