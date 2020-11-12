@@ -100,9 +100,9 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[NEO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "2ce161b435e34823996b577823bfa6df88d80d6a"
+git-tree-sha1 = "6d6ba42418e14432851d67ba06f41b3bc08c2680"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
-version = "20.44.18297+0"
+version = "20.44.18297+1"
 
 [[OrderedCollections]]
 git-tree-sha1 = "cf59cfed2e2c12e8a2ff0a4f1e9b2cd8650da6db"
