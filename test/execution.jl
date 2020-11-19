@@ -183,10 +183,8 @@ end
 
 
 @testset "scalar through single-value array, using device function" begin
-    function child(a, i)
-        return a[i]
-    end
-    @noinline function parent(a, x)
+    @noinline child(a, i) = a[i]
+    function parent(a, x)
         i = get_global_id(0)
         max = get_global_size(0)
         if i == max
