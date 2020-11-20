@@ -22,7 +22,6 @@ end
 @generated function emit_localmemory(::Val{id}, ::Type{T}, ::Val{len}=Val(0)) where {id,T,len}
     JuliaContext() do ctx
         eltyp = convert(LLVMType, T, ctx)
-
         T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local}, ctx)
 
         # create a function
@@ -44,11 +43,11 @@ end
             entry = BasicBlock(llvm_f, "entry", ctx)
             position!(builder, entry)
 
-            ptr = gep!(builder, gv, [ConstantInt(0, ctx),
-                                    ConstantInt(0, ctx)])
+            ptr = gep!(builder, gv, [ConstantInt(0, ctx), ConstantInt(0, ctx)])
 
-            val = ptrtoint!(builder, ptr, T_ptr)
-            ret!(builder, val)
+            untyped_ptr = bitcast!(builder, ptr, T_ptr)
+
+            ret!(builder, untyped_ptr)
         end
 
         call_function(llvm_f, LLVMPtr{T,AS.Local})
