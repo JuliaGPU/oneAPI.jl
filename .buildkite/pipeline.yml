@@ -4,12 +4,12 @@ env:
 steps:
   # Julia versions
 
-  - label: "Julia 1.5"
+  - label: "Julia 1.6"
     plugins:
-      - JuliaCI/julia#v0.2:
-          version: 1.5
-      - JuliaCI/julia-test#v0.2: ~
-      - JuliaCI/julia-coverage#v0.2:
+      - JuliaCI/julia#v0.5:
+          version: nightly
+      - JuliaCI/julia-test#v0.3: ~
+      - JuliaCI/julia-coverage#v0.3:
           codecov: true
           dirs:
             - src
@@ -22,13 +22,13 @@ steps:
 
   # Special tests
 
-  - label: "debug"
+  - label: "Validation"
     plugins:
-      - JuliaCI/julia#v0.2:
-          version: 1.5
-      - JuliaCI/julia-test#v0.2:
+      - JuliaCI/julia#v0.5:
+          version: nightly
+      - JuliaCI/julia-test#v0.3:
           julia_args: "-g2"
-      - JuliaCI/julia-coverage#v0.2:
+      - JuliaCI/julia-coverage#v0.3:
           codecov: true
           dirs:
             - src

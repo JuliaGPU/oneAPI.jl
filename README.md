@@ -19,7 +19,7 @@ This package is under heavy development, and not ready for general use.
 
 ## Installation
 
-You need to use Julia 1.5 or higher, and it is strongly advised to use [the official
+You need to use Julia 1.6 or higher, and it is strongly advised to use [the official
 binaries](https://julialang.org/downloads/). For now, only Linux is supported.
 
 Once you have installed Julia, proceed by entering the package manager REPL mode by pressing
