@@ -2,12 +2,12 @@
 
 *Julia support for the oneAPI programming toolkit.*
 
-| **Build Status**              | **Coverage**                    |
-|:-----------------------------:|:-------------------------------:|
-| [![][gitlab-img]][gitlab-url] | [![][codecov-img]][codecov-url] |
+| **Build Status**                    | **Coverage**                    |
+|:-----------------------------------:|:-------------------------------:|
+| [![][buildkite-img]][buildkite-url] | [![][codecov-img]][codecov-url] |
 
-[gitlab-img]: https://gitlab.com/JuliaGPU/oneAPI.jl/badges/master/pipeline.svg
-[gitlab-url]: https://gitlab.com/JuliaGPU/oneAPI.jl/commits/master
+[buildkite-img]: https://badge.buildkite.com/00fff01fd4d6cdd905e61e2ce7ed0f7203ba227df9b575426c.svg
+[buildkite-url]: https://buildkite.com/julialang/oneapi-dot-jl
 
 [codecov-img]: https://codecov.io/gh/JuliaGPU/oneAPI.jl/branch/master/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/JuliaGPU/oneAPI.jl
