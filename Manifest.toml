@@ -138,9 +138,9 @@ uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 
 [[NEO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "6d6ba42418e14432851d67ba06f41b3bc08c2680"
+git-tree-sha1 = "c753dd029eb0837658bf8eaee041c19e4ce5bb8c"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
-version = "20.44.18297+1"
+version = "21.12.19358+0"
 
 [[NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -254,9 +254,9 @@ version = "20.3.2+0"
 
 [[libigc_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "fb854aa61bb2dcc3897ad5d2364b14d2750ffd60"
+git-tree-sha1 = "6140dbf267f7ab57fb791b49f2114374218b5c20"
 uuid = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-version = "1.0.5353+0"
+version = "1.0.6712+0"
 
 [[nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -264,15 +264,15 @@ uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
 
 [[oneAPI_Level_Zero_Headers_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "6d2e1b2a16da71440d7feade4ee2fca8e1f56ad5"
+git-tree-sha1 = "06922325d1c18e52decc8f96835f458ccc186476"
 uuid = "f4bc562b-d309-54f8-9efb-476e56f0410d"
-version = "1.0.4+1"
+version = "1.1.2+0"
 
 [[oneAPI_Level_Zero_Loader_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "6a28902427681d1c0f42455b18c9cbecf86fad4d"
+git-tree-sha1 = "4a15ba323e7b8fbfa2410bd59fd97f740f64087f"
 uuid = "13eca655-d68d-5b81-8367-6d99d727ab01"
-version = "1.0.16+0"
+version = "1.2.3+0"
 
 [[p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
