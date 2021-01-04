@@ -59,7 +59,7 @@ function properties(groups::ZeCommandQueueGroups)
     zeDeviceGetCommandQueueGroupProperties(groups.device, count_ref, all_props)
 
     return [(flags=props.flags,
-             maxMemoryFillPatternSize=Int(props.maxMemoryFillPatternSize),
+             maxMemoryFillPatternSize=UInt(props.maxMemoryFillPatternSize),
              numQueues=Int(props.numQueues),
              ) for props in all_props[1:count_ref[]]]
 end

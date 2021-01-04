@@ -1,5 +1,3 @@
-@testset "oneL0" begin
-
 using oneAPI.oneL0
 
 
@@ -279,8 +277,5 @@ for buf in [device_alloc(ctx, dev, 1024),
     evict(ctx, dev, buf, 1024)
     free(buf)
 end
-
-end
-
 
 end

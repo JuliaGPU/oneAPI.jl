@@ -1,13 +1,10 @@
-env:
-  SECRET_CODECOV_TOKEN: "OYpS8fj3vGhj7iZf9vLAeapyxQNSOEW6mApcSvGboL9AlS+0nfOSFjFrIBNnIU0prxQQy1gR9AwR/JO1m2OFWeRhjYtkQPPhk4xVtSKmv0LLTL0snA8IohUopqfu722i7zLrPcz/A0LFIFsb0ey+oReJs2xnGOshNIJu4FDowUV3wmZvfKWNsSK4cGN+HFQ3387Ow4SsmiUr7oqh0iMBQNqaY8oZ2BY1dFOgPaOegIp70YEFRdJ8DKaLd7WGxFLY9oQEhZZdmx/zx0xo56/NGtDwVYkDPa4qPhJczDBoIn5XvcRiIW0VJ/MaRARxnpenBX5H6gwdcZYUGtjXWIRXBw==;U2FsdGVkX1/bZy1Bp4/dBH5scPpWqLKusXGvSkRGUa+1F7hi4P4Cu5a6GcfNIEvQr+bBj2VlZvqhNW0FAqN3QQ=="
-
 steps:
   # Julia versions
 
   - label: "Julia 1.6"
     plugins:
-      - JuliaCI/julia#v0.5:
-          version: nightly
+      - JuliaCI/julia#v0.6:
+          version: 1.6-nightly
       - JuliaCI/julia-test#v0.3: ~
       - JuliaCI/julia-coverage#v0.3:
           codecov: true
@@ -18,14 +15,16 @@ steps:
     agents:
       queue: "juliagpu"
       intel: "*"
+    if: build.message !~ /\[skip tests\]/
+    timeout_in_minutes: 60
 
 
   # Special tests
 
   - label: "Validation"
     plugins:
-      - JuliaCI/julia#v0.5:
-          version: nightly
+      - JuliaCI/julia#v0.6:
+          version: 1.6-nightly
       - JuliaCI/julia-test#v0.3:
           julia_args: "-g2"
       - JuliaCI/julia-coverage#v0.3:
@@ -40,3 +39,8 @@ steps:
     agents:
       queue: "juliagpu"
       intel: "*"
+    if: build.message !~ /\[skip tests\]/
+    timeout_in_minutes: 60
+
+env:
+  SECRET_CODECOV_TOKEN: "OYpS8fj3vGhj7iZf9vLAeapyxQNSOEW6mApcSvGboL9AlS+0nfOSFjFrIBNnIU0prxQQy1gR9AwR/JO1m2OFWeRhjYtkQPPhk4xVtSKmv0LLTL0snA8IohUopqfu722i7zLrPcz/A0LFIFsb0ey+oReJs2xnGOshNIJu4FDowUV3wmZvfKWNsSK4cGN+HFQ3387Ow4SsmiUr7oqh0iMBQNqaY8oZ2BY1dFOgPaOegIp70YEFRdJ8DKaLd7WGxFLY9oQEhZZdmx/zx0xo56/NGtDwVYkDPa4qPhJczDBoIn5XvcRiIW0VJ/MaRARxnpenBX5H6gwdcZYUGtjXWIRXBw==;U2FsdGVkX1/bZy1Bp4/dBH5scPpWqLKusXGvSkRGUa+1F7hi4P4Cu5a6GcfNIEvQr+bBj2VlZvqhNW0FAqN3QQ=="

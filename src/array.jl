@@ -17,7 +17,7 @@ mutable struct oneArray{T,N} <: AbstractGPUArray{T,N}
   ctx::ZeContext
   dev::ZeDevice
 
-  function oneArray{T,N}(::UndefInitializer, dims::Dims{N})  where {T,N}
+  function oneArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N}
     Base.isbitsunion(T) && error("oneArray does not yet support union bits types")
     Base.isbitstype(T)  || error("oneArray only supports bits types") # allocatedinline on 1.3+
     ctx = context()
