@@ -43,4 +43,5 @@ steps:
     timeout_in_minutes: 60
 
 env:
+  JULIA_PKG_SERVER: "" # it often struggles with our large artifacts
   SECRET_CODECOV_TOKEN: "OYpS8fj3vGhj7iZf9vLAeapyxQNSOEW6mApcSvGboL9AlS+0nfOSFjFrIBNnIU0prxQQy1gR9AwR/JO1m2OFWeRhjYtkQPPhk4xVtSKmv0LLTL0snA8IohUopqfu722i7zLrPcz/A0LFIFsb0ey+oReJs2xnGOshNIJu4FDowUV3wmZvfKWNsSK4cGN+HFQ3387Ow4SsmiUr7oqh0iMBQNqaY8oZ2BY1dFOgPaOegIp70YEFRdJ8DKaLd7WGxFLY9oQEhZZdmx/zx0xo56/NGtDwVYkDPa4qPhJczDBoIn5XvcRiIW0VJ/MaRARxnpenBX5H6gwdcZYUGtjXWIRXBw==;U2FsdGVkX1/bZy1Bp4/dBH5scPpWqLKusXGvSkRGUa+1F7hi4P4Cu5a6GcfNIEvQr+bBj2VlZvqhNW0FAqN3QQ=="
