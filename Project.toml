@@ -18,7 +18,7 @@ SPIRV_Tools_jll = "6ac6d60f-d740-5983-97d7-a4482c0689f4"
 oneAPI_Level_Zero_Loader_jll = "13eca655-d68d-5b81-8367-6d99d727ab01"
 
 [compat]
-Adapt = "2.0"
+Adapt = "2.0, 3.0"
 CEnum = "0.4"
 GPUArrays = "6.1.1"
 GPUCompiler = "0.9"
