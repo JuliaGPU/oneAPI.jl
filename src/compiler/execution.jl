@@ -113,29 +113,30 @@ struct HostKernel{F,TT} <: AbstractKernel{F,TT}
 end
 
 function zefunction(f::Core.Function, tt::Type=Tuple{}; name=nothing, kwargs...)
-    spec = FunctionSpec(f, tt, true, name)
-    cache = get!(()->Dict{UInt,Any}(), zefunction_cache, device)
+    dev = device()
+    cache = get!(()->Dict{UInt,Any}(), zefunction_cache, dev)
+    source = FunctionSpec(f, tt, true, name)
+    target = SPIRVCompilerTarget(; kwargs...)
+    params = oneAPICompilerParams()
+    job = CompilerJob(target, source, params)
     GPUCompiler.cached_compilation(cache, zefunction_compile, zefunction_link,
-                                   spec; kwargs...)::HostKernel{f,tt}
+                                   job; kwargs...)::HostKernel{f,tt}
 end
 
 const zefunction_cache = Dict{Any,Any}()
 
-function zefunction_compile(source::FunctionSpec; kwargs...)
-    target = SPIRVCompilerTarget(; kwargs...)
-    params = oneAPICompilerParams()
-    job = CompilerJob(target, source, params)
+function zefunction_compile(@nospecialize(job::CompilerJob))
     return GPUCompiler.compile(:obj, job)
 end
 
 # JIT into an executable kernel object
-function zefunction_link(source::FunctionSpec, (image, kernel_fn, undefined_fns); kwargs...)
+function zefunction_link(@nospecialize(job::CompilerJob), (image, kernel_fn, undefined_fns); kwargs...)
     ctx = context()
     dev = device()
     mod = ZeModule(ctx, dev, image)
     kernel = kernels(mod)[kernel_fn]
 
-    return HostKernel{source.f,source.tt}(kernel)
+    return HostKernel{job.source.f,job.source.tt}(kernel)
 end
 
 @inline function _call(kernel::HostKernel, tt, args...; config=nothing, kwargs...)
