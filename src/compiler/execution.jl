@@ -119,8 +119,8 @@ function zefunction(f::Core.Function, tt::Type=Tuple{}; name=nothing, kwargs...)
     target = SPIRVCompilerTarget(; kwargs...)
     params = oneAPICompilerParams()
     job = CompilerJob(target, source, params)
-    GPUCompiler.cached_compilation(cache, zefunction_compile, zefunction_link,
-                                   job; kwargs...)::HostKernel{f,tt}
+    GPUCompiler.cached_compilation(cache, job,
+                                   zefunction_compile, zefunction_link)::HostKernel{f,tt}
 end
 
 const zefunction_cache = Dict{Any,Any}()
@@ -130,7 +130,7 @@ function zefunction_compile(@nospecialize(job::CompilerJob))
 end
 
 # JIT into an executable kernel object
-function zefunction_link(@nospecialize(job::CompilerJob), (image, kernel_fn, undefined_fns); kwargs...)
+function zefunction_link(@nospecialize(job::CompilerJob), (image, kernel_fn, undefined_fns))
     ctx = context()
     dev = device()
     mod = ZeModule(ctx, dev, image)
