@@ -3,10 +3,10 @@ steps:
 
   - label: "Julia 1.6"
     plugins:
-      - JuliaCI/julia#v0.6:
+      - JuliaCI/julia#v1:
           version: 1.6-nightly
-      - JuliaCI/julia-test#v0.3: ~
-      - JuliaCI/julia-coverage#v0.3:
+      - JuliaCI/julia-test#v1: ~
+      - JuliaCI/julia-coverage#v1:
           codecov: true
           dirs:
             - src
@@ -23,11 +23,11 @@ steps:
 
   - label: "Validation"
     plugins:
-      - JuliaCI/julia#v0.6:
+      - JuliaCI/julia#v1:
           version: 1.6-nightly
-      - JuliaCI/julia-test#v0.3:
+      - JuliaCI/julia-test#v1:
           julia_args: "-g2"
-      - JuliaCI/julia-coverage#v0.3:
+      - JuliaCI/julia-coverage#v1:
           codecov: true
           dirs:
             - src
