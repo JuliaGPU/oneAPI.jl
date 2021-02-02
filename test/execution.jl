@@ -1,5 +1,7 @@
 import Adapt
 
+using StaticArrays
+
 dummy() = return
 
 @testset "@oneapi" begin
@@ -515,5 +517,21 @@ end
 end
 
 end
+
+############################################################################################
+
+@testset "#55: invalid integers created by alloc_opt" begin
+    function f(a)
+        x = SVector(0f0, 0f0)
+        v = MVector{3, Float32}(undef)
+        for (i,_) in enumerate(x)
+            v[i] = 1.0f0
+        end
+        a[1] = v[1]
+        return nothing
+    end
+    @oneapi f(oneArray(zeros(1)))
+end
+
 
 ############################################################################################
