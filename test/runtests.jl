@@ -88,6 +88,11 @@ if do_list
     end
     exit(0)
 end
+## no options should remain
+optlike_args = filter(startswith("-"), ARGS)
+if !isempty(optlike_args)
+    error("Unknown test options `$(join(optlike_args, " "))` (try `--help` for usage instructions)")
+end
 ## the remaining args filter tests
 if !isempty(ARGS)
   filter!(tests) do test
@@ -109,9 +114,8 @@ end
 const test_exename = popfirst!(test_exeflags.exec)
 function addworker(X; kwargs...)
     withenv("JULIA_NUM_THREADS" => 1, "OPENBLAS_NUM_THREADS" => 1) do
-        procs = addprocs(X; exename=test_exename, exeflags=test_exeflags,
-                            dir=@__DIR__, kwargs...)
-        @everywhere procs include("setup.jl")
+        procs = addprocs(X; exename=test_exename, exeflags=test_exeflags, kwargs...)
+        @everywhere procs include($(joinpath(@__DIR__, "setup.jl")))
         procs
     end
 end
