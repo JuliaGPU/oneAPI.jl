@@ -16,16 +16,14 @@ examples = find_sources(examples_dir)
 filter!(file -> readline(file) != "# EXCLUDE FROM TESTING", examples)
 filter!(file -> !occursin("Kaleidoscope", file), examples)
 
-cd(examples_dir) do
-    examples = relpath.(examples, Ref(examples_dir))
-    @testset for example in examples
-        cmd = Base.julia_cmd()
-        if Base.JLOptions().project != C_NULL
-            cmd = `$cmd --project=$(unsafe_string(Base.JLOptions().project))`
-        end
-
-        @test success(pipeline(`$cmd $example`, stderr=stderr))
+examples = relpath.(examples, Ref(examples_dir))
+@testset for example in examples
+    cmd = Base.julia_cmd()
+    if Base.JLOptions().project != C_NULL
+        cmd = `$cmd --project=$(unsafe_string(Base.JLOptions().project))`
     end
+
+    @test success(pipeline(`$cmd $(joinpath(examples_dir, example))`, stderr=stderr))
 end
 
 end
