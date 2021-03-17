@@ -41,6 +41,7 @@ _, jobs = extract_flag!(ARGS, "--jobs", Threads.nthreads())
 do_quickfail, _ = extract_flag!(ARGS, "--quickfail")
 
 include("setup.jl")     # make sure everything is precompiled
+@test oneAPI.functional()
 
 # choose tests
 const tests = []

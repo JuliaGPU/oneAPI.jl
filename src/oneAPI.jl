@@ -17,6 +17,7 @@ export oneL0
 include("../lib/utils/APIUtils.jl")
 include("../lib/level-zero/oneL0.jl")
 using .oneL0
+functional() = oneL0.functional[]
 
 # device functionality (needs to be loaded first, because of generated functions)
 include("device/pointer.jl")

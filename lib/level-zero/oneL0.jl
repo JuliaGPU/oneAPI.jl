@@ -32,6 +32,8 @@ include("memory.jl")
 include("copy.jl")
 include("residency.jl")
 
+const functional = Ref{Bool}(false)
+
 function __init__()
     res = unsafe_zeInit(0)
     if res == RESULT_ERROR_UNINITIALIZED
@@ -43,6 +45,8 @@ function __init__()
                   https://github.com/intel/compute-runtime#supported-platforms"""
     elseif res !== RESULT_SUCCESS
         throw_api_error(res)
+    else
+        functional[] = true
     end
 end
 
