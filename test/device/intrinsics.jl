@@ -22,52 +22,18 @@ end
 ############################################################################################
 
 @testset "math" begin
-    buf = oneArray(zeros(Float32))
-
-    function kernel(a, i)
-        a[] = oneAPI.log10(i)
-        return
+    @testset "log10" begin
+        @test testf(a->log10.(a), Float32[100])
     end
 
-    @oneapi kernel(buf, Float32(100))
-    val = Array(buf)
-    @test val[] ≈ 2.0
+    for op in (exp, exp2, exp10, expm1)
+        @testset "$op" begin
+            for T in (Float32, Float64)
+                @test testf(x->op.(x), rand(T, 1))
+                @test testf(x->op.(x), -rand(T, 1))
+            end
 
-
-    # dictionary of key=>tuple, where the tuple should
-    # contain the cpu command and the cuda function to test.
-    ops = Dict("exp"=>(exp, oneAPI.exp),
-               "exp2"=>(exp2, oneAPI.exp2),
-               "exp10"=>(exp10, oneAPI.exp10),
-               "expm1"=>(expm1, oneAPI.expm1))
-
-    @testset "$key" for key=keys(ops)
-        cpu_op, cuda_op = ops[key]
-
-        buf = oneArray(zeros(Float32))
-
-        function cuda_kernel(a, x)
-            a[] = cuda_op(x)
-            return
         end
-
-        #op(::Float32)
-        x   = rand(Float32)
-        @oneapi cuda_kernel(buf, x)
-        val = Array(buf)
-        @test val[] ≈ cpu_op(x)
-        @oneapi cuda_kernel(buf, -x)
-        val = Array(buf)
-        @test val[] ≈ cpu_op(-x)
-
-        #op(::Float64)
-        x   = rand(Float64)
-        @oneapi cuda_kernel(buf, x)
-        val = Array(buf)
-        @test val[] ≈ cpu_op(x)
-        @oneapi cuda_kernel(buf, -x)
-        val = Array(buf)
-        @test val[] ≈ cpu_op(-x)
     end
 end
 

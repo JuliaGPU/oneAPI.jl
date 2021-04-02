@@ -5,6 +5,10 @@ using Adapt
 
 using GPUCompiler
 
+using ExprTools
+
+using SpecialFunctions
+
 using LLVM
 using LLVM.Interop
 using Core: LLVMPtr
@@ -48,5 +52,12 @@ include("mapreduce.jl")
 include("gpuarrays.jl")
 include("random.jl")
 include("utils.jl")
+
+function __init__()
+    precompiling = ccall(:jl_generating_output, Cint, ()) != 0
+    if !precompiling
+        eval(overrides)
+    end
+end
 
 end

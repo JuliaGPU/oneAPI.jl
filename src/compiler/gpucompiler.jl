@@ -1,3 +1,5 @@
+const ci_cache = GPUCompiler.CodeCache()
+
 struct oneAPICompilerParams <: AbstractCompilerParams end
 
 oneAPICompilerJob = CompilerJob{SPIRVCompilerTarget,oneAPICompilerParams}
@@ -27,3 +29,8 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module)
          MDNode([ConstantInt(Int32(1), ctx),
                  ConstantInt(Int32(5), ctx)]))
 end
+
+GPUCompiler.ci_cache(::oneAPICompilerJob) = ci_cache
+
+GPUCompiler.method_table(::oneAPICompilerJob) = method_table
+

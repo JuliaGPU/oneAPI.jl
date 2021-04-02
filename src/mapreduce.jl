@@ -66,7 +66,7 @@ function partial_mapreduce_device(f, op, neutral, maxitems, Rreduce, Rother, R, 
         ireduce = localIdx_reduce + (groupIdx_reduce - 1) * localDim_reduce
         while ireduce <= length(Rreduce)
             Ireduce = Rreduce[ireduce]
-            J = Base.max(Iother, Ireduce)
+            J = max(Iother, Ireduce)
             val = op(val, f(_map_getindex(As, J)...))
             ireduce += localDim_reduce * groupDim_reduce
         end
@@ -134,8 +134,8 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
 
     # group size is restricted by local memory
     max_lmem_elements = compute_properties(device()).maxSharedLocalMemory ÷ sizeof(T)
-    max_items = Base.min(compute_properties(device()).maxTotalGroupSize,
-                         compute_items(max_lmem_elements ÷ 2))
+    max_items = min(compute_properties(device()).maxTotalGroupSize,
+                    compute_items(max_lmem_elements ÷ 2))
     # TODO: dynamic local memory to avoid two compilations
 
     # let the driver suggest a group size
