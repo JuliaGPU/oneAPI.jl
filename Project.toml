@@ -22,6 +22,7 @@ oneAPI_Level_Zero_Loader_jll = "13eca655-d68d-5b81-8367-6d99d727ab01"
 [compat]
 Adapt = "2.0, 3.0"
 CEnum = "0.4"
+ExprTools = "0.1"
 GPUArrays = "6.1.1"
 GPUCompiler = "0.11"
 LLVM = "3"
