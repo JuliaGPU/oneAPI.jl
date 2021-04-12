@@ -1,7 +1,6 @@
 # Julia wrapper for header: ze_api.h
 # Automatically generated using Clang.jl
 
-
 @checked function zeInit(flags)
     ccall((:zeInit, libze_loader), ze_result_t,
           (ze_init_flags_t,),
@@ -36,6 +35,12 @@ end
     ccall((:zeDriverGetExtensionProperties, libze_loader), ze_result_t,
           (ze_driver_handle_t, Ptr{UInt32}, Ptr{ze_driver_extension_properties_t}),
           hDriver, pCount, pExtensionProperties)
+end
+
+@checked function zeDriverGetExtensionFunctionAddress(hDriver, name, ppFunctionAddress)
+    ccall((:zeDriverGetExtensionFunctionAddress, libze_loader), ze_result_t,
+          (ze_driver_handle_t, Cstring, Ptr{Ptr{Cvoid}}),
+          hDriver, name, ppFunctionAddress)
 end
 
 @checked function zeDeviceGet(hDriver, pCount, phDevices)
@@ -123,10 +128,23 @@ end
           hDevice)
 end
 
+@checked function zeDeviceGetGlobalTimestamps(hDevice, hostTimestamp, deviceTimestamp)
+    ccall((:zeDeviceGetGlobalTimestamps, libze_loader), ze_result_t,
+          (ze_device_handle_t, Ptr{UInt64}, Ptr{UInt64}),
+          hDevice, hostTimestamp, deviceTimestamp)
+end
+
 @checked function zeContextCreate(hDriver, desc, phContext)
     ccall((:zeContextCreate, libze_loader), ze_result_t,
           (ze_driver_handle_t, Ptr{ze_context_desc_t}, Ptr{ze_context_handle_t}),
           hDriver, desc, phContext)
+end
+
+@checked function zeContextCreateEx(hDriver, desc, numDevices, phDevices, phContext)
+    ccall((:zeContextCreateEx, libze_loader), ze_result_t,
+          (ze_driver_handle_t, Ptr{ze_context_desc_t}, UInt32, Ptr{ze_device_handle_t},
+           Ptr{ze_context_handle_t}),
+          hDriver, desc, numDevices, phDevices, phContext)
 end
 
 @checked function zeContextDestroy(hContext)
@@ -811,4 +829,10 @@ end
           (ze_context_handle_t, Ptr{Cvoid}, Csize_t, Ptr{ze_memory_access_attribute_t},
            Ptr{Csize_t}),
           hContext, ptr, size, access, outSize)
+end
+
+@checked function zeKernelSetGlobalOffsetExp(hKernel, offsetX, offsetY, offsetZ)
+    ccall((:zeKernelSetGlobalOffsetExp, libze_loader), ze_result_t,
+          (ze_kernel_handle_t, UInt32, UInt32, UInt32),
+          hKernel, offsetX, offsetY, offsetZ)
 end

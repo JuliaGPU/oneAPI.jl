@@ -1,6 +1,5 @@
 # Automatically generated using Clang.jl
 
-
 # Skipping MacroDefinition: ZE_MAKE_VERSION ( _major , _minor ) ( ( _major << 16 ) | ( _minor & 0x0000ffff ) )
 # Skipping MacroDefinition: ZE_MAJOR_VERSION ( _ver ) ( _ver >> 16 )
 # Skipping MacroDefinition: ZE_MINOR_VERSION ( _ver ) ( _ver & 0x0000ffff )
@@ -18,7 +17,11 @@ const ZE_SUBGROUPSIZE_COUNT = 8
 const ZE_MAX_NATIVE_KERNEL_UUID_SIZE = 16
 const ZE_MAX_KERNEL_UUID_SIZE = 16
 const ZE_MAX_MODULE_UUID_SIZE = 16
+const ZE_MODULE_PROGRAM_EXP_NAME = "ZE_experimental_module_program"
 const ZE_RAYTRACING_EXT_NAME = "ZE_extension_raytracing"
+const ZE_FLOAT_ATOMICS_EXT_NAME = "ZE_extension_float_atomics"
+const ZE_GLOBAL_OFFSET_EXP_NAME = "ZE_experimental_global_offset"
+const ZE_RELAXED_ALLOCATION_LIMITS_EXP_NAME = "ZE_experimental_relaxed_allocation_limits"
 const ze_bool_t = UInt8
 const _ze_driver_handle_t = Cvoid
 const ze_driver_handle_t = Ptr{_ze_driver_handle_t}
@@ -102,7 +105,6 @@ const ze_ipc_event_pool_handle_t = _ze_ipc_event_pool_handle_t
     ZE_RESULT_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_result_t = _ze_result_t
 
 @cenum _ze_structure_type_t::UInt32 begin
@@ -138,10 +140,13 @@ const ze_result_t = _ze_result_t
     ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES = 30
     ZE_STRUCTURE_TYPE_SAMPLER_DESC = 31
     ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC = 32
-    ZE_STRUCTURE_TYPE_RAYTRACING_MEM_ALLOC_EXT_DESC = 65537
+    ZE_STRUCTURE_TYPE_DEVICE_RAYTRACING_EXT_PROPERTIES = 65537
+    ZE_STRUCTURE_TYPE_RAYTRACING_MEM_ALLOC_EXT_DESC = 65538
+    ZE_STRUCTURE_TYPE_FLOAT_ATOMIC_EXT_PROPERTIES = 65539
+    ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 131073
+    ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC = 131074
     ZE_STRUCTURE_TYPE_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_structure_type_t = _ze_structure_type_t
 const ze_external_memory_type_flags_t = UInt32
@@ -151,7 +156,6 @@ const ze_external_memory_type_flags_t = UInt32
     ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF = 2
     ZE_EXTERNAL_MEMORY_TYPE_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_external_memory_type_flag_t = _ze_external_memory_type_flag_t
 
@@ -213,7 +217,6 @@ const ze_device_uuid_t = _ze_device_uuid_t
     ZE_DEVICE_TYPE_MCA = 4
     ZE_DEVICE_TYPE_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_device_type_t = _ze_device_type_t
 const ze_device_property_flags_t = UInt32
@@ -392,7 +395,6 @@ const ze_command_queue_flags_t = UInt32
     ZE_COMMAND_QUEUE_MODE_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_command_queue_mode_t = _ze_command_queue_mode_t
 
 @cenum _ze_command_queue_priority_t::UInt32 begin
@@ -401,7 +403,6 @@ const ze_command_queue_mode_t = _ze_command_queue_mode_t
     ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH = 2
     ZE_COMMAND_QUEUE_PRIORITY_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_command_queue_priority_t = _ze_command_queue_priority_t
 
@@ -522,9 +523,21 @@ const ze_fence_desc_t = _ze_fence_desc_t
     ZE_IMAGE_FORMAT_LAYOUT_P016 = 25
     ZE_IMAGE_FORMAT_LAYOUT_Y216 = 26
     ZE_IMAGE_FORMAT_LAYOUT_P216 = 27
+    ZE_IMAGE_FORMAT_LAYOUT_P8 = 28
+    ZE_IMAGE_FORMAT_LAYOUT_YUY2 = 29
+    ZE_IMAGE_FORMAT_LAYOUT_A8P8 = 30
+    ZE_IMAGE_FORMAT_LAYOUT_IA44 = 31
+    ZE_IMAGE_FORMAT_LAYOUT_AI44 = 32
+    ZE_IMAGE_FORMAT_LAYOUT_Y416 = 33
+    ZE_IMAGE_FORMAT_LAYOUT_Y210 = 34
+    ZE_IMAGE_FORMAT_LAYOUT_I420 = 35
+    ZE_IMAGE_FORMAT_LAYOUT_YV12 = 36
+    ZE_IMAGE_FORMAT_LAYOUT_400P = 37
+    ZE_IMAGE_FORMAT_LAYOUT_422H = 38
+    ZE_IMAGE_FORMAT_LAYOUT_422V = 39
+    ZE_IMAGE_FORMAT_LAYOUT_444P = 40
     ZE_IMAGE_FORMAT_LAYOUT_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_image_format_layout_t = _ze_image_format_layout_t
 
@@ -536,7 +549,6 @@ const ze_image_format_layout_t = _ze_image_format_layout_t
     ZE_IMAGE_FORMAT_TYPE_FLOAT = 4
     ZE_IMAGE_FORMAT_TYPE_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_image_format_type_t = _ze_image_format_type_t
 
@@ -550,7 +562,6 @@ const ze_image_format_type_t = _ze_image_format_type_t
     ZE_IMAGE_FORMAT_SWIZZLE_X = 6
     ZE_IMAGE_FORMAT_SWIZZLE_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_image_format_swizzle_t = _ze_image_format_swizzle_t
 
@@ -575,7 +586,6 @@ const ze_image_flags_t = UInt32
     ZE_IMAGE_TYPE_BUFFER = 5
     ZE_IMAGE_TYPE_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_image_type_t = _ze_image_type_t
 
@@ -630,7 +640,6 @@ const ze_host_mem_alloc_desc_t = _ze_host_mem_alloc_desc_t
     ZE_MEMORY_TYPE_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_memory_type_t = _ze_memory_type_t
 
 struct _ze_memory_allocation_properties_t
@@ -682,7 +691,6 @@ const ze_module_constants_t = _ze_module_constants_t
     ZE_MODULE_FORMAT_NATIVE = 1
     ZE_MODULE_FORMAT_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_module_format_t = _ze_module_format_t
 
@@ -750,6 +758,28 @@ struct _ze_group_count_t
 end
 
 const ze_group_count_t = _ze_group_count_t
+
+struct _ze_module_program_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    count::UInt32
+    inputSizes::Ptr{Csize_t}
+    pInputModules::Ptr{Ptr{UInt8}}
+    pBuildFlags::Ptr{Cstring}
+    pConstants::Ptr{Ptr{ze_module_constants_t}}
+end
+
+const ze_module_program_exp_desc_t = _ze_module_program_exp_desc_t
+const ze_device_raytracing_ext_flags_t = UInt32
+
+struct _ze_device_raytracing_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_device_raytracing_ext_flags_t
+    maxBVHLevels::UInt32
+end
+
+const ze_device_raytracing_ext_properties_t = _ze_device_raytracing_ext_properties_t
 const ze_raytracing_mem_alloc_ext_flags_t = UInt32
 
 struct _ze_raytracing_mem_alloc_ext_desc_t
@@ -769,7 +799,6 @@ const ze_raytracing_mem_alloc_ext_desc_t = _ze_raytracing_mem_alloc_ext_desc_t
     ZE_SAMPLER_ADDRESS_MODE_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_sampler_address_mode_t = _ze_sampler_address_mode_t
 
 @cenum _ze_sampler_filter_mode_t::UInt32 begin
@@ -777,7 +806,6 @@ const ze_sampler_address_mode_t = _ze_sampler_address_mode_t
     ZE_SAMPLER_FILTER_MODE_LINEAR = 1
     ZE_SAMPLER_FILTER_MODE_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_sampler_filter_mode_t = _ze_sampler_filter_mode_t
 
@@ -800,6 +828,26 @@ struct _ze_physical_mem_desc_t
 end
 
 const ze_physical_mem_desc_t = _ze_physical_mem_desc_t
+const ze_device_fp_atomic_ext_flags_t = UInt32
+
+struct _ze_float_atomic_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    fp16Flags::ze_device_fp_atomic_ext_flags_t
+    fp32Flags::ze_device_fp_atomic_ext_flags_t
+    fp64Flags::ze_device_fp_atomic_ext_flags_t
+end
+
+const ze_float_atomic_ext_properties_t = _ze_float_atomic_ext_properties_t
+const ze_relaxed_allocation_limits_exp_flags_t = UInt32
+
+struct _ze_relaxed_allocation_limits_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_relaxed_allocation_limits_exp_flags_t
+end
+
+const ze_relaxed_allocation_limits_exp_desc_t = _ze_relaxed_allocation_limits_exp_desc_t
 const ze_init_flags_t = UInt32
 
 @cenum _ze_init_flag_t::UInt32 begin
@@ -807,15 +855,14 @@ const ze_init_flags_t = UInt32
     ZE_INIT_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_init_flag_t = _ze_init_flag_t
 
 @cenum _ze_api_version_t::UInt32 begin
     ZE_API_VERSION_1_0 = 65536
-    ZE_API_VERSION_CURRENT = 65536
+    ZE_API_VERSION_1_1 = 65537
+    ZE_API_VERSION_CURRENT = 65537
     ZE_API_VERSION_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_api_version_t = _ze_api_version_t
 
@@ -824,7 +871,6 @@ const ze_api_version_t = _ze_api_version_t
     ZE_IPC_PROPERTY_FLAG_EVENT_POOL = 2
     ZE_IPC_PROPERTY_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_ipc_property_flag_t = _ze_ipc_property_flag_t
 
@@ -836,7 +882,6 @@ const ze_ipc_property_flag_t = _ze_ipc_property_flag_t
     ZE_DEVICE_PROPERTY_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_device_property_flag_t = _ze_device_property_flag_t
 
 @cenum _ze_device_module_flag_t::UInt32 begin
@@ -846,7 +891,6 @@ const ze_device_property_flag_t = _ze_device_property_flag_t
     ZE_DEVICE_MODULE_FLAG_DP4A = 8
     ZE_DEVICE_MODULE_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_device_module_flag_t = _ze_device_module_flag_t
 
@@ -862,7 +906,6 @@ const ze_device_module_flag_t = _ze_device_module_flag_t
     ZE_DEVICE_FP_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_device_fp_flag_t = _ze_device_fp_flag_t
 
 @cenum _ze_command_queue_group_property_flag_t::UInt32 begin
@@ -873,14 +916,12 @@ const ze_device_fp_flag_t = _ze_device_fp_flag_t
     ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_command_queue_group_property_flag_t = _ze_command_queue_group_property_flag_t
 
 @cenum _ze_device_memory_property_flag_t::UInt32 begin
     ZE_DEVICE_MEMORY_PROPERTY_FLAG_TBD = 1
     ZE_DEVICE_MEMORY_PROPERTY_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_device_memory_property_flag_t = _ze_device_memory_property_flag_t
 
@@ -892,14 +933,12 @@ const ze_device_memory_property_flag_t = _ze_device_memory_property_flag_t
     ZE_MEMORY_ACCESS_CAP_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_memory_access_cap_flag_t = _ze_memory_access_cap_flag_t
 
 @cenum _ze_device_cache_property_flag_t::UInt32 begin
     ZE_DEVICE_CACHE_PROPERTY_FLAG_USER_CONTROL = 1
     ZE_DEVICE_CACHE_PROPERTY_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_device_cache_property_flag_t = _ze_device_cache_property_flag_t
 
@@ -909,7 +948,6 @@ const ze_device_cache_property_flag_t = _ze_device_cache_property_flag_t
     ZE_DEVICE_P2P_PROPERTY_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_device_p2p_property_flag_t = _ze_device_p2p_property_flag_t
 
 @cenum _ze_context_flag_t::UInt32 begin
@@ -917,14 +955,12 @@ const ze_device_p2p_property_flag_t = _ze_device_p2p_property_flag_t
     ZE_CONTEXT_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_context_flag_t = _ze_context_flag_t
 
 @cenum _ze_command_queue_flag_t::UInt32 begin
     ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY = 1
     ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_command_queue_flag_t = _ze_command_queue_flag_t
 
@@ -934,7 +970,6 @@ const ze_command_queue_flag_t = _ze_command_queue_flag_t
     ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY = 4
     ZE_COMMAND_LIST_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_command_list_flag_t = _ze_command_list_flag_t
 
@@ -950,7 +985,6 @@ const ze_command_list_flag_t = _ze_command_list_flag_t
     ZE_MEMORY_ADVICE_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_memory_advice_t = _ze_memory_advice_t
 
 @cenum _ze_event_pool_flag_t::UInt32 begin
@@ -959,7 +993,6 @@ const ze_memory_advice_t = _ze_memory_advice_t
     ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP = 4
     ZE_EVENT_POOL_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_event_pool_flag_t = _ze_event_pool_flag_t
 
@@ -970,14 +1003,12 @@ const ze_event_pool_flag_t = _ze_event_pool_flag_t
     ZE_EVENT_SCOPE_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_event_scope_flag_t = _ze_event_scope_flag_t
 
 @cenum _ze_fence_flag_t::UInt32 begin
     ZE_FENCE_FLAG_SIGNALED = 1
     ZE_FENCE_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_fence_flag_t = _ze_fence_flag_t
 
@@ -987,7 +1018,6 @@ const ze_fence_flag_t = _ze_fence_flag_t
     ZE_IMAGE_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_image_flag_t = _ze_image_flag_t
 
 @cenum _ze_image_sampler_filter_flag_t::UInt32 begin
@@ -996,7 +1026,6 @@ const ze_image_flag_t = _ze_image_flag_t
     ZE_IMAGE_SAMPLER_FILTER_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_image_sampler_filter_flag_t = _ze_image_sampler_filter_flag_t
 
 @cenum _ze_device_mem_alloc_flag_t::UInt32 begin
@@ -1004,7 +1033,6 @@ const ze_image_sampler_filter_flag_t = _ze_image_sampler_filter_flag_t
     ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED = 2
     ZE_DEVICE_MEM_ALLOC_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_device_mem_alloc_flag_t = _ze_device_mem_alloc_flag_t
 
@@ -1015,7 +1043,6 @@ const ze_device_mem_alloc_flag_t = _ze_device_mem_alloc_flag_t
     ZE_HOST_MEM_ALLOC_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_host_mem_alloc_flag_t = _ze_host_mem_alloc_flag_t
 const ze_ipc_memory_flags_t = UInt32
 
@@ -1024,14 +1051,12 @@ const ze_ipc_memory_flags_t = UInt32
     ZE_IPC_MEMORY_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_ipc_memory_flag_t = _ze_ipc_memory_flag_t
 
 @cenum _ze_module_property_flag_t::UInt32 begin
     ZE_MODULE_PROPERTY_FLAG_IMPORTS = 1
     ZE_MODULE_PROPERTY_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_module_property_flag_t = _ze_module_property_flag_t
 
@@ -1040,7 +1065,6 @@ const ze_module_property_flag_t = _ze_module_property_flag_t
     ZE_KERNEL_FLAG_EXPLICIT_RESIDENCY = 2
     ZE_KERNEL_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_kernel_flag_t = _ze_kernel_flag_t
 const ze_kernel_indirect_access_flags_t = UInt32
@@ -1052,7 +1076,6 @@ const ze_kernel_indirect_access_flags_t = UInt32
     ZE_KERNEL_INDIRECT_ACCESS_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_kernel_indirect_access_flag_t = _ze_kernel_indirect_access_flag_t
 const ze_cache_config_flags_t = UInt32
 
@@ -1062,8 +1085,15 @@ const ze_cache_config_flags_t = UInt32
     ZE_CACHE_CONFIG_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_cache_config_flag_t = _ze_cache_config_flag_t
+
+@cenum _ze_module_program_exp_version_t::UInt32 begin
+    ZE_MODULE_PROGRAM_EXP_VERSION_1_0 = 65536
+    ZE_MODULE_PROGRAM_EXP_VERSION_CURRENT = 65536
+    ZE_MODULE_PROGRAM_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_module_program_exp_version_t = _ze_module_program_exp_version_t
 
 @cenum _ze_raytracing_ext_version_t::UInt32 begin
     ZE_RAYTRACING_EXT_VERSION_1_0 = 65536
@@ -1071,14 +1101,19 @@ const ze_cache_config_flag_t = _ze_cache_config_flag_t
     ZE_RAYTRACING_EXT_VERSION_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_raytracing_ext_version_t = _ze_raytracing_ext_version_t
+
+@cenum _ze_device_raytracing_ext_flag_t::UInt32 begin
+    ZE_DEVICE_RAYTRACING_EXT_FLAG_RAYQUERY = 1
+    ZE_DEVICE_RAYTRACING_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_device_raytracing_ext_flag_t = _ze_device_raytracing_ext_flag_t
 
 @cenum _ze_raytracing_mem_alloc_ext_flag_t::UInt32 begin
     ZE_RAYTRACING_MEM_ALLOC_EXT_FLAG_TBD = 1
     ZE_RAYTRACING_MEM_ALLOC_EXT_FLAG_FORCE_UINT32 = 2147483647
 end
-
 
 const ze_raytracing_mem_alloc_ext_flag_t = _ze_raytracing_mem_alloc_ext_flag_t
 
@@ -1089,7 +1124,6 @@ const ze_raytracing_mem_alloc_ext_flag_t = _ze_raytracing_mem_alloc_ext_flag_t
     ZE_MEMORY_ACCESS_ATTRIBUTE_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_memory_access_attribute_t = _ze_memory_access_attribute_t
 
 @cenum _ze_physical_mem_flag_t::UInt32 begin
@@ -1097,8 +1131,50 @@ const ze_memory_access_attribute_t = _ze_memory_access_attribute_t
     ZE_PHYSICAL_MEM_FLAG_FORCE_UINT32 = 2147483647
 end
 
-
 const ze_physical_mem_flag_t = _ze_physical_mem_flag_t
+
+@cenum _ze_float_atomics_ext_version_t::UInt32 begin
+    ZE_FLOAT_ATOMICS_EXT_VERSION_1_0 = 65536
+    ZE_FLOAT_ATOMICS_EXT_VERSION_CURRENT = 65536
+    ZE_FLOAT_ATOMICS_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_float_atomics_ext_version_t = _ze_float_atomics_ext_version_t
+
+@cenum _ze_device_fp_atomic_ext_flag_t::UInt32 begin
+    ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_LOAD_STORE = 1
+    ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_ADD = 2
+    ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_MIN_MAX = 4
+    ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_LOAD_STORE = 65536
+    ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_ADD = 131072
+    ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_MIN_MAX = 262144
+    ZE_DEVICE_FP_ATOMIC_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_device_fp_atomic_ext_flag_t = _ze_device_fp_atomic_ext_flag_t
+
+@cenum _ze_global_offset_exp_version_t::UInt32 begin
+    ZE_GLOBAL_OFFSET_EXP_VERSION_1_0 = 65536
+    ZE_GLOBAL_OFFSET_EXP_VERSION_CURRENT = 65536
+    ZE_GLOBAL_OFFSET_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_global_offset_exp_version_t = _ze_global_offset_exp_version_t
+
+@cenum _ze_relaxed_allocation_limits_exp_version_t::UInt32 begin
+    ZE_RELAXED_ALLOCATION_LIMITS_EXP_VERSION_1_0 = 65536
+    ZE_RELAXED_ALLOCATION_LIMITS_EXP_VERSION_CURRENT = 65536
+    ZE_RELAXED_ALLOCATION_LIMITS_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_relaxed_allocation_limits_exp_version_t = _ze_relaxed_allocation_limits_exp_version_t
+
+@cenum _ze_relaxed_allocation_limits_exp_flag_t::UInt32 begin
+    ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE = 1
+    ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_relaxed_allocation_limits_exp_flag_t = _ze_relaxed_allocation_limits_exp_flag_t
 
 struct _ze_init_params_t
     pflags::Ptr{ze_init_flags_t}
@@ -2443,4 +2519,3 @@ struct _ze_callbacks_t
 end
 
 const ze_callbacks_t = _ze_callbacks_t
-
