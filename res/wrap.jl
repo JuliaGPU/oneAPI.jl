@@ -7,8 +7,7 @@
 
 using Clang
 
-function wrap(name, headers...; library="lib$name", include_dirs=dirname.(headers),
-                                defines=[], undefines=[])
+function wrap(name, headers...; library="lib$name", defines=[], include_dirs=[])
     clang_args = String[]
     append!(clang_args, map(dir->"-I$dir", include_dirs))
     for define in defines
@@ -18,13 +17,9 @@ function wrap(name, headers...; library="lib$name", include_dirs=dirname.(header
             append!(clang_args, ["-D", "$define"])
         end
     end
-    for undefine in undefines
-        append!(clang_args, ["-U", "$undefine"])
-    end
 
     output_file = "lib$(name).jl"
     common_file = "lib$(name)_common.jl"
-    aliases_file = "lib$(name)_aliases.jl"
 
     context = init(;
                     headers = [headers...],
@@ -38,29 +33,8 @@ function wrap(name, headers...; library="lib$name", include_dirs=dirname.(header
                   )
     run(context)
 
-
-    ## extract aliases
-
-    common_text = read(common_file, String)
-    common_io = open(common_file, "w")
-
-    aliases_io = open(aliases_file, "w")
-
-    for line in split(common_text, '\n')
-        re = r"const (\w+) = \1_v\d+"
-        if match(re, line) !== nothing
-            println(aliases_io, line)
-        else
-            println(common_io, line)
-        end
-    end
-
-    close(aliases_io)
-    close(common_io)
-
-    return output_file, common_file, aliases_file
+    return output_file, common_file
 end
-
 
 
 #
@@ -78,8 +52,8 @@ end
 
 function pass(x, state, f = (x, state)->nothing)
     f(x, state)
-    if x.args isa Vector
-        for a in x.args
+    if length(x) > 0
+        for a in x
             pass(a, state, f)
         end
     else
@@ -108,25 +82,24 @@ end
 checked_types = [
     "ze_result_t",
 ]
-function insert_check(x, state)
-    if x isa CSTParser.EXPR && x.typ == CSTParser.FunctionDef
-        _, def, body, _ = x.args
-        @assert body isa CSTParser.EXPR && body.typ == CSTParser.Block
-        @assert length(body.args) == 1
+function insert_check_pass(x, state)
+    if x isa CSTParser.EXPR && x.head == :function
+        _, def, body, _ = x
+        @assert body isa CSTParser.EXPR && body.head == :block
+        @assert length(body) == 1
 
         # Clang.jl-generated ccalls should be directly part of a function definition
         call = body.args[1]
-        @assert call isa CSTParser.EXPR && call.typ == CSTParser.Call && call.args[1].val == "ccall"
+        @assert call isa CSTParser.EXPR && call.head == :call && call[1].val == "ccall"
 
         # get the ccall return type
-        rv = call.args[5]
+        rv = call[5]
 
         if rv.val in checked_types
             push!(state.edits, Edit(state.offset, "@checked "))
         end
     end
 end
-
 
 
 ## indenting passes
@@ -164,64 +137,68 @@ function get_lines(text)
     lines
 end
 
-function wrap_at_comma(x, state, indent, offset, column)
+function wrap_at_comma(x, I, state, indent, offset, column, debug=false)
     comma = nothing
-    for y in x
+    for i in I
+        y = x[i]
+        # debug && @show y
+        # debug && dump(y)
         if column + y.fullspan > 92 && comma !== nothing
             column = indent
             push!(state.edits, Edit(comma, ",\n" * " "^column))
             column += offset - comma[1] - 1 # other stuff might have snuck between the comma and the current expr
             comma = nothing
-        elseif y.typ == CSTParser.PUNCTUATION && y.kind == Tokens.COMMA
-            comma = (offset+1):(offset+y.fullspan)
+         elseif y.head == :COMMA
+             comma = (offset+1):(offset+y.fullspan)
         end
         offset += y.fullspan
         column += y.fullspan
     end
 end
 
-function indent_ccall(x, state)
-    if x isa CSTParser.EXPR && x.typ == CSTParser.Call && x.args[1].val == "ccall"
+function indent_ccall_pass(x, state)
+    if x isa CSTParser.EXPR && x.head == :call && x[1].val == "ccall"
         # figure out how much to indent by looking at where the expr starts
         line = findlast(y -> state.offset >= y[2], state.lines) # index, not the actual number
         line_indent, line_offset = state.lines[line]
         expr_indent = state.offset - line_offset
-        indent = expr_indent + sum(x->x.fullspan, x.args[1:2])
+        indent = expr_indent + sum(x->x.fullspan, [x[i] for i in 1:2])
 
-        if length(x.args[7]) > 2    # non-empty tuple type
+        if length(x[7]) > 2    # non-empty tuple type
             # break before the tuple type
-            offset = state.offset + sum(x->x.fullspan, x.args[1:6])
+            offset = state.offset + sum(x->x.fullspan, [x[i] for i in 1:6])
             push!(state.edits, Edit(offset:offset, "\n" * " "^indent))
 
             # wrap tuple type
-            wrap_at_comma(x.args[7], state, indent+1, offset, indent+1)
+            wrap_at_comma(x[7], 1:lastindex(x[7]), state, indent+1, offset, indent+1, )
         end
 
-        if length(x.args) > 9
+        if length(x) > 9
             # break before the arguments
-            offset = state.offset + sum(x->x.fullspan, x.args[1:8])
+            offset = state.offset + sum(x->x.fullspan, [x[i] for i in 1:8])
             push!(state.edits, Edit(offset:offset, "\n" * " "^indent))
 
             # wrap arguments
-            wrap_at_comma(x.args[9:end], state, indent, offset, indent)
+            wrap_at_comma(x, 9:lastindex(x), state, indent, offset, indent)
         end
     end
 end
 
-function indent_definition(x, state)
-    if x isa CSTParser.EXPR && x.typ == CSTParser.FunctionDef
+function indent_definition_pass(x, state)
+    if x isa CSTParser.EXPR && x.head == :function
         # figure out how much to indent by looking at where the expr starts
         line = findlast(y -> state.offset >= y[2], state.lines) # index, not the actual number
         line_indent, line_offset = state.lines[line]
         expr_indent = state.offset - line_offset
-        indent = expr_indent + x.args[1].fullspan + sum(x->x.fullspan, x.args[2].args[1:2])
+        indent = expr_indent + x[1].fullspan + sum(x->x.fullspan, [x[2][i] for i in 1:2])
 
-        if length(x.args[2]) > 2    # non-empty args
-            offset = state.offset + x.args[1].fullspan + sum(x->x.fullspan, x.args[2].args[1:2])
-            wrap_at_comma(x.args[2].args[3:end-1], state, indent, offset, indent)
+        if length(x[2]) > 2    # non-empty args
+            offset = state.offset + x[1].fullspan + sum(x->x.fullspan, [x[2][i] for i in 1:2])
+            wrap_at_comma(x[2], 3:(lastindex(x[2])-1), state, indent, offset, indent)
         end
     end
 end
+
 
 
 #
@@ -230,8 +207,8 @@ end
 
 using oneAPI_Level_Zero_Headers_jll
 
-function process(name, headers...; kwargs...)
-    output_file, common_file, aliases_file = wrap(name, headers...; kwargs...)
+function process(name, headers...; modname=name, kwargs...)
+    output_file, common_file = wrap(name, headers...; kwargs...)
 
     for file in (output_file, common_file)
         text = read(file, String)
@@ -243,7 +220,7 @@ function process(name, headers...; kwargs...)
         ast = CSTParser.parse(text, true)
 
         state.offset = 0
-        pass(ast, state, insert_check)
+        pass(ast, state, insert_check_pass)
 
         # apply
         state.offset = 0
@@ -251,7 +228,6 @@ function process(name, headers...; kwargs...)
         for i = 1:length(state.edits)
             text = apply(text, state.edits[i])
         end
-
 
         ## indentation passes
 
@@ -260,10 +236,10 @@ function process(name, headers...; kwargs...)
         ast = CSTParser.parse(text, true)
 
         state.offset = 0
-        pass(ast, state, indent_definition)
+        pass(ast, state, indent_definition_pass)
 
         state.offset = 0
-        pass(ast, state, indent_ccall)
+        pass(ast, state, indent_ccall_pass)
 
         # apply
         state.offset = 0
@@ -273,26 +249,37 @@ function process(name, headers...; kwargs...)
         end
 
 
+        ## header
+
+        squeezed = replace(text, "\n\n\n"=>"\n\n")
+        while length(text) != length(squeezed)
+            text = squeezed
+            squeezed = replace(text, "\n\n\n"=>"\n\n")
+        end
+        text = squeezed
+
+
         write(file, text)
     end
 
 
-
     ## manual patches
 
-    patchdir = joinpath(@__DIR__, "patches")
-    for entry in readdir(patchdir)
-        if endswith(entry, ".patch")
-            path = joinpath(patchdir, entry)
-            run(`patch -i $path`)
+    patchdir = joinpath(@__DIR__, "patches", name)
+    if isdir(patchdir)
+        for entry in readdir(patchdir)
+            if endswith(entry, ".patch")
+                path = joinpath(patchdir, entry)
+                run(`patch -p1 -i $path`)
+            end
         end
     end
 
 
     ## move to destination
 
-    for src in (output_file, common_file, aliases_file)
-        dst = joinpath(dirname(@__DIR__), "src", src)
+    for src in (output_file, common_file)
+        dst = joinpath(dirname(@__DIR__), "lib", modname, src)
         cp(src, dst; force=true)
     end
 
@@ -301,7 +288,7 @@ function process(name, headers...; kwargs...)
 end
 
 function main()
-    process("ze", oneAPI_Level_Zero_Headers_jll.ze_api; library="libze_loader")
+    process("ze", oneAPI_Level_Zero_Headers_jll.ze_api; library="libze_loader", modname="level-zero")
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
