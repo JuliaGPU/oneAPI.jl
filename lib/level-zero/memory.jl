@@ -56,7 +56,7 @@ Base.sizeof(buf::DeviceBuffer) = buf.bytesize
 context(buf::DeviceBuffer) = buf.context
 
 Base.show(io::IO, buf::DeviceBuffer) =
-    @printf(io, "DeviceBuffer(%s at %p)", Base.format_bytes(sizeof(buf)), Int(pointer(buf)))
+    @printf(io, "DeviceBuffer(%s at %p)", Base.format_bytes(sizeof(buf)), pointer(buf))
 
 Base.convert(::Type{ZePtr{T}}, buf::DeviceBuffer) where {T} =
     convert(ZePtr{T}, pointer(buf))
