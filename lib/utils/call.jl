@@ -1,4 +1,4 @@
-export @checked
+export @checked, @debug_ccall
 
 """
     @checked function foo(...)
@@ -32,3 +32,32 @@ macro checked(ex)
 
     return esc(:($safe_def, $unsafe_def))
 end
+
+macro debug_ccall(target, rettyp, argtyps, args...)
+    @assert Meta.isexpr(target, :tuple)
+    f, lib = target.args
+
+    quote
+        # get the call target, as e.g. libcuda() triggers initialization, even though we
+        # can't use the result in the ccall expression below as it's supposed to be constant
+        $(esc(target))
+
+        print($f, '(')
+        for (i, arg) in enumerate(($(map(esc, args)...),))
+            i > 1 && print(", ")
+            render_arg(stdout, arg)
+        end
+        print(')')
+        rv = ccall($(esc(target)), $(esc(rettyp)), $(esc(argtyps)), $(map(esc, args)...))
+        println(" = ", rv)
+        for (i, arg) in enumerate(($(map(esc, args)...),))
+            if arg isa Base.RefValue
+                println(" $i: ", arg[])
+            end
+        end
+        rv
+    end
+end
+
+render_arg(io, arg) = print(io, arg)
+render_arg(io, arg::Union{<:Base.RefValue, AbstractArray}) = summary(io, arg)
