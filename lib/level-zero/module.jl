@@ -23,13 +23,12 @@ mutable struct ZeModule
 
         # compile the module
         GC.@preserve image build_flags constants begin
-            desc_ref = Ref(ze_module_desc_t(
-                ZE_STRUCTURE_TYPE_MODULE_DESC, C_NULL,
-                ZE_MODULE_FORMAT_IL_SPIRV,
-                sizeof(image),
-                pointer(image),
-                pointer(build_flags),
-                Base.unsafe_convert(Ptr{ze_module_constants_t}, constants)
+            desc_ref = Ref(ze_module_desc_t(;
+                format=ZE_MODULE_FORMAT_IL_SPIRV,
+                inputSize=sizeof(image),
+                pInputModule=pointer(image),
+                pBuildFlags=pointer(build_flags),
+                pConstants=Base.unsafe_convert(Ptr{ze_module_constants_t}, constants)
             ))
             handle_ref = Ref{ze_module_handle_t}()
             res = unsafe_zeModuleCreate(ctx, dev, desc_ref, handle_ref, log_ref)
@@ -80,11 +79,7 @@ mutable struct ZeKernel
 
     function ZeKernel(mod, name)
         GC.@preserve name begin
-            desc_ref = Ref(ze_kernel_desc_t(
-                ZE_STRUCTURE_TYPE_KERNEL_DESC, C_NULL,
-                0,
-                pointer(name)
-            ))
+            desc_ref = Ref(ze_kernel_desc_t(; pKernelName=pointer(name)))
             handle_ref = Ref{ze_kernel_handle_t}()
             zeKernelCreate(mod, desc_ref, handle_ref)
         end
@@ -232,7 +227,7 @@ end
 export properties
 
 function properties(kernel::ZeKernel)
-    props_ref = Ref{ze_kernel_properties_t}()
+    props_ref = Ref(ze_kernel_properties_t())
     zeKernelGetProperties(kernel, props_ref)
 
     props = props_ref[]

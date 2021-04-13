@@ -6,10 +6,7 @@ mutable struct ZeContext
     driver::ZeDriver
 
     function ZeContext(drv::ZeDriver)
-        desc_ref = Ref(ze_context_desc_t(
-            ZE_STRUCTURE_TYPE_CONTEXT_DESC, C_NULL,
-            0,
-        ))
+        desc_ref = Ref(ze_context_desc_t())
         handle_ref = Ref{ze_context_handle_t}()
         zeContextCreate(drv, desc_ref, handle_ref)
         obj = new(handle_ref[], drv)

@@ -31,7 +31,7 @@ end
 ## properties
 
 function properties(dev::ZeDevice)
-    props_ref = Ref{ze_device_properties_t}()
+    props_ref = Ref(ze_device_properties_t())
     zeDeviceGetProperties(dev, props_ref)
 
     props = props_ref[]
@@ -59,7 +59,7 @@ function properties(dev::ZeDevice)
 end
 
 function compute_properties(dev::ZeDevice)
-    props_ref = Ref{ze_device_compute_properties_t}()
+    props_ref = Ref(ze_device_compute_properties_t())
     zeDeviceGetComputeProperties(dev, props_ref)
 
     props = props_ref[]
@@ -77,7 +77,7 @@ function compute_properties(dev::ZeDevice)
 end
 
 function module_properties(dev::ZeDevice)
-    props_ref = Ref{ze_device_module_properties_t}()
+    props_ref = Ref(ze_device_module_properties_t())
     zeDeviceGetModuleProperties(dev, props_ref)
 
     props = props_ref[]
@@ -97,7 +97,7 @@ function memory_properties(dev::ZeDevice)
     count_ref = Ref{UInt32}(0)
     zeDeviceGetMemoryProperties(dev, count_ref, C_NULL)
 
-    all_props = Vector{ze_device_memory_properties_t}(undef, count_ref[])
+    all_props = fill(ze_device_memory_properties_t(), count_ref[])
     zeDeviceGetMemoryProperties(dev, count_ref, all_props)
 
     return [(maxClockRate=Int(props.maxClockRate),
@@ -107,7 +107,7 @@ function memory_properties(dev::ZeDevice)
 end
 
 function memory_access_properties(dev::ZeDevice)
-    props_ref = Ref{ze_device_memory_access_properties_t}()
+    props_ref = Ref(ze_device_memory_access_properties_t())
     zeDeviceGetMemoryAccessProperties(dev, props_ref)
 
     props = props_ref[]
@@ -124,7 +124,7 @@ function cache_properties(dev::ZeDevice)
     count_ref = Ref{UInt32}(0)
     zeDeviceGetCacheProperties(dev, count_ref, C_NULL)
 
-    all_props = Vector{ze_device_cache_properties_t}(undef, count_ref[])
+    all_props = fill(ze_device_cache_properties_t(), count_ref[])
     zeDeviceGetCacheProperties(dev, count_ref, all_props)
 
     return [(flags=props.flags,
@@ -133,7 +133,7 @@ function cache_properties(dev::ZeDevice)
 end
 
 function image_properties(dev::ZeDevice)
-    props_ref = Ref{ze_device_image_properties_t}()
+    props_ref = Ref(ze_device_image_properties_t())
     zeDeviceGetImageProperties(dev, props_ref)
 
     props = props_ref[]
@@ -150,7 +150,7 @@ function image_properties(dev::ZeDevice)
 end
 
 function p2p_properties(dev1, dev2::ZeDevice)
-    props_ref = Ref{ze_device_p2p_properties_t}()
+    props_ref = Ref(ze_device_p2p_properties_t())
     zeDeviceGetP2PProperties(dev1, dev2, props_ref)
 
     props = props_ref[]
@@ -173,7 +173,7 @@ struct ZeDevices
         count_ref = Ref{UInt32}(0)
         zeDeviceGet(drv, count_ref, C_NULL)
 
-        handles = Vector{ze_device_handle_t}(undef, count_ref[])
+        handles = fill(ze_device_handle_t(), count_ref[])
         zeDeviceGet(drv, count_ref, handles)
 
         new(handles, drv)

@@ -40,10 +40,7 @@ end
 
 function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer, alignment::Integer=1;
                       flags=0, ordinal::Integer=0)
-    desc_ref = Ref(ze_device_mem_alloc_desc_t(
-        ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC, C_NULL,
-        flags, ordinal
-    ))
+    desc_ref = Ref(ze_device_mem_alloc_desc_t(; flags, ordinal))
 
     ptr_ref = Ref{Ptr{Cvoid}}()
     zeMemAllocDevice(ctx, desc_ref, bytesize, alignment, dev, ptr_ref)
@@ -81,10 +78,7 @@ struct HostBuffer <: AbstractBuffer
 end
 
 function host_alloc(ctx::ZeContext, bytesize::Integer, alignment::Integer=1; flags=0)
-    desc_ref = Ref(ze_host_mem_alloc_desc_t(
-        ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC, C_NULL,
-        flags
-    ))
+    desc_ref = Ref(ze_host_mem_alloc_desc_t(; flags))
 
     ptr_ref = Ref{Ptr{Cvoid}}()
     zeMemAllocHost(ctx, desc_ref, bytesize, alignment, ptr_ref)
@@ -123,14 +117,8 @@ end
 function shared_alloc(ctx::ZeContext, dev::Union{Nothing,ZeDevice}, bytesize::Integer,
                       alignment::Integer=1; host_flags=0,
                       device_flags=0, ordinal::Integer=0)
-    device_desc_ref = Ref(ze_device_mem_alloc_desc_t(
-        ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC, C_NULL,
-        device_flags, ordinal
-    ))
-    host_desc_ref = Ref(ze_host_mem_alloc_desc_t(
-        ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC, C_NULL,
-        host_flags
-    ))
+    device_desc_ref = Ref(ze_device_mem_alloc_desc_t(; flags=device_flags, ordinal))
+    host_desc_ref = Ref(ze_host_mem_alloc_desc_t(; flags=host_flags))
 
     ptr_ref = Ref{Ptr{Cvoid}}()
     zeMemAllocShared(ctx, device_desc_ref, host_desc_ref, bytesize, alignment,
@@ -156,8 +144,8 @@ Base.convert(::Type{ZePtr{T}}, buf::SharedBuffer) where {T} =
 ## properties
 
 function properties(buf::AbstractBuffer)
-    props_ref = Ref{ze_memory_allocation_properties_t}()
-    dev_ref = Ref{ze_device_handle_t}(C_NULL)
+    props_ref = Ref(ze_memory_allocation_properties_t())
+    dev_ref = Ref(ze_device_handle_t())
     zeMemGetAllocProperties(buf.context, pointer(buf), props_ref, dev_ref)
 
     props = props_ref[]
