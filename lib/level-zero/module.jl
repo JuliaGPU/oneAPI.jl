@@ -111,7 +111,7 @@ struct ZeModuleKernelDict <: AbstractDict{String,ZeKernel}
     function ZeModuleKernelDict(mod)
         count_ref = Ref{UInt32}(0)
         zeModuleGetKernelNames(mod, count_ref, C_NULL)
-        names_ref = Vector{Cstring}(undef, count_ref[])
+        names_ref = Vector{Ptr{Cchar}}(undef, count_ref[])
         zeModuleGetKernelNames(mod, count_ref, names_ref)
         new(mod, unsafe_string.(names_ref))
     end
@@ -218,7 +218,7 @@ function source_attributes(kernel::ZeKernel)
     zeKernelGetSourceAttributes(kernel, size_ref, C_NULL)
 
     data = Vector{UInt8}(undef, size_ref[])
-    ptr_ref = Ref{Cstring}(pointer(data))
+    ptr_ref = Ref{Ptr{Cchar}}(pointer(data))
     zeKernelGetSourceAttributes(kernel, size_ref, ptr_ref)
     str = String(data)
 

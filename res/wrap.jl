@@ -5,35 +5,18 @@
 # Parsing
 #
 
-using Clang
+using Clang.Generators
 
 function wrap(name, headers...; library="lib$name", defines=[], include_dirs=[])
-    clang_args = String[]
-    append!(clang_args, map(dir->"-I$dir", include_dirs))
-    for define in defines
-        if isa(define, Pair)
-            append!(clang_args, ["-D", "$(first(define))=$(last(define))"])
-        else
-            append!(clang_args, ["-D", "$define"])
-        end
-    end
+    options =  load_options(joinpath(@__DIR__, "wrap.toml"))
+    options["general"]["library_name"] = library
+    options["general"]["output_file_path"] = "lib$(name).jl"
 
-    output_file = "lib$(name).jl"
-    common_file = "lib$(name)_common.jl"
+    ctx = create_context([headers...], String[], options)
 
-    context = init(;
-                    headers = [headers...],
-                    output_file = output_file,
-                    common_file = common_file,
-                    clang_includes = [include_dirs..., CLANG_INCLUDE],
-                    clang_args = clang_args,
-                    header_wrapped = (root, current)->startswith(basename(current), "ze_") && in(root, headers),
-                    header_library = x->library,
-                    clang_diagnostics = true,
-                  )
-    run(context)
+    build!(ctx)
 
-    return output_file, common_file
+    return options["general"]["output_file_path"]
 end
 
 
@@ -208,9 +191,9 @@ end
 using oneAPI_Level_Zero_Headers_jll
 
 function process(name, headers...; modname=name, kwargs...)
-    output_file, common_file = wrap(name, headers...; kwargs...)
+    output_file = wrap(name, headers...; kwargs...)
 
-    for file in (output_file, common_file)
+    let file = output_file
         text = read(file, String)
 
 
@@ -278,7 +261,7 @@ function process(name, headers...; modname=name, kwargs...)
 
     ## move to destination
 
-    for src in (output_file, common_file)
+    let src = output_file
         dst = joinpath(dirname(@__DIR__), "lib", modname, src)
         cp(src, dst; force=true)
     end

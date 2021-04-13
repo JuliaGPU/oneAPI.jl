@@ -101,14 +101,3 @@ end
 @noinline function throw_api_error(res)
     throw(ZeError(res))
 end
-
-macro check(ex)
-    quote
-        res = $(esc(ex))
-        if res != RESULT_SUCCESS
-            throw_api_error(res)
-        end
-
-        return
-    end
-end

@@ -13,12 +13,20 @@ include("utils.jl")
 include("pointer.jl")
 
 # core API
-include("libze_common.jl")
-include("error.jl")
+macro check(ex)
+    quote
+        res = $(esc(ex))
+        if res != RESULT_SUCCESS
+            throw_api_error(res)
+        end
+
+        return
+    end
+end
 include("libze.jl")
-include("libze_aliases.jl")
 
 # core wrappers
+include("error.jl")
 include("common.jl")
 include("driver.jl")
 include("device.jl")

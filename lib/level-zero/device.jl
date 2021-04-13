@@ -54,7 +54,7 @@ function properties(dev::ZeDevice)
         timestampValidBits=Int(props.timestampValidBits),
         kernelTimestampValidBits=Int(props.kernelTimestampValidBits),
         uuid=Base.UUID(reinterpret(UInt128, [props.uuid.id...])[1]),
-        name=String([props.name[1:findfirst(isequal(0), props.name)-1]...]),
+        name=String(UInt8[props.name[1:findfirst(isequal(0), props.name)-1]...]),
     )
 end
 
