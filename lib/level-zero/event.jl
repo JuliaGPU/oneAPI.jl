@@ -7,13 +7,9 @@ mutable struct ZeEventPool
 
     context::ZeContext
 
-    function ZeEventPool(ctx::ZeContext, size::Integer, devs::ZeDevice...;
+    function ZeEventPool(ctx::ZeContext, count::Integer, devs::ZeDevice...;
                          flags=0)
-        desc_ref = Ref(ze_event_pool_desc_t(
-            ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, C_NULL,
-            flags,
-            size
-        ))
+        desc_ref = Ref(ze_event_pool_desc_t(; flags, count))
         handle_ref = Ref{ze_event_pool_handle_t}()
         zeEventPoolCreate(ctx, desc_ref, length(devs), isempty(devs) ? C_NULL : [devs...], handle_ref)
         obj = new(handle_ref[], ctx)
@@ -38,12 +34,7 @@ mutable struct ZeEvent
     pool::ZeEventPool
 
     function ZeEvent(pool, index::Integer)
-        desc_ref = Ref(ze_event_desc_t(
-            ZE_STRUCTURE_TYPE_EVENT_DESC, C_NULL,
-            index-1,
-            0,
-            0
-        ))
+        desc_ref = Ref(ze_event_desc_t(; index=index-1))
         handle_ref = Ref{ze_event_handle_t}()
         zeEventCreate(pool, desc_ref, handle_ref)
         obj = new(handle_ref[], pool)

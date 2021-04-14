@@ -13,9 +13,8 @@ mutable struct ZeCommandQueue
                             flags=0,
                             mode::ze_command_queue_mode_t=ZE_COMMAND_QUEUE_MODE_DEFAULT,
                             priority::ze_command_queue_priority_t=ZE_COMMAND_QUEUE_PRIORITY_NORMAL)
-        desc_ref = Ref(ze_command_queue_desc_t(
-            ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC, C_NULL,
-            ordinal-1, index-1, flags, mode, priority
+        desc_ref = Ref(ze_command_queue_desc_t(;
+            ordinal=ordinal-1, index=index-1, flags, mode, priority
         ))
         handle_ref = Ref{ze_command_queue_handle_t}()
         zeCommandQueueCreate(ctx, dev, desc_ref, handle_ref)
@@ -55,7 +54,7 @@ function properties(groups::ZeCommandQueueGroups)
     count_ref = Ref{UInt32}(0)
     zeDeviceGetCommandQueueGroupProperties(groups.device, count_ref, C_NULL)
 
-    all_props = Vector{ze_command_queue_group_properties_t}(undef, count_ref[])
+    all_props = fill(ze_command_queue_group_properties_t(), count_ref[])
     zeDeviceGetCommandQueueGroupProperties(groups.device, count_ref, all_props)
 
     return [(flags=props.flags,

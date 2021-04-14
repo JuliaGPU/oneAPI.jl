@@ -23,13 +23,12 @@ mutable struct ZeModule
 
         # compile the module
         GC.@preserve image build_flags constants begin
-            desc_ref = Ref(ze_module_desc_t(
-                ZE_STRUCTURE_TYPE_MODULE_DESC, C_NULL,
-                ZE_MODULE_FORMAT_IL_SPIRV,
-                sizeof(image),
-                pointer(image),
-                pointer(build_flags),
-                Base.unsafe_convert(Ptr{ze_module_constants_t}, constants)
+            desc_ref = Ref(ze_module_desc_t(;
+                format=ZE_MODULE_FORMAT_IL_SPIRV,
+                inputSize=sizeof(image),
+                pInputModule=pointer(image),
+                pBuildFlags=pointer(build_flags),
+                pConstants=Base.unsafe_convert(Ptr{ze_module_constants_t}, constants)
             ))
             handle_ref = Ref{ze_module_handle_t}()
             res = unsafe_zeModuleCreate(ctx, dev, desc_ref, handle_ref, log_ref)
@@ -80,11 +79,7 @@ mutable struct ZeKernel
 
     function ZeKernel(mod, name)
         GC.@preserve name begin
-            desc_ref = Ref(ze_kernel_desc_t(
-                ZE_STRUCTURE_TYPE_KERNEL_DESC, C_NULL,
-                0,
-                pointer(name)
-            ))
+            desc_ref = Ref(ze_kernel_desc_t(; pKernelName=pointer(name)))
             handle_ref = Ref{ze_kernel_handle_t}()
             zeKernelCreate(mod, desc_ref, handle_ref)
         end
@@ -111,7 +106,7 @@ struct ZeModuleKernelDict <: AbstractDict{String,ZeKernel}
     function ZeModuleKernelDict(mod)
         count_ref = Ref{UInt32}(0)
         zeModuleGetKernelNames(mod, count_ref, C_NULL)
-        names_ref = Vector{Cstring}(undef, count_ref[])
+        names_ref = Vector{Ptr{Cchar}}(undef, count_ref[])
         zeModuleGetKernelNames(mod, count_ref, names_ref)
         new(mod, unsafe_string.(names_ref))
     end
@@ -218,7 +213,7 @@ function source_attributes(kernel::ZeKernel)
     zeKernelGetSourceAttributes(kernel, size_ref, C_NULL)
 
     data = Vector{UInt8}(undef, size_ref[])
-    ptr_ref = Ref{Cstring}(pointer(data))
+    ptr_ref = Ref{Ptr{Cchar}}(pointer(data))
     zeKernelGetSourceAttributes(kernel, size_ref, ptr_ref)
     str = String(data)
 
@@ -232,7 +227,7 @@ end
 export properties
 
 function properties(kernel::ZeKernel)
-    props_ref = Ref{ze_kernel_properties_t}()
+    props_ref = Ref(ze_kernel_properties_t())
     zeKernelGetProperties(kernel, props_ref)
 
     props = props_ref[]

@@ -9,9 +9,8 @@ mutable struct ZeCommandList
     device::ZeDevice
 
     function ZeCommandList(ctx::ZeContext, dev::ZeDevice, ordinal=1; flags=0)
-        desc_ref = Ref(ze_command_list_desc_t(
-            ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, C_NULL,
-            ordinal-1, flags,
+        desc_ref = Ref(ze_command_list_desc_t(;
+            commandQueueGroupOrdinal=ordinal-1, flags,
         ))
         handle_ref = Ref{ze_command_list_handle_t}()
         zeCommandListCreate(ctx, dev, desc_ref, handle_ref)

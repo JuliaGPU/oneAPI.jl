@@ -52,7 +52,7 @@ Base.IteratorSize(::ZeDrivers) = Base.HasLength()
 ## properties
 
 function properties(drv::ZeDriver)
-    props_ref = Ref{ze_driver_properties_t}()
+    props_ref = Ref(ze_driver_properties_t())
     zeDriverGetProperties(drv, props_ref)
 
     props = props_ref[]
@@ -65,7 +65,7 @@ function properties(drv::ZeDriver)
 end
 
 function ipc_properties(drv::ZeDriver)
-    props_ref = Ref{ze_driver_ipc_properties_t}()
+    props_ref = Ref(ze_driver_ipc_properties_t())
     zeDriverGetIpcProperties(drv, props_ref)
 
     props = props_ref[]
