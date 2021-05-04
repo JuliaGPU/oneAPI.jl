@@ -90,9 +90,6 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     Base.check_reducedims(R, A)
     length(A) == 0 && return R # isempty(::Broadcasted) iterates
 
-    f = zefunc(f)
-    op = zefunc(op)
-
     # add singleton dimensions to the output container, if needed
     if ndims(R) < ndims(A)
         dims = Base.fill_to_length(size(R), 1, Val(ndims(A)))
