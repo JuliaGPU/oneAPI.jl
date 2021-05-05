@@ -184,9 +184,9 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[SPIRV_LLVM_Translator_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "a18fe1b9bfdccd0d73c855cc052a46bc6ad3cf2e"
+git-tree-sha1 = "e32465b6e44a849e99892bef37979cd4d5895359"
 uuid = "4a5d46fc-d8cf-5151-a261-86b458210efb"
-version = "11.0.0+0"
+version = "11.0.0+1"
 
 [[SPIRV_Tools_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
