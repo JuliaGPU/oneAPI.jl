@@ -16,17 +16,17 @@ version = "0.4.1"
 
 [[CSTParser]]
 deps = ["Tokenize"]
-git-tree-sha1 = "d099404ed1319a69fca328814e9a7ad46b32ab67"
+git-tree-sha1 = "ffc3860cb53809f4fef6bc94117efab53975ad15"
 uuid = "00ebfdb7-1f24-5e51-bd34-a7502290713f"
-version = "3.1.0"
+version = "3.2.0"
 
 [[Clang]]
-deps = ["CEnum", "Clang_jll", "TOML"]
-git-tree-sha1 = "da3729e8289a2202fc87c34f232fabc92e338b11"
-repo-rev = "dag"
+deps = ["CEnum", "Clang_jll", "Downloads", "Pkg", "TOML"]
+git-tree-sha1 = "468f7fead4786ebe67b8d12b9516971cdd31e651"
+repo-rev = "master"
 repo-url = "https://github.com/JuliaInterop/Clang.jl.git"
 uuid = "40e3b903-d033-50b4-a0cc-940c62c95e31"
-version = "0.13.0"
+version = "0.14.0"
 
 [[Clang_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "libLLVM_jll"]
@@ -47,9 +47,10 @@ deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[JLLWrappers]]
-git-tree-sha1 = "a431f5f2ca3f4feef3bd7a5e94b8b8d4f2f647a0"
+deps = ["Preferences"]
+git-tree-sha1 = "642a199af8b68253517b80bd3bfd17eb4e84df6e"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
-version = "1.2.0"
+version = "1.3.0"
 
 [[LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -90,6 +91,12 @@ uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 [[Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
+[[Preferences]]
+deps = ["TOML"]
+git-tree-sha1 = "ea79e4c9077208cd3bc5d29631a26bc0cff78902"
+uuid = "21216c6a-2e73-6563-6e65-726566657250"
+version = "1.2.1"
 
 [[Printf]]
 deps = ["Unicode"]
