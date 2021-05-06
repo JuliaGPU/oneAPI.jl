@@ -3633,10 +3633,6 @@ end
 
 const ze_callbacks_t = _ze_callbacks_t
 
-const ZE_APICALL = nothing
-
-const ZE_APIEXPORT = nothing
-
 # Skipping MacroDefinition: ZE_DLLEXPORT __attribute__ ( ( visibility ( "default" ) ) )
 
 const ZE_MAX_IPC_HANDLE_SIZE = 64

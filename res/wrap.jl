@@ -12,7 +12,8 @@ function wrap(name, headers...; library="lib$name", defines=[], include_dirs=[])
     options["general"]["library_name"] = library
     options["general"]["output_file_path"] = "lib$(name).jl"
 
-    ctx = create_context([headers...], String[], options)
+    args = get_default_args()
+    ctx = create_context([headers...], args, options)
 
     build!(ctx)
 
