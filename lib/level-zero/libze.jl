@@ -1234,8 +1234,8 @@ end
 @checked function zeCommandListAppendMemoryCopy(hCommandList, dstptr, srcptr, size,
                                                 hSignalEvent, numWaitEvents, phWaitEvents)
     @ccall libze_loader.zeCommandListAppendMemoryCopy(hCommandList::ze_command_list_handle_t,
-                                                      dstptr::Ptr{Cvoid},
-                                                      srcptr::Ptr{Cvoid}, size::Csize_t,
+                                                      dstptr::PtrOrZePtr{Cvoid},
+                                                      srcptr::PtrOrZePtr{Cvoid}, size::Csize_t,
                                                       hSignalEvent::ze_event_handle_t,
                                                       numWaitEvents::UInt32,
                                                       phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
@@ -1245,7 +1245,7 @@ end
                                                 size, hSignalEvent, numWaitEvents,
                                                 phWaitEvents)
     @ccall libze_loader.zeCommandListAppendMemoryFill(hCommandList::ze_command_list_handle_t,
-                                                      ptr::Ptr{Cvoid}, pattern::Ptr{Cvoid},
+                                                      ptr::PtrOrZePtr{Cvoid}, pattern::PtrOrZePtr{Cvoid},
                                                       pattern_size::Csize_t, size::Csize_t,
                                                       hSignalEvent::ze_event_handle_t,
                                                       numWaitEvents::UInt32,
@@ -1258,11 +1258,11 @@ end
                                                       hSignalEvent, numWaitEvents,
                                                       phWaitEvents)
     @ccall libze_loader.zeCommandListAppendMemoryCopyRegion(hCommandList::ze_command_list_handle_t,
-                                                            dstptr::Ptr{Cvoid},
+                                                            dstptr::PtrOrZePtr{Cvoid},
                                                             dstRegion::Ptr{ze_copy_region_t},
                                                             dstPitch::UInt32,
                                                             dstSlicePitch::UInt32,
-                                                            srcptr::Ptr{Cvoid},
+                                                            srcptr::PtrOrZePtr{Cvoid},
                                                             srcRegion::Ptr{ze_copy_region_t},
                                                             srcPitch::UInt32,
                                                             srcSlicePitch::UInt32,
@@ -1276,9 +1276,9 @@ end
                                                            hSignalEvent, numWaitEvents,
                                                            phWaitEvents)
     @ccall libze_loader.zeCommandListAppendMemoryCopyFromContext(hCommandList::ze_command_list_handle_t,
-                                                                 dstptr::Ptr{Cvoid},
+                                                                 dstptr::PtrOrZePtr{Cvoid},
                                                                  hContextSrc::ze_context_handle_t,
-                                                                 srcptr::Ptr{Cvoid},
+                                                                 srcptr::PtrOrZePtr{Cvoid},
                                                                  size::Csize_t,
                                                                  hSignalEvent::ze_event_handle_t,
                                                                  numWaitEvents::UInt32,
@@ -1334,7 +1334,7 @@ end
 
 @checked function zeCommandListAppendMemoryPrefetch(hCommandList, ptr, size)
     @ccall libze_loader.zeCommandListAppendMemoryPrefetch(hCommandList::ze_command_list_handle_t,
-                                                          ptr::Ptr{Cvoid},
+                                                          ptr::PtrOrZePtr{Cvoid},
                                                           size::Csize_t)::ze_result_t
 end
 
@@ -1355,7 +1355,7 @@ const ze_memory_advice_t = _ze_memory_advice_t
 @checked function zeCommandListAppendMemAdvise(hCommandList, hDevice, ptr, size, advice)
     @ccall libze_loader.zeCommandListAppendMemAdvise(hCommandList::ze_command_list_handle_t,
                                                      hDevice::ze_device_handle_t,
-                                                     ptr::Ptr{Cvoid}, size::Csize_t,
+                                                     ptr::PtrOrZePtr{Cvoid}, size::Csize_t,
                                                      advice::ze_memory_advice_t)::ze_result_t
 end
 
@@ -1573,24 +1573,24 @@ end
 
 @checked function zeMemFree(hContext, ptr)
     @ccall libze_loader.zeMemFree(hContext::ze_context_handle_t,
-                                  ptr::Ptr{Cvoid})::ze_result_t
+                                  ptr::PtrOrZePtr{Cvoid})::ze_result_t
 end
 
 @checked function zeMemGetAllocProperties(hContext, ptr, pMemAllocProperties, phDevice)
     @ccall libze_loader.zeMemGetAllocProperties(hContext::ze_context_handle_t,
-                                                ptr::Ptr{Cvoid},
+                                                ptr::PtrOrZePtr{Cvoid},
                                                 pMemAllocProperties::Ptr{ze_memory_allocation_properties_t},
                                                 phDevice::Ptr{ze_device_handle_t})::ze_result_t
 end
 
 @checked function zeMemGetAddressRange(hContext, ptr, pBase, pSize)
-    @ccall libze_loader.zeMemGetAddressRange(hContext::ze_context_handle_t, ptr::Ptr{Cvoid},
+    @ccall libze_loader.zeMemGetAddressRange(hContext::ze_context_handle_t, ptr::PtrOrZePtr{Cvoid},
                                              pBase::Ptr{Ptr{Cvoid}},
                                              pSize::Ptr{Csize_t})::ze_result_t
 end
 
 @checked function zeMemGetIpcHandle(hContext, ptr, pIpcHandle)
-    @ccall libze_loader.zeMemGetIpcHandle(hContext::ze_context_handle_t, ptr::Ptr{Cvoid},
+    @ccall libze_loader.zeMemGetIpcHandle(hContext::ze_context_handle_t, ptr::PtrOrZePtr{Cvoid},
                                           pIpcHandle::Ptr{ze_ipc_mem_handle_t})::ze_result_t
 end
 
@@ -1608,12 +1608,12 @@ const ze_ipc_memory_flag_t = _ze_ipc_memory_flag_t
                                            hDevice::ze_device_handle_t,
                                            handle::ze_ipc_mem_handle_t,
                                            flags::ze_ipc_memory_flags_t,
-                                           pptr::Ptr{Ptr{Cvoid}})::ze_result_t
+                                           pptr::PtrOrZePtr{Ptr{Cvoid}})::ze_result_t
 end
 
 @checked function zeMemCloseIpcHandle(hContext, ptr)
     @ccall libze_loader.zeMemCloseIpcHandle(hContext::ze_context_handle_t,
-                                            ptr::Ptr{Cvoid})::ze_result_t
+                                            ptr::PtrOrZePtr{Cvoid})::ze_result_t
 end
 
 @checked function zeModuleCreate(hContext, hDevice, desc, phModule, phBuildLog)
@@ -1860,13 +1860,13 @@ const ze_raytracing_mem_alloc_ext_flag_t = _ze_raytracing_mem_alloc_ext_flag_t
 @checked function zeContextMakeMemoryResident(hContext, hDevice, ptr, size)
     @ccall libze_loader.zeContextMakeMemoryResident(hContext::ze_context_handle_t,
                                                     hDevice::ze_device_handle_t,
-                                                    ptr::Ptr{Cvoid},
+                                                    ptr::PtrOrZePtr{Cvoid},
                                                     size::Csize_t)::ze_result_t
 end
 
 @checked function zeContextEvictMemory(hContext, hDevice, ptr, size)
     @ccall libze_loader.zeContextEvictMemory(hContext::ze_context_handle_t,
-                                             hDevice::ze_device_handle_t, ptr::Ptr{Cvoid},
+                                             hDevice::ze_device_handle_t, ptr::PtrOrZePtr{Cvoid},
                                              size::Csize_t)::ze_result_t
 end
 
@@ -1909,7 +1909,7 @@ const ze_memory_access_attribute_t = _ze_memory_access_attribute_t
 end
 
 @checked function zeVirtualMemFree(hContext, ptr, size)
-    @ccall libze_loader.zeVirtualMemFree(hContext::ze_context_handle_t, ptr::Ptr{Cvoid},
+    @ccall libze_loader.zeVirtualMemFree(hContext::ze_context_handle_t, ptr::PtrOrZePtr{Cvoid},
                                          size::Csize_t)::ze_result_t
 end
 
