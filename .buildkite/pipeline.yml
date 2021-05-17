@@ -4,7 +4,7 @@ steps:
   - label: "Julia 1.6"
     plugins:
       - JuliaCI/julia#v1:
-          version: 1.6-nightly
+          version: 1.6
       - JuliaCI/julia-test#v1: ~
       - JuliaCI/julia-coverage#v1:
           codecov: true
@@ -24,7 +24,7 @@ steps:
   - label: "Validation"
     plugins:
       - JuliaCI/julia#v1:
-          version: 1.6-nightly
+          version: 1.6
       - JuliaCI/julia-test#v1:
           julia_args: "-g2"
       - JuliaCI/julia-coverage#v1:
