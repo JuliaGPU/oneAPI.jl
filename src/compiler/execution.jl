@@ -126,15 +126,19 @@ end
 const zefunction_cache = Dict{Any,Any}()
 
 function zefunction_compile(@nospecialize(job::CompilerJob))
-    return GPUCompiler.compile(:obj, job)
+    mi, mi_meta = GPUCompiler.emit_julia(job)
+    ir, ir_meta = GPUCompiler.emit_llvm(job, mi)
+    asm, asm_meta = GPUCompiler.emit_asm(job, ir; format=LLVM.API.LLVMObjectFile)
+
+    return (image=asm, entry=LLVM.name(ir_meta.entry))
 end
 
 # JIT into an executable kernel object
-function zefunction_link(@nospecialize(job::CompilerJob), (image, kernel_fn, undefined_fns))
+function zefunction_link(@nospecialize(job::CompilerJob), compiled)
     ctx = context()
     dev = device()
-    mod = ZeModule(ctx, dev, image)
-    kernel = kernels(mod)[kernel_fn]
+    mod = ZeModule(ctx, dev, compiled.image)
+    kernel = kernels(mod)[compiled.entry]
 
     return HostKernel{job.source.f,job.source.tt}(kernel)
 end
