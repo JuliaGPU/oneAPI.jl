@@ -10,36 +10,66 @@ macro builtin_ccall(name, ret, argtypes, args...)
     @assert Meta.isexpr(argtypes, :tuple)
     argtypes = argtypes.args
 
+    function mangle(T::Type)
+        if T == Cint
+            "i"
+        elseif T == Cuint
+            "j"
+        elseif T == Clong
+            "l"
+        elseif T == Culong
+            "m"
+        elseif T == Cshort
+            "s"
+        elseif T == Cushort
+            "t"
+        elseif T == Cchar
+            "c"
+        elseif T == Cuchar
+            "h"
+        elseif T == Cfloat
+            "f"
+        elseif T == Cdouble
+            "d"
+        elseif T <: LLVMPtr
+            elt, as = T.parameters
+
+            # mangle address space
+            ASstr = if as == AS.Global
+                "CLglobal"
+            #elseif as == AS.Global_device
+            #    "CLdevice"
+            #elseif as == AS.Global_host
+            #    "CLhost"
+            elseif as == AS.Local
+                "CLlocal"
+            elseif as == AS.Constant
+                "CLconstant"
+            elseif as == AS.Private
+                "CLprivate"
+            elseif as == AS.Generic
+                "CLgeneric"
+            else
+                error("Unknown address space $AS")
+            end
+
+            # encode as vendor qualifier
+            ASstr = "U" * string(length(ASstr)) * ASstr
+
+            # XXX: where does the V come from?
+            "P" * ASstr * "V" * mangle(elt)
+        else
+            error("Unknown type $t")
+        end
+    end
+
     # C++-style mangling; very limited to just support these intrinsics
     # TODO: generalize for use with other intrinsics? do we need to mangle those?
     mangled = "_Z$(length(name))$name"
     for t in argtypes
         # with `@eval @builtin_ccall`, we get actual types in the ast, otherwise symbols
-        t = isa(t, Symbol) ? eval(t) : t
-
-        mangled *= if t == Cint
-            'i'
-        elseif t == Cuint
-            'j'
-        elseif t == Clong
-            'l'
-        elseif t == Culong
-            'm'
-        elseif t == Cshort
-            's'
-        elseif t == Cushort
-            't'
-        elseif t == Cchar
-            'c'
-        elseif t == Cuchar
-            'h'
-        elseif t == Cfloat
-            'f'
-        elseif t == Cdouble
-            'd'
-        else
-            error("Unknown type $t")
-        end
+        t = (isa(t, Symbol) || isa(t, Expr)) ? eval(t) : t
+        mangled *= mangle(t)
     end
 
     push!(opencl_builtins, mangled)
