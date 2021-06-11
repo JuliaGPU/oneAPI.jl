@@ -74,7 +74,7 @@ macro builtin_ccall(name, ret, argtypes, args...)
 
     push!(opencl_builtins, mangled)
     esc(quote
-        ccall($("extern $mangled"), llvmcall, $ret, ($(argtypes...),), $(args...))
+        @typed_ccall($mangled, llvmcall, $ret, ($(argtypes...),), $(args...))
     end)
 end
 
