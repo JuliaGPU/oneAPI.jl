@@ -24,10 +24,11 @@ using .oneL0
 functional() = oneL0.functional[]
 
 # device functionality (needs to be loaded first, because of generated functions)
+include("device/utils.jl")
 include("device/pointer.jl")
 include("device/array.jl")
 include("device/runtime.jl")
-include("device/opencl/utils.jl")
+include("device/quirks.jl")
 include("device/opencl/work_item.jl")
 include("device/opencl/synchronization.jl")
 include("device/opencl/memory.jl")
