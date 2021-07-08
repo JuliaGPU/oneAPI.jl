@@ -20,14 +20,14 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module)
     ctx = LLVM.context(mod)
 
     # OpenCL 2.0
-    push!(metadata(mod), "opencl.ocl.version",
-         MDNode([ConstantInt(Int32(2), ctx),
-                 ConstantInt(Int32(0), ctx)]))
+    push!(metadata(mod)["opencl.ocl.version"],
+          MDNode([ConstantInt(Int32(2); ctx),
+                  ConstantInt(Int32(0); ctx)]; ctx))
 
     # SPIR-V 1.5
-    push!(metadata(mod), "opencl.spirv.version",
-         MDNode([ConstantInt(Int32(1), ctx),
-                 ConstantInt(Int32(5), ctx)]))
+    push!(metadata(mod)["opencl.spirv.version"],
+          MDNode([ConstantInt(Int32(1); ctx),
+                  ConstantInt(Int32(5); ctx)]; ctx))
 end
 
 GPUCompiler.ci_cache(::oneAPICompilerJob) = ci_cache

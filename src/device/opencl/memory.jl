@@ -20,9 +20,9 @@ end
 
 # get a pointer to local memory, with known (static) or zero length (dynamic shared memory)
 @generated function emit_localmemory(::Val{id}, ::Type{T}, ::Val{len}=Val(0)) where {id,T,len}
-    JuliaContext() do ctx
-        eltyp = convert(LLVMType, T, ctx)
-        T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local}, ctx)
+    Context() do ctx
+        eltyp = convert(LLVMType, T; ctx)
+        T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local}; ctx)
 
         # create a function
         llvm_f, _ = create_function(T_ptr)
@@ -40,10 +40,10 @@ end
 
         # generate IR
         Builder(ctx) do builder
-            entry = BasicBlock(llvm_f, "entry", ctx)
+            entry = BasicBlock(llvm_f, "entry"; ctx)
             position!(builder, entry)
 
-            ptr = gep!(builder, gv, [ConstantInt(0, ctx), ConstantInt(0, ctx)])
+            ptr = gep!(builder, gv, [ConstantInt(0; ctx), ConstantInt(0; ctx)])
 
             untyped_ptr = bitcast!(builder, ptr, T_ptr)
 
