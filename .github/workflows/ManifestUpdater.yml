@@ -18,8 +18,7 @@ jobs:
           echo "::set-output name=version::$version"
       - uses: julia-actions/setup-julia@v1
         with:
-          # version: ${{ steps.julia_compat.outputs.version }}
-          version: "1.6"
+          version: ${{ steps.julia_compat.outputs.version }}
       - name: Update packages
         id: pkg_update
         run: |
