@@ -105,7 +105,7 @@ end
 
 macro device_function(ex)
     ex = macroexpand(__module__, ex)
-    def = splitdef(ex)
+    def = ExprTools.splitdef(ex)
 
     # generate a function that errors
     def[:body] = quote
@@ -113,7 +113,7 @@ macro device_function(ex)
     end
 
     esc(quote
-        $(combinedef(def))
+        $(ExprTools.combinedef(def))
         @device_override $ex
     end)
 end

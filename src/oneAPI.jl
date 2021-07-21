@@ -5,7 +5,7 @@ using Adapt
 
 using GPUCompiler
 
-using ExprTools
+import ExprTools
 
 using SpecialFunctions
 
