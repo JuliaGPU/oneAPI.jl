@@ -404,3 +404,151 @@ end
 end
 
 end
+
+
+
+############################################################################################
+
+
+
+@testset "atomics (high-level)" begin
+
+@testset "add" begin
+    @testset for T in [Int32, UInt32]
+        a = oneArray([zero(T)])
+
+        function kernel(T, a)
+            oneAPI.@atomic a[1] = a[1] + 1
+            oneAPI.@atomic a[1] += 1
+            return
+        end
+
+        @oneapi items=256 kernel(T, a)
+        @test Array(a)[1] == 512
+    end
+end
+
+@testset "sub" begin
+    @testset for T in [Int32, UInt32]
+        a = oneArray(T[1024])
+
+        function kernel(T, a)
+            oneAPI.@atomic a[1] = a[1] - 1
+            oneAPI.@atomic a[1] -= 1
+            return
+        end
+
+        @oneapi items=256 kernel(T, a)
+        @test Array(a)[1] == 512
+    end
+end
+
+@testset "and" begin
+    @testset for T in [Int32, UInt32]
+        a = oneArray([~zero(T), ~zero(T)])
+
+        function kernel(T, a)
+            i = get_local_id()
+            mask = ~(T(1) << (i-1))
+            oneAPI.@atomic a[1] = a[1] & mask
+            oneAPI.@atomic a[2] &= mask
+            return
+        end
+
+        @oneapi items=8*sizeof(T) kernel(T, a)
+        @test Array(a)[1] == zero(T)
+        @test Array(a)[2] == zero(T)
+    end
+end
+
+@testset "or" begin
+    @testset for T in [Int32, UInt32]
+        a = oneArray([zero(T), zero(T)])
+
+        function kernel(T, a)
+            i = get_local_id()
+            mask = T(1) << (i-1)
+            oneAPI.@atomic a[1] = a[1] | mask
+            oneAPI.@atomic a[2] |= mask
+            return
+        end
+
+        @oneapi items=8*sizeof(T) kernel(T, a)
+        @test Array(a)[1] == ~zero(T)
+        @test Array(a)[2] == ~zero(T)
+    end
+end
+
+@testset "xor" begin
+    @testset for T in [Int32, UInt32]
+        a = oneArray([zero(T), zero(T)])
+
+        function kernel(T, a)
+            i = get_local_id()
+            mask = T(1) << ((i-1)%(8*sizeof(T)))
+            oneAPI.@atomic a[1] = a[1] ⊻ mask
+            oneAPI.@atomic a[2] ⊻= mask
+            return
+        end
+
+        nb = 4
+        @oneapi items=(8*sizeof(T)+nb) kernel(T, a)
+        @test Array(a)[1] == ~zero(T) & ~((one(T) << nb) - one(T))
+        @test Array(a)[2] == ~zero(T) & ~((one(T) << nb) - one(T))
+    end
+end
+
+@testset "max" begin
+    @testset for T in [Int32, UInt32]
+        a = oneArray([zero(T)])
+
+        function kernel(T, a)
+            i = get_local_id()
+            oneAPI.@atomic a[1] = max(a[1], i)
+            return
+        end
+
+        @oneapi items=32 kernel(T, a)
+        @test Array(a)[1] == 32
+    end
+end
+
+@testset "min" begin
+    @testset for T in [Int32, UInt32]
+        a = oneArray([typemax(T)])
+
+        function kernel(T, a)
+            i = get_local_id()
+            oneAPI.@atomic a[1] = min(a[1], i)
+            return
+        end
+
+        @oneapi items=32 kernel(T, a)
+        @test Array(a)[1] == 1
+    end
+end
+
+@testset "macro" begin
+    using oneAPI: AtomicError
+
+    @test_throws_macro AtomicError("right-hand side of an @atomic assignment should be a call") @macroexpand begin
+        oneAPI.@atomic a[1] = 1
+    end
+    @test_throws_macro AtomicError("right-hand side of an @atomic assignment should be a call") @macroexpand begin
+        oneAPI.@atomic a[1] = b ? 1 : 2
+    end
+
+    @test_throws_macro AtomicError("right-hand side of a non-inplace @atomic assignment should reference the left-hand side") @macroexpand begin
+        oneAPI.@atomic a[1] = a[2] + 1
+    end
+
+    @test_throws_macro AtomicError("unknown @atomic expression") @macroexpand begin
+        oneAPI.@atomic wat(a[1])
+    end
+
+    @test_throws_macro AtomicError("@atomic should be applied to an array reference expression") @macroexpand begin
+        oneAPI.@atomic a = a + 1
+    end
+end
+
+end

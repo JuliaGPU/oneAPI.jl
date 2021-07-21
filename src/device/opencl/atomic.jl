@@ -145,3 +145,97 @@ Compute `old ^ val` and store result at location pointed by `p`. The function
 returns `old`.
 """
 atomic_xor!
+
+
+
+#
+# High-level interface
+#
+
+# prototype of a high-level interface for performing atomic operations on arrays
+#
+# this design could be generalized by having atomic {field,array}{set,ref} accessors, as
+# well as acquire/release operations to implement the fallback functionality where any
+# operation can be applied atomically.
+
+const inplace_ops = Dict(
+    :(+=) => :(+),
+    :(-=) => :(-),
+    :(*=) => :(*),
+    :(/=) => :(/),
+    :(&=) => :(&),
+    :(|=) => :(|),
+    :(⊻=) => :(⊻)
+)
+
+struct AtomicError <: Exception
+    msg::AbstractString
+end
+
+Base.showerror(io::IO, err::AtomicError) =
+    print(io, "AtomicError: ", err.msg)
+
+"""
+    @atomic a[I] = op(a[I], val)
+    @atomic a[I] ...= val
+
+Atomically perform a sequence of operations that loads an array element `a[I]`, performs the
+operation `op` on that value and a second value `val`, and writes the result back to the
+array. This sequence can be written out as a regular assignment, in which case the same
+array element should be used in the left and right hand side of the assignment, or as an
+in-place application of a known operator. In both cases, the array reference should be pure
+and not induce any side-effects.
+
+!!! warn
+    This interface is experimental, and might change without warning.  Use the lower-level
+    `atomic_...!` functions for a stable API.
+"""
+macro atomic(ex)
+    # decode assignment and call
+    if ex.head == :(=)
+        ref = ex.args[1]
+        rhs = ex.args[2]
+        Meta.isexpr(rhs, :call) || throw(AtomicError("right-hand side of an @atomic assignment should be a call"))
+        op = rhs.args[1]
+        if rhs.args[2] != ref
+            throw(AtomicError("right-hand side of a non-inplace @atomic assignment should reference the left-hand side"))
+        end
+        val = rhs.args[3]
+    elseif haskey(inplace_ops, ex.head)
+        op = inplace_ops[ex.head]
+        ref = ex.args[1]
+        val = ex.args[2]
+    else
+        throw(AtomicError("unknown @atomic expression"))
+    end
+
+    # decode array expression
+    Meta.isexpr(ref, :ref) || throw(AtomicError("@atomic should be applied to an array reference expression"))
+    array = ref.args[1]
+    indices = Expr(:tuple, ref.args[2:end]...)
+
+    esc(quote
+        $atomic_arrayset($array, $indices, $op, $val)
+    end)
+end
+
+# FIXME: make this respect the indexing style
+@inline atomic_arrayset(A::AbstractArray{T}, Is::Tuple, op::Function, val) where {T} =
+    atomic_arrayset(A, Base._to_linear_index(A, Is...), op, convert(T, val))
+
+function atomic_arrayset(A::AbstractArray, I::Integer, op::Function, val)
+    error("Don't know how to atomically perform $op on $(typeof(A))")
+    # TODO: while { acquire, op, cmpxchg }
+end
+
+# oneAPI.jl atomics
+for (op,impl) in [(+)      => atomic_add!,
+                  (-)      => atomic_sub!,
+                  (&)      => atomic_and!,
+                  (|)      => atomic_or!,
+                  (⊻)      => atomic_xor!,
+                  Base.max => atomic_max!,
+                  Base.min => atomic_min!]
+    @eval @inline atomic_arrayset(A::oneDeviceArray, I::Integer, ::typeof($op), val) =
+        $impl(pointer(A, I), val)
+end
