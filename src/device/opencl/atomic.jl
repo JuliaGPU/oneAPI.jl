@@ -1,5 +1,7 @@
 # Atomic Functions
 
+# TODO: support for 64-bit atomics via atom_cmpxchg (from cl_khr_int64_base_atomics)
+
 # "atomic operations on 32-bit signed, unsigned integers and single precision
 #  floating-point to locations in __global or __local memory"
 
@@ -62,10 +64,22 @@ end
 
 # specifically typed
 
-@device_function atomic_xchg!(p::LLVMPtr{Float32,AS.Local}, val::Float32) =
-    @builtin_ccall("atomic_xchg", Float32, (LLVMPtr{Float32,AS.Local}, Float32,), p, val)
-@device_function atomic_xchg!(p::LLVMPtr{Float32,AS.Global}, val::Float32) =
-    @builtin_ccall("atomic_xchg", Float32, (LLVMPtr{Float32,AS.Global}, Float32,), p, val)
+for as in atomic_memory_types
+@eval begin
+
+@device_function atomic_xchg!(p::LLVMPtr{Float32,$as}, val::Float32) =
+    @builtin_ccall("atomic_xchg", Float32, (LLVMPtr{Float32,$as}, Float32,), p, val)
+
+# XXX: why is only xchg supported on floats? isn't it safe for cmpxchg too,
+#      which should only perform bitwise comparisons?
+@device_function atomic_cmpxchg!(p::LLVMPtr{Float32,$as}, cmp::Float32, val::Float32) =
+    reinterpret(Float32, atomic_cmpxchg!(reinterpret(LLVMPtr{UInt32,$as}, p),
+                                         reinterpret(UInt32, cmp),
+                                         reinterpret(UInt32, val)))
+
+end
+end
+
 
 
 # documentation
@@ -223,12 +237,7 @@ end
 @inline atomic_arrayset(A::AbstractArray{T}, Is::Tuple, op::Function, val) where {T} =
     atomic_arrayset(A, Base._to_linear_index(A, Is...), op, convert(T, val))
 
-function atomic_arrayset(A::AbstractArray, I::Integer, op::Function, val)
-    error("Don't know how to atomically perform $op on $(typeof(A))")
-    # TODO: while { acquire, op, cmpxchg }
-end
-
-# oneAPI.jl atomics
+# native atomics
 for (op,impl) in [(+)      => atomic_add!,
                   (-)      => atomic_sub!,
                   (&)      => atomic_and!,
@@ -236,6 +245,19 @@ for (op,impl) in [(+)      => atomic_add!,
                   (⊻)      => atomic_xor!,
                   Base.max => atomic_max!,
                   Base.min => atomic_min!]
-    @eval @inline atomic_arrayset(A::oneDeviceArray, I::Integer, ::typeof($op), val) =
+    @eval @inline atomic_arrayset(A::oneDeviceArray{T}, I::Integer, ::typeof($op),
+                                  val::T) where {T <: Union{Int32,UInt32}} =
         $impl(pointer(A, I), val)
+end
+
+# fallback using compare-and-swap
+function atomic_arrayset(A::AbstractArray{T}, I::Integer, op::Function, val) where {T}
+    ptr = pointer(A, I)
+    old = Base.unsafe_load(ptr, 1)
+    while true
+        cmp = old
+        new = convert(T, op(old, val))
+        old = atomic_cmpxchg!(ptr, cmp, new)
+        (old == cmp) && return new
+    end
 end

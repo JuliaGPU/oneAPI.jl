@@ -414,7 +414,7 @@ end
 @testset "atomics (high-level)" begin
 
 @testset "add" begin
-    @testset for T in [Int32, UInt32]
+    @testset for T in [Int32, UInt32, Float32]
         a = oneArray([zero(T)])
 
         function kernel(T, a)
@@ -429,7 +429,7 @@ end
 end
 
 @testset "sub" begin
-    @testset for T in [Int32, UInt32]
+    @testset for T in [Int32, UInt32, Float32]
         a = oneArray(T[1024])
 
         function kernel(T, a)
@@ -499,7 +499,7 @@ end
 end
 
 @testset "max" begin
-    @testset for T in [Int32, UInt32]
+    @testset for T in [Int32, UInt32, Float32]
         a = oneArray([zero(T)])
 
         function kernel(T, a)
@@ -514,7 +514,7 @@ end
 end
 
 @testset "min" begin
-    @testset for T in [Int32, UInt32]
+    @testset for T in [Int32, UInt32, Float32]
         a = oneArray([typemax(T)])
 
         function kernel(T, a)
@@ -524,6 +524,36 @@ end
         end
 
         @oneapi items=32 kernel(T, a)
+        @test Array(a)[1] == 1
+    end
+end
+
+@testset "mul" begin
+    @testset for T in [Int32, UInt32, Float32]
+        a = oneArray(T[1])
+
+        function kernel(T, a)
+            oneAPI.@atomic a[1] = a[1] * 2
+            oneAPI.@atomic a[1] *= 2
+            return
+        end
+
+        @oneapi items=8 kernel(T, a)
+        @test Array(a)[1] == 65536
+    end
+end
+
+@testset "div" begin
+    @testset for T in [Int32, UInt32, Float32]
+        a = oneArray(T[65536])
+
+        function kernel(T, a)
+            oneAPI.@atomic a[1] = a[1] / 2
+            oneAPI.@atomic a[1] /= 2
+            return
+        end
+
+        @oneapi items=8 kernel(T, a)
         @test Array(a)[1] == 1
     end
 end
