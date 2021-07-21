@@ -50,7 +50,7 @@ macro oneapi(ex...)
                 local $kernel_tt = Tuple{map(Core.Typeof, $kernel_args)...}
                 local $kernel = $zefunction($kernel_f, $kernel_tt; $(compiler_kwargs...))
                 if $launch
-                    $kernel($kernel_args...; $(call_kwargs...))
+                    $kernel($(var_exprs...); $(call_kwargs...))
                 end
                 $kernel
             end
@@ -122,14 +122,15 @@ abstract type AbstractKernel{F,TT} end
     end
 end
 
-(kernel::AbstractKernel)(args...; kwargs...) = call(kernel, args...; kwargs...)
-
 
 ## host-side kernels
 
 struct HostKernel{F,TT} <: AbstractKernel{F,TT}
     fun::ZeKernel
 end
+
+
+## host-side API
 
 function zefunction(f::Core.Function, tt::Type=Tuple{}; name=nothing, kwargs...)
     dev = device()
@@ -172,6 +173,10 @@ end
     execute!(queue) do list
         append_launch!(list, kernel, groups)
     end
+end
+
+function (kernel::HostKernel)(args...; kwargs...)
+    call(kernel, map(kernel_convert, args)...; kwargs...)
 end
 
 
