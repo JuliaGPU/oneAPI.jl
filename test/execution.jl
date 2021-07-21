@@ -27,10 +27,24 @@ end
     @oneapi groups=1 dummy()
     @oneapi groups=(1,1) dummy()
     @oneapi groups=(1,1,1) dummy()
+end
 
-    @oneapi config=(kernel)->() dummy()
-    @oneapi config=(kernel)->(items=1,) dummy()
-    @oneapi config=(kernel)->(groups=1,) dummy()
+
+@testset "launch=false" begin
+    k = @oneapi launch=false dummy()
+    k()
+    k(; items=1)
+end
+
+
+@testset "inference" begin
+    foo() = @oneapi dummy()
+    @inferred foo()
+
+    # with arguments, we call kernel_convert
+    kernel(a) = return
+    bar(a) = @oneapi kernel(a)
+    @inferred bar(oneArray([1]))
 end
 
 

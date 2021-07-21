@@ -13,29 +13,48 @@ macro oneapi(ex...)
     vars, var_exprs = assign_args!(code, args)
 
     # group keyword argument
-    compiler_kwargs, call_kwargs, other_kwargs =
-        split_kwargs(kwargs, [:name], [:groups, :items, :config, :queue])
+    macro_kwargs, compiler_kwargs, call_kwargs, other_kwargs =
+        split_kwargs(kwargs, [:launch], [:name], [:groups, :items, :queue])
     if !isempty(other_kwargs)
         key,val = first(other_kwargs).args
         throw(ArgumentError("Unsupported keyword argument '$key'"))
     end
 
+    # handle keyword arguments that influence the macro's behavior
+    launch = true
+    for kwarg in macro_kwargs
+        key,val = kwarg.args
+        if key == :launch
+            isa(val, Bool) || throw(ArgumentError("`launch` keyword argument to @cuda should be a constant value"))
+            launch = val::Bool
+        else
+            throw(ArgumentError("Unsupported keyword argument '$key'"))
+        end
+    end
+    if !launch && !isempty(call_kwargs)
+        error("@oneapi with launch=false does not support launch-time keyword arguments; use them when calling the kernel")
+    end
+
     # FIXME: macro hygiene wrt. escaping kwarg values (this broke with 1.5)
     #        we esc() the whole thing now, necessitating gensyms...
-    @gensym kernel_args kernel_tt kernel
+    @gensym f_var kernel_f kernel_args kernel_tt kernel
 
     # convert the arguments, call the compiler and launch the kernel
     # while keeping the original arguments alive
     push!(code.args,
         quote
-            GC.@preserve $(vars...) begin
+            $f_var = $f
+            GC.@preserve $(vars...) $f_var begin
+                local $kernel_f = $kernel_convert($f_var)
                 local $kernel_args = map($kernel_convert, ($(var_exprs...),))
                 local $kernel_tt = Tuple{map(Core.Typeof, $kernel_args)...}
-                local $kernel = $zefunction($f, $kernel_tt; $(compiler_kwargs...))
-                $kernel($kernel_args...; $(call_kwargs...))
+                local $kernel = $zefunction($kernel_f, $kernel_tt; $(compiler_kwargs...))
+                if $launch
+                    $kernel($kernel_args...; $(call_kwargs...))
+                end
+                $kernel
             end
-        end)
-
+         end)
     return esc(code)
 end
 
@@ -99,7 +118,7 @@ abstract type AbstractKernel{F,TT} end
     quote
         Base.@_inline_meta
 
-        _call(kernel, $call_tt, $(call_args...); call_kwargs...)
+        onecall(kernel.fun, $call_tt, $(call_args...); call_kwargs...)
     end
 end
 
@@ -143,16 +162,8 @@ function zefunction_link(@nospecialize(job::CompilerJob), compiled)
     return HostKernel{job.source.f,job.source.tt}(kernel)
 end
 
-@inline function _call(kernel::HostKernel, tt, args...; config=nothing, kwargs...)
-    if config !== nothing
-        _call(kernel.fun, tt, args...; kwargs..., config(kernel)...)
-    else
-        _call(kernel.fun, tt, args...; kwargs...)
-    end
-end
-
-@inline function _call(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
-                       queue::ZeCommandQueue=global_queue(context(), device()))
+@inline function onecall(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
+                         queue::ZeCommandQueue=global_queue(context(), device()))
     for (i, arg) in enumerate(args)
         arguments(kernel)[i] = arg
     end
