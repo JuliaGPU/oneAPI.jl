@@ -85,8 +85,7 @@ macro on_device(ex)
                 return
             end
 
-            @oneapi $kernel()
-            synchronize()
+            oneAPI.@sync @oneapi $kernel()
         end
     end)
 end

@@ -55,3 +55,18 @@ function versioninfo(io::IO=stdout)
         println(io, "- $(props.name)")
     end
 end
+
+"""
+    @sync ex
+
+Run expression `ex` and synchronize the GPU afterwards.
+
+See also: [`synchronize`](@ref).
+"""
+macro sync(ex)
+    quote
+        local ret = $(esc(ex))
+        synchronize()
+        ret
+    end
+end
