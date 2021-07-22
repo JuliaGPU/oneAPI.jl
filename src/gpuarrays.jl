@@ -13,19 +13,12 @@ struct oneArrayBackend <: AbstractGPUBackend end
 struct oneKernelContext <: AbstractKernelContext end
 
 @inline function GPUArrays.launch_heuristic(::oneArrayBackend, f::F, args::Vararg{Any,N};
-                                            maximize_blocksize=false) where {F,N}
-    # HACK: oneAPI needs the global size to compute a group size,
-    #       so forward the kernel to launch_configuration
-    # TODO: re-work this API in GPUArrays.jl
+                                             elements::Int, elements_per_thread::Int) where {F,N}
     kernel = @oneapi launch=false f(oneKernelContext(), args...)
-    return kernel
-end
 
-@inline function GPUArrays.launch_configuration(::oneArrayBackend, kernel::AbstractKernel, total_threads::Int, elements_per_thread::Int=1)
-    # TODO: respect maximize_blocksize? currently max groupsize seems to be 256
-    items = suggest_groupsize(kernel.fun, total_threads).x
-    groups = cld(total_threads, items)
-    return (threads=items, blocks=groups, elements_per_thread=1)
+    items = suggest_groupsize(kernel.fun, elements).x
+    groups = cld(elements, items)
+    return (threads=items, blocks=groups)
 end
 
 function GPUArrays.gpu_call(::oneArrayBackend, f, args, threads::Int, blocks::Int;
