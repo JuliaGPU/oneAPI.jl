@@ -17,8 +17,12 @@ struct oneKernelContext <: AbstractKernelContext end
     kernel = @oneapi launch=false f(oneKernelContext(), args...)
 
     items = suggest_groupsize(kernel.fun, elements).x
-    groups = cld(elements, items)
-    return (threads=items, blocks=groups)
+    # XXX: the z dimension of the suggested group size is often non-zero.
+    #      preserve this in GPUArrays?
+    # XXX: how many groups is a good number? the API doesn't tell us.
+    #      measured on a low-end IGP, 32 blocks seems like a good sweet spot.
+    #      note that this only matters for grid-stride kernels, like broadcast.
+    return (threads=items, blocks=32)
 end
 
 function GPUArrays.gpu_call(::oneArrayBackend, f, args, threads::Int, blocks::Int;
