@@ -22,9 +22,9 @@ version = "0.4.1"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "ad613c934ec3a3aa0ff19b91f15a16d56ed404b5"
+git-tree-sha1 = "bdc0937269321858ab2a4f288486cb258b9a0af7"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.0.2"
+version = "1.3.0"
 
 [[Compat]]
 deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
@@ -65,15 +65,15 @@ version = "0.1.6"
 
 [[GPUArrays]]
 deps = ["Adapt", "LinearAlgebra", "Printf", "Random", "Serialization", "Statistics"]
-git-tree-sha1 = "dbc86e71cdc8cafae25ca5f96a2722327e77eacd"
+git-tree-sha1 = "8034b1a19f7a19743c53cda450fcc65d1b8f7ab5"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "8.0.0"
+version = "8.0.1"
 
 [[GPUCompiler]]
 deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "4967fd150625ee238a304f7005ae83c752266a75"
+git-tree-sha1 = "f26f15d9c353f7091065390ea826df9e03917e58"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.12.7"
+version = "0.12.8"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -87,15 +87,15 @@ version = "1.3.0"
 
 [[LLVM]]
 deps = ["CEnum", "LLVMExtra_jll", "Libdl", "Printf", "Unicode"]
-git-tree-sha1 = "733abcbdc67337bb6aaf873c6bebbe1e6440a5df"
+git-tree-sha1 = "d6041ad706cf458b2c9f3e501152488a26451e9c"
 uuid = "929cbde3-209d-540e-8aea-75f648917ca0"
-version = "4.1.1"
+version = "4.2.0"
 
 [[LLVMExtra_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "b36c0677a0549c7d1dc8719899a4133abbfacf7d"
+git-tree-sha1 = "a9b1130c4728b0e462a1c28772954650039eb847"
 uuid = "dad2f222-ce93-54a1-a47d-0025e8a3acab"
-version = "0.0.6+0"
+version = "0.0.7+0"
 
 [[LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -191,9 +191,9 @@ version = "11.0.0+2"
 
 [[SPIRV_Tools_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "3c09b0e79758ddd4ecf41b9edf449a36ad70ef73"
+git-tree-sha1 = "c0324b7e07bc4649f755bfe7e00f7c6ed6aa353f"
 uuid = "6ac6d60f-d740-5983-97d7-a4482c0689f4"
-version = "2020.6.0+0"
+version = "2021.2.0+0"
 
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
