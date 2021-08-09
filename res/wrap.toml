@@ -1,2 +1,5 @@
 [general]
 # library_name and output_file_path set in wrap.jl
+
+[codegen]
+use_ccall_macro = true
