@@ -15,11 +15,12 @@ using Core: LLVMPtr
 
 using SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll
 
-export oneL0
+export oneL0, SYCL
 
 # core library
 include("../lib/utils/APIUtils.jl")
 include("../lib/level-zero/oneL0.jl")
+include("../lib/sycl/SYCL.jl")
 using .oneL0
 functional() = oneL0.functional[]
 
@@ -49,6 +50,12 @@ include("compiler/reflection.jl")
 include("memory.jl")
 include("pool.jl")
 include("array.jl")
+
+# array libraries
+include("../lib/mkl/oneMKL.jl")
+export oneMKL
+
+# integrations and specialized functionality
 include("broadcast.jl")
 include("mapreduce.jl")
 include("gpuarrays.jl")
