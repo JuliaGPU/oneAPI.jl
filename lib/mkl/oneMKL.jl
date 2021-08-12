@@ -5,20 +5,16 @@ using CxxWrap
 using ..oneAPI
 using ..oneAPI.oneL0
 
-@wrapmodule(joinpath(@__DIR__, "../../deps/liboneapilib.so"), :define_module_mkl)
+@readmodule(joinpath(@__DIR__, "../../deps/liboneapilib.so"), :define_module_mkl)
+@wraptypes
+CxxWrap.argument_overloads(t::Type{<:ZeCxxPtr{T}}) where {T} = [oneArray{T}]
+@wrapfunctions
 
-# XXX: expose ZePtr and the automatic conversions from oneArray to CxxWrap
-#      so that we don't need to explicitly pointer, reinterpret or @preserve.
-raw_pointer(A::oneArray{T}) where {T} = reinterpret(Ptr{T}, pointer(A))
-
-for fun in [:oneapiHgemm, :oneapiSgemm, :oneapiDgemm, :oneapiCgemm, :oneapiZgemm]
-    @eval function $fun(queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-        GC.@preserve A B C begin
-            oneapiSgemm(queue, transA, transB, m, n, k, alpha, raw_pointer(A), lda,
-                        raw_pointer(B), ldb, beta, raw_pointer(C), ldc)
-        end
-    end
-end
+# XXX: CxxWrap makes use a C++-specific wrapper for ZePtr, ZeCxxPtr,
+#      so forward all relevant calls to the underlying Level 0 pointer.
+Base.cconvert(::Type{<:ZeCxxPtr}, x) = x
+Base.unsafe_convert(::Type{<:ZeCxxPtr{T}}, x::oneArray{T}) where {T} =
+    ZeCxxPtr{T}(reinterpret(Ptr{T}, Base.unsafe_convert(ZePtr{T}, x)))
 
 function __init__()
   @initcxx
