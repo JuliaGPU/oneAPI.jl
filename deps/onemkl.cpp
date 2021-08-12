@@ -22,7 +22,7 @@ template <typename T> struct ZePtr {
 
 // https://spec.oneapi.io/versions/1.0-rev-1/elements/oneMKL/source/domains/blas/gemm.html
 
-void oneapiHgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
+void onemklHgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                  oneapi::mkl::transpose transB, int64_t m, int64_t n, int64_t k,
                  half alpha, ZePtr<half> A, int64_t lda, ZePtr<half> B,
                  int64_t ldb, half beta, ZePtr<half> C, int64_t ldc) {
@@ -30,7 +30,7 @@ void oneapiHgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                                           alpha, A, lda, B, ldb, beta, C, ldc);
 }
 
-void oneapiSgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
+void onemklSgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                  oneapi::mkl::transpose transB, int64_t m, int64_t n, int64_t k,
                  float alpha, ZePtr<float> A, int64_t lda, ZePtr<float> B,
                  int64_t ldb, float beta, ZePtr<float> C, int64_t ldc) {
@@ -38,7 +38,7 @@ void oneapiSgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                                           alpha, A, lda, B, ldb, beta, C, ldc);
 }
 
-void oneapiDgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
+void onemklDgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                  oneapi::mkl::transpose transB, int64_t m, int64_t n, int64_t k,
                  double alpha, ZePtr<double> A, int64_t lda, ZePtr<double> B,
                  int64_t ldb, double beta, ZePtr<double> C, int64_t ldc) {
@@ -46,7 +46,7 @@ void oneapiDgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                                           alpha, A, lda, B, ldb, beta, C, ldc);
 }
 
-void oneapiCgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
+void onemklCgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                  oneapi::mkl::transpose transB, int64_t m, int64_t n, int64_t k,
                  std::complex<float> alpha, ZePtr<std::complex<float>> A,
                  int64_t lda, ZePtr<std::complex<float>> B, int64_t ldb,
@@ -56,7 +56,7 @@ void oneapiCgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                                           alpha, A, lda, B, ldb, beta, C, ldc);
 }
 
-void oneapiZgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
+void onemklZgemm(sycl::queue device_queue, oneapi::mkl::transpose transA,
                  oneapi::mkl::transpose transB, int64_t m, int64_t n, int64_t k,
                  std::complex<double> alpha, ZePtr<std::complex<double>> A,
                  int64_t lda, ZePtr<std::complex<double>> B, int64_t ldb,
@@ -83,15 +83,15 @@ JLCXX_MODULE define_module_mkl(jlcxx::Module &mod) {
                 wrapped.template constructor<typename WrappedT::value_type *>();
             });
 
-    mod.add_bits<oneapi::mkl::transpose>("Transpose", julia_type("CppEnum"));
-    mod.set_const("nontrans", oneapi::mkl::transpose::nontrans);
-    mod.set_const("trans", oneapi::mkl::transpose::trans);
-    mod.set_const("conjtrans", oneapi::mkl::transpose::conjtrans);
+    mod.add_bits<oneapi::mkl::transpose>("onemklTranspose", julia_type("CppEnum"));
+    mod.set_const("ONEMKL_TRANSPOSE_NONTRANS", oneapi::mkl::transpose::nontrans);
+    mod.set_const("ONEMKL_TRANSPOSE_TRANS", oneapi::mkl::transpose::trans);
+    mod.set_const("ONEMLK_TRANSPOSE_CONJTRANS", oneapi::mkl::transpose::conjtrans);
 
     // gemm
-    mod.method("oneapiHgemm", oneapiHgemm);
-    mod.method("oneapiSgemm", oneapiSgemm);
-    mod.method("oneapiDgemm", oneapiDgemm);
-    mod.method("oneapiCgemm", oneapiCgemm);
-    mod.method("oneapiZgemm", oneapiZgemm);
+    mod.method("onemklHgemm", onemklHgemm);
+    mod.method("onemklSgemm", onemklSgemm);
+    mod.method("onemklDgemm", onemklDgemm);
+    mod.method("onemklCgemm", onemklCgemm);
+    mod.method("onemklZgemm", onemklZgemm);
 }
