@@ -1,6 +1,6 @@
 # host array
 
-export oneArray
+export oneArray, oneVector, oneMatrix, oneVecOrMat
 
 @enum ArrayState begin
   ARRAY_UNMANAGED
