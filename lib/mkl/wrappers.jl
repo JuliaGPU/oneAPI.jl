@@ -69,11 +69,12 @@ for (fname, elty) in
             context(A) == context(B) == context(C) || error("Multi-context GEMM not supported")
             queue = global_queue(context(A), device(A))
 
-            # FIXME: CxxWrap-generated function signatures only accept Integers
-            #        for enum-typed arguments, even though that conversion
-            #        should only be done at the `ccall` site.
+            # FIXME: CxxWrap-generated function signatures are too narrowly typed,
+            #        breaking ccall-based conversions
             transA = convert(onemklTranspose, transA)
             transB = convert(onemklTranspose, transB)
+            alpha = $elty(alpha)
+            beta = $elty(beta)
 
             $fname(sycl_queue(queue), transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
             C
