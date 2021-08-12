@@ -2,7 +2,9 @@
 
 # to avoid CUDA-style implicit state, where operations can fail if they are accidentally
 # executed in the wrong context, ownership should always be encoded in each object.
-# the accessors below should only be used to determine initial ownership.
+# the functions below should only be used to determine initial ownership.
+
+# XXX: rework this -- it doesn't work well when altering the state
 
 export driver, driver!, device, device!, context, context!, global_queue, synchronize
 
@@ -53,3 +55,35 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
 end
 
 oneL0.synchronize() = oneL0.synchronize(global_queue(context(), device()))
+
+
+
+## SYCL state
+
+# XXX: including objects in the TLS key is bad for performance
+
+export sycl_platform, sycl_device, sycl_context, sycl_queue
+
+function sycl_platform(drv=driver())
+    get!(task_local_storage(), (:SYCLPlatform, drv)) do
+        SYCL.syclMakePlatform(drv)
+    end
+end
+
+function sycl_device(dev=device())
+    get!(task_local_storage(), (:SYCLDevice, dev)) do
+        SYCL.syclMakeDevice(sycl_platform(), dev)
+    end
+end
+
+function sycl_context(ctx=context(), dev=device())
+    get!(task_local_storage(), (:SYCLContext, dev)) do
+        SYCL.syclMakeContext([sycl_device(dev)], ctx)
+    end
+end
+
+function sycl_queue(queue)
+    get!(task_local_storage(), (:SYCLQueue, queue.context, queue.device)) do
+        SYCL.syclMakeQueue(sycl_context(queue.context, queue.device), global_queue(queue.context, queue.device))
+    end
+end
