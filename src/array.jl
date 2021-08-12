@@ -38,7 +38,7 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
     else
       maxsize
     end
-    
+
     ctx = context()
     dev = device()
     buf = allocate(B, ctx, dev, bufsize, Base.datatype_alignment(T))
