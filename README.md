@@ -158,13 +158,13 @@ Finally, the `oneArray` type makes it possible to use your oneAPI accelerator wi
 need to write custom kernels, thanks to Julia's high-level array abstractions:
 
 ```julia
-julia> a = oneArray(rand(2,2))
-2×2 oneArray{Float64,2}:
+julia> a = oneArray(rand(Float32, 2,2))
+2×2 oneArray{Float32,2}:
  0.592979  0.996154
  0.874364  0.232854
 
 julia> a .+ 1
-2×2 oneArray{Float64,2}:
+2×2 oneArray{Float32,2}:
  1.59298  1.99615
  1.87436  1.23285
 ```
