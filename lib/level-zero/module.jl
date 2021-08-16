@@ -8,7 +8,7 @@ mutable struct ZeModule
     context::ZeContext
     device::ZeDevice
 
-    function ZeModule(ctx::ZeContext, dev::ZeDevice, image; build_flags="", log::Bool=true)
+    function ZeModule(ctx::ZeContext, dev::ZeDevice, image; build_flags="-ze-opt-disable", log::Bool=true)
         log_ref = if log
             log_ref = Ref{ze_module_build_log_handle_t}()
         else
