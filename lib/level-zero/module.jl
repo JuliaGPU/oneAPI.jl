@@ -169,7 +169,7 @@ function suggest_groupsize(kernel::ZeKernel, global_sz::ZeDim)
     group_sz_x = Ref{UInt32}()
     group_sz_y = Ref{UInt32}()
     group_sz_z = Ref{UInt32}()
-    zeKernelSuggestGroupSize(kernel, global_sz.x, global_sz.y, global_sz.x,
+    zeKernelSuggestGroupSize(kernel, global_sz.x, global_sz.y, global_sz.z,
                              group_sz_x, group_sz_y, group_sz_z)
     return ZeDim3(group_sz_x[], group_sz_y[], group_sz_z[])
 end
