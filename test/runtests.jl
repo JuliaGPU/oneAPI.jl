@@ -180,6 +180,7 @@ function print_testworker_errored(name, wrkr)
 end
 
 # run tasks
+t0 = now()
 results = []
 all_tasks = Task[]
 all_tests = copy(tests)
@@ -214,13 +215,24 @@ try
         end
     end
     @sync begin
+        function recycle_worker(p)
+            rmprocs(p, waitfor=30)
+            return nothing
+        end
+
         for p in workers()
             @async begin
                 push!(all_tasks, current_task())
                 while length(tests) > 0
                     test = popfirst!(tests)
-                    local resp
+
+                    # sometimes a worker failed, and we need to spawn a new one
+                    if p === nothing
+                        p = addworker(1)[1]
+                    end
                     wrkr = p
+
+                    local resp
 
                     # run the test
                     running_tests[test] = now()
@@ -240,15 +252,23 @@ try
 
                         # the worker encountered some failure, recycle it
                         # so future tests get a fresh environment
-                        rmprocs(wrkr, waitfor=30)
-                        p = addworker(1)[1]
+                        p = recycle_worker(p)
                     else
                         print_testworker_stats(test, wrkr, resp)
+
+                        cpu_rss = resp[6]
+                        if haskey(ENV, "CI") && cpu_rss > 3*2^30
+                            # XXX: collecting garbage
+                            #      after each test, we are leaking CPU memory somewhere.
+                            #      this is a problem on CI, where2 we don't have much RAM.
+                            #      work around this by periodically recycling the worker.
+                            p = recycle_worker(p)
+                        end
                     end
                 end
-                if p != 1
-                    # Free up memory =)
-                    rmprocs(p, waitfor=30)
+
+                if p !== nothing
+                    recycle_worker(p)
                 end
             end
         end
@@ -280,6 +300,9 @@ finally
         schedule(stdin_monitor, InterruptException(); error=true)
     end
 end
+t1 = now()
+elapsed = canonicalize(Dates.CompoundPeriod(t1-t0))
+println("Testing finished in $elapsed")
 
 # construct a testset to render the test results
 o_ts = Test.DefaultTestSet("Overall")
@@ -294,7 +317,11 @@ for (testname, (resp,)) in results
     elseif isa(resp, Tuple{Int,Int})
         fake = Test.DefaultTestSet(testname)
         for i in 1:resp[1]
-            Test.record(fake, Test.Pass(:test, nothing, nothing, nothing))
+            if VERSION >= v"1.7-"
+                Test.record(fake, Test.Pass(:test, nothing, nothing, nothing, nothing))
+            else
+                Test.record(fake, Test.Pass(:test, nothing, nothing, nothing))
+            end
         end
         for i in 1:resp[2]
             Test.record(fake, Test.Broken(:test, nothing))
@@ -308,7 +335,11 @@ for (testname, (resp,)) in results
         println()
         fake = Test.DefaultTestSet(testname)
         for i in 1:resp.captured.ex.pass
-            Test.record(fake, Test.Pass(:test, nothing, nothing, nothing))
+            if VERSION >= v"1.7-"
+                Test.record(fake, Test.Pass(:test, nothing, nothing, nothing, nothing))
+            else
+                Test.record(fake, Test.Pass(:test, nothing, nothing, nothing))
+            end
         end
         for i in 1:resp.captured.ex.broken
             Test.record(fake, Test.Broken(:test, nothing))
