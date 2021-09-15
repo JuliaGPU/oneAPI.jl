@@ -55,8 +55,8 @@ Base.unsafe_convert(::Type{LLVMPtr{T,A}}, a::oneDeviceArray{T,N,A}) where {T,A,N
 # NOTE: these intrinsics are now implemented using plain and simple pointer operations;
 #       when adding support for isbits union arrays we will need to implement that here.
 
-# TODO: arrays as allocated by the CUDA APIs are 256-byte aligned. we should keep track of
-#       this information, because it enables optimizations like Load Store Vectorization
+# TODO: how are allocations aligned by the level zero API? keep track of this
+#       because it enables optimizations like Load Store Vectorization
 #       (cfr. shared memory and its wider-than-datatype alignment)
 
 @inline function arrayref(A::oneDeviceArray{T}, index::Int) where {T}
