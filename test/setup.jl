@@ -28,6 +28,7 @@ function runtests(f, name)
         end
 
         ex = quote
+            GC.gc(true)
             Random.seed!(1)
             oneAPI.allowscalar(false)
 
@@ -51,6 +52,7 @@ function runtests(f, name)
         end
         res = vcat(collect(data), cpu_rss)
 
+        GC.gc(true)
         res
     finally
         Test.TESTSET_PRINT_ENABLE[] = old_print_setting
@@ -93,17 +95,20 @@ macro test_throws_macro(ty, ex)
     end
 end
 
-# Run some code on-device, returning captured standard output
-macro on_device(ex)
+# Run some code on-device
+macro on_device(ex...)
+    code = ex[end]
+    kwargs = ex[1:end-1]
+
     @gensym kernel
     esc(quote
         let
             function $kernel()
-                $ex
+                $code
                 return
             end
 
-            oneAPI.@sync @oneapi $kernel()
+            oneAPI.@sync @oneapi $(kwargs...) $kernel()
         end
     end)
 end

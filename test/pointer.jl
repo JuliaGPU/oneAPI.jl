@@ -14,10 +14,10 @@ voidptr_b = ZePtr{Cvoid}(Int(0xCAFEBABE))
 
 @testset "conversions" begin
 
-# between regular and CUDA pointers
+# between host and device pointers
 @test_throws ArgumentError convert(Ptr{Cvoid}, voidptr_a)
 
-# between CUDA pointers
+# between device pointers
 intptr_a = ZePtr{Int}(Int(0xDEADBEEF))
 @test convert(typeof(intptr_a), voidptr_a) == intptr_a
 

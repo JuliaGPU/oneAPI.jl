@@ -155,7 +155,7 @@ Base.convert(::Type{ZeRef{T}}, x::ZePtr{T}) where {T} = x
 Base.convert(::Type{ZeRef{T}}, x) where {T} = ZeRef{T}(x)
 
 
-## ZeRef object backed by a CUDA array at index i
+## ZeRef object backed by an array at index i
 
 struct ZeRefArray{T,A<:AbstractArray{T}} <: Ref{T}
     x::A
