@@ -1,25 +1,25 @@
 # Shared Memory (part of B.2)
 
-export @LocalMemory
+export @LocalMemory, oneLocalArray
 
-lmem_id = 0
+@inline function oneLocalArray(::Type{T}, dims) where {T}
+    len = prod(dims)
+    # NOTE: this relies on const-prop to forward the literal length to the generator.
+    #       maybe we should include the size in the type, like StaticArrays does?
+    ptr = emit_localmemory(T, Val(len))
+    oneDeviceArray(dims, ptr)
+end
 
 macro LocalMemory(T, dims)
-    # FIXME: generating a unique id in the macro is incorrect, as multiple parametrically typed
-    #        functions will alias the id (and the size might be a parameter). but incrementing in
-    #        the @generated function doesn't work, as it is supposed to be pure and identical
-    #        invocations will erroneously share (and even cause multiple lmem globals).
-    id = gensym("static_lmem")
+    Base.depwarn("@LocalMemory is deprecated, please use the oneLocalArray function", :oneLocalArray)
 
     quote
-        len = prod($(esc(dims)))
-        ptr = emit_localmemory(Val($(QuoteNode(id))), $(esc(T)), Val(len))
-        oneDeviceArray($(esc(dims)), ptr)
+        oneLocalArray($(esc(T)), $(esc(dims)))
     end
 end
 
-# get a pointer to local memory, with known (static) or zero length (dynamic shared memory)
-@generated function emit_localmemory(::Val{id}, ::Type{T}, ::Val{len}=Val(0)) where {id,T,len}
+# get a pointer to local memory, with known (static) or zero length (dynamic)
+@generated function emit_localmemory(::Type{T}, ::Val{len}=Val(0)) where {T,len}
     Context() do ctx
         eltyp = convert(LLVMType, T; ctx)
         T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local}; ctx)
@@ -30,7 +30,7 @@ end
         # create the global variable
         mod = LLVM.parent(llvm_f)
         gv_typ = LLVM.ArrayType(eltyp, len)
-        gv = GlobalVariable(mod, gv_typ, GPUCompiler.safe_name(string(id)), AS.Local)
+        gv = GlobalVariable(mod, gv_typ, "local_memory", AS.Local)
         if len > 0
             linkage!(gv, LLVM.API.LLVMInternalLinkage)
             initializer!(gv, null(gv_typ))

@@ -10,7 +10,7 @@
     item = get_local_id(0)
 
     # shared mem for a complete reduction
-    shared = @LocalMemory(T, (2*maxitems,))
+    shared = oneLocalArray(T, (2*maxitems,))
     @inbounds shared[item] = val
 
     # perform a reduction
