@@ -67,25 +67,25 @@ export sycl_platform, sycl_device, sycl_context, sycl_queue
 
 function sycl_platform(drv=driver())
     get!(task_local_storage(), (:SYCLPlatform, drv)) do
-        SYCL.syclMakePlatform(drv)
+        syclPlatform(drv)
     end
 end
 
 function sycl_device(dev=device())
     get!(task_local_storage(), (:SYCLDevice, dev)) do
-        SYCL.syclMakeDevice(sycl_platform(), dev)
+        syclDevice(sycl_platform(), dev)
     end
 end
 
 function sycl_context(ctx=context(), dev=device())
     get!(task_local_storage(), (:SYCLContext, dev)) do
-        SYCL.syclMakeContext([sycl_device(dev)], ctx)
+        syclContext([sycl_device(dev)], ctx)
     end
 end
 
 function sycl_queue(queue)
     get!(task_local_storage(), (:SYCLQueue, queue.context, queue.device)) do
-        SYCL.syclMakeQueue(sycl_context(queue.context, queue.device), global_queue(queue.context, queue.device))
+        syclQueue(sycl_context(queue.context, queue.device), global_queue(queue.context, queue.device))
     end
 end
 

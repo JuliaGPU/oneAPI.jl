@@ -17,13 +17,14 @@ using SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll
 
 export oneL0, SYCL
 
-Base.include_dependency("deps/liboneapilib.so")
+const liboneapilib = joinpath(dirname(@__DIR__), "deps", "liboneapilib.so")
+Base.include_dependency(liboneapilib)
 
 # core library
 include("../lib/utils/APIUtils.jl")
 include("../lib/level-zero/oneL0.jl")
 include("../lib/sycl/SYCL.jl")
-using .oneL0
+using .oneL0, .SYCL
 functional() = oneL0.functional[]
 
 # device functionality (needs to be loaded first, because of generated functions)

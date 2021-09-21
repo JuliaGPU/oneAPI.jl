@@ -14,6 +14,9 @@ function wrap(name, headers...; library="lib$name", defines=[], include_dirs=[])
     options["general"]["output_file_path"] = "lib$(name).jl"
 
     args = get_default_args()
+    for include_dir in include_dirs
+        push!(args, "-I$include_dir")
+    end
     ctx = create_context([headers...], args, options)
 
     build!(ctx, BUILDSTAGE_NO_PRINTING)
@@ -182,6 +185,12 @@ end
 function main()
     process("ze", oneAPI_Level_Zero_Headers_jll.ze_api;
             library="libze_loader", modname="level-zero")
+    process("sycl", joinpath(dirname(@__DIR__), "deps", "sycl.h");
+            include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))],
+            library="liboneapilib", modname="sycl")
+    process("onemkl", joinpath(dirname(@__DIR__), "deps", "onemkl.h");
+            include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))],
+            library="liboneapilib", modname="mkl")
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
