@@ -109,7 +109,7 @@ Base.sizeof(x::oneArray) = Base.elsize(x) * length(x)
 ## derived types
 
 export oneDenseArray, oneDenseVector, oneDenseMatrix, oneDenseVecOrMat,
-       oneDenseArray, oneDenseVector, oneDenseMatrix, oneDenseVecOrMat,
+       oneStridedArray, oneStridedVector, oneStridedMatrix, oneStridedVecOrMat,
        oneWrappedArray, oneWrappedVector, oneWrappedMatrix, oneWrappedVecOrMat
 
 oneContiguousSubArray{T,N,A<:oneArray} = Base.FastContiguousSubArray{T,N,A}
