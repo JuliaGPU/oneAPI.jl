@@ -7,12 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(oneAPILib)
 
-find_package(JlCxx)
-
-add_library(oneapilib SHARED sycl.cpp onemkl.cpp)
+add_library(oneapilib SHARED sycl.h sycl.hpp sycl.cpp onemkl.cpp)
 
 target_link_libraries(oneapilib
-  JlCxx::cxxwrap_julia
   mkl_sycl
   mkl_intel_ilp64
   mkl_sequential
