@@ -32,10 +32,10 @@ for (fname, elty) in
         function gemm!(transA::Char,
                        transB::Char,
                        alpha::Number,
-                       A::oneVecOrMat{$elty},
-                       B::oneVecOrMat{$elty},
+                       A::oneStridedVecOrMat{$elty},
+                       B::oneStridedVecOrMat{$elty},
                        beta::Number,
-                       C::oneVecOrMat{$elty})
+                       C::oneStridedVecOrMat{$elty})
             m = size(A, transA == 'N' ? 1 : 2)
             k = size(A, transA == 'N' ? 2 : 1)
             n = size(B, transB == 'N' ? 2 : 1)
@@ -61,8 +61,8 @@ for (fname, elty) in
         function gemm(transA::Char,
                       transB::Char,
                       alpha::Number,
-                      A::oneVecOrMat{$elty},
-                      B::oneVecOrMat{$elty})
+                      A::oneStridedVecOrMat{$elty},
+                      B::oneStridedVecOrMat{$elty})
             gemm!(transA, transB, alpha, A, B, zero($elty),
                   similar(B, $elty, (size(A, transA == 'N' ? 1 : 2),
                                      size(B, transB == 'N' ? 2 : 1))))
@@ -70,8 +70,8 @@ for (fname, elty) in
 
         function gemm(transA::Char,
                       transB::Char,
-                      A::oneVecOrMat{$elty},
-                      B::oneVecOrMat{$elty})
+                      A::oneStridedVecOrMat{$elty},
+                      B::oneStridedVecOrMat{$elty})
             gemm(transA, transB, one($elty), A, B)
         end
     end
