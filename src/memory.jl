@@ -7,10 +7,6 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dst::Union{Ptr{T},Ze
     execute!(global_queue(ctx, dev)) do list
         append_copy!(list, dst, src, bytes)
     end
-
-    # memory copies are synchronizing
-    # TODO: this is costly; figure out a better programming model
-    synchronize(global_queue(ctx, dev))
 end
 
 function unsafe_fill!(ctx::ZeContext, dev::ZeDevice, ptr::Union{Ptr{T},ZePtr{T}},

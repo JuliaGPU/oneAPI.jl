@@ -9,18 +9,24 @@
     items = get_local_size(0)
     item = get_local_id(0)
 
-    # shared mem for a complete reduction
-    shared = @LocalMemory(T, (2*maxitems,))
+    # local mem for a complete reduction
+    shared = oneLocalArray(T, (maxitems,))
     @inbounds shared[item] = val
 
     # perform a reduction
-    d = items>>1
-    while d > 0
+    d = 1
+    while d < items
         barrier()
-        if item <= d
-            shared[item] = op(shared[item], shared[item+d])
+        index = 2 * d * (item-1) + 1
+        @inbounds if index <= items
+            other_val = if index + d <= items
+                shared[index+d]
+            else
+                neutral
+            end
+            shared[index] = op(shared[index], other_val)
         end
-        d >>= 1
+        d *= 2
     end
 
     # load the final value on the first item
@@ -114,10 +120,10 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     #
     # items in a group work together to reduce values across the reduction dimensions;
     # we want as many as possible to improve algorithm efficiency and execution occupancy.
-    wanted_items = nextpow(2, length(Rreduce))
+    wanted_items = length(Rreduce)
     function compute_items(max_items)
         if wanted_items > max_items
-            prevpow(2, max_items)
+            max_items
         else
             wanted_items
         end

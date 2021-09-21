@@ -194,12 +194,12 @@ n = 256
 
 @testset "constructors" begin
     # static
-    @on_device @LocalMemory(Float32, 1)
-    @on_device @LocalMemory(Float32, (1,2))
-    @on_device @LocalMemory(Tuple{Float32, Float32}, 1)
-    @on_device @LocalMemory(Tuple{Float32, Float32}, (1,2))
-    @on_device @LocalMemory(Tuple{RGB{Float32}, UInt32}, 1)
-    @on_device @LocalMemory(Tuple{RGB{Float32}, UInt32}, (1,2))
+    @on_device oneLocalArray(Float32, 1)
+    @on_device oneLocalArray(Float32, (1,2))
+    @on_device oneLocalArray(Tuple{Float32, Float32}, 1)
+    @on_device oneLocalArray(Tuple{Float32, Float32}, (1,2))
+    @on_device oneLocalArray(Tuple{RGB{Float32}, UInt32}, 1)
+    @on_device oneLocalArray(Tuple{RGB{Float32}, UInt32}, (1,2))
 end
 
 
@@ -210,8 +210,8 @@ end
         t = get_local_id(0)
         tr = n-t+1
 
-        s = @LocalMemory(Float32, 1024)
-        s2 = @LocalMemory(Float32, 1024)  # catch aliasing
+        s = oneLocalArray(Float32, 1024)
+        s2 = oneLocalArray(Float32, 1024)  # catch aliasing
 
         s[t] = d[t]
         s2[t] = 2*d[t]
@@ -234,8 +234,8 @@ end
             t = get_local_id(0)
             tr = n-t+1
 
-            s = @LocalMemory(T, 1024)
-            s2 = @LocalMemory(T, 1024)  # catch aliasing
+            s = oneLocalArray(T, 1024)
+            s2 = oneLocalArray(T, 1024)  # catch aliasing
 
             s[t] = d[t]
             s2[t] = d[t]

@@ -268,6 +268,10 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
     # copy selector bytes
     error("Not implemented")
   end
+
+  # copies to the host are synchronizing
+  synchronize(global_queue(context(src), device(src)))
+
   return dest
 end
 
