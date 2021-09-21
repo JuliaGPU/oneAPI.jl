@@ -25,15 +25,7 @@ using oneAPI_Level_Zero_Headers_jll
 # XXX: isn't there a Conda package providing ze_api.hpp?
 include_dir =  joinpath(oneAPI_Level_Zero_Headers_jll.artifact_dir, "include")
 
-
-using CxxWrap
-
-prefix = String[]
-push!(prefix, dirname(Base.julia_cmd()[1]))
-push!(prefix, CxxWrap.prefix_path())
-
 rpath = String[]
-push!(rpath, joinpath(CxxWrap.prefix_path(), "lib"))
 push!(rpath, Conda.lib_dir(:oneapi))
 
 withenv("PATH"=>"$(ENV["PATH"]):$(Conda.bin_dir(:oneapi))",
@@ -41,7 +33,6 @@ withenv("PATH"=>"$(ENV["PATH"]):$(Conda.bin_dir(:oneapi))",
 mktempdir() do build_dir
 mktempdir() do install_dir
     run(```cmake -DCMAKE_CXX_FLAGS="-isystem $include_dir"
-                 -DCMAKE_PREFIX_PATH=$(join(prefix, ';'))
                  -DCMAKE_INSTALL_RPATH=$(join(rpath, ';'))
                  -DCMAKE_INSTALL_PREFIX=$install_dir
                  -S $(@__DIR__) -B $build_dir```)
