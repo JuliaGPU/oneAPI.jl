@@ -1,6 +1,6 @@
 using LinearAlgebra
 
-function gemm_dispatch!(C::oneVecOrMat, A, B, alpha::Number=true, beta::Number=false)
+function gemm_dispatch!(C::oneStridedVecOrMat, A, B, alpha::Number=true, beta::Number=false)
     if ndims(A) > 2
         throw(ArgumentError("A has more than 2 dimensions"))
     elseif ndims(B) > 2
@@ -41,7 +41,7 @@ function gemm_dispatch!(C::oneVecOrMat, A, B, alpha::Number=true, beta::Number=f
     end
 
     T = eltype(C)
-    if T <: onemklFloat && dA isa oneDenseArray{T} && dB isa oneDenseArray{T}
+    if T <: onemklFloat && dA isa oneStridedArray{T} && dB isa oneStridedArray{T}
         gemm!(tA, tB, alpha, dA, dB, beta, C)
     else
         GPUArrays.generic_matmatmul!(C, A, B, alpha, beta)
@@ -51,26 +51,26 @@ end
 for NT in (Number, Real)
     # NOTE: alpha/beta also ::Real to avoid ambiguities with certain Base methods
     @eval begin
-        LinearAlgebra.mul!(C::oneMatrix, A::oneVecOrMat, B::oneVecOrMat, a::$NT, b::$NT) =
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::oneStridedVecOrMat, B::oneStridedVecOrMat, a::$NT, b::$NT) =
             gemm_dispatch!(C, A, B, a, b)
 
-        LinearAlgebra.mul!(C::oneMatrix, A::Transpose{<:Any, <:oneVecOrMat}, B::oneMatrix, a::$NT, b::$NT) =
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::Transpose{<:Any, <:oneStridedVecOrMat}, B::oneStridedMatrix, a::$NT, b::$NT) =
             gemm_dispatch!(C, A, B, a, b)
-        LinearAlgebra.mul!(C::oneMatrix, A::oneMatrix, B::Transpose{<:Any, <:oneVecOrMat}, a::$NT, b::$NT) =
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::oneStridedMatrix, B::Transpose{<:Any, <:oneStridedVecOrMat}, a::$NT, b::$NT) =
             gemm_dispatch!(C, A, B, a, b)
-        LinearAlgebra.mul!(C::oneMatrix, A::Transpose{<:Any, <:oneVecOrMat}, B::Transpose{<:Any, <:oneVecOrMat}, a::$NT, b::$NT) =
-            gemm_dispatch!(C, A, B, a, b)
-
-        LinearAlgebra.mul!(C::oneMatrix, A::Adjoint{<:Any, <:oneVecOrMat}, B::oneMatrix, a::$NT, b::$NT) =
-            gemm_dispatch!(C, A, B, a, b)
-        LinearAlgebra.mul!(C::oneMatrix, A::oneMatrix, B::Adjoint{<:Any, <:oneVecOrMat}, a::$NT, b::$NT) =
-            gemm_dispatch!(C, A, B, a, b)
-        LinearAlgebra.mul!(C::oneMatrix, A::Adjoint{<:Any, <:oneVecOrMat}, B::Adjoint{<:Any, <:oneVecOrMat}, a::$NT, b::$NT) =
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::Transpose{<:Any, <:oneStridedVecOrMat}, B::Transpose{<:Any, <:oneStridedVecOrMat}, a::$NT, b::$NT) =
             gemm_dispatch!(C, A, B, a, b)
 
-        LinearAlgebra.mul!(C::oneMatrix, A::Transpose{<:Any, <:oneVecOrMat}, B::Adjoint{<:Any, <:oneVecOrMat}, a::$NT, b::$NT) =
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::Adjoint{<:Any, <:oneStridedVecOrMat}, B::oneStridedMatrix, a::$NT, b::$NT) =
             gemm_dispatch!(C, A, B, a, b)
-        LinearAlgebra.mul!(C::oneMatrix, A::Adjoint{<:Any, <:oneVecOrMat}, B::Transpose{<:Any, <:oneVecOrMat}, a::$NT, b::$NT) =
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::oneStridedMatrix, B::Adjoint{<:Any, <:oneStridedVecOrMat}, a::$NT, b::$NT) =
+            gemm_dispatch!(C, A, B, a, b)
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::Adjoint{<:Any, <:oneStridedVecOrMat}, B::Adjoint{<:Any, <:oneStridedVecOrMat}, a::$NT, b::$NT) =
+            gemm_dispatch!(C, A, B, a, b)
+
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::Transpose{<:Any, <:oneStridedVecOrMat}, B::Adjoint{<:Any, <:oneStridedVecOrMat}, a::$NT, b::$NT) =
+            gemm_dispatch!(C, A, B, a, b)
+        LinearAlgebra.mul!(C::oneStridedMatrix, A::Adjoint{<:Any, <:oneStridedVecOrMat}, B::Transpose{<:Any, <:oneStridedVecOrMat}, a::$NT, b::$NT) =
             gemm_dispatch!(C, A, B, a, b)
     end
 end
