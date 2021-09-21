@@ -5,17 +5,18 @@
 # Parsing
 #
 
+using Clang
 using Clang.Generators
 using JuliaFormatter
 
-function wrap(name, headers...; library="lib$name", defines=[], include_dirs=[])
+function wrap(name, headers...; library="lib$name", defines=[], include_dirs=[], dependents=true)
     options =  load_options(joinpath(@__DIR__, "wrap.toml"))
     options["general"]["library_name"] = library
     options["general"]["output_file_path"] = "lib$(name).jl"
 
     args = get_default_args()
     for include_dir in include_dirs
-        push!(args, "-I$include_dir")
+        push!(args, "-isystem$include_dir")
     end
     ctx = create_context([headers...], args, options)
 
@@ -27,6 +28,21 @@ function wrap(name, headers...; library="lib$name", defines=[], include_dirs=[])
         for (i, expr) in enumerate(exprs)
             exprs[i] = expr |> change_argument_types |> add_check_pass
         end
+    end
+
+    # if requested, only wrap stuff from the list of headers
+    # (i.e., not from included ones)
+    if !dependents
+        function rewrite!(dag::ExprDAG)
+            replace!(get_nodes(dag)) do node
+                path = normpath(Clang.get_filename(node.cursor))
+                if !in(path, headers)
+                    return ExprNode(node.id, Generators.Skip(), node.cursor, Expr[], node.adj)
+                end
+                return node
+            end
+        end
+        rewrite!(ctx.dag)
     end
 
     build!(ctx, BUILDSTAGE_PRINTING_ONLY)
@@ -187,10 +203,10 @@ function main()
             library="libze_loader", modname="level-zero")
     process("sycl", joinpath(dirname(@__DIR__), "deps", "sycl.h");
             include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))],
-            library="liboneapilib", modname="sycl")
+            library="liboneapilib", modname="sycl", dependents=false)
     process("onemkl", joinpath(dirname(@__DIR__), "deps", "onemkl.h");
             include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))],
-            library="liboneapilib", modname="mkl")
+            library="liboneapilib", modname="mkl", dependents=false)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
