@@ -8,13 +8,18 @@ gpuarrays_root = dirname(dirname(gpuarrays))
 include(joinpath(gpuarrays_root, "test", "testsuite.jl"))
 testf(f, xs...; kwargs...) = TestSuite.compare(f, oneArray, xs...; kwargs...)
 
-TestSuite.supported_eltypes(::Type{<:oneArray}) =
-    (Int32, Int64,
-     Float32,
-     ComplexF16, ComplexF32,
-     Complex{Int16}, Complex{Int32}, Complex{Int64})
-# JuliaGPU/oneAPI.jl#50: Float64 is not supported by all platforms
 # JuliaGPU/oneAPI.jl#108: fill! broken for Int16/Float16
+const eltypes = [Int32, Int64,
+                 Complex{Int16}, Complex{Int32}, Complex{Int64},
+                 Float32,
+                 ComplexF32]
+if oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
+    append!(eltypes, [#=Float16,=# ComplexF16])
+end
+if oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+    append!(eltypes, [Float64, ComplexF64])
+end
+TestSuite.supported_eltypes(::Type{<:oneArray}) = eltypes
 
 using Random
 
