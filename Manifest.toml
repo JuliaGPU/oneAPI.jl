@@ -65,11 +65,9 @@ version = "0.1.6"
 
 [[GPUArrays]]
 deps = ["Adapt", "LinearAlgebra", "Printf", "Random", "Serialization", "Statistics"]
-git-tree-sha1 = "8141bc8b2dab4a09957850ecd455088a13f57492"
-repo-rev = "91d10ea"
-repo-url = "https://github.com/JuliaGPU/GPUArrays.jl.git"
+git-tree-sha1 = "69faa5f1c5706ca9ca067604acf797ee3a8ec6f6"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "8.1.0"
+version = "8.1.1"
 
 [[GPUCompiler]]
 deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "TimerOutputs", "UUIDs"]
