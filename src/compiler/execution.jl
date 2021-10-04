@@ -166,7 +166,7 @@ end
 @inline function onecall(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
                          queue::ZeCommandQueue=global_queue(context(), device()))
     for (i, arg) in enumerate(args)
-        arguments(kernel)[i] = arg
+        oneL0.arguments(kernel)[i] = arg
     end
 
     groupsize!(kernel, items)
