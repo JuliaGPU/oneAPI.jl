@@ -36,3 +36,9 @@ end
   A = [1,2,3,4]
   gA = reshape(oneArray(A),4)
 end
+
+@testset "fill(::SubArray)" begin
+  xs = oneAPI.zeros(3)
+  fill!(view(xs, 2:2), 1)
+  @test Array(xs) == [0,1,0]
+end

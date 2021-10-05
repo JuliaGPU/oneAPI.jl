@@ -297,7 +297,7 @@ fill(v, dims::Dims) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 
 function Base.fill!(A::oneDenseArray{T}, val) where T
   B = [convert(T, val)]
-  unsafe_fill!(A.ctx, A.dev, pointer(A), pointer(B), length(A))
+  unsafe_fill!(context(A), device(A), pointer(A), pointer(B), length(A))
   A
 end
 
