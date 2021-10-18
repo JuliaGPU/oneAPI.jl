@@ -150,9 +150,9 @@ uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 
 [[NEO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "af0b09f8be45263ae1e1b76878135bac8f960050"
+git-tree-sha1 = "875f9aa2bc926d268374e46a5bbb505129e3af4a"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
-version = "21.39.21127+0"
+version = "21.41.21220+0"
 
 [[NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
