@@ -22,9 +22,9 @@ version = "0.4.1"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "926870acb6cbcf029396f2f2de030282b6bc1941"
+git-tree-sha1 = "54fc4400de6e5c3e27be6047da2ef6ba355511f8"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.11.4"
+version = "1.11.6"
 
 [[ChangesOfVariables]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
@@ -65,9 +65,9 @@ deps = ["ArgTools", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
 [[ExprTools]]
-git-tree-sha1 = "24565044e60bc48a7562e75bcf14f084901dc0b6"
+git-tree-sha1 = "56559bbef6ca5ea0c0818fa5c90320398a6fbf8d"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
-version = "0.1.7"
+version = "0.1.8"
 
 [[GPUArrays]]
 deps = ["Adapt", "LinearAlgebra", "Printf", "Random", "Serialization", "Statistics"]
@@ -77,9 +77,9 @@ version = "8.1.3"
 
 [[GPUCompiler]]
 deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "2cac236070c2c4b36de54ae9146b55ee2c34ac7a"
+git-tree-sha1 = "abd824e1f2ecd18d33811629c781441e94a24e81"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.13.10"
+version = "0.13.11"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -206,9 +206,9 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[SPIRV_LLVM_Translator_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "8cca87d57f6ddf19373cc9791fddc741406c8fbf"
+git-tree-sha1 = "f3621f2c9d9d83dc4eeeb7146ff6655f2694d031"
 uuid = "4a5d46fc-d8cf-5151-a261-86b458210efb"
-version = "11.0.0+2"
+version = "11.0.0+3"
 
 [[SPIRV_Tools_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -254,9 +254,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[TimerOutputs]]
 deps = ["ExprTools", "Printf"]
-git-tree-sha1 = "a5aed757f65c8a1c64503bc4035f704d24c749bf"
+git-tree-sha1 = "97e999be94a7147d0609d0b9fc9feca4bf24d76b"
 uuid = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
-version = "0.5.14"
+version = "0.5.15"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]
