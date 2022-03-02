@@ -38,7 +38,7 @@ end
 end
 
 @testset "fill(::SubArray)" begin
-  xs = oneAPI.zeros(3)
+  xs = oneAPI.zeros(Float32, 3)
   fill!(view(xs, 2:2), 1)
   @test Array(xs) == [0,1,0]
 end
