@@ -28,7 +28,9 @@ end
 
     for op in (exp, exp2, exp10, expm1)
         @testset "$op" begin
-            for T in (Float32, Float64)
+            typs = [Float32]
+            float64_supported && push!(typs, Float64)
+            for T in typs
                 @test testf(x->op.(x), rand(T, 1))
                 @test testf(x->op.(x), -rand(T, 1))
             end
@@ -68,16 +70,18 @@ endline = Sys.iswindows() ? "\r\n" : "\n"
     @test out == "foobar$endline"
 
     # c argument promotions
-    function kernel(A)
-        oneAPI.@printf("%f %f\n", A[1], A[1])
-        return
+    if float64_supported
+        function kernel(A)
+            oneAPI.@printf("%f %f\n", A[1], A[1])
+            return
+        end
+        x = oneArray(ones(Float64, 2, 2))
+        _, out = @grab_output begin
+            @oneapi kernel(x)
+            synchronize()
+        end
+        @test out == "1.000000 1.000000$endline"
     end
-    x = oneArray(ones(2, 2))
-    _, out = @grab_output begin
-        @oneapi kernel(x)
-        synchronize()
-    end
-    @test out == "1.000000 1.000000$endline"
 end
 
 @testset "@print" begin
@@ -137,8 +141,10 @@ end
         test_output(typ(42), "42")
     end
 
-    for typ in (Float32, Float64)
-        test_output(typ(42), "42.000000")
+    if float64_supported
+        for typ in (Float32, Float64)
+            test_output(typ(42), "42.000000")
+        end
     end
 
     test_output(Cchar('c'), "c")
@@ -163,7 +169,7 @@ end
     @test out == "42$endline"
 end
 
-@testset "@show" begin
+float64_supported && @testset "@show" begin
     function kernel()
         seven_i32 = Int32(7)
         three_f64 = Float64(3)
@@ -229,7 +235,9 @@ end
 end
 
 @testset "parametrically typed" begin
-    @testset for typ in [Int32, Int64, Float32, Float64]
+    typs = [Int32, Int64, Float32]
+    float64_supported && push!(typs, Float64)
+    @testset for typ in typs
         function kernel(d::oneDeviceArray{T}, n) where {T}
             t = get_local_id(0)
             tr = n-t+1
@@ -364,7 +372,7 @@ end
         for i = 1:i
             b *= 2
         end
-        b /= 2
+        b ÷= 2
         oneAPI.atomic_or!(pointer(a), T(b))
         return
     end
@@ -382,7 +390,7 @@ end
         for i = 1:i
             b *= 2
         end
-        b /= 2
+        b ÷= 2
         oneAPI.atomic_xor!(pointer(a), T(b))
         return
     end
@@ -548,8 +556,8 @@ end
         a = oneArray(T[65536])
 
         function kernel(T, a)
-            oneAPI.@atomic a[1] = a[1] / 2
-            oneAPI.@atomic a[1] /= 2
+            oneAPI.@atomic a[1] = a[1] ÷ 2
+            oneAPI.@atomic a[1] ÷= 2
             return
         end
 

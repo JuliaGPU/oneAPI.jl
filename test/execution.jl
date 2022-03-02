@@ -86,12 +86,6 @@ end
         @test occursin("Body::Union{}", err)
     end
 
-    let
-        range_kernel() = (0.0:0.1:100.0; nothing)
-
-        @test_throws oneAPI.InvalidIRError @oneapi range_kernel()
-    end
-
     # set name of kernel
     @test occursin("julia_mykernel", sprint(io->(@device_code_llvm io=io begin
         k = zefunction(dummy, name="mykernel")
@@ -345,7 +339,7 @@ end
         sink(unsafe_trunc(T,i))
         return
     end
-    @oneapi kernel2(Int, 1.)
+    @oneapi kernel2(Int, 1f0)
 end
 
 
@@ -387,12 +381,12 @@ end
        @oneapi inner(a)
     end
 
-    a = [1.]
+    a = [1f0]
     a_dev = oneArray(a)
 
-    outer(a_dev, 2.)
+    outer(a_dev, 2f0)
 
-    @test Array(a_dev) ≈ [2.]
+    @test Array(a_dev) ≈ [2f0]
 end
 
 @testset "closures" begin
@@ -405,12 +399,12 @@ end
        @oneapi inner(a_dev)
     end
 
-    a = [1.]
+    a = [1f0]
     a_dev = oneArray(a)
 
-    outer(a_dev, 2.)
+    outer(a_dev, 2f0)
 
-    @test Array(a_dev) ≈ [2.]
+    @test Array(a_dev) ≈ [2f0]
 end
 
 @testset "conversions" begin
@@ -539,12 +533,12 @@ end
         x = SVector(0f0, 0f0)
         v = MVector{3, Float32}(undef)
         for (i,_) in enumerate(x)
-            v[i] = 1.0f0
+            v[i] = 1f0
         end
         a[1] = v[1]
         return nothing
     end
-    @oneapi f(oneArray(zeros(1)))
+    @oneapi f(oneArray(zeros(Float32, 1)))
 end
 
 
