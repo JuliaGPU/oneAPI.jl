@@ -82,6 +82,25 @@ group = first(compute_groups(dev))
 queue = ZeCommandQueue(ctx, dev, group.ordinal)
 
 
+@testset "fence" begin
+
+fence = ZeFence(queue)
+
+@test !query(fence)
+
+execute!(queue, fence) do list
+    # do nothing, but signal the fence on completion
+end
+
+wait(fence)
+@test query(fence)
+
+reset(fence)
+@test !query(fence)
+
+end
+
+
 @testset "event" begin
 
 ZeEventPool(ctx, 1)
