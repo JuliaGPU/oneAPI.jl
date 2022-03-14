@@ -27,7 +27,7 @@ Base.getindex(pool::ZeEventPool, i::Integer) = ZeEvent(pool, i)
 
 # event
 
-export ZeEvent, append_wait!, signal, append_signal!, append_reset!, query, kernel_timestamp
+export ZeEvent, append_wait!, signal, append_signal!, append_reset!, kernel_timestamp
 
 mutable struct ZeEvent
     handle::ze_event_handle_t
@@ -58,7 +58,7 @@ append_wait!(list::ZeCommandList, events::ZeEvent...) =
 Base.reset(event::ZeEvent) = zeEventHostReset(event)
 append_reset!(list::ZeCommandList, event::ZeEvent) = zeCommandListAppendEventReset(list, event)
 
-function query(event::ZeEvent)
+function Base.isdone(event::ZeEvent)
     res = unsafe_zeEventQueryStatus(event)
     if res == RESULT_NOT_READY
         return false

@@ -86,17 +86,17 @@ queue = ZeCommandQueue(ctx, dev, group.ordinal)
 
 fence = ZeFence(queue)
 
-@test !query(fence)
+@test !Base.isdone(fence)
 
 execute!(queue, fence) do list
     # do nothing, but signal the fence on completion
 end
 
 wait(fence)
-@test query(fence)
+@test Base.isdone(fence)
 
 reset(fence)
-@test !query(fence)
+@test !Base.isdone(fence)
 
 end
 
@@ -109,13 +109,13 @@ ZeEventPool(ctx, 1, dev)
 pool = ZeEventPool(ctx, 1)
 
 event = pool[1]
-@test !query(event)
+@test !Base.isdone(event)
 
 signal(event)
 ZeCommandList(ctx, dev, group.ordinal) do list
     append_signal!(list, event)
 end
-@test query(event)
+@test Base.isdone(event)
 
 wait(event, 1)
 ZeCommandList(ctx, dev, group.ordinal) do list
@@ -201,11 +201,11 @@ wait_event = pool[2]
 execute!(queue) do list
     append_launch!(list, kernel, 1, signal_event, wait_event)
 end
-@test !query(signal_event)
+@test !Base.isdone(signal_event)
 
 signal(wait_event)
 synchronize(queue)
-@test query(signal_event)
+@test Base.isdone(signal_event)
 
 end
 

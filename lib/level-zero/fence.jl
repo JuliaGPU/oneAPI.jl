@@ -1,6 +1,6 @@
 # fence
 
-export ZeFence, query
+export ZeFence
 
 mutable struct ZeFence
     handle::ze_fence_handle_t
@@ -25,7 +25,7 @@ Base.wait(fence::ZeFence, timeout::Number=typemax(UInt64)) =
 
 Base.reset(fence::ZeFence) = zeFenceReset(fence)
 
-function query(fence::ZeFence)
+function Base.isdone(fence::ZeFence)
     res = unsafe_zeFenceQueryStatus(fence)
     if res == RESULT_NOT_READY
         return false
