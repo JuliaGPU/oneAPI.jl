@@ -57,5 +57,5 @@ operations. The list is then closed and executed on the queue.
 """
 function execute!(f::Base.Callable, queue::ZeCommandQueue, fence=nothing; kwargs...)
     list = ZeCommandList(f, queue.context, queue.device, queue.ordinal; kwargs...)
-    execute!(queue, [list])
+    execute!(queue, [list], fence)
 end
