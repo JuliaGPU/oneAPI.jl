@@ -22,7 +22,7 @@ function wrap(name, headers...; library="lib$name", defines=[], include_dirs=[])
     for node in get_nodes(ctx.dag)
         exprs = get_exprs(node)
         for (i, expr) in enumerate(exprs)
-            exprs[i] = add_check_pass(expr)
+            exprs[i] = expr |> change_argument_types |> add_check_pass
         end
     end
 
@@ -42,16 +42,88 @@ checked_types = [
 function add_check_pass(x::Expr)
     Meta.isexpr(x, :function) || return x
     body = x.args[2].args[1]
-    if Meta.isexpr(body, :macrocall)  # `@ccall`
-        ret_type = string(body.args[3].args[2])
-        if ret_type in checked_types
-            return Expr(:macrocall, Symbol("@checked"), nothing, x)
-        end
-    else
-        @assert Meta.isexpr(body, :call)  # `ccall`
-        ret_type = string(body.args[3])
-        if ret_type in checked_types
-            return Expr(:macrocall, Symbol("@checked"), nothing, x)
+    @assert Meta.isexpr(body, :macrocall) # `@ccall`
+    ret_type = string(body.args[3].args[2])
+    if ret_type in checked_types
+        return Expr(:macrocall, Symbol("@checked"), nothing, x)
+    end
+end
+
+# change certain Ptr inputs to ZePtr
+argument_types = Dict(
+    :zeCommandListAppendMemoryCopy => Dict(
+        :dstptr => :(PtrOrZePtr{Cvoid}),
+        :srcptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeCommandListAppendMemoryFill => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+        :pattern => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeCommandListAppendMemoryCopyRegion => Dict(
+        :dstptr => :(PtrOrZePtr{Cvoid}),
+        :srcptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeCommandListAppendMemoryCopyFromContext => Dict(
+        :dstptr => :(PtrOrZePtr{Cvoid}),
+        :srcptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeCommandListAppendMemoryPrefetch => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeCommandListAppendMemAdvise => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeMemFree => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeMemFreeExt => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeMemGetAllocProperties => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeMemGetAddressRange => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeMemGetIpcHandle => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeMemOpenIpcHandle => Dict(
+        :pptr => :(Ptr{PtrOrZePtr{Cvoid}}),
+    ),
+    :zeMemCloseIpcHandle => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeContextEvictMemory => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeContextMakeMemoryResident => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+    :zeVirtualMemFree => Dict(
+        :ptr => :(PtrOrZePtr{Cvoid}),
+    ),
+)
+function change_argument_types(x::Expr)
+    global argument_types
+    Meta.isexpr(x, :function) || return x
+    body = x.args[2].args[1]
+    @assert Meta.isexpr(body, :macrocall) # `@ccall`
+    the_ccall = body.args[3]
+    @assert Meta.isexpr(the_ccall, :(::))
+    call, ret = the_ccall.args
+    @assert Meta.isexpr(call, :call)
+    target, argexprs... = call.args
+    @assert Meta.isexpr(target, :(.))
+    lib, f = target.args
+    f = f.value
+    for argexpr in argexprs
+        @assert Meta.isexpr(argexpr, :(::))
+        arg, argtyp = argexpr.args
+        if haskey(argument_types, f) && haskey(argument_types[f], arg)
+            new_argtyp = argument_types[f][arg]
+            @info "Changing argument $f($arg::$argtyp) to $new_argtyp"
+            argexpr.args[2] = new_argtyp
         end
     end
     return x
@@ -108,7 +180,8 @@ function process(name, headers...; modname=name, kwargs...)
 end
 
 function main()
-    process("ze", oneAPI_Level_Zero_Headers_jll.ze_api; library="libze_loader", modname="level-zero")
+    process("ze", oneAPI_Level_Zero_Headers_jll.ze_api;
+            library="libze_loader", modname="level-zero")
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
