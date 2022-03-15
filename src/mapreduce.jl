@@ -163,8 +163,10 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # perform the actual reduction
     if reduce_groups == 1
         # we can cover the dimensions to reduce using a single group
+        Array(R′)
         @oneapi items=items groups=groups partial_mapreduce_device(
             f, op, init, Val(items), Rreduce, Rother, R′, A)
+        # Base.@show R′
     else
         # we need multiple steps to cover all values to reduce
         partial = similar(R, (size(R)..., reduce_groups))

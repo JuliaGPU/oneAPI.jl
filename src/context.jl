@@ -52,4 +52,6 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
     end
 end
 
-oneL0.synchronize() = oneL0.synchronize(global_queue(context(), device()))
+function oneL0.synchronize()
+    oneL0.synchronize(global_queue(context(), device()))
+end

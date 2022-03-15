@@ -51,6 +51,7 @@ end
 Base.pointer(buf::DeviceBuffer) = buf.ptr
 Base.sizeof(buf::DeviceBuffer) = buf.bytesize
 context(buf::DeviceBuffer) = buf.context
+device(buf::DeviceBuffer) = buf.device
 
 Base.show(io::IO, buf::DeviceBuffer) =
     @printf(io, "DeviceBuffer(%s at %p)", Base.format_bytes(sizeof(buf)), pointer(buf))
@@ -89,6 +90,7 @@ end
 Base.pointer(buf::HostBuffer) = buf.ptr
 Base.sizeof(buf::HostBuffer) = buf.bytesize
 context(buf::HostBuffer) = buf.context
+device(buf::HostBuffer) = nothing
 
 Base.show(io::IO, buf::HostBuffer) =
     @printf(io, "HostBuffer(%s at %p)", Base.format_bytes(sizeof(buf)), Int(pointer(buf)))
@@ -130,6 +132,7 @@ end
 Base.pointer(buf::SharedBuffer) = buf.ptr
 Base.sizeof(buf::SharedBuffer) = buf.bytesize
 context(buf::SharedBuffer) = buf.context
+device(buf::SharedBuffer) = buf.device
 
 Base.show(io::IO, buf::SharedBuffer) =
     @printf(io, "SharedBuffer(%s at %p)", Base.format_bytes(sizeof(buf)), Int(pointer(buf)))
