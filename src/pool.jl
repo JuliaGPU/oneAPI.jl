@@ -1,6 +1,6 @@
 function allocate(::Type{oneL0.DeviceBuffer}, ctx, dev, bytes::Int, alignment::Int)
     bytes == 0 && return oneL0.DeviceBuffer(ZE_NULL, bytes, ctx, dev)
-    
+
     buf = device_alloc(ctx, dev, bytes, alignment)
     make_resident(ctx, dev, buf)
 
