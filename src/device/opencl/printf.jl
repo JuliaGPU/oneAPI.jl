@@ -194,13 +194,12 @@ GPU analog of `Base.@show`. It comes with the same type restrictions as [`@print
 @show threadIdx().x
 ```
 """
-macro show(ex)
-    val = gensym("val")
-    s = string(ex)
-    quote
-        $val = $(esc(ex))
-        oneAPI.@println($(Expr(:string, s, " = ", val)))
-        $val
+macro show(exs...)
+    blk = Expr(:block)
+    for ex in exs
+        push!(blk.args, :(oneAPI.@println($(sprint(Base.show_unquoted,ex)*" = "),
+                                          begin local value = $(esc(ex)) end)))
     end
+    isempty(exs) || push!(blk.args, :value)
+    blk
 end
-

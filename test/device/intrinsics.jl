@@ -174,8 +174,7 @@ float64_supported && @testset "@show" begin
         seven_i32 = Int32(7)
         three_f64 = Float64(3)
         oneAPI.@show seven_i32
-        oneAPI.@show three_f64
-        oneAPI.@show 1f0 + 4f0
+        oneAPI.@show three_f64 1f0 + 4f0
         return nothing
     end
 
