@@ -78,6 +78,8 @@ const ze_ipc_event_pool_handle_t = _ze_ipc_event_pool_handle_t
     ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY = 1879048195
     ZE_RESULT_ERROR_MODULE_BUILD_FAILURE = 1879048196
     ZE_RESULT_ERROR_MODULE_LINK_FAILURE = 1879048197
+    ZE_RESULT_ERROR_DEVICE_REQUIRES_RESET = 1879048198
+    ZE_RESULT_ERROR_DEVICE_IN_LOW_POWER_STATE = 1879048199
     ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS = 1879113728
     ZE_RESULT_ERROR_NOT_AVAILABLE = 1879113729
     ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE = 1879179264
@@ -146,11 +148,29 @@ const ze_result_t = _ze_result_t
     ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES = 30
     ZE_STRUCTURE_TYPE_SAMPLER_DESC = 31
     ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC = 32
+    ZE_STRUCTURE_TYPE_KERNEL_PREFERRED_GROUP_SIZE_PROPERTIES = 33
+    ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_WIN32 = 34
+    ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_WIN32 = 35
     ZE_STRUCTURE_TYPE_DEVICE_RAYTRACING_EXT_PROPERTIES = 65537
     ZE_STRUCTURE_TYPE_RAYTRACING_MEM_ALLOC_EXT_DESC = 65538
     ZE_STRUCTURE_TYPE_FLOAT_ATOMIC_EXT_PROPERTIES = 65539
+    ZE_STRUCTURE_TYPE_CACHE_RESERVATION_EXT_DESC = 65540
+    ZE_STRUCTURE_TYPE_EU_COUNT_EXT = 65541
+    ZE_STRUCTURE_TYPE_SRGB_EXT_DESC = 65542
+    ZE_STRUCTURE_TYPE_LINKAGE_INSPECTION_EXT_DESC = 65543
+    ZE_STRUCTURE_TYPE_PCI_EXT_PROPERTIES = 65544
+    ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES = 65545
+    ZE_STRUCTURE_TYPE_MEMORY_FREE_EXT_DESC = 65546
+    ZE_STRUCTURE_TYPE_MEMORY_COMPRESSION_HINTS_EXT_DESC = 65547
+    ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES = 65548
     ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 131073
     ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC = 131074
+    ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_PROPERTIES = 131075
+    ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_DESC = 131076
+    ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXP_DESC = 131077
+    ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2 = 131078
+    ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES = 131079
+    ZE_STRUCTURE_TYPE_POWER_SAVING_HINT_EXP_DESC = 131080
     ZE_STRUCTURE_TYPE_FORCE_UINT32 = 2147483647
 end
 
@@ -161,6 +181,12 @@ const ze_external_memory_type_flags_t = UInt32
 @cenum _ze_external_memory_type_flag_t::UInt32 begin
     ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_FD = 1
     ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF = 2
+    ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32 = 4
+    ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT = 8
+    ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE = 16
+    ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT = 32
+    ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP = 64
+    ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE = 128
     ZE_EXTERNAL_MEMORY_TYPE_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -223,6 +249,7 @@ const ze_device_uuid_t = _ze_device_uuid_t
     ZE_DEVICE_TYPE_CPU = 2
     ZE_DEVICE_TYPE_FPGA = 3
     ZE_DEVICE_TYPE_MCA = 4
+    ZE_DEVICE_TYPE_VPU = 5
     ZE_DEVICE_TYPE_FORCE_UINT32 = 2147483647
 end
 
@@ -558,6 +585,8 @@ const ze_fence_desc_t = _ze_fence_desc_t
     ZE_IMAGE_FORMAT_LAYOUT_422H = 38
     ZE_IMAGE_FORMAT_LAYOUT_422V = 39
     ZE_IMAGE_FORMAT_LAYOUT_444P = 40
+    ZE_IMAGE_FORMAT_LAYOUT_RGBP = 41
+    ZE_IMAGE_FORMAT_LAYOUT_BRGP = 42
     ZE_IMAGE_FORMAT_LAYOUT_FORCE_UINT32 = 2147483647
 end
 
@@ -704,6 +733,25 @@ end
 
 const ze_external_memory_export_fd_t = _ze_external_memory_export_fd_t
 
+struct _ze_external_memory_import_win32_handle_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_external_memory_type_flags_t
+    handle::Ptr{Cvoid}
+    name::Ptr{Cvoid}
+end
+
+const ze_external_memory_import_win32_handle_t = _ze_external_memory_import_win32_handle_t
+
+struct _ze_external_memory_export_win32_handle_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_external_memory_type_flags_t
+    handle::Ptr{Cvoid}
+end
+
+const ze_external_memory_export_win32_handle_t = _ze_external_memory_export_win32_handle_t
+
 struct _ze_module_constants_t
     numConstants::UInt32
     pConstantIds::Ptr{UInt32}
@@ -778,6 +826,14 @@ struct _ze_kernel_properties_t
 end
 
 const ze_kernel_properties_t = _ze_kernel_properties_t
+
+struct _ze_kernel_preferred_group_size_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    preferredMultiple::UInt32
+end
+
+const ze_kernel_preferred_group_size_properties_t = _ze_kernel_preferred_group_size_properties_t
 
 struct _ze_group_count_t
     groupCountX::UInt32
@@ -882,10 +938,151 @@ end
 
 const ze_relaxed_allocation_limits_exp_desc_t = _ze_relaxed_allocation_limits_exp_desc_t
 
+struct _ze_cache_reservation_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    maxCacheReservationSize::Csize_t
+end
+
+const ze_cache_reservation_ext_desc_t = _ze_cache_reservation_ext_desc_t
+
+struct _ze_image_memory_properties_exp_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    size::UInt64
+    rowPitch::UInt64
+    slicePitch::UInt64
+end
+
+const ze_image_memory_properties_exp_t = _ze_image_memory_properties_exp_t
+
+struct _ze_image_view_planar_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    planeIndex::UInt32
+end
+
+const ze_image_view_planar_exp_desc_t = _ze_image_view_planar_exp_desc_t
+
+const ze_scheduling_hint_exp_flags_t = UInt32
+
+struct _ze_scheduling_hint_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    schedulingHintFlags::ze_scheduling_hint_exp_flags_t
+end
+
+const ze_scheduling_hint_exp_properties_t = _ze_scheduling_hint_exp_properties_t
+
+struct _ze_scheduling_hint_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_scheduling_hint_exp_flags_t
+end
+
+const ze_scheduling_hint_exp_desc_t = _ze_scheduling_hint_exp_desc_t
+
+struct _ze_context_power_saving_hint_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    hint::UInt32
+end
+
+const ze_context_power_saving_hint_exp_desc_t = _ze_context_power_saving_hint_exp_desc_t
+
+struct _ze_eu_count_ext_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    numTotalEUs::UInt32
+end
+
+const ze_eu_count_ext_t = _ze_eu_count_ext_t
+
+struct _ze_pci_address_ext_t
+    domain::UInt32
+    bus::UInt32
+    device::UInt32
+    _function::UInt32
+end
+
+const ze_pci_address_ext_t = _ze_pci_address_ext_t
+
+struct _ze_pci_speed_ext_t
+    genVersion::Int32
+    width::Int32
+    maxBandwidth::Int64
+end
+
+const ze_pci_speed_ext_t = _ze_pci_speed_ext_t
+
+struct _ze_pci_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    address::ze_pci_address_ext_t
+    maxSpeed::ze_pci_speed_ext_t
+end
+
+const ze_pci_ext_properties_t = _ze_pci_ext_properties_t
+
+struct _ze_srgb_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    sRGB::ze_bool_t
+end
+
+const ze_srgb_ext_desc_t = _ze_srgb_ext_desc_t
+
+struct _ze_image_allocation_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    id::UInt64
+end
+
+const ze_image_allocation_ext_properties_t = _ze_image_allocation_ext_properties_t
+
+const ze_linkage_inspection_ext_flags_t = UInt32
+
+struct _ze_linkage_inspection_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_linkage_inspection_ext_flags_t
+end
+
+const ze_linkage_inspection_ext_desc_t = _ze_linkage_inspection_ext_desc_t
+
+const ze_memory_compression_hints_ext_flags_t = UInt32
+
+struct _ze_memory_compression_hints_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_memory_compression_hints_ext_flags_t
+end
+
+const ze_memory_compression_hints_ext_desc_t = _ze_memory_compression_hints_ext_desc_t
+
+const ze_driver_memory_free_policy_ext_flags_t = UInt32
+
+struct _ze_driver_memory_free_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    freePolicies::ze_driver_memory_free_policy_ext_flags_t
+end
+
+const ze_driver_memory_free_ext_properties_t = _ze_driver_memory_free_ext_properties_t
+
+struct _ze_memory_free_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    freePolicy::ze_driver_memory_free_policy_ext_flags_t
+end
+
+const ze_memory_free_ext_desc_t = _ze_memory_free_ext_desc_t
+
 const ze_init_flags_t = UInt32
 
 @cenum _ze_init_flag_t::UInt32 begin
     ZE_INIT_FLAG_GPU_ONLY = 1
+    ZE_INIT_FLAG_VPU_ONLY = 2
     ZE_INIT_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -903,7 +1100,9 @@ end
 @cenum _ze_api_version_t::UInt32 begin
     ZE_API_VERSION_1_0 = 65536
     ZE_API_VERSION_1_1 = 65537
-    ZE_API_VERSION_CURRENT = 65537
+    ZE_API_VERSION_1_2 = 65538
+    ZE_API_VERSION_1_3 = 65539
+    ZE_API_VERSION_CURRENT = 65539
     ZE_API_VERSION_FORCE_UINT32 = 2147483647
 end
 
@@ -1534,6 +1733,7 @@ end
 @cenum _ze_device_mem_alloc_flag_t::UInt32 begin
     ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_CACHED = 1
     ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED = 2
+    ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_INITIAL_PLACEMENT = 4
     ZE_DEVICE_MEM_ALLOC_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -1543,6 +1743,7 @@ const ze_device_mem_alloc_flag_t = _ze_device_mem_alloc_flag_t
     ZE_HOST_MEM_ALLOC_FLAG_BIAS_CACHED = 1
     ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED = 2
     ZE_HOST_MEM_ALLOC_FLAG_BIAS_WRITE_COMBINED = 4
+    ZE_HOST_MEM_ALLOC_FLAG_BIAS_INITIAL_PLACEMENT = 8
     ZE_HOST_MEM_ALLOC_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -1600,7 +1801,8 @@ end
 const ze_ipc_memory_flags_t = UInt32
 
 @cenum _ze_ipc_memory_flag_t::UInt32 begin
-    ZE_IPC_MEMORY_FLAG_TBD = 1
+    ZE_IPC_MEMORY_FLAG_BIAS_CACHED = 1
+    ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED = 2
     ZE_IPC_MEMORY_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -1611,7 +1813,7 @@ const ze_ipc_memory_flag_t = _ze_ipc_memory_flag_t
                                            hDevice::ze_device_handle_t,
                                            handle::ze_ipc_mem_handle_t,
                                            flags::ze_ipc_memory_flags_t,
-                                           pptr::PtrOrZePtr{Ptr{Cvoid}})::ze_result_t
+                                           pptr::Ptr{PtrOrZePtr{Cvoid}})::ze_result_t
 end
 
 @checked function zeMemCloseIpcHandle(hContext, ptr)
@@ -2017,6 +2219,284 @@ const ze_relaxed_allocation_limits_exp_version_t = _ze_relaxed_allocation_limits
 end
 
 const ze_relaxed_allocation_limits_exp_flag_t = _ze_relaxed_allocation_limits_exp_flag_t
+
+@cenum _ze_cache_reservation_ext_version_t::UInt32 begin
+    ZE_CACHE_RESERVATION_EXT_VERSION_1_0 = 65536
+    ZE_CACHE_RESERVATION_EXT_VERSION_CURRENT = 65536
+    ZE_CACHE_RESERVATION_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_cache_reservation_ext_version_t = _ze_cache_reservation_ext_version_t
+
+@cenum _ze_cache_ext_region_t::UInt32 begin
+    ZE_CACHE_EXT_REGION_ZE_CACHE_REGION_DEFAULT = 0
+    ZE_CACHE_EXT_REGION_ZE_CACHE_RESERVE_REGION = 1
+    ZE_CACHE_EXT_REGION_ZE_CACHE_NON_RESERVED_REGION = 2
+    ZE_CACHE_EXT_REGION_FORCE_UINT32 = 2147483647
+end
+
+const ze_cache_ext_region_t = _ze_cache_ext_region_t
+
+@checked function zeDeviceReserveCacheExt(hDevice, cacheLevel, cacheReservationSize)
+    @ccall libze_loader.zeDeviceReserveCacheExt(hDevice::ze_device_handle_t,
+                                                cacheLevel::Csize_t,
+                                                cacheReservationSize::Csize_t)::ze_result_t
+end
+
+@checked function zeDeviceSetCacheAdviceExt(hDevice, ptr, regionSize, cacheRegion)
+    @ccall libze_loader.zeDeviceSetCacheAdviceExt(hDevice::ze_device_handle_t,
+                                                  ptr::Ptr{Cvoid}, regionSize::Csize_t,
+                                                  cacheRegion::ze_cache_ext_region_t)::ze_result_t
+end
+
+@cenum _ze_event_query_timestamps_exp_version_t::UInt32 begin
+    ZE_EVENT_QUERY_TIMESTAMPS_EXP_VERSION_1_0 = 65536
+    ZE_EVENT_QUERY_TIMESTAMPS_EXP_VERSION_CURRENT = 65536
+    ZE_EVENT_QUERY_TIMESTAMPS_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_event_query_timestamps_exp_version_t = _ze_event_query_timestamps_exp_version_t
+
+@checked function zeEventQueryTimestampsExp(hEvent, hDevice, pCount, pTimestamps)
+    @ccall libze_loader.zeEventQueryTimestampsExp(hEvent::ze_event_handle_t,
+                                                  hDevice::ze_device_handle_t,
+                                                  pCount::Ptr{UInt32},
+                                                  pTimestamps::Ptr{ze_kernel_timestamp_result_t})::ze_result_t
+end
+
+@cenum _ze_image_memory_properties_exp_version_t::UInt32 begin
+    ZE_IMAGE_MEMORY_PROPERTIES_EXP_VERSION_1_0 = 65536
+    ZE_IMAGE_MEMORY_PROPERTIES_EXP_VERSION_CURRENT = 65536
+    ZE_IMAGE_MEMORY_PROPERTIES_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_image_memory_properties_exp_version_t = _ze_image_memory_properties_exp_version_t
+
+@checked function zeImageGetMemoryPropertiesExp(hImage, pMemoryProperties)
+    @ccall libze_loader.zeImageGetMemoryPropertiesExp(hImage::ze_image_handle_t,
+                                                      pMemoryProperties::Ptr{ze_image_memory_properties_exp_t})::ze_result_t
+end
+
+@cenum _ze_image_view_exp_version_t::UInt32 begin
+    ZE_IMAGE_VIEW_EXP_VERSION_1_0 = 65536
+    ZE_IMAGE_VIEW_EXP_VERSION_CURRENT = 65536
+    ZE_IMAGE_VIEW_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_image_view_exp_version_t = _ze_image_view_exp_version_t
+
+@checked function zeImageViewCreateExp(hContext, hDevice, desc, hImage, phImageView)
+    @ccall libze_loader.zeImageViewCreateExp(hContext::ze_context_handle_t,
+                                             hDevice::ze_device_handle_t,
+                                             desc::Ptr{ze_image_desc_t},
+                                             hImage::ze_image_handle_t,
+                                             phImageView::Ptr{ze_image_handle_t})::ze_result_t
+end
+
+@cenum _ze_image_view_planar_exp_version_t::UInt32 begin
+    ZE_IMAGE_VIEW_PLANAR_EXP_VERSION_1_0 = 65536
+    ZE_IMAGE_VIEW_PLANAR_EXP_VERSION_CURRENT = 65536
+    ZE_IMAGE_VIEW_PLANAR_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_image_view_planar_exp_version_t = _ze_image_view_planar_exp_version_t
+
+@cenum _ze_scheduling_hints_exp_version_t::UInt32 begin
+    ZE_SCHEDULING_HINTS_EXP_VERSION_1_0 = 65536
+    ZE_SCHEDULING_HINTS_EXP_VERSION_CURRENT = 65536
+    ZE_SCHEDULING_HINTS_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_scheduling_hints_exp_version_t = _ze_scheduling_hints_exp_version_t
+
+@cenum _ze_scheduling_hint_exp_flag_t::UInt32 begin
+    ZE_SCHEDULING_HINT_EXP_FLAG_OLDEST_FIRST = 1
+    ZE_SCHEDULING_HINT_EXP_FLAG_ROUND_ROBIN = 2
+    ZE_SCHEDULING_HINT_EXP_FLAG_STALL_BASED_ROUND_ROBIN = 4
+    ZE_SCHEDULING_HINT_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_scheduling_hint_exp_flag_t = _ze_scheduling_hint_exp_flag_t
+
+@checked function zeKernelSchedulingHintExp(hKernel, pHint)
+    @ccall libze_loader.zeKernelSchedulingHintExp(hKernel::ze_kernel_handle_t,
+                                                  pHint::Ptr{ze_scheduling_hint_exp_desc_t})::ze_result_t
+end
+
+@cenum _ze_linkonce_odr_ext_version_t::UInt32 begin
+    ZE_LINKONCE_ODR_EXT_VERSION_1_0 = 65536
+    ZE_LINKONCE_ODR_EXT_VERSION_CURRENT = 65536
+    ZE_LINKONCE_ODR_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_linkonce_odr_ext_version_t = _ze_linkonce_odr_ext_version_t
+
+@cenum _ze_power_saving_hint_exp_version_t::UInt32 begin
+    ZE_POWER_SAVING_HINT_EXP_VERSION_1_0 = 65536
+    ZE_POWER_SAVING_HINT_EXP_VERSION_CURRENT = 65536
+    ZE_POWER_SAVING_HINT_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_power_saving_hint_exp_version_t = _ze_power_saving_hint_exp_version_t
+
+@cenum _ze_power_saving_hint_type_t::UInt32 begin
+    ZE_POWER_SAVING_HINT_TYPE_MIN = 0
+    ZE_POWER_SAVING_HINT_TYPE_MAX = 100
+    ZE_POWER_SAVING_HINT_TYPE_FORCE_UINT32 = 2147483647
+end
+
+const ze_power_saving_hint_type_t = _ze_power_saving_hint_type_t
+
+@cenum _ze_subgroup_ext_version_t::UInt32 begin
+    ZE_SUBGROUP_EXT_VERSION_1_0 = 65536
+    ZE_SUBGROUP_EXT_VERSION_CURRENT = 65536
+    ZE_SUBGROUP_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_subgroup_ext_version_t = _ze_subgroup_ext_version_t
+
+@cenum _ze_eu_count_ext_version_t::UInt32 begin
+    ZE_EU_COUNT_EXT_VERSION_1_0 = 65536
+    ZE_EU_COUNT_EXT_VERSION_CURRENT = 65536
+    ZE_EU_COUNT_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_eu_count_ext_version_t = _ze_eu_count_ext_version_t
+
+@cenum _ze_pci_properties_ext_version_t::UInt32 begin
+    ZE_PCI_PROPERTIES_EXT_VERSION_1_0 = 65536
+    ZE_PCI_PROPERTIES_EXT_VERSION_CURRENT = 65536
+    ZE_PCI_PROPERTIES_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_pci_properties_ext_version_t = _ze_pci_properties_ext_version_t
+
+@checked function zeDevicePciGetPropertiesExt(hDevice, pPciProperties)
+    @ccall libze_loader.zeDevicePciGetPropertiesExt(hDevice::ze_device_handle_t,
+                                                    pPciProperties::Ptr{ze_pci_ext_properties_t})::ze_result_t
+end
+
+@cenum _ze_srgb_ext_version_t::UInt32 begin
+    ZE_SRGB_EXT_VERSION_1_0 = 65536
+    ZE_SRGB_EXT_VERSION_CURRENT = 65536
+    ZE_SRGB_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_srgb_ext_version_t = _ze_srgb_ext_version_t
+
+@cenum _ze_image_copy_ext_version_t::UInt32 begin
+    ZE_IMAGE_COPY_EXT_VERSION_1_0 = 65536
+    ZE_IMAGE_COPY_EXT_VERSION_CURRENT = 65536
+    ZE_IMAGE_COPY_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_image_copy_ext_version_t = _ze_image_copy_ext_version_t
+
+@checked function zeCommandListAppendImageCopyToMemoryExt(hCommandList, dstptr, hSrcImage,
+                                                          pSrcRegion, destRowPitch,
+                                                          destSlicePitch, hSignalEvent,
+                                                          numWaitEvents, phWaitEvents)
+    @ccall libze_loader.zeCommandListAppendImageCopyToMemoryExt(hCommandList::ze_command_list_handle_t,
+                                                                dstptr::Ptr{Cvoid},
+                                                                hSrcImage::ze_image_handle_t,
+                                                                pSrcRegion::Ptr{ze_image_region_t},
+                                                                destRowPitch::UInt32,
+                                                                destSlicePitch::UInt32,
+                                                                hSignalEvent::ze_event_handle_t,
+                                                                numWaitEvents::UInt32,
+                                                                phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@checked function zeCommandListAppendImageCopyFromMemoryExt(hCommandList, hDstImage, srcptr,
+                                                            pDstRegion, srcRowPitch,
+                                                            srcSlicePitch, hSignalEvent,
+                                                            numWaitEvents, phWaitEvents)
+    @ccall libze_loader.zeCommandListAppendImageCopyFromMemoryExt(hCommandList::ze_command_list_handle_t,
+                                                                  hDstImage::ze_image_handle_t,
+                                                                  srcptr::Ptr{Cvoid},
+                                                                  pDstRegion::Ptr{ze_image_region_t},
+                                                                  srcRowPitch::UInt32,
+                                                                  srcSlicePitch::UInt32,
+                                                                  hSignalEvent::ze_event_handle_t,
+                                                                  numWaitEvents::UInt32,
+                                                                  phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@cenum _ze_image_query_alloc_properties_ext_version_t::UInt32 begin
+    ZE_IMAGE_QUERY_ALLOC_PROPERTIES_EXT_VERSION_1_0 = 65536
+    ZE_IMAGE_QUERY_ALLOC_PROPERTIES_EXT_VERSION_CURRENT = 65536
+    ZE_IMAGE_QUERY_ALLOC_PROPERTIES_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_image_query_alloc_properties_ext_version_t = _ze_image_query_alloc_properties_ext_version_t
+
+@checked function zeImageGetAllocPropertiesExt(hContext, hImage, pImageAllocProperties)
+    @ccall libze_loader.zeImageGetAllocPropertiesExt(hContext::ze_context_handle_t,
+                                                     hImage::ze_image_handle_t,
+                                                     pImageAllocProperties::Ptr{ze_image_allocation_ext_properties_t})::ze_result_t
+end
+
+@cenum _ze_linkage_inspection_ext_version_t::UInt32 begin
+    ZE_LINKAGE_INSPECTION_EXT_VERSION_1_0 = 65536
+    ZE_LINKAGE_INSPECTION_EXT_VERSION_CURRENT = 65536
+    ZE_LINKAGE_INSPECTION_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_linkage_inspection_ext_version_t = _ze_linkage_inspection_ext_version_t
+
+@cenum _ze_linkage_inspection_ext_flag_t::UInt32 begin
+    ZE_LINKAGE_INSPECTION_EXT_FLAG_IMPORTS = 1
+    ZE_LINKAGE_INSPECTION_EXT_FLAG_UNRESOLVABLE_IMPORTS = 2
+    ZE_LINKAGE_INSPECTION_EXT_FLAG_EXPORTS = 4
+    ZE_LINKAGE_INSPECTION_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_linkage_inspection_ext_flag_t = _ze_linkage_inspection_ext_flag_t
+
+@checked function zeModuleInspectLinkageExt(pInspectDesc, numModules, phModules, phLog)
+    @ccall libze_loader.zeModuleInspectLinkageExt(pInspectDesc::Ptr{ze_linkage_inspection_ext_desc_t},
+                                                  numModules::UInt32,
+                                                  phModules::Ptr{ze_module_handle_t},
+                                                  phLog::Ptr{ze_module_build_log_handle_t})::ze_result_t
+end
+
+@cenum _ze_memory_compression_hints_ext_version_t::UInt32 begin
+    ZE_MEMORY_COMPRESSION_HINTS_EXT_VERSION_1_0 = 65536
+    ZE_MEMORY_COMPRESSION_HINTS_EXT_VERSION_CURRENT = 65536
+    ZE_MEMORY_COMPRESSION_HINTS_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_memory_compression_hints_ext_version_t = _ze_memory_compression_hints_ext_version_t
+
+@cenum _ze_memory_compression_hints_ext_flag_t::UInt32 begin
+    ZE_MEMORY_COMPRESSION_HINTS_EXT_FLAG_COMPRESSED = 1
+    ZE_MEMORY_COMPRESSION_HINTS_EXT_FLAG_UNCOMPRESSED = 2
+    ZE_MEMORY_COMPRESSION_HINTS_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_memory_compression_hints_ext_flag_t = _ze_memory_compression_hints_ext_flag_t
+
+@cenum _ze_memory_free_policies_ext_version_t::UInt32 begin
+    ZE_MEMORY_FREE_POLICIES_EXT_VERSION_1_0 = 65536
+    ZE_MEMORY_FREE_POLICIES_EXT_VERSION_CURRENT = 65536
+    ZE_MEMORY_FREE_POLICIES_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_memory_free_policies_ext_version_t = _ze_memory_free_policies_ext_version_t
+
+@cenum _ze_driver_memory_free_policy_ext_flag_t::UInt32 begin
+    ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE = 1
+    ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE = 2
+    ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_driver_memory_free_policy_ext_flag_t = _ze_driver_memory_free_policy_ext_flag_t
+
+@checked function zeMemFreeExt(hContext, pMemFreeDesc, ptr)
+    @ccall libze_loader.zeMemFreeExt(hContext::ze_context_handle_t,
+                                     pMemFreeDesc::Ptr{ze_memory_free_ext_desc_t},
+                                     ptr::PtrOrZePtr{Cvoid})::ze_result_t
+end
 
 struct _ze_init_params_t
     pflags::Ptr{ze_init_flags_t}
@@ -2787,6 +3267,46 @@ end
 
 const ze_command_list_callbacks_t = _ze_command_list_callbacks_t
 
+struct _ze_image_get_properties_params_t
+    phDevice::Ptr{ze_device_handle_t}
+    pdesc::Ptr{Ptr{ze_image_desc_t}}
+    ppImageProperties::Ptr{Ptr{ze_image_properties_t}}
+end
+
+const ze_image_get_properties_params_t = _ze_image_get_properties_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnImageGetPropertiesCb_t ) ( ze_image_get_properties_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnImageGetPropertiesCb_t = Ptr{Cvoid}
+
+struct _ze_image_create_params_t
+    phContext::Ptr{ze_context_handle_t}
+    phDevice::Ptr{ze_device_handle_t}
+    pdesc::Ptr{Ptr{ze_image_desc_t}}
+    pphImage::Ptr{Ptr{ze_image_handle_t}}
+end
+
+const ze_image_create_params_t = _ze_image_create_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnImageCreateCb_t ) ( ze_image_create_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnImageCreateCb_t = Ptr{Cvoid}
+
+struct _ze_image_destroy_params_t
+    phImage::Ptr{ze_image_handle_t}
+end
+
+const ze_image_destroy_params_t = _ze_image_destroy_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnImageDestroyCb_t ) ( ze_image_destroy_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnImageDestroyCb_t = Ptr{Cvoid}
+
+struct _ze_image_callbacks_t
+    pfnGetPropertiesCb::ze_pfnImageGetPropertiesCb_t
+    pfnCreateCb::ze_pfnImageCreateCb_t
+    pfnDestroyCb::ze_pfnImageDestroyCb_t
+end
+
+const ze_image_callbacks_t = _ze_image_callbacks_t
+
 struct _ze_fence_create_params_t
     phCommandQueue::Ptr{ze_command_queue_handle_t}
     pdesc::Ptr{Ptr{ze_fence_desc_t}}
@@ -2985,46 +3505,6 @@ struct _ze_event_callbacks_t
 end
 
 const ze_event_callbacks_t = _ze_event_callbacks_t
-
-struct _ze_image_get_properties_params_t
-    phDevice::Ptr{ze_device_handle_t}
-    pdesc::Ptr{Ptr{ze_image_desc_t}}
-    ppImageProperties::Ptr{Ptr{ze_image_properties_t}}
-end
-
-const ze_image_get_properties_params_t = _ze_image_get_properties_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnImageGetPropertiesCb_t ) ( ze_image_get_properties_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnImageGetPropertiesCb_t = Ptr{Cvoid}
-
-struct _ze_image_create_params_t
-    phContext::Ptr{ze_context_handle_t}
-    phDevice::Ptr{ze_device_handle_t}
-    pdesc::Ptr{Ptr{ze_image_desc_t}}
-    pphImage::Ptr{Ptr{ze_image_handle_t}}
-end
-
-const ze_image_create_params_t = _ze_image_create_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnImageCreateCb_t ) ( ze_image_create_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnImageCreateCb_t = Ptr{Cvoid}
-
-struct _ze_image_destroy_params_t
-    phImage::Ptr{ze_image_handle_t}
-end
-
-const ze_image_destroy_params_t = _ze_image_destroy_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnImageDestroyCb_t ) ( ze_image_destroy_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnImageDestroyCb_t = Ptr{Cvoid}
-
-struct _ze_image_callbacks_t
-    pfnGetPropertiesCb::ze_pfnImageGetPropertiesCb_t
-    pfnCreateCb::ze_pfnImageCreateCb_t
-    pfnDestroyCb::ze_pfnImageDestroyCb_t
-end
-
-const ze_image_callbacks_t = _ze_image_callbacks_t
 
 struct _ze_module_create_params_t
     phContext::Ptr{ze_context_handle_t}
@@ -3602,6 +4082,8 @@ end
 
 const ze_callbacks_t = _ze_callbacks_t
 
+# Skipping MacroDefinition: ZE_APIEXPORT __attribute__ ( ( visibility ( "default" ) ) )
+
 # Skipping MacroDefinition: ZE_DLLEXPORT __attribute__ ( ( visibility ( "default" ) ) )
 
 const ZE_MAX_IPC_HANDLE_SIZE = 64
@@ -3631,3 +4113,37 @@ const ZE_FLOAT_ATOMICS_EXT_NAME = "ZE_extension_float_atomics"
 const ZE_GLOBAL_OFFSET_EXP_NAME = "ZE_experimental_global_offset"
 
 const ZE_RELAXED_ALLOCATION_LIMITS_EXP_NAME = "ZE_experimental_relaxed_allocation_limits"
+
+const ZE_CACHE_RESERVATION_EXT_NAME = "ZE_extension_cache_reservation"
+
+const ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME = "ZE_experimental_event_query_timestamps"
+
+const ZE_IMAGE_MEMORY_PROPERTIES_EXP_NAME = "ZE_experimental_image_memory_properties"
+
+const ZE_IMAGE_VIEW_EXP_NAME = "ZE_experimental_image_view"
+
+const ZE_IMAGE_VIEW_PLANAR_EXP_NAME = "ZE_experimental_image_view_planar"
+
+const ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME = "ZE_experimental_scheduling_hints"
+
+const ZE_LINKONCE_ODR_EXT_NAME = "ZE_extension_linkonce_odr"
+
+const ZE_CONTEXT_POWER_SAVING_HINT_EXP_NAME = "ZE_experimental_power_saving_hint"
+
+const ZE_SUBGROUPS_EXT_NAME = "ZE_extension_subgroups"
+
+const ZE_EU_COUNT_EXT_NAME = "ZE_extension_eu_count"
+
+const ZE_PCI_PROPERTIES_EXT_NAME = "ZE_extension_pci_properties"
+
+const ZE_SRGB_EXT_NAME = "ZE_extension_srgb"
+
+const ZE_IMAGE_COPY_EXT_NAME = "ZE_extension_image_copy"
+
+const ZE_IMAGE_QUERY_ALLOC_PROPERTIES_EXT_NAME = "ZE_extension_image_query_alloc_properties"
+
+const ZE_LINKAGE_INSPECTION_EXT_NAME = "ZE_extension_linkage_inspection"
+
+const ZE_MEMORY_COMPRESSION_HINTS_EXT_NAME = "ZE_extension_memory_compression_hints"
+
+const ZE_MEMORY_FREE_POLICIES_EXT_NAME = "ZE_extension_memory_free_policies"
