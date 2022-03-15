@@ -79,9 +79,9 @@ version = "8.2.1"
 
 [[GPUCompiler]]
 deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "647a54f196b5ffb7c3bc2fec5c9a57fa273354cc"
+git-tree-sha1 = "14cab4f9b82b82ed67b1803e5d979296134dcb3e"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.13.14"
+version = "0.14.0"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -210,11 +210,11 @@ uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
-[[SPIRV_LLVM_Translator_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "f3621f2c9d9d83dc4eeeb7146ff6655f2694d031"
-uuid = "4a5d46fc-d8cf-5151-a261-86b458210efb"
-version = "11.0.0+3"
+[[SPIRV_LLVM_Translator_unified_jll]]
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
+git-tree-sha1 = "c15e7a1be8b4ee63236f0e4b48b354690bbac0a3"
+uuid = "85f0d8ed-5b39-5caa-b1ae-7472de402361"
+version = "0.1.0+0"
 
 [[SPIRV_Tools_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
