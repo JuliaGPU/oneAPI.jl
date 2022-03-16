@@ -146,11 +146,14 @@ end
 const zefunction_cache = Dict{Any,Any}()
 
 function zefunction_compile(@nospecialize(job::CompilerJob))
-    mi, mi_meta = GPUCompiler.emit_julia(job)
-    ir, ir_meta = GPUCompiler.emit_llvm(job, mi)
-    asm, asm_meta = GPUCompiler.emit_asm(job, ir; format=LLVM.API.LLVMObjectFile)
+    # TODO: on 1.9, this actually creates a context. cache those.
+    JuliaContext() do ctx
+        mi, mi_meta = GPUCompiler.emit_julia(job)
+        ir, ir_meta = GPUCompiler.emit_llvm(job, mi; ctx)
+        asm, asm_meta = GPUCompiler.emit_asm(job, ir; format=LLVM.API.LLVMObjectFile)
 
-    return (image=asm, entry=LLVM.name(ir_meta.entry))
+        (image=asm, entry=LLVM.name(ir_meta.entry))
+    end
 end
 
 # JIT into an executable kernel object

@@ -13,7 +13,7 @@ using LLVM
 using LLVM.Interop
 using Core: LLVMPtr
 
-using SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll
+using SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll
 
 export oneL0
 
