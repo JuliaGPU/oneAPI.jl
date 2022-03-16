@@ -14,7 +14,10 @@ function release(buf::oneL0.AbstractBuffer)
     dev = oneL0.device(buf)
 
     evict(ctx, dev, buf)
-    free(buf)
+    free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE)
+
+    # TODO: queue-ordered free from non-finalizer tasks once we have
+    #       `zeMemFreeAsync(ptr, queue)`
 
     return
 end

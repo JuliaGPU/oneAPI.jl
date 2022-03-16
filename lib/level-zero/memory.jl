@@ -18,8 +18,14 @@ Base.convert(T::Type{<:Union{Ptr,ZePtr}}, buf::AbstractBuffer) =
 # and not the pointer of the buffer object itself.
 Base.unsafe_convert(P::Type{<:Union{Ptr,ZePtr}}, buf::AbstractBuffer) = convert(P, buf)
 
-function free(buf::AbstractBuffer)
-    zeMemFree(context(buf), buf)
+function free(buf::AbstractBuffer; policy=nothing)
+    ctx = context(buf)
+    if policy === nothing
+        zeMemFree(ctx, buf)
+    else
+        desc_ref = Ref(ze_memory_free_ext_desc_t(; freePolicy=policy))
+        zeMemFreeExt(ctx, desc_ref, buf)
+    end
 end
 
 
