@@ -541,5 +541,56 @@ end
     @oneapi f(oneArray(zeros(Float32, 1)))
 end
 
+@testset "#160: barrier intrinsincs should be convergent" begin
+    # Solve L*x = r and store the result in r.
+    function cpu(n::Int, r::Vector{Float32})
+        for j=1:n
+            temp = r[j]/2f0
+            for k=j+1:n
+                r[k] = r[k] - 2f0*temp
+            end
+            r[j] = temp
+        end
+    end
+    function gpu(::Val{n},r_) where {n}
+        tx = get_local_id()
+        bx = get_group_id()
+
+        r = oneLocalArray(Float32, n)
+
+        r[tx] = r_[tx]
+
+        barrier()
+
+        for j=1:n
+            if tx == 1
+                r[j] = r[j] / 2f0
+            end
+            barrier()
+
+            if tx > j && tx <= 4
+                r[tx] = r[tx] - 2f0*r[j]
+            end
+            barrier()
+        end
+
+        if bx == 1
+            r_[tx] = r[tx]
+        end
+
+        return
+    end
+
+    A = Float32[10, 10]
+    n = length(A)
+
+    hA = copy(A)
+    cpu(n,hA)
+
+    dA = oneArray(A)
+    @oneapi items=n gpu(Val(n),dA)
+
+    @test Array(dA) == hA
+end
 
 ############################################################################################
