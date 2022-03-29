@@ -66,6 +66,12 @@ using NEO_jll, oneAPI_Level_Zero_Loader_jll
 # activate the global environment, where we'll set the preferences
 Pkg.activate()
 
+# work around Preferences.jl#34
+if !isfile(Base.active_project())
+    mkpath(dirname(Base.active_project()))
+    touch(Base.active_project())
+end
+
 function set_preferences(mod, entries)
     for (lib, path) in entries
         binding = replace(split(lib, '.')[1], "-" => "_")
