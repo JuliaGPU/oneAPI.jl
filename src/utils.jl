@@ -9,7 +9,7 @@ function versioninfo(io::IO=stdout)
     versions = Dict(map(uuid->deps[uuid].name => deps[uuid].version, collect(keys(deps))))
 
     println(io, "Binary dependencies:")
-    for pkg in ["NEO_jll", "libigc_jll", "gmmlib_jll", "SPIRV_LLVM_Translator_jll", "SPIRV_Tools_jll"]
+    for pkg in ["NEO_jll", "libigc_jll", "gmmlib_jll", "SPIRV_LLVM_Translator_unified_jll", "SPIRV_Tools_jll"]
         println(io, "- $pkg: $(versions[pkg])")
     end
     println(io)
