@@ -12,9 +12,12 @@
 [codecov-img]: https://codecov.io/gh/JuliaGPU/oneAPI.jl/branch/master/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/JuliaGPU/oneAPI.jl
 
-oneAPI.jl provides support for working with the [oneAPI unified programming model](https://software.intel.com/en-us/oneapi). The package is verified to work with the (currently) only implementation of this interface [that is part of the Intel Compute Runtime](https://github.com/intel/compute-runtime), only available on Linux.
+oneAPI.jl provides support for working with the [oneAPI unified programming
+model](https://software.intel.com/en-us/oneapi). The package is verified to work with the
+(currently) only implementation of this interface [that is part of the Intel Compute
+Runtime](https://github.com/intel/compute-runtime), only available on Linux.
 
-This package is under heavy development, and not ready for general use.
+This package is still under significant development, so expect bugs and missing features.
 
 
 ## Installation
@@ -179,3 +182,40 @@ GPUArrays.jl array interfaces. This results in a full-featured GPU array type.
 However, the package has not been extensively tested, and performance issues might be
 present. There is no integration with vendor libraries like oneMKL or oneDNN, and as a
 result certain operations (like matrix multiplication) will be unavailable or slow.
+
+
+## Using a local toolchain
+
+For debugging issues with the underlying toolchain (NEO, IGC, etc), you may want the
+package to use your local installation of these components instead of downloading the
+prebuilt Julia binaries from Yggdrasil. This can be done using Preferences.jl, overriding
+the paths to resources provided by the various JLLs that oneAPI.jl uses. A helpful script
+to automate this is provided in the `res` folder of this repository:
+
+```
+$ julia res/local.jl
+
+Trying to find local IGC...
+- found libigc at /usr/local/lib/libigc.so
+- found libiga64 at /usr/local/lib/libiga64.so
+- found libigdfcl at /usr/local/lib/libigdfcl.so
+- found libopencl-clang at /usr/local/lib/libopencl-clang.so.11
+
+Trying to find local gmmlib...
+- found libigdgmm at /usr/local/lib/libigdgmm.so
+
+Trying to find local NEO...
+- found libze_intel_gpu.so.1 at /usr/local/lib/libze_intel_gpu.so.1
+- found libigdrcl at /usr/local/lib/intel-opencl/libigdrcl.so
+
+Trying to find local oneAPI loader...
+- found libze_loader at /lib/x86_64-linux-gnu/libze_loader.so
+- found libze_validation_layer at /lib/x86_64-linux-gnu/libze_validation_layer.so
+
+Writing preferences...
+```
+
+The discovered paths will be written to a global file with preferences, typically
+`$HOME/.julia/environments/vX.Y/LocalPreferences.toml` (where `vX.Y` refers to the Julia
+version you are using). You can modify this file, or remove it when you want to revert to
+default set of binaries.
