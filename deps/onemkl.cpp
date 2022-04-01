@@ -20,8 +20,8 @@ oneapi::mkl::transpose convert(onemklTranspose val) {
 
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
-                           int64_t k, half alpha, const half *A, int64_t lda,
-                           const half *B, int64_t ldb, half beta, half *C,
+                           int64_t k, sycl::half alpha, const sycl::half *A, int64_t lda,
+                           const sycl::half *B, int64_t ldb, sycl::half beta, sycl::half *C,
                            int64_t ldc) {
     oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
                                           convert(transB), m, n, k, alpha, A,
