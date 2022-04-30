@@ -593,4 +593,18 @@ end
     @test Array(dA) == hA
 end
 
+@testset "NEO#172" begin
+    # conversions from integers to pointers resulted in lost memory stores
+
+    function kernel(ptr)
+        ptr = reinterpret(Core.LLVMPtr{Float32, AS.Global}, ptr)
+        unsafe_store!(ptr, 42)
+        return
+    end
+
+    a = oneArray(Float32[0])
+    @oneapi kernel(pointer(a))
+    @test Array(a) == [42]
+end
+
 ############################################################################################
