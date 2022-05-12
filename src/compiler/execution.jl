@@ -90,16 +90,12 @@ kernel_convert(arg) = adapt(KernelAdaptor(), arg)
 
 abstract type AbstractKernel{F,TT} end
 
-@generated function call(kernel::AbstractKernel{F,TT}, args...; call_kwargs...) where {F,TT}
-    sig = Base.signature_type(F, TT)
-    args = (:F, (:( args[$i] ) for i in 1:length(args))...)
+@inline @generated function call(kernel::AbstractKernel{F,TT}, args...; call_kwargs...) where {F,TT}
+    sig = Tuple{F, TT.parameters...}    # Base.signature_type with a function type
+    args = (:(kernel.f), (:( args[$i] ) for i in 1:length(args))...)
 
     # filter out ghost arguments that shouldn't be passed
-    predicate = if VERSION >= v"1.5.0-DEV.581"
-        dt -> isghosttype(dt) || Core.Compiler.isconstType(dt)
-    else
-        dt -> isghosttype(dt)
-    end
+    predicate = dt -> isghosttype(dt) || Core.Compiler.isconstType(dt)
     to_pass = map(!predicate, sig.parameters)
     call_t =                  Type[x[1] for x in zip(sig.parameters,  to_pass) if x[2]]
     call_args = Union{Expr,Symbol}[x[1] for x in zip(args, to_pass)            if x[2]]
@@ -116,8 +112,6 @@ abstract type AbstractKernel{F,TT} end
     call_tt = Base.to_tuple_type(call_t)
 
     quote
-        Base.@_inline_meta
-
         onecall(kernel.fun, $call_tt, $(call_args...); call_kwargs...)
     end
 end
@@ -126,21 +120,23 @@ end
 ## host-side kernels
 
 struct HostKernel{F,TT} <: AbstractKernel{F,TT}
+    f::F
     fun::ZeKernel
 end
 
 
 ## host-side API
 
-function zefunction(f::Core.Function, tt::Type=Tuple{}; name=nothing, kwargs...)
+function zefunction(f::F, tt::TT=Tuple{}; name=nothing, kwargs...) where {F,TT}
     dev = device()
     cache = get!(()->Dict{UInt,Any}(), zefunction_cache, dev)
     source = FunctionSpec(f, tt, true, name)
     target = SPIRVCompilerTarget(; kwargs...)
     params = oneAPICompilerParams()
     job = CompilerJob(target, source, params)
-    GPUCompiler.cached_compilation(cache, job,
-                                   zefunction_compile, zefunction_link)::HostKernel{f,tt}
+    kernel = GPUCompiler.cached_compilation(cache, job,
+                                            zefunction_compile, zefunction_link)
+    HostKernel{F,tt}(f, kernel)
 end
 
 const zefunction_cache = Dict{Any,Any}()
@@ -161,9 +157,7 @@ function zefunction_link(@nospecialize(job::CompilerJob), compiled)
     ctx = context()
     dev = device()
     mod = ZeModule(ctx, dev, compiled.image)
-    kernel = kernels(mod)[compiled.entry]
-
-    return HostKernel{job.source.f,job.source.tt}(kernel)
+    kernels(mod)[compiled.entry]
 end
 
 @inline function onecall(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
