@@ -136,6 +136,8 @@ function zefunction(f::F, tt::TT=Tuple{}; name=nothing, kwargs...) where {F,TT}
     job = CompilerJob(target, source, params)
     kernel = GPUCompiler.cached_compilation(cache, job,
                                             zefunction_compile, zefunction_link)
+    # compilation is cached on the function type, so we can only create a kernel object here
+    # (as it captures the function _instance_). we may want to cache those objects.
     HostKernel{F,tt}(f, kernel)
 end
 
