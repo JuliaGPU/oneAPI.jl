@@ -4,6 +4,9 @@ struct ZeDevice
     handle::ze_device_handle_t
 
     driver::ZeDriver
+
+    # only accept handles, don't convert
+    ZeDevice(handle::ze_device_handle_t, driver::ZeDriver) = new(handle, driver)
 end
 
 Base.unsafe_convert(::Type{ze_device_handle_t}, dev::ZeDevice) = dev.handle
