@@ -2,6 +2,9 @@ export ZeDriver, api_version, properties, ipc_properties, extension_properties
 
 struct ZeDriver
     handle::ze_driver_handle_t
+
+    # only accept handles, don't convert
+    ZeDriver(handle::ze_driver_handle_t) = new(handle)
 end
 
 Base.unsafe_convert(::Type{ze_driver_handle_t}, drv::ZeDriver) = drv.handle
