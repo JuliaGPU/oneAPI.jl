@@ -36,3 +36,16 @@ end
 # trig.jl
 @device_override @noinline Base.Math.sincos_domain_error(x) =
     @print_and_throw "sincos(x) is only defined for finite x."
+
+# diagonal.jl
+# XXX: remove when we have malloc
+import LinearAlgebra
+@device_override function Base.setindex!(D::LinearAlgebra.Diagonal, v, i::Int, j::Int)
+    @boundscheck checkbounds(D, i, j)
+    if i == j
+        @inbounds D.diag[i] = v
+    elseif !iszero(v)
+        @print_and_throw "cannot set off-diagonal entry to a nonzero value"
+    end
+    return v
+end
