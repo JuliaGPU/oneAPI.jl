@@ -1,6 +1,6 @@
 export ZeDevice, properties, compute_properties, module_properties, memory_properties, memory_access_properties, cache_properties, image_properties, p2p_properties
 
-struct ZeDevice
+struct ZeDevice <: Adapt.AbstractGPUDevice
     handle::ze_device_handle_t
 
     driver::ZeDriver

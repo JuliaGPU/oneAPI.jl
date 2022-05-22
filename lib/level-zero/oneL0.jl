@@ -9,6 +9,9 @@ using Printf
 using NEO_jll
 using oneAPI_Level_Zero_Loader_jll
 
+import Adapt
+
+
 include("utils.jl")
 include("pointer.jl")
 

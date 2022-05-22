@@ -159,6 +159,8 @@ function device(A::oneArray)
   return oneL0.device(A.storage.buffer)
 end
 
+Adapt.get_computing_device(A::oneArray) = device(A)
+
 
 ## derived types
 

@@ -55,3 +55,18 @@ end
 function oneL0.synchronize()
     oneL0.synchronize(global_queue(context(), device()))
 end
+
+
+function Adapt.adapt_storage(dev::ZeDevice, x)
+    prev_dev = device()
+    try
+        device!(dev)
+        Adapt.adapt_storage(oneArray, x)
+    finally
+        device!(prev_dev)
+    end
+end
+
+
+# ToDo: implement Sys.total_memory(dev::ZeDevice)
+# ToDo: implement Sys.free_memory(dev::ZeDevice)
