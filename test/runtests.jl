@@ -42,6 +42,7 @@ do_quickfail, _ = extract_flag!(ARGS, "--quickfail")
 
 include("setup.jl")     # make sure everything is precompiled
 @test oneAPI.functional()
+@info "System information:\n" * sprint(io->oneAPI.versioninfo(io))
 
 # choose tests
 const tests = []
