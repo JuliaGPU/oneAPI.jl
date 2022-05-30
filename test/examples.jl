@@ -14,7 +14,6 @@ end
 examples_dir = joinpath(@__DIR__, "..", "examples")
 examples = find_sources(examples_dir)
 filter!(file -> readline(file) != "# EXCLUDE FROM TESTING", examples)
-filter!(file -> !occursin("Kaleidoscope", file), examples)
 
 examples = relpath.(examples, Ref(examples_dir))
 @testset for example in examples
