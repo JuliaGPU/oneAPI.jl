@@ -41,7 +41,7 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
     
     ctx = context()
     dev = device()
-    buf = allocate(B, ctx, dev, prod(dims) * sizeof(T), Base.datatype_alignment(T))
+    buf = allocate(B, ctx, dev, bufsize, Base.datatype_alignment(T))
     storage = ArrayStorage(buf, 1)
     obj = new{T,N,B}(storage, maxsize, 0, dims)
     finalizer(unsafe_free!, obj)
