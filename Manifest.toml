@@ -193,17 +193,17 @@ deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[Random]]
-deps = ["Serialization"]
+deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[SPIRV_LLVM_Translator_unified_jll]]
-deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
-git-tree-sha1 = "c15e7a1be8b4ee63236f0e4b48b354690bbac0a3"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg", "TOML"]
+git-tree-sha1 = "2f9c006df258116f90874e47207229c83d06c845"
 uuid = "85f0d8ed-5b39-5caa-b1ae-7472de402361"
-version = "0.1.0+0"
+version = "0.2.0+0"
 
 [[SPIRV_Tools_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
