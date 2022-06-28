@@ -61,7 +61,7 @@ for gentype in generic_types
 
 @device_override Base.hypot(x::$gentype, y::$gentype) = @builtin_ccall("hypot", $gentype, ($gentype, $gentype), x, y)
 
-@device_override SpecialFunctions.lgamma(x::$gentype) = @builtin_ccall("lgamma", $gentype, ($gentype,), x)
+@device_override SpecialFunctions.loggamma(x::$gentype) = @builtin_ccall("lgamma", $gentype, ($gentype,), x)
 
 @device_override Base.log(x::$gentype) = @builtin_ccall("log", $gentype, ($gentype,), x)
 @device_override Base.log2(x::$gentype) = @builtin_ccall("log2", $gentype, ($gentype,), x)
@@ -100,7 +100,7 @@ for gentype in generic_types
 @device_override Base.tanh(x::$gentype) = @builtin_ccall("tanh", $gentype, ($gentype,), x)
 @device_function tanpi(x::$gentype) = @builtin_ccall("tanpi", $gentype, ($gentype,), x)
 
-@device_function tgamma(x::$gentype) = @builtin_ccall("tgamma", $gentype, ($gentype,), x)
+@device_override SpecialFunctions.gamma(x::$gentype) = @builtin_ccall("tgamma", $gentype, ($gentype,), x)
 
 @device_override Base.trunc(x::$gentype) = @builtin_ccall("trunc", $gentype, ($gentype,), x)
 
