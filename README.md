@@ -52,8 +52,8 @@ ZeDevice(GPU, vendor 0x8086, device 0x1912): Intel(R) Gen9
 ```
 
 To ensure other functionality works as expected, you can run the test suite from the package
-manager REPL mode, note that it will pull and run the test suite for [GPUArrays](https://github.com/JuliaGPU/GPUArrays.jl)
-which takes quite some time:
+manager REPL mode. Note that this will pull and run the test suite for
+[GPUArrays](https://github.com/JuliaGPU/GPUArrays.jl), which takes quite some time:
 
 ```
 pkg> test oneAPI
