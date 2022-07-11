@@ -41,7 +41,8 @@ function gemm_dispatch!(C::oneStridedVecOrMat, A, B, alpha::Number=true, beta::N
     end
 
     T = eltype(C)
-    if T <: onemklFloat && dA isa oneStridedArray{T} && dB isa oneStridedArray{T}
+    if T <: onemklFloat && dA isa oneStridedArray{T} && dB isa oneStridedArray{T} &&
+       T != Float16 # onemklHgemm is currently not hooked-up
         gemm!(tA, tB, alpha, dA, dB, beta, C)
     else
         GPUArrays.generic_matmatmul!(C, A, B, alpha, beta)
