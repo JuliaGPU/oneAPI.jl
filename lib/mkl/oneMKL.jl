@@ -8,6 +8,8 @@ using ..oneAPI.oneL0
 using ..oneAPI.SYCL
 using ..oneAPI.SYCL: syclQueue_t
 
+using GPUArrays
+
 include("libonemkl.jl")
 
 const onemklFloat = Union{Float64,Float32,Float16,ComplexF64,ComplexF32}
