@@ -15,9 +15,11 @@ using Core: LLVMPtr
 
 using SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll
 
+using Scratch
+
 export oneL0, SYCL
 
-const liboneapilib = joinpath(dirname(@__DIR__), "deps", "liboneapilib.so")
+const liboneapilib = joinpath(@get_scratch!("deps"), "lib", "liboneapilib.so")
 Base.include_dependency(liboneapilib)
 
 # core library
