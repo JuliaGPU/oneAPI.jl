@@ -72,6 +72,9 @@ function __init__()
     if !precompiling
         eval(overrides)
     end
+
+    # ensure that libopencl.so
+    ENV["OCL_ICD_VENDORS"] = oneL0.NEO_jll.libigdrcl
 end
 
 end
