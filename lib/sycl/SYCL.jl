@@ -73,6 +73,7 @@ mutable struct syclQueue
     syclQueueCreate(handle, ctx, ze_queue, true)
     obj = new(handle[], ctx, ze_queue)
     finalizer(obj) do queue
+      onemklDestroy()
       syclQueueDestroy(queue)
     end
   end
