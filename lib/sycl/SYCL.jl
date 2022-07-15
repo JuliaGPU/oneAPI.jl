@@ -55,6 +55,7 @@ mutable struct syclContext
     syclContextCreate(handle, devs, length(devs), ze_ctx, true)
     obj = new(handle[], devs, ze_ctx)
     finalizer(obj) do ctx
+      onemklDestroy()
       syclContextDestroy(ctx)
     end
   end
@@ -73,7 +74,6 @@ mutable struct syclQueue
     syclQueueCreate(handle, ctx, ze_queue, true)
     obj = new(handle[], ctx, ze_queue)
     finalizer(obj) do queue
-      onemklDestroy()
       syclQueueDestroy(queue)
     end
   end
