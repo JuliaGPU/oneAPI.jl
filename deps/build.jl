@@ -22,6 +22,8 @@ end
 Conda.add("dpcpp_linux-64", conda_dir; channel="intel")
 Conda.add("mkl-devel-dpcpp", conda_dir; channel="intel")
 
+Conda.list(conda_dir)
+
 # XXX: isn't there a Conda package providing ze_api.hpp?
 include_dir =  joinpath(oneAPI_Level_Zero_Headers_jll.artifact_dir, "include")
 
