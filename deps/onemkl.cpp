@@ -3,17 +3,6 @@
 
 #include <oneapi/mkl.hpp>
 
-#ifdef __cplusplus
-// work around to expose mkl gpu cleanup
-namespace oneapi {
-namespace mkl {
-namespace gpu {
-int clean_device_info_cache();
-}
-}
-}
-#endif
-
 // gemm
 
 // https://spec.oneapi.io/versions/1.0-rev-1/elements/oneMKL/source/domains/blas/gemm.html
@@ -90,6 +79,21 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
         reinterpret_cast<const std::complex<double> *>(B), ldb, beta,
         reinterpret_cast<std::complex<double> *>(C), ldc);
     return 0;
+}
+
+
+// other
+
+// oneMKL keeps a cache of SYCL queues and tries to destroy them when unloading the library.
+// that is incompatible with oneAPI.jl destroying queues before that, so expose a function
+// to manually wipe the device cache when we're destroying queues.
+
+namespace oneapi {
+namespace mkl {
+namespace gpu {
+int clean_device_info_cache();
+}
+}
 }
 
 extern "C" void onemklDestroy() {
