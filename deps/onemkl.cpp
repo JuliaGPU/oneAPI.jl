@@ -91,11 +91,11 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
 namespace oneapi {
 namespace mkl {
 namespace gpu {
-int clean_device_info_cache();
+int clean_gpu_caches();
 }
 }
 }
 
 extern "C" void onemklDestroy() {
-    oneapi::mkl::gpu::clean_device_info_cache();
+    oneapi::mkl::gpu::clean_gpu_caches();
 }
