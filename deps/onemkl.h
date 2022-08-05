@@ -39,6 +39,7 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                 const double _Complex *B, int64_t ldb, double _Complex beta,
                 double _Complex *C, int64_t ldc);
 
+void onemklDestroy();
 #ifdef __cplusplus
 }
 #endif

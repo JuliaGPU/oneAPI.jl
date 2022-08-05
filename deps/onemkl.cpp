@@ -80,3 +80,22 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
         reinterpret_cast<std::complex<double> *>(C), ldc);
     return 0;
 }
+
+
+// other
+
+// oneMKL keeps a cache of SYCL queues and tries to destroy them when unloading the library.
+// that is incompatible with oneAPI.jl destroying queues before that, so expose a function
+// to manually wipe the device cache when we're destroying queues.
+
+namespace oneapi {
+namespace mkl {
+namespace gpu {
+int clean_gpu_caches();
+}
+}
+}
+
+extern "C" void onemklDestroy() {
+    oneapi::mkl::gpu::clean_gpu_caches();
+}
