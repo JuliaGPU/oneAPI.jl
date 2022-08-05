@@ -13,6 +13,8 @@ steps:
             - src
             - lib
             - examples
+    artifact_paths:
+      - "deps/build.log"
     agents:
       queue: "juliagpu"
       intel: "*"

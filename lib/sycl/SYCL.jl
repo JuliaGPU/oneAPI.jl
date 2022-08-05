@@ -55,6 +55,7 @@ mutable struct syclContext
     syclContextCreate(handle, devs, length(devs), ze_ctx, true)
     obj = new(handle[], devs, ze_ctx)
     finalizer(obj) do ctx
+      onemklDestroy()
       syclContextDestroy(ctx)
     end
   end

@@ -68,3 +68,7 @@ end
 function syclEventDestroy(obj)
     @ccall liboneapilib.syclEventDestroy(obj::syclEvent_t)::Cint
 end
+
+function onemklDestroy()
+    @ccall liboneapilib.onemklDestroy()::Cvoid
+end
