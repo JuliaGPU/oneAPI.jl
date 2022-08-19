@@ -1,5 +1,7 @@
 using Distributed, Test, oneAPI
 
+oneAPI.functional() || error("oneAPI.jl is not functional on this system")
+
 # GPUArrays has a testsuite that isn't part of the main package.
 # Include it directly.
 import GPUArrays
