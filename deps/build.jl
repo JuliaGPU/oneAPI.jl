@@ -2,7 +2,7 @@
 
 # XXX: build this library on Yggdrasil
 
-using Scratch, CMake_jll, oneAPI_Level_Zero_Headers_jll
+using Scratch, CMake_jll, oneAPI_Level_Zero_Headers_jll, Pkg
 
 oneAPI = Base.UUID("8f75cd03-7ff8-4ecb-9b8f-daf728133b1b")
 
@@ -12,7 +12,14 @@ install_dir = get_scratch!(oneAPI, "deps")
 rm(install_dir; recursive=true)
 
 # install the toolchain
-using Conda
+try
+    using Conda
+catch err
+    # Sometimes, Conda fails to import because its environment is missing.
+    # That's probably caused by a missing build, but Pkg should do that...
+    Pkg.build("Conda")
+    using Conda
+end
 if !isfile(joinpath(conda_dir, "condarc-julia.yml"))
     Conda.create(conda_dir)
     # conda#8850
