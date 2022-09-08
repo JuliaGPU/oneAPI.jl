@@ -37,7 +37,7 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
                      ldc)
     @ccall liboneapilib.onemklZgemm(device_queue::syclQueue_t, transA::onemklTranspose,
                                     transB::onemklTranspose, m::Int64, n::Int64, k::Int64,
-                                    alpha::ComplexF32, A::ZePtr{ComplexF32}, lda::Int64,
-                                    B::ZePtr{ComplexF32}, ldb::Int64, beta::ComplexF32,
-                                    C::ZePtr{ComplexF32}, ldc::Int64)::Cint
+                                    alpha::ComplexF64, A::ZePtr{ComplexF64}, lda::Int64,
+                                    B::ZePtr{ComplexF64}, ldb::Int64, beta::ComplexF64,
+                                    C::ZePtr{ComplexF64}, ldc::Int64)::Cint
 end
