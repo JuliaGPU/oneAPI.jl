@@ -10,7 +10,7 @@ using ..oneAPI.oneL0:
 
 include("libsycl.jl")
 
-export syclPlatform, syclDevice, syclContext, syclQueue
+export syclPlatform, syclDevice, syclContext, syclQueue, syclEvent
 
 mutable struct syclPlatform
   handle::syclPlatform_t
@@ -81,5 +81,23 @@ end
 
 Base.unsafe_convert(::Type{syclQueue_t}, queue::syclQueue) =
   queue.handle
+
+mutable struct syclEvent
+  handle::syclEvent_t
+  ctx::syclContext
+  ze_event::ZeEvent
+
+  function syclEvent(ctx::syclContext, ze_event::ZeEvent)
+    handle = Ref{syclEvent_t}()
+    syclEventCreate(handle, ctx, ze_event, true)
+    obj = new(handle[], ctx, ze_event)
+    finalizer(obj) do event
+      syclEventDestroy(event)
+    end
+  end
+end
+
+Base.unsafe_convert(::Type{syclEvent_t}, event::syclEvent) =
+  event.handle
 
 end
