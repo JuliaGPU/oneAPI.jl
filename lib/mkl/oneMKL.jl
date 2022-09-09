@@ -1,7 +1,7 @@
 module oneMKL
 
 using ..oneAPI
-using ..oneAPI: liboneapilib
+using ..oneAPI: liboneapi_support
 
 using ..oneAPI.oneL0
 

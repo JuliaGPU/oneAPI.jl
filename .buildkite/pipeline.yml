@@ -1,6 +1,28 @@
 steps:
   # Julia versions
 
+  - label: "Julia 1.8 (development)"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: 1.8
+      - JuliaCI/julia-test#v1: ~
+      - JuliaCI/julia-coverage#v1:
+          codecov: true
+          dirs:
+            - src
+            - lib
+            - examples
+    command: |
+      julia --project=deps -e 'using Pkg; Pkg.instantiate()'
+      julia --project=deps deps/build_local.jl
+    agents:
+      queue: "juliagpu"
+      intel: "*"
+    if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
+    timeout_in_minutes: 60
+
+  - wait  # smoke test: don't kick off a large number of tests if they'd all just fail
+
   - label: "Julia 1.6"
     plugins:
       - JuliaCI/julia#v1:
@@ -13,37 +35,16 @@ steps:
             - src
             - lib
             - examples
-    artifact_paths:
-      - "deps/build.log"
     agents:
       queue: "juliagpu"
       intel: "*"
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 60
 
-  - wait  # smoke test: don't kick off a large number of tests if they'd all just fail
-
   - label: "Julia 1.7"
     plugins:
       - JuliaCI/julia#v1:
           version: 1.7
-      - JuliaCI/julia-test#v1: ~
-      - JuliaCI/julia-coverage#v1:
-          codecov: true
-          dirs:
-            - src
-            - lib
-            - examples
-    agents:
-      queue: "juliagpu"
-      intel: "*"
-    if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
-    timeout_in_minutes: 60
-
-  - label: "Julia 1.8"
-    plugins:
-      - JuliaCI/julia#v1:
-          version: 1.8
       - JuliaCI/julia-test#v1: ~
       - JuliaCI/julia-coverage#v1:
           codecov: true
