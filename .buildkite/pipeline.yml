@@ -1,7 +1,7 @@
 steps:
   # Julia versions
 
-  - label: "Julia 1.6"
+  - label: "Julia 1.6 (development)"
     plugins:
       - JuliaCI/julia#v1:
           version: 1.6
@@ -13,8 +13,9 @@ steps:
             - src
             - lib
             - examples
-    artifact_paths:
-      - "deps/build.log"
+    command: |
+      julia --project=deps -e 'using Pkg; Pkg.instantiate()'
+      julia --project=deps deps/build_local.jl
     agents:
       queue: "juliagpu"
       intel: "*"

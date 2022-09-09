@@ -220,12 +220,6 @@ git-tree-sha1 = "e0225ce074ac6c448b3d7f92d5708a93fea4ddbc"
 uuid = "6ac6d60f-d740-5983-97d7-a4482c0689f4"
 version = "2022.1.0+0"
 
-[[Scratch]]
-deps = ["Dates"]
-git-tree-sha1 = "0b4b7f1393cff97c33891da2a0bf69c6ed241fda"
-uuid = "6c6a2e73-6563-6170-7368-637461726353"
-version = "1.1.0"
-
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
@@ -302,6 +296,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "oneAPI_Level_Zero_Headers_j
 git-tree-sha1 = "ace5d951ecdad720dff226dee07154891543f7dd"
 uuid = "13eca655-d68d-5b81-8367-6d99d727ab01"
 version = "1.8.1+1"
+
+[[oneAPI_Support_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "99c26371880e86fddd9c88ed18152f6ffc560437"
+uuid = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
+version = "2022.1.0+0"
 
 [[p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
