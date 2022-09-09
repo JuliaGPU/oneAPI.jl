@@ -19,8 +19,8 @@ using Scratch
 
 export oneL0, SYCL
 
-const liboneapilib = joinpath(@get_scratch!("deps"), "lib", "liboneapilib.so")
-Base.include_dependency(liboneapilib)
+const liboneapi_support = joinpath(@get_scratch!("deps"), "lib", "liboneapi_support.so")
+Base.include_dependency(liboneapi_support)
 
 # core library
 include("../lib/utils/APIUtils.jl")

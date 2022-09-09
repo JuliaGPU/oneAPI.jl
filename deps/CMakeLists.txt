@@ -4,11 +4,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-project(oneAPILib)
+project(oneAPISupport)
 
-add_library(oneapilib SHARED sycl.h sycl.hpp sycl.cpp onemkl.cpp)
+add_library(oneapi_support SHARED sycl.h sycl.hpp sycl.cpp onemkl.cpp)
 
-target_link_libraries(oneapilib
+target_link_libraries(oneapi_support
   mkl_sycl
   mkl_intel_ilp64
   mkl_sequential
@@ -22,5 +22,5 @@ target_link_libraries(oneapilib
   pi_level_zero
 )
 
-install(TARGETS oneapilib
+install(TARGETS oneapi_support
         LIBRARY DESTINATION lib)

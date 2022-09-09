@@ -1,6 +1,4 @@
-# build liboneapilib with C wrappers for C++ APIs
-
-# XXX: build this library on Yggdrasil
+# build liboneapi_support with C wrappers for C++ APIs
 
 using Scratch, CMake_jll, oneAPI_Level_Zero_Headers_jll, Pkg
 

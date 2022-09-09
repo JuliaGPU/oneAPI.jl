@@ -203,10 +203,10 @@ function main()
             library="libze_loader", modname="level-zero")
     process("sycl", joinpath(dirname(@__DIR__), "deps", "sycl.h");
             include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))],
-            library="liboneapilib", modname="sycl", dependents=false)
+            library="liboneapi_support", modname="sycl", dependents=false)
     process("onemkl", joinpath(dirname(@__DIR__), "deps", "onemkl.h");
             include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))],
-            library="liboneapilib", modname="mkl", dependents=false)
+            library="liboneapi_support", modname="mkl", dependents=false)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

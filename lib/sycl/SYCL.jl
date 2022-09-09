@@ -1,7 +1,7 @@
 module SYCL
 
 using ..oneAPI
-using ..oneAPI: liboneapilib
+using ..oneAPI: liboneapi_support
 
 using ..oneAPI.oneL0
 using ..oneAPI.oneL0:
