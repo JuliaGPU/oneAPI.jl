@@ -22,9 +22,9 @@ version = "0.4.2"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "80ca332f6dcb2508adba68f22f551adb2d00a624"
+git-tree-sha1 = "dc4405cee4b2fe9e1108caec2d760b7ea758eca2"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.15.3"
+version = "1.15.5"
 
 [[ChangesOfVariables]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
@@ -75,9 +75,9 @@ version = "0.1.2"
 
 [[GPUCompiler]]
 deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "122d7bcc92abf94cf1a86281ad7a4d0e838ab9e0"
+git-tree-sha1 = "ebb892e1df16040a845e1d11087e4fbfe10323a8"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.16.3"
+version = "0.16.4"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -287,15 +287,15 @@ uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
 
 [[oneAPI_Level_Zero_Headers_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "62d45c6e325c8581ddb6855e1f4609bf52b3bb89"
+git-tree-sha1 = "a6993678f31fb17d388809ec99edea2e56c728c4"
 uuid = "f4bc562b-d309-54f8-9efb-476e56f0410d"
-version = "1.4.0+0"
+version = "1.4.8+0"
 
 [[oneAPI_Level_Zero_Loader_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "ace5d951ecdad720dff226dee07154891543f7dd"
+git-tree-sha1 = "f9baf4d3c341269b20f8835e19efffd0fc8e9c2f"
 uuid = "13eca655-d68d-5b81-8367-6d99d727ab01"
-version = "1.8.1+1"
+version = "1.8.5+0"
 
 [[oneAPI_Support_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
