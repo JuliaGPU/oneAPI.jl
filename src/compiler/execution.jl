@@ -45,17 +45,22 @@ macro oneapi(ex...)
         quote
             $f_var = $f
             GC.@preserve $(vars...) $f_var begin
-                local $kernel_f = $kernel_convert($f_var)
-                local $kernel_args = map($kernel_convert, ($(var_exprs...),))
-                local $kernel_tt = Tuple{map(Core.Typeof, $kernel_args)...}
-                local $kernel = $zefunction($kernel_f, $kernel_tt; $(compiler_kwargs...))
+                $kernel_f = $kernel_convert($f_var)
+                $kernel_args = map($kernel_convert, ($(var_exprs...),))
+                $kernel_tt = Tuple{map(Core.Typeof, $kernel_args)...}
+                $kernel = $zefunction($kernel_f, $kernel_tt; $(compiler_kwargs...))
                 if $launch
                     $kernel($(var_exprs...); $(call_kwargs...))
                 end
                 $kernel
             end
          end)
-    return esc(code)
+
+    return esc(quote
+        let
+            $code
+        end
+    end)
 end
 
 
