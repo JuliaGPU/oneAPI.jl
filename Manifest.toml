@@ -299,9 +299,9 @@ version = "1.8.5+0"
 
 [[oneAPI_Support_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "99c26371880e86fddd9c88ed18152f6ffc560437"
+git-tree-sha1 = "d879007712830ffd6eec093b517f6cb203a53326"
 uuid = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
-version = "2022.1.0+0"
+version = "2022.1.0+1"
 
 [[p7zip_jll]]
 deps = ["Artifacts", "Libdl"]

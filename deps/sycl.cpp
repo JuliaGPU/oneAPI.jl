@@ -35,7 +35,7 @@ extern "C" int syclContextCreate(syclContext_t *obj, syclDevice_t *devices,
     std::vector<sycl::device> sycl_devices(ndevices);
     for (size_t i = 0; i < ndevices; i++)
         sycl_devices[i] = devices[i]->val;
-    
+
     auto sycl_context =
         sycl::ext::oneapi::level_zero::make_context(sycl_devices, (pi_native_handle) context, keep_ownership);
     *obj = new syclContext_st({sycl_context});
@@ -61,18 +61,14 @@ extern "C" int syclQueueDestroy(syclQueue_t obj) {
     return 0;
 }
 
-// XXX: make_event only available on master
-// extern "C" int syclEventCreate(syclEvent_t *obj, syclContext_t context,
-//                               ze_event_handle_t event, int keep_ownership) {
-//    auto ownership = keep_ownership ? sycl::level_zero::ownership::keep
-//                                    : sycl::level_zero::ownership::transfer;
-//    auto sycl_event = sycl::level_zero::make<sycl::event>(
-//        context->val, ze_event_handle_t event, ownership);
-//    *obj = new syclEvent_st({sycl_event});
-//    return 0;
-//}
-//
-// extern "C" int syclEventDestroy(syclEvent_t obj) {
-//    delete obj;
-//    return 0;
-//}
+extern "C" int syclEventCreate(syclEvent_t *obj, syclContext_t context,
+                               ze_event_handle_t event, int keep_ownership) {
+   auto sycl_event = sycl::ext::oneapi::level_zero::make_event(context->val, (pi_native_handle) event, keep_ownership);
+   *obj = new syclEvent_st({sycl_event});
+   return 0;
+}
+
+extern "C" int syclEventDestroy(syclEvent_t obj) {
+   delete obj;
+   return 0;
+}

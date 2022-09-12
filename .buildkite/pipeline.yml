@@ -18,7 +18,7 @@ steps:
     agents:
       queue: "juliagpu"
       intel: "*"
-    if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
+    if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 60
 
   - wait  # smoke test: don't kick off a large number of tests if they'd all just fail
@@ -38,7 +38,7 @@ steps:
     agents:
       queue: "juliagpu"
       intel: "*"
-    if: build.message !~ /\[skip tests\]/
+    if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
     timeout_in_minutes: 60
 
   - label: "Julia 1.7"
