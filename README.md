@@ -2,9 +2,10 @@
 
 *Julia support for the oneAPI programming toolkit.*
 
-| **Build Status**                    | **Coverage**                    |
-|:-----------------------------------:|:-------------------------------:|
-| [![][buildkite-img]][buildkite-url] | [![][codecov-img]][codecov-url] |
+[![][doi-img]][doi-url] [![][buildkite-img]][buildkite-url] [![][codecov-img]][codecov-url]
+
+[doi-img]: https://zenodo.org/badge/252466420.svg
+[doi-url]: https://zenodo.org/badge/latestdoi/252466420
 
 [buildkite-img]: https://badge.buildkite.com/00fff01fd4d6cdd905e61e2ce7ed0f7203ba227df9b575426c.svg
 [buildkite-url]: https://buildkite.com/julialang/oneapi-dot-jl
