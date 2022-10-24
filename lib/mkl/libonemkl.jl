@@ -41,3 +41,28 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
                                     B::ZePtr{ComplexF64}, ldb::Int64, beta::ComplexF64,
                                     C::ZePtr{ComplexF64}, ldc::Int64)::Cint
 end
+
+function onemklDcopy(device_queue, n, x, incx, y, incy)
+    @ccall liboneapi_support.onemklDcopy(device_queue::syclQueue_t, n::Int64, 
+                                x::ZePtr{Cdouble}, incx::Int64,
+                                y::ZePtr{Cdouble}, incy::Int64)::Cvoid
+end
+
+function onemklScopy(device_queue, n, x, incx, y, incy)
+    @ccall liboneapi_support.onemklScopy(device_queue::syclQueue_t, n::Int64, 
+                                x::ZePtr{Cfloat}, incx::Int64,
+                                y::ZePtr{Cfloat}, incy::Int64)::Cvoid
+end
+
+function onemklZcopy(device_queue, n, x, incx, y, incy)
+    @ccall liboneapi_support.onemklZcopy(device_queue::syclQueue_t, n::Int64, 
+                                x::ZePtr{ComplexF64}, incx::Int64,
+                                y::ZePtr{ComplexF64}, incy::Int64)::Cvoid
+end
+
+function onemklCcopy(device_queue, n, x, incx, y, incy)
+    @ccall liboneapi_support.onemklCcopy(device_queue::syclQueue_t, n::Int64, 
+                                x::ZePtr{ComplexF32}, incx::Int64,
+                                y::ZePtr{ComplexF32}, incy::Int64)::Cvoid
+end
+

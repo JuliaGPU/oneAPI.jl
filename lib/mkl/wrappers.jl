@@ -20,6 +20,25 @@ end
 # BLAS
 #
 
+# level 1
+## copy
+for (fname, elty) in
+        ((:onemklDcopy,:Float64),
+         (:onemklScopy,:Float32),
+         (:onemklZcopy,:ComplexF64),
+         (:onemklCcopy,:ComplexF32))
+    @eval begin
+        function copy!(n::Integer,
+                       x::StridedArray{$elty},
+                       y::StridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
+            y
+        end
+    end
+end
+
+
 # level 3
 
 for (fname, elty) in
