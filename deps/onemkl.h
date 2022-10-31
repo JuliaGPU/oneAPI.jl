@@ -39,6 +39,7 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                 const double _Complex *B, int64_t ldb, double _Complex beta,
                 double _Complex *C, int64_t ldc);
 
+// Level-1: scal oneMKL
 void onemklDscal(syclQueue_t device_queue, int64_t n, double alpha, double *x,
                  int64_t incx);
 void onemklSscal(syclQueue_t device_queue, int64_t n, float alpha, float *x,
