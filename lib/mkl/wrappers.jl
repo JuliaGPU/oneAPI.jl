@@ -27,7 +27,7 @@ for (fname, elty) in
                        x::StridedArray{$elty})
             queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
-			x
+            x
         end
     end
 end
