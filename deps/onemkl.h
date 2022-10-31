@@ -10,9 +10,9 @@ extern "C" {
 #endif
 
 typedef enum {
-    ONEMKL_TRANSPOSE_NONTRANS,
-    ONEMKL_TRANSPOSE_TRANS,
-    ONEMLK_TRANSPOSE_CONJTRANS
+  ONEMKL_TRANSPOSE_NONTRANS,
+  ONEMKL_TRANSPOSE_TRANS,
+  ONEMLK_TRANSPOSE_CONJTRANS
 } onemklTranspose;
 
 // XXX: how to expose half in C?
@@ -38,6 +38,15 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                 double _Complex alpha, const double _Complex *A, int64_t lda,
                 const double _Complex *B, int64_t ldb, double _Complex beta,
                 double _Complex *C, int64_t ldc);
+
+void onemklDscal(syclQueue_t device_queue, int64_t n, double alpha, double *x,
+                 int64_t incx);
+void onemklSscal(syclQueue_t device_queue, int64_t n, float alpha, float *x,
+                 int64_t incx);
+void onemklCscal(syclQueue_t device_queue, int64_t n,
+                 float alpha, float _Complex *x, int64_t incx);
+void onemklZscal(syclQueue_t device_queue, int64_t n,
+                 double alpha, double _Complex *x, int64_t incx);
 
 void onemklDestroy();
 #ifdef __cplusplus

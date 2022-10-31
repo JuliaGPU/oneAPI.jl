@@ -14,7 +14,23 @@ function Base.convert(::Type{onemklTranspose}, trans::Char)
     end
 end
 
-
+# level 1
+## scal
+for (fname, elty) in
+	((:onemklDscal,:Float64),
+	 (:onemklSscal,:Float32),
+	 (:onemklZscal,:ComplexF64),
+	 (:onemklCscal,:ComplexF32))
+    @eval begin
+    	function scal!(n::Integer,
+	               alpha::Number,
+		       x::StridedArray{$elty})
+		queue = global_queue(context(x), device(x))
+		$fname(sycl_queue(queue), n, alpha, x, stride(x,1))
+		x
+	end
+    end
+end
 
 #
 # BLAS
