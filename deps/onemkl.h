@@ -38,12 +38,10 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                 double _Complex alpha, const double _Complex *A, int64_t lda,
                 const double _Complex *B, int64_t ldb, double _Complex beta,
                 double _Complex *C, int64_t ldc);
-
-# level-1: nrm2 
 void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, int64_t incx, double *result);
 void onemklSnrm2(syclQueue_t device_queue, int64_t n, const float *x, int64_t incx, float *result);
-void onemklCnrm2(syclQueue_t device_queue, int64_t n, const std::complex<float> *x, int64_t incx, float *result);
-void onemklZnrm2(syclQueue_t device_queue, int64_t n, const std::complex<double> *x, int64_t incx, double *result);
+void onemklCnrm2(syclQueue_t device_queue, int64_t n, const float _Complex *x, int64_t incx, float *result);
+void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _Complex *x, int64_t incx, double *result);
 
 void onemklDestroy();
 #ifdef __cplusplus
