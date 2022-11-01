@@ -81,6 +81,21 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
     return 0;
 }
 
+extern "C" void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, int64_t incx, double *result) {
+    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
+}
+
+extern "C" void onemklSnrm2(syclQueue_t device_queue, int64_t n, const float *x, int64_t incx, float *result) {
+    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
+}
+
+extern "C" void onemklCnrm2(syclQueue_t device_queue, int64_t n, const std::complex<float> *x, int64_t incx, float *result) {   
+    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
+}
+
+extern "C" void onemklZnrm2(syclQueue_t device_queue, int64_t n, const std::complex<double> *x, int64_t incx, double *result) {
+    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
+}
 
 // other
 

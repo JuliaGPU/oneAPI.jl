@@ -41,3 +41,21 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
                                     B::ZePtr{ComplexF64}, ldb::Int64, beta::ComplexF64,
                                     C::ZePtr{ComplexF64}, ldc::Int64)::Cint
 end
+
+function onemklDnrm2(device_queue, n, x, incx, result)
+	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{Cdouble}, incx::Int64, result::ZePtr{Cdouble})
+end
+
+function onemklSnrm2(device_queue, n, x, incx, result)
+	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{Cfloat}, incx::Int64, result::ZePtr{Cfloat})
+end
+
+function onemklCnrm2(device_queue, n, x, incx, result)
+	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{ComplexF32}, incx::Int64, result::ZePtr{ComplexF32})
+end
+
+function onemklZnrm2(device_queue, n, x, incx, result)
+	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{ComplexF64}, incx::Int64, result::ZePtr{ComplexF64})
+end
+
+
