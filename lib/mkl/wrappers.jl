@@ -32,6 +32,11 @@ for (fname, elty, ret_type) in
 	end
 end
 
+#
+# BLAS
+#
+
+# level 3
 
 for (fname, elty) in
         ((:onemklDgemm,:Float64),
