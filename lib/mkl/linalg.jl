@@ -49,8 +49,12 @@ function gemm_dispatch!(C::oneStridedVecOrMat, A, B, alpha::Number=true, beta::N
     end
 end
 
-LinearAlgebra.rmul!(x::oneStridedVecOrMat, k::Number) = 
+LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Number) = 
 	oneMKL.scal!(length(x), k, x)
+
+# Work around ambiguity with GPUArrays wrapper
+LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Real) =
+	invoke(rmul!, Tuple{typeof(x), Number}, x, k)
 
 for NT in (Number, Real)
     # NOTE: alpha/beta also ::Real to avoid ambiguities with certain Base methods
