@@ -12,7 +12,7 @@ using GPUArrays
 
 include("libonemkl.jl")
 
-const onemklFloat = Union{Float64,Float32,Float16,ComplexF64,ComplexF32}
+const onemklFloat = Union{Float64,Float32,ComplexF64,ComplexF32}
 
 include("wrappers.jl")
 include("linalg.jl")

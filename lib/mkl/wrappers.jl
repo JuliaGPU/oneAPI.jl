@@ -19,24 +19,19 @@ end
 for (fname, elty) in
 		((:onemklDnrm2, :Float64),
 		 (:onemklSnrm2, :Float32),
-		 (:onemklZnrm2, :ComplexF32),
+		 (:onemklCnrm2, :ComplexF32),
 		 (:onemklZnrm2, :ComplexF64))
 	@eval begin
 		function nrm2!(n::Integer, 
 					   x::StridedArray{$elty},
-					   result::StridedArray{$elty})
+                       result::StridedArray{$elty})
 				queue = global_queue(context(x), device(x))
+                #result = Ref{$ret_type}()
 				$fname(sycl_queue(queue), n, x, stride(x,1), result)
-				result
+                result
 		end
 	end
 end
-
-#
-# BLAS
-#
-
-# level 3
 
 for (fname, elty) in
         ((:onemklDgemm,:Float64),

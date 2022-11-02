@@ -43,19 +43,19 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
 end
 
 function onemklDnrm2(device_queue, n, x, incx, result)
-	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{Cdouble}, incx::Int64, result::ZePtr{Cdouble})
+	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{Cdouble}, incx::Int64, result::ZePtr{Cdouble})::Cvoid
 end
 
 function onemklSnrm2(device_queue, n, x, incx, result)
-	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{Cfloat}, incx::Int64, result::ZePtr{Cfloat})
+	@ccall liboneapi_support.onemklSnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{Cfloat}, incx::Int64, result::ZePtr{Cfloat})::Cvoid
 end
 
 function onemklCnrm2(device_queue, n, x, incx, result)
-	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{ComplexF32}, incx::Int64, result::ZePtr{Cfloat})
+	@ccall liboneapi_support.onemklCnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{ComplexF32}, incx::Int64, result::ZePtr{Cfloat})::Cvoid
 end
 
 function onemklZnrm2(device_queue, n, x, incx, result)
-	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{ComplexF64}, incx::Int64, result::ZePtr{Cdouble})
+	@ccall liboneapi_support.onemklZnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{ComplexF64}, incx::Int64, result::ZePtr{Cdouble})::Cvoid
 end
 
 
