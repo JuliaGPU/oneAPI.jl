@@ -19,6 +19,43 @@ end
 #
 # BLAS
 #
+# level 1
+
+## iamax
+for (fname, elty) in
+    ((:onemklDamax,:Float64),
+     (:onemklSamax,:Float32),
+     (:onemklZamax,:ComplexF64),
+     (:onemklCamax,:ComplexF32))
+    @eval begin
+        function iamax(n::Integer, x::StridedArray{$elty})
+            result = Ref{Clong}()
+            #result = StridedArray{oneArray(Int64)};
+            n = length(x)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
+            return result[]
+        end
+    end
+end
+
+## iamin
+for (fname, elty) in
+    ((:onemklDamax,:Float64),
+     (:onemklSamax,:Float32),
+     (:onemklZamax,:ComplexF64),
+     (:onemklCamax,:ComplexF32))
+    @eval begin
+        function iamin(n::Integer, x::StridedArray{$elty})
+            result = Ref{Clong}()
+            #result = StridedArray{oneArray(Int64)};
+            n = length(x)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
+            return result[]
+        end
+    end
+end
 
 # level 3
 
