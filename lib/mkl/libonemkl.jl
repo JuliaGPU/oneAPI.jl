@@ -54,7 +54,14 @@ function onemklZscal(device_queue, n, alpha, x, incx)
 	@ccall liboneapi_support.onemklZscal(device_queue::syclQueue_t, n::Int64, alpha::ComplexF64, x::ZePtr{ComplexF64}, incx::Int64)::Cvoid
 end
 
+function onemklZdscal(device_queue, n, alpha, x, incx)
+	@ccall liboneapi_support.onemklZdscal(device_queue::syclQueue_t, n::Int64, alpha::Cdouble, x::ZePtr{ComplexF64}, incx::Int64)::Cvoid
+end
+
 function onemklCscal(device_queue, n, alpha, x, incx)
 	@ccall liboneapi_support.onemklCscal(device_queue::syclQueue_t, n::Int64, alpha::ComplexF32, x::ZePtr{ComplexF32}, incx::Int64)::Cvoid
 end
 
+function onemklCsscal(device_queue, n, alpha, x, incx)
+	@ccall liboneapi_support.onemklCsscal(device_queue::syclQueue_t, n::Int64, alpha::Cfloat, x::ZePtr{ComplexF32}, incx::Int64)::Cvoid
+end
