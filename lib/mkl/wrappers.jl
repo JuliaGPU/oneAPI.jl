@@ -23,7 +23,7 @@ for (fname, elty) in
 	 (:onemklCscal,:ComplexF32))
     @eval begin
     	function scal!(n::Integer,
-                       alpha::Number,
+                       alpha::$elty,
                        x::StridedArray{$elty})
             queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
