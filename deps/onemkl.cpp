@@ -96,7 +96,7 @@ extern "C" void onemklCscal(syclQueue_t device_queue, int64_t n,
                             float _Complex alpha, float _Complex *x,
                             int64_t incx) {
   oneapi::mkl::blas::column_major::scal(
-      device_queue->val, n, std::complex<float>(alpha), reinterpret_cast<std::complex<float> *>(x),
+      device_queue->val, n, static_cast<std::complex<float> >(alpha), reinterpret_cast<std::complex<float> *>(x),
       incx);
 }
 
@@ -112,7 +112,7 @@ extern "C" void onemklZscal(syclQueue_t device_queue, int64_t n,
                             double _Complex alpha, double _Complex *x,
                             int64_t incx) {
   oneapi::mkl::blas::column_major::scal(
-      device_queue->val, n, std::complex<double>(alpha), reinterpret_cast<std::complex<double> *>(x),
+      device_queue->val, n, static_cast<std::complex<double> >(alpha), reinterpret_cast<std::complex<double> *>(x),
       incx);
 }
 
