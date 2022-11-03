@@ -51,8 +51,8 @@ function onemklSnrm2(device_queue, ctx, dev, n, x, incx, result)
 	@ccall liboneapi_support.onemklSnrm2(device_queue::syclQueue_t, ctx::syclContext_t, dev::syclDevice_t, n::Int64, x::ZePtr{Cfloat}, incx::Int64, result::Ref{Cfloat})::Cvoid
 end
 
-function onemklCnrm2(device_queue, n, x, incx, result)
-	@ccall liboneapi_support.onemklCnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{ComplexF32}, incx::Int64, result::Ptr{Cfloat})::Cvoid
+function onemklCnrm2(device_queue, ctx, dev, n, x, incx, result)
+	@ccall liboneapi_support.onemklCnrm2(device_queue::syclQueue_t, ctx::syclContext_t, dev::syclDevice_t, n::Int64, x::ZePtr{ComplexF32}, incx::Int64, result::Ref{Cfloat})::Cvoid
 end
 
 function onemklZnrm2(device_queue, n, x, incx, result)
