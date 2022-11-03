@@ -1,4 +1,5 @@
 using CEnum
+using oneAPI.SYCL: syclQueue_t, syclContext_t, syclDevice_t
 
 @cenum onemklTranspose::UInt32 begin
     ONEMKL_TRANSPOSE_NONTRANS = 0
@@ -42,42 +43,59 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
                                     C::ZePtr{ComplexF64}, ldc::Int64)::Cint
 end
 
-function onemklSamax(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklSamax(device_queue::syclQueue_t, n::Int64,
-                             x::ZePtr{Cfloat}, incx::Int64, result::RefOrZeRef{Int64})::Cvoid
+function getSyclObjects(x)
+    dev = device(x)
+    ctx = context(x)
+    syclQueue= sycl_queue(global_queue(ctx, dev))
+    syclDevice = sycl_device(dev)
+    syclContext = sycl_context(ctx, dev)
+    return syclQueue, syclDevice, syclContext
 end
 
-function onemklDamax(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklDamax(device_queue::syclQueue_t, n::Int64,
-                             x::ZePtr{Cdouble}, incx::Int64, result::RefOrZeRef{Int64})::Cvoid
+function onemklSamax(n, x, incx, result)
+    queue, dev, ctx = getSyclObjects(x)
+    @ccall liboneapi_support.onemklSamax(queue::syclQueue_t, dev::syclDevice_t, ctx::syclContext_t, n::Int64,
+                             x::ZePtr{Cfloat}, incx::Int64, result::Ref{Int64})::Cvoid
 end
 
-function onemklCamax(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklCamax(device_queue::syclQueue_t, n::Int64,
-                             x::ZePtr{ComplexF32}, incx::Int64,result::RefOrZeRef{Int64})::Cvoid
+function onemklDamax(n, x, incx, result)
+    queue, dev, ctx = getSyclObjects(x)
+    @ccall liboneapi_support.onemklDamax(queue::syclQueue_t, dev::syclDevice_t, ctx::syclContext_t, n::Int64,
+                             x::ZePtr{Cdouble}, incx::Int64, result::Ref{Int64})::Cvoid
 end
 
-function onemklZamax(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklZamax(device_queue::syclQueue_t, n::Int64,
-                             x::ZePtr{ComplexF64}, incx::Int64, result::RefOrZeRef{Int64})::Cvoid
+function onemklCamax(n, x, incx, result)
+    queue, dev, ctx = getSyclObjects(x)
+    @ccall liboneapi_support.onemklCamax(queue::syclQueue_t, dev::syclDevice_t, ctx::syclContext_t, n::Int64,
+                             x::ZePtr{ComplexF32}, incx::Int64,result::Ref{Int64})::Cvoid
 end
 
-function onemklSamin(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklSamin(device_queue::syclQueue_t, n::Int64,
-                             x::ZePtr{Cfloat}, incx::Int64, result::RefOrZeRef{Int64})::Cvoid
+function onemklZamax(n, x, incx, result)
+    queue, dev, ctx = getSyclObjects(x)
+    @ccall liboneapi_support.onemklZamax(queue::syclQueue_t, dev::syclDevice_t, ctx::syclContext_t, n::Int64,
+                             x::ZePtr{ComplexF64}, incx::Int64, result::Ref{Int64})::Cvoid
 end
 
-function onemklDamin(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklDamin(device_queue::syclQueue_t, n::Int64,
-                             x::ZePtr{Cdouble}, incx::Int64, result::RefOrZeRef{Int64})::Cvoid
+function onemklSamin(n, x, incx, result)
+    queue, dev, ctx = getSyclObjects(x)
+    @ccall liboneapi_support.onemklSamin(queue::syclQueue_t, dev::syclDevice_t, ctx::syclContext_t, n::Int64,
+                             x::ZePtr{Cfloat}, incx::Int64, result::Ref{Int64})::Cvoid
 end
 
-function onemklCamin(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklCamin(device_queue::syclQueue_t, n::Int64,
-                             x::ZePtr{ComplexF32}, incx::Int64,result::RefOrZeRef{Int64})::Cvoid
+function onemklDamin(n, x, incx, result)
+    queue, dev, ctx = getSyclObjects(x)
+    @ccall liboneapi_support.onemklDamin(queue::syclQueue_t, dev::syclDevice_t, ctx::syclContext_t, n::Int64,
+                             x::ZePtr{Cdouble}, incx::Int64, result::Ref{Int64})::Cvoid
 end
 
-function onemklZamin(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklZamin(device_queue::syclQueue_t, n::Int64,
-                             x::ZePtr{ComplexF64}, incx::Int64, result::RefOrZeRef{Int64})::Cvoid
+function onemklCamin(n, x, incx, result)
+    queue, dev, ctx = getSyclObjects(x)
+    @ccall liboneapi_support.onemklCamin(queue::syclQueue_t, dev::syclDevice_t, ctx::syclContext_t, n::Int64,
+                             x::ZePtr{ComplexF32}, incx::Int64,result::Ref{Int64})::Cvoid
+end
+
+function onemklZamin(n, x, incx, result)
+    queue, dev, ctx = getSyclObjects(x)
+    @ccall liboneapi_support.onemklZamin(queue::syclQueue_t, dev::syclDevice_t, ctx::syclContext_t, n::Int64,
+                             x::ZePtr{ComplexF64}, incx::Int64, result::Ref{Int64})::Cvoid
 end

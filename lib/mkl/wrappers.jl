@@ -28,12 +28,10 @@ for (fname, elty) in
      (:onemklZamax,:ComplexF64),
      (:onemklCamax,:ComplexF32))
     @eval begin
-        function iamax(n::Integer, x::StridedArray{$elty})
-            result = Ref{Clong}()
-            #result = StridedArray{oneArray(Int64)};
+        function iamax(x::oneStridedArray{$elty})
             n = length(x)
-            queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
+            result = Ref{Clong}()
+            $fname(n, x, stride(x, 1), result)
             return result[]
         end
     end
@@ -41,17 +39,15 @@ end
 
 ## iamin
 for (fname, elty) in
-    ((:onemklDamax,:Float64),
-     (:onemklSamax,:Float32),
-     (:onemklZamax,:ComplexF64),
-     (:onemklCamax,:ComplexF32))
+    ((:onemklDamin,:Float64),
+     (:onemklSamin,:Float32),
+     (:onemklZamin,:ComplexF64),
+     (:onemklCamin,:ComplexF32))
     @eval begin
-        function iamin(n::Integer, x::StridedArray{$elty})
-            result = Ref{Clong}()
-            #result = StridedArray{oneArray(Int64)};
+        function iamin(x::StridedArray{$elty})
             n = length(x)
-            queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
+            result = Ref{Clong}()
+            $fname(n, x, stride(x, 1), result)
             return result[]
         end
     end

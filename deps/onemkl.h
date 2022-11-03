@@ -39,15 +39,15 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                 const double _Complex *B, int64_t ldb, double _Complex beta,
                 double _Complex *C, int64_t ldc);
 
-void onemklDamax(syclQueue_t device_queue, int64_t n, const double *x, int64_t incx, int64_t *result);
-void onemklSamax(syclQueue_t device_queue, int64_t n, const float  *x, int64_t incx, int64_t *result);
-void onemklZamax(syclQueue_t device_queue, int64_t n, const double _Complex *x, int64_t incx, int64_t *result);
-void onemklCamax(syclQueue_t device_queue, int64_t n, const float _Complex *x, int64_t incx, int64_t *result);
+void onemklDamax(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx, int64_t n, const double *x, int64_t incx, int64_t *result);
+void onemklSamax(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx, int64_t n, const float  *x, int64_t incx, int64_t *result);
+void onemklZamax(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx, int64_t n, const double _Complex *x, int64_t incx, int64_t *result);
+void onemklCamax(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx, int64_t n, const float _Complex *x, int64_t incx, int64_t *result);
 
-void onemklDamin(syclQueue_t device_queue, int64_t n, const double *x, int64_t incx, int64_t *result);
-void onemklSamin(syclQueue_t device_queue, int64_t n, const float  *x, int64_t incx, int64_t *result);
-void onemklZamin(syclQueue_t device_queue, int64_t n, const double _Complex *x, int64_t incx, int64_t *result);
-void onemklCamin(syclQueue_t device_queue, int64_t n, const float _Complex *x, int64_t incx, int64_t *result);
+void onemklDamin(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx, int64_t n, const double *x, int64_t incx, int64_t *result);
+void onemklSamin(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx, int64_t n, const float  *x, int64_t incx, int64_t *result);
+void onemklZamin(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx, int64_t n, const double _Complex *x, int64_t incx, int64_t *result);
+void onemklCamin(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx, int64_t n, const float _Complex *x, int64_t incx, int64_t *result);
 
 void onemklDestroy();
 #ifdef __cplusplus

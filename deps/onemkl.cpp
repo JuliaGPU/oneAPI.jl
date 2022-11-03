@@ -81,38 +81,70 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
     return 0;
 }
 
-extern "C" void onemklDamax(syclQueue_t device_queue, int64_t n, const double *x, int64_t incx, int64_t *result)
-{
-    //printf("Hello World\n\n");
-    printf("n %ld, incx %ld, x %p\n", n, incx, x);
-    int64_t r=0;
-    oneapi::mkl::blas::column_major::iamax(device_queue->val, n, x, incx, &r);
+extern "C" void onemklDamax(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx,
+                            int64_t n, const double *x, int64_t incx, int64_t *result){
+    auto result_p = sycl::malloc_shared<int64_t>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::iamax(device_queue->val, n, x, incx, result_p);
+    status.wait();
+    // Julia array index starts with '1' not '0'
+    *result = (*result_p) + 1;
 }
-extern "C" void onemklSamax(syclQueue_t device_queue, int64_t n, const float  *x, int64_t incx, int64_t *result){
-    oneapi::mkl::blas::column_major::iamax(device_queue->val, n, x, incx, result);
+extern "C" void onemklSamax(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx,
+                            int64_t n, const float  *x, int64_t incx, int64_t *result){
+    auto result_p = sycl::malloc_shared<int64_t>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::iamax(device_queue->val, n, x, incx, result_p);
+    status.wait();
+    // Julia array index starts with '1' not '0'
+    *result = (*result_p)+1;
 }
-extern "C" void onemklZamax(syclQueue_t device_queue, int64_t n, const double _Complex *x, int64_t incx, int64_t *result){
-    oneapi::mkl::blas::column_major::iamax(device_queue->val, n, reinterpret_cast<const std::complex<double> *>(x), incx, result);
+extern "C" void onemklZamax(syclQueue_t device_queue, syclDevice_t dev, syclContext_t ctx,
+                            int64_t n, const double _Complex *x, int64_t incx, int64_t *result){
+    auto result_p = sycl::malloc_shared<int64_t>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::iamax(device_queue->val, n, reinterpret_cast<const std::complex<double> *>(x), incx, result_p);
+    status.wait();
+    // Julia array index starts with '1' not '0'
+    *result = (*result_p) + 1;
 }
-extern "C" void onemklCamax(syclQueue_t device_queue, int64_t n, const float _Complex *x, int64_t incx, int64_t *result){
-    oneapi::mkl::blas::column_major::iamax(device_queue->val, n, reinterpret_cast<const std::complex<float> *>(x), incx, result);
+extern "C" void onemklCamax(syclQueue_t device_queue,  syclDevice_t dev, syclContext_t ctx,
+                            int64_t n, const float _Complex *x, int64_t incx, int64_t *result){
+    auto result_p = sycl::malloc_shared<int64_t>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::iamax(device_queue->val, n, reinterpret_cast<const std::complex<float> *>(x), incx, result_p);
+    status.wait();
+    // Julia array index starts with '1' not '0'
+    *result = (*result_p) + 1;
 }
 
-extern "C" void onemklDamin(syclQueue_t device_queue, int64_t n, const double *x, int64_t incx, int64_t *result)
-{
-    //printf("Hello World\n\n");
-    //printf("n %ld, incx %ld, x %p\n", n, incx, x);
-    int64_t r=0;
-    oneapi::mkl::blas::column_major::iamin(device_queue->val, n, x, incx, &r);
+extern "C" void onemklDamin(syclQueue_t device_queue,  syclDevice_t dev, syclContext_t ctx,
+                            int64_t n, const double *x, int64_t incx, int64_t *result){
+    auto result_p = sycl::malloc_shared<int64_t>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::iamin(device_queue->val, n, x, incx, result_p);
+    status.wait();
+    // Julia array index starts with '1' not '0'
+    *result = (*result_p) + 1;
 }
-extern "C" void onemklSamin(syclQueue_t device_queue, int64_t n, const float  *x, int64_t incx, int64_t *result){
-    oneapi::mkl::blas::column_major::iamin(device_queue->val, n, x, incx, result);
+extern "C" void onemklSamin(syclQueue_t device_queue,  syclDevice_t dev, syclContext_t ctx,
+                            int64_t n, const float  *x, int64_t incx, int64_t *result){
+    auto result_p = sycl::malloc_shared<int64_t>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::iamin(device_queue->val, n, x, incx, result_p);
+    status.wait();
+    // Julia array index starts with '1' not '0'
+    *result = (*result_p) + 1;
 }
-extern "C" void onemklZamin(syclQueue_t device_queue, int64_t n, const double _Complex *x, int64_t incx, int64_t *result){
-    oneapi::mkl::blas::column_major::iamin(device_queue->val, n, reinterpret_cast<const std::complex<double> *>(x), incx, result);
+extern "C" void onemklZamin(syclQueue_t device_queue,  syclDevice_t dev, syclContext_t ctx,
+                            int64_t n, const double _Complex *x, int64_t incx, int64_t *result){
+    auto result_p = sycl::malloc_shared<int64_t>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::iamin(device_queue->val, n, reinterpret_cast<const std::complex<double> *>(x), incx, result_p);
+    status.wait();
+    // Julia array index starts with '1' not '0'
+    *result = (*result_p) + 1;
 }
-extern "C" void onemklCamin(syclQueue_t device_queue, int64_t n, const float _Complex *x, int64_t incx, int64_t *result){
-    oneapi::mkl::blas::column_major::iamin(device_queue->val, n, reinterpret_cast<const std::complex<float> *>(x), incx, result);
+extern "C" void onemklCamin(syclQueue_t device_queue,  syclDevice_t dev, syclContext_t ctx,
+                            int64_t n, const float _Complex *x, int64_t incx, int64_t *result){
+    auto result_p = sycl::malloc_shared<int64_t>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::iamin(device_queue->val, n, reinterpret_cast<const std::complex<float> *>(x), incx, result_p);
+    status.wait();
+    // Julia array index starts with '1' not '0'
+    *result = (*result_p) + 1;
 }
 
 // other
