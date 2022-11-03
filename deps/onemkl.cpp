@@ -102,8 +102,11 @@ extern "C" void onemklCnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDev
     *result = *result_p;
 }
 
-extern "C" void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _Complex *x, int64_t incx, double *result) {
-    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, reinterpret_cast<const std::complex<double> *>(x), incx, result);
+extern "C" void onemklZnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDevice_t dev, int64_t n, const double _Complex *x, int64_t incx, double *result) {
+    auto result_p = sycl::malloc_shared<double>(1, dev->val, ctx->val);
+    auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, reinterpret_cast<const std::complex<double> *>(x), incx, result_p);
+    status.wait();
+    *result = *result_p;
 }
 
 // other
