@@ -22,11 +22,11 @@ for (fname, elty, ret_type) in
 		 (:onemklCnrm2, :ComplexF32,:Float32),
 		 (:onemklZnrm2, :ComplexF64,:Float64))
 	@eval begin
-		function nrm2!(n::Integer, 
+		function nrm2(n::Integer, 
 					   x::StridedArray{$elty})
 				queue = global_queue(context(x), device(x))
                 result = Ref{$ret_type}()
-                $fname(sycl_queue(queue), n, x, stride(x,1), result)
+                $fname(sycl_queue(queue), sycl_context(context(x), device(x)), sycl_device(device(x)), n, x, stride(x,1), result)
                 return result[]
 		end
 	end

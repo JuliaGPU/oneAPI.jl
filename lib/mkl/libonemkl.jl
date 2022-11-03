@@ -1,4 +1,5 @@
 using CEnum
+using oneAPI.SYCL: syclQueue_t, syclContext_t, syclDevice_t
 
 @cenum onemklTranspose::UInt32 begin
     ONEMKL_TRANSPOSE_NONTRANS = 0
@@ -42,12 +43,12 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
                                     C::ZePtr{ComplexF64}, ldc::Int64)::Cint
 end
 
-function onemklDnrm2(device_queue, n, x, incx, result)
-	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{Cdouble}, incx::Int64, result::Ptr{Cdouble})::Cvoid
+function onemklDnrm2(device_queue, ctx, dev, n, x, incx, result)
+	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, ctx::syclContext_t, dev::syclDevice_t, n::Int64, x::ZePtr{Cdouble}, incx::Int64, result::Ref{Cdouble})::Cvoid
 end
 
-function onemklSnrm2(device_queue, n, x, incx, result)
-	@ccall liboneapi_support.onemklSnrm2(device_queue::syclQueue_t, n::Int64, x::ZePtr{Cfloat}, incx::Int64, result::Ptr{Cfloat})::Cvoid
+function onemklSnrm2(device_queue, ctx, dev, n, x, incx, result)
+	@ccall liboneapi_support.onemklSnrm2(device_queue::syclQueue_t, ctx::syclContext_t, dev::syclDevice_t, n::Int64, x::ZePtr{Cfloat}, incx::Int64, result::Ref{Cfloat})::Cvoid
 end
 
 function onemklCnrm2(device_queue, n, x, incx, result)

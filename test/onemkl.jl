@@ -11,6 +11,8 @@ k = 13
 	@testset for T in eltypes
 		if T <:oneMKL.onemklFloat
 			A = rand(T,m)
+			gpuA = oneArray(A)
+			#println(oneMKL.nrm2!(m, gpuA))
 			@test testf(norm, A, m)
 		end
 	end
