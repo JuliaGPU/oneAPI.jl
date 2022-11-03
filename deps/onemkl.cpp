@@ -81,6 +81,9 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
     return 0;
 }
 
+extern "C" void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha, const float *x, std::int64_t incx, float *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x, incx, y, incy);
+}
 
 // other
 

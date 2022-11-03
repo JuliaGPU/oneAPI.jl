@@ -14,8 +14,26 @@ function Base.convert(::Type{onemklTranspose}, trans::Char)
     end
 end
 
-
-
+# level 1
+## axpy
+for (fname, elty) in 
+        ((:onemklDaxpy,:Float64),
+        (:onemklSaxpy,:Float32),
+        (:onemklZaxpy,:ComplexF64),
+        (:onemklCaxpy,:ComplexF32))
+    @eval begin
+        function axpy!(n::Integer,
+                       alpha::Number,
+                       x::StridedArray{$elty},
+                       y::StridedArray{$elty}
+                      )
+            queue = global_queue(context(x), device(x))
+            alpha = $elty(alpha)
+            $fname(sycl_queue(queue), n, alpha, x, stride(x,1), y, stride(y,1))
+            y
+        end
+    end
+end
 #
 # BLAS
 #

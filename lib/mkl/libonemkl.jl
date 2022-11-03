@@ -41,3 +41,7 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
                                     B::ZePtr{ComplexF64}, ldb::Int64, beta::ComplexF64,
                                     C::ZePtr{ComplexF64}, ldc::Int64)::Cint
 end
+
+function onemklSaxpy(device_queue, n, alpha, x, incx, y, incy)
+    @ccall liboneapi_support.onemklSaxpy(device_queue::syclQueue_t, n::Int64, alpha::Cfloat, x::ZePtr{Cfloat}, incx::Int64, y::ZePtr{Cfloat}, incy::Int64)::Cvoid
+end
