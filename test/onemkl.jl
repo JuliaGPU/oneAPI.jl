@@ -9,7 +9,7 @@ k = 13
 #####
 @testset "level 1" begin
     @testset for T in eltypes
-        if T === Float32
+        if T <:oneMKL.onemklFloat
             A = rand(T,m)
 			B = rand(T, m)
             #gpuA = oneArray(A)

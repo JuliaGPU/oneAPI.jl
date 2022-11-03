@@ -45,3 +45,11 @@ end
 function onemklSaxpy(device_queue, n, alpha, x, incx, y, incy)
     @ccall liboneapi_support.onemklSaxpy(device_queue::syclQueue_t, n::Int64, alpha::Cfloat, x::ZePtr{Cfloat}, incx::Int64, y::ZePtr{Cfloat}, incy::Int64)::Cvoid
 end
+
+function onemklDaxpy(device_queue, n, alpha, x, incx, y, incy)
+    @ccall liboneapi_support.onemklDaxpy(device_queue::syclQueue_t, n::Int64, alpha::Cdouble, x::ZePtr{Cdouble}, incx::Int64, y::ZePtr{Cdouble}, incy::Int64)::Cvoid
+end
+
+function onemklCaxpy(device_queue, n, alpha, x, incx, y, incy)
+    @ccall liboneapi_support.onemklCaxpy(device_queue::syclQueue_t, n::Int64, alpha::ComplexF32, x::ZePtr{ComplexF32}, incx::Int64, y::ZePtr{ComplexF32}, incy::Int64)::Cvoid
+end

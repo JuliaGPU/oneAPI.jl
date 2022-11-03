@@ -85,6 +85,14 @@ extern "C" void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha, co
     oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x, incx, y, incy);
 }
 
+extern "C" void onemklDaxpy(syclQueue_t device_queue, int64_t n, double alpha, const double *x, std::int64_t incx, double *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x, incx, y, incy);
+}
+
+extern "C" void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex alpha, const float _Complex *x, std::int64_t incx, float _Complex *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, reinterpret_cast<const std::complex<float> *>(x), incx, reinterpret_cast<std::complex<float> *>(y), incy);
+}
+
 // other
 
 // oneMKL keeps a cache of SYCL queues and tries to destroy them when unloading the library.
