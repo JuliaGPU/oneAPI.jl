@@ -12,10 +12,7 @@ k = 13
         if T <:oneMKL.onemklFloat
             A = rand(T,m)
 			B = rand(T, m)
-            #gpuA = oneArray(A)
-            #gpuB = oneArray{T}(undef, m)
             alpha = rand()
-            #oneMKL.axpy!(m, alpha, gpuA, gpuB)
 			@test testf(axpy!, alpha, A, B)
         end
     end
