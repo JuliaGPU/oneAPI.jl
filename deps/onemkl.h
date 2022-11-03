@@ -42,7 +42,7 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
 void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha, const float *x, int64_t incx, float *y, int64_t incy);
 void onemklDaxpy(syclQueue_t device_queue, int64_t n, double alpha, const double *x, int64_t incx, double *y, int64_t incy);
 void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex alpha, const float _Complex *x, int64_t incx, float _Complex *y, int64_t incy);
-
+void onemklZaxpy(syclQueue_t device_queue, int64_t n, double _Complex alpha, const double _Complex *x, int64_t incx, double _Complex *y, int64_t incy);
 
 void onemklDestroy();
 #ifdef __cplusplus

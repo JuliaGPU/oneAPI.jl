@@ -53,3 +53,7 @@ end
 function onemklCaxpy(device_queue, n, alpha, x, incx, y, incy)
     @ccall liboneapi_support.onemklCaxpy(device_queue::syclQueue_t, n::Int64, alpha::ComplexF32, x::ZePtr{ComplexF32}, incx::Int64, y::ZePtr{ComplexF32}, incy::Int64)::Cvoid
 end
+
+function onemklZaxpy(device_queue, n, alpha, x, incx, y, incy)
+    @ccall liboneapi_support.onemklZaxpy(device_queue::syclQueue_t, n::Int64, alpha::ComplexF64, x::ZePtr{ComplexF64}, incx::Int64, y::ZePtr{ComplexF64}, incy::Int64)::Cvoid
+end
