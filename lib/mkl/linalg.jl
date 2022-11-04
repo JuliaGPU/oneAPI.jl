@@ -49,7 +49,7 @@ function gemm_dispatch!(C::oneStridedVecOrMat, A, B, alpha::Number=true, beta::N
     end
 end
 
-function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{<:onemklFloat}, y::oneStridedVecOrMat{<:onemklFloat}) where T<:Union{Float16, ComplexF16, onemklFloat}
+function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{<:onemklFloat}, y::oneStridedVecOrMat{<:onemklFloat}) where T<:Union{onemklFloat}
     length(x)==length(y) || throw(DimensionMismatch("axpy arguments have lengths $(length(x)) and $(length(y))"))
     oneMKL.axpy!(length(x), alpha, x, y)
 end

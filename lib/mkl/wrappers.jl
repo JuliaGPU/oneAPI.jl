@@ -24,8 +24,8 @@ for (fname, elty) in
     @eval begin
         function axpy!(n::Integer,
                        alpha::Number,
-                       x::StridedArray{$elty},
-                       y::StridedArray{$elty}
+                       x::oneStridedArray{$elty},
+                       y::oneStridedArray{$elty}
                       )
             queue = global_queue(context(x), device(x))
             alpha = $elty(alpha)
