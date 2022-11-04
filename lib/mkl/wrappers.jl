@@ -24,7 +24,7 @@ for (fname, elty) in
     @eval begin
     	function scal!(n::Integer,
                        alpha::Number,
-                       x::StridedArray{$elty})
+                       x::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
             alpha = $elty(alpha)
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
