@@ -16,7 +16,7 @@ k = 13
         @test Array(A) == Array(B)
 		
 		# Test axpy primitive
-		alpha = rand()
-		@test testf(axpy!, alpha, rand(T,m), rand(T,m))
+		alpha = rand(T,1)
+		@test testf(axpy!, alpha[1], rand(T,m), rand(T,m))
     end # level 1 testset
 end
