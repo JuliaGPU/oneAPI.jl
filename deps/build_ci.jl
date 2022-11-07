@@ -12,7 +12,7 @@ support_dir = get_scratch!(oneAPI, "support")
 # is this a full-fledged check-out?
 if isdir(joinpath(@__DIR__), "..", ".git")
     # determine latest change to the wrappers
-    deps_timestamp = parse(Int, read(`$(git()) -C $(@__DIR__) log -1 --format=%ct .`, String))
+    deps_timestamp = parse(Int, read(`$(git()) -C $(@__DIR__) log -1 --format=%ct src`, String))
     @info "Latest change to the wrappers: $(unix2datetime(deps_timestamp))"
 
     # find out which version of oneAPI_Support_jll we are using
