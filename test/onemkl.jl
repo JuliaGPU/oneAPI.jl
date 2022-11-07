@@ -1,7 +1,5 @@
 using oneAPI
 using oneAPI.oneMKL
-<<<<<<< HEAD
-=======
 
 using LinearAlgebra
 
