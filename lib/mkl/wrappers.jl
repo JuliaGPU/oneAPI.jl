@@ -23,12 +23,12 @@ for (fname, elty, ret_type) in
 		 (:onemklZnrm2, :ComplexF64,:Float64))
 	@eval begin
 		function nrm2(n::Integer, 
-					x::oneStridedArray{$elty})
-                queue = global_queue(context(x), device(x))
-                result = oneArray{$ret_type}([0]);
-                $fname(sycl_queue(queue), sycl_context(context(x), device(x)), sycl_device(device(x)), n, x, stride(x,1), result)
-                res = Array(result)
-                return res[1]
+                      x::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            result = oneArray{$ret_type}([0]);
+            $fname(sycl_queue(queue), sycl_context(context(x), device(x)), sycl_device(device(x)), n, x, stride(x,1), result)            
+            res = Array(result)
+            return res[1]
 		end
 	end
 end
