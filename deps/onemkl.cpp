@@ -118,7 +118,6 @@ extern "C" void onemklCcopy(syclQueue_t device_queue, int64_t n, const float _Co
     oneapi::mkl::blas::column_major::copy(device_queue->val, n, 
         reinterpret_cast<const std::complex<float> *>(x), incx, 
         reinterpret_cast<std::complex<float> *>(y), incy);
->>>>>>> master
 }
 
 // other
