@@ -95,6 +95,30 @@ extern "C" void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex 
 
 extern "C" void onemklZaxpy(syclQueue_t device_queue, int64_t n, double _Complex alpha, const double _Complex *x, std::int64_t incx, double _Complex *y, int64_t incy) {
     oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, reinterpret_cast<const std::complex<double> *>(x), incx, reinterpret_cast<std::complex<double> *>(y), incy);
+
+extern "C" void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
+                            int64_t incx, double *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::copy(device_queue->val, n, x, incx, y, incy);
+}
+
+extern "C" void onemklScopy(syclQueue_t device_queue, int64_t n, const float *x,
+                            int64_t incx, float *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::copy(device_queue->val, n, x, incx, y, incy);
+}
+
+extern "C" void onemklZcopy(syclQueue_t device_queue, int64_t n, const double _Complex *x,
+                            int64_t incx, double _Complex *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::copy(device_queue->val, n,
+        reinterpret_cast<const std::complex<double> *>(x), incx,
+        reinterpret_cast<std::complex<double> *>(y), incy);
+}
+
+extern "C" void onemklCcopy(syclQueue_t device_queue, int64_t n, const float _Complex *x,
+                            int64_t incx, float _Complex *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::copy(device_queue->val, n, 
+        reinterpret_cast<const std::complex<float> *>(x), incx, 
+        reinterpret_cast<std::complex<float> *>(y), incy);
+>>>>>>> master
 }
 
 // other
