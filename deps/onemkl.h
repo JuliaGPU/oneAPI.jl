@@ -45,6 +45,14 @@ void onemklSnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDevice_t dev, 
 void onemklCnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDevice_t dev, int64_t n, const float _Complex *x, int64_t incx, float *result);
 void onemklZnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDevice_t dev, int64_t n, const double _Complex *x, int64_t incx, double *result);
 
+void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
+                 int64_t incx, double *y, int64_t incy);
+void onemklScopy(syclQueue_t device_queue, int64_t n, const float *x,
+                 int64_t incx, float *y, int64_t incy);
+void onemklZcopy(syclQueue_t device_queue, int64_t n, const double _Complex *x,
+                 int64_t incx, double _Complex *y, int64_t incy);
+void onemklCcopy(syclQueue_t device_queue, int64_t n, const float _Complex *x,
+                 int64_t incx, float _Complex *y, int64_t incy);
 void onemklDestroy();
 #ifdef __cplusplus
 }

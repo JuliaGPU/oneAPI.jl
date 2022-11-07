@@ -75,9 +75,9 @@ version = "0.1.2"
 
 [[GPUCompiler]]
 deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "ebb892e1df16040a845e1d11087e4fbfe10323a8"
+git-tree-sha1 = "76f70a337a153c1632104af19d29023dbb6f30dd"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.16.4"
+version = "0.16.6"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -298,10 +298,10 @@ uuid = "13eca655-d68d-5b81-8367-6d99d727ab01"
 version = "1.8.5+0"
 
 [[oneAPI_Support_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "2d158bce0dd1a7a0e0efee1c10936c33762f9057"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "oneAPI_Level_Zero_Loader_jll"]
+git-tree-sha1 = "c2e8a61242bd2f2873ef947d7ac4e0792a1a4d10"
 uuid = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
-version = "0.1.0+0"
+version = "0.1.1+0"
 
 [[p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
