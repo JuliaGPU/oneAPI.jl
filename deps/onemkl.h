@@ -47,6 +47,14 @@ void onemklCsscal(syclQueue_t device_queue, int64_t n, float alpha, float _Compl
 void onemklZscal(syclQueue_t device_queue, int64_t n, double _Complex alpha, double _Complex *x, int64_t incx);
 void onemklZdscal(syclQueue_t device_queue, int64_t n, double alpha, double _Complex *x, int64_t incx);
 
+void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
+                 int64_t incx, double *y, int64_t incy);
+void onemklScopy(syclQueue_t device_queue, int64_t n, const float *x,
+                 int64_t incx, float *y, int64_t incy);
+void onemklZcopy(syclQueue_t device_queue, int64_t n, const double _Complex *x,
+                 int64_t incx, double _Complex *y, int64_t incy);
+void onemklCcopy(syclQueue_t device_queue, int64_t n, const float _Complex *x,
+                 int64_t incx, float _Complex *y, int64_t incy);
 void onemklDestroy();
 #ifdef __cplusplus
 }
