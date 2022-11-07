@@ -28,8 +28,8 @@ for (fname, elty, ret_type) in
             $fname(sycl_queue(queue), sycl_context(context(x), device(x)), sycl_device(device(x)), n, x, stride(x,1), result)            
             res = Array(result)
             return res[1]
-		end
-	end
+        end
+    end
 end
 
 #
