@@ -40,17 +40,13 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                 double _Complex *C, int64_t ldc);
 
 // Supported Level-1: Nrm2
-void onemklDnrm2(syclQueue_t device_queue, syclContext_t ctx, 
-                 syclDevice_t dev, int64_t n, const double *x, 
+void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, 
                  int64_t incx, double *result);
-void onemklSnrm2(syclQueue_t device_queue, syclContext_t ctx, 
-                 syclDevice_t dev, int64_t n, const float *x, 
+void onemklSnrm2(syclQueue_t device_queue, int64_t n, const float *x, 
                  int64_t incx, float *result);
-void onemklCnrm2(syclQueue_t device_queue, syclContext_t ctx, 
-                 syclDevice_t dev, int64_t n, const float _Complex *x, 
+void onemklCnrm2(syclQueue_t device_queue, int64_t n, const float _Complex *x, 
                  int64_t incx, float *result);
-void onemklZnrm2(syclQueue_t device_queue, syclContext_t ctx, 
-                 syclDevice_t dev, int64_t n, const double _Complex *x, 
+void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _Complex *x, 
                  int64_t incx, double *result);
 
 void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,

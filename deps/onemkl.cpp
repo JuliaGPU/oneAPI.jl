@@ -81,24 +81,24 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
     return 0;
 }
 
-extern "C" void onemklDnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDevice_t dev, 
-                            int64_t n, const double *x, int64_t incx, double *result) {
+extern "C" void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, 
+                            int64_t incx, double *result) {
     oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
 }
 
-extern "C" void onemklSnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDevice_t dev, 
-                            int64_t n, const float *x, int64_t incx, float *result) {
+extern "C" void onemklSnrm2(syclQueue_t device_queue, int64_t n, const float *x, 
+                            int64_t incx, float *result) {
     oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
 }
 
-extern "C" void onemklCnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDevice_t dev, 
-                            int64_t n, const float _Complex *x, int64_t incx, float *result) {   
+extern "C" void onemklCnrm2(syclQueue_t device_queue, int64_t n, const float _Complex *x, 
+                            int64_t incx, float *result) {   
     oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, 
                     reinterpret_cast<const std::complex<float> *>(x), incx, result);
 }
 
-extern "C" void onemklZnrm2(syclQueue_t device_queue, syclContext_t ctx, syclDevice_t dev, 
-                            int64_t n, const double _Complex *x, int64_t incx, double *result) {
+extern "C" void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _Complex *x, 
+                            int64_t incx, double *result) {
     oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, 
                     reinterpret_cast<const std::complex<double> *>(x), incx, result);
 }
