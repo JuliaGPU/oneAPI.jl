@@ -15,6 +15,7 @@ k = 13
         oneMKL.copy!(m,A,B)
         @test Array(A) == Array(B)
 		
+		# Test axpy primitive
 		alpha = rand()
 		@test testf(axpy!, alpha, rand(T,m), rand(T,m))
     end # level 1 testset

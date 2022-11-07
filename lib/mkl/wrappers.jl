@@ -15,7 +15,7 @@ function Base.convert(::Type{onemklTranspose}, trans::Char)
 end
 
 # level 1
-## axpy
+## axpy primitive
 for (fname, elty) in 
         ((:onemklDaxpy,:Float64),
         (:onemklSaxpy,:Float32),
