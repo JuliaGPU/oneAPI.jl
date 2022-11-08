@@ -49,11 +49,7 @@ function gemm_dispatch!(C::oneStridedVecOrMat, A, B, alpha::Number=true, beta::N
     end
 end
 
-LinearAlgebra.norm(x::oneStridedVecOrMat{<:onemklFloat}, n::Number) = 
-    oneMKL.nrm2(length(x), x)
-
-LinearAlgebra.norm(x::oneStridedVecOrMat{<:onemklFloat}, n::Real) = 
-    invoke(norm, Tuple{typeof(x), Number}, x, n)
+LinearAlgebra.norm(x::oneStridedVecOrMat{<:onemklFloat}) = oneMKL.nrm2(length(x), x)
 
 for NT in (Number, Real)
     # NOTE: alpha/beta also ::Real to avoid ambiguities with certain Base methods
