@@ -1,6 +1,10 @@
 # build liboneapi_support with C wrappers for C++ APIs
 
-using Pkg, Scratch, Preferences, CMake_jll, oneAPI_Level_Zero_Headers_jll
+using Pkg
+Pkg.activate(@__DIR__)
+Pkg.instantiate()
+
+using Scratch, Preferences, CMake_jll, oneAPI_Level_Zero_Headers_jll
 
 oneAPI = Base.UUID("8f75cd03-7ff8-4ecb-9b8f-daf728133b1b")
 
