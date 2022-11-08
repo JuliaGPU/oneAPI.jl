@@ -122,6 +122,7 @@ extern "C" void onemklZdscal(syclQueue_t device_queue, int64_t n,
   oneapi::mkl::blas::column_major::scal(
       device_queue->val, n, alpha, reinterpret_cast<std::complex<double> *>(x),
       incx);
+}
 
 extern "C" void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
                             int64_t incx, double *y, int64_t incy) {
