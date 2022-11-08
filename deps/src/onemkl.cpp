@@ -83,24 +83,28 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
 
 extern "C" void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, 
                             int64_t incx, double *result) {
-    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
+    auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
+    status.wait();
 }
 
 extern "C" void onemklSnrm2(syclQueue_t device_queue, int64_t n, const float *x, 
                             int64_t incx, float *result) {
-    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
+    auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
+    status.wait();
 }
 
 extern "C" void onemklCnrm2(syclQueue_t device_queue, int64_t n, const float _Complex *x, 
                             int64_t incx, float *result) {   
-    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, 
+    auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, 
                     reinterpret_cast<const std::complex<float> *>(x), incx, result);
+    status.wait();
 }
 
 extern "C" void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _Complex *x, 
                             int64_t incx, double *result) {
-    oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, 
+    auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, 
                     reinterpret_cast<const std::complex<double> *>(x), incx, result);
+    status.wait();
 }
 
 extern "C" void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
