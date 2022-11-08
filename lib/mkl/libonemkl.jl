@@ -81,3 +81,43 @@ function onemklCcopy(device_queue, n, x, incx, y, incy)
                                 x::ZePtr{ComplexF32}, incx::Int64,
                                 y::ZePtr{ComplexF32}, incy::Int64)::Cvoid
 end
+
+function onemklSamax(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklSamax(device_queue::syclQueue_t, n::Int64,
+                             x::ZePtr{Cfloat}, incx::Int64, result::ZePtr{Int64})::Cvoid
+end
+
+function onemklDamax(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklDamax(device_queue::syclQueue_t, n::Int64,
+                             x::ZePtr{Cdouble}, incx::Int64, result::ZePtr{Int64})::Cvoid
+end
+
+function onemklCamax(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklCamax(device_queue::syclQueue_t, n::Int64,
+                             x::ZePtr{ComplexF32}, incx::Int64,result::ZePtr{Int64})::Cvoid
+end
+
+function onemklZamax(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklZamax(device_queue::syclQueue_t, n::Int64,
+                             x::ZePtr{ComplexF64}, incx::Int64, result::ZePtr{Int64})::Cvoid
+end
+
+function onemklSamin(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklSamin(device_queue::syclQueue_t, n::Int64,
+                             x::ZePtr{Cfloat}, incx::Int64, result::ZePtr{Int64})::Cvoid
+end
+
+function onemklDamin(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklDamin(device_queue::syclQueue_t, n::Int64,
+                             x::ZePtr{Cdouble}, incx::Int64, result::ZePtr{Int64})::Cvoid
+end
+
+function onemklCamin(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklCamin(device_queue::syclQueue_t, n::Int64,
+                             x::ZePtr{ComplexF32}, incx::Int64,result::ZePtr{Int64})::Cvoid
+end
+
+function onemklZamin(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklZamin(device_queue::syclQueue_t, n::Int64,
+                             x::ZePtr{ComplexF64}, incx::Int64, result::ZePtr{Int64})::Cvoid
+end

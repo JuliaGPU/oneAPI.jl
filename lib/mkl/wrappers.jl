@@ -56,6 +56,39 @@ for (fname, elty) in
     end
 end
 
+## iamax
+for (fname, elty) in
+    ((:onemklDamax,:Float64),
+     (:onemklSamax,:Float32),
+     (:onemklZamax,:ComplexF64),
+     (:onemklCamax,:ComplexF32))
+    @eval begin
+        function iamax(x::oneStridedArray{$elty})
+            n = length(x)
+            queue = global_queue(context(x), device(x))
+            result = oneArray{Int64}([0]);
+            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
+            return Array(result)[1]+1
+        end
+    end
+end
+
+## iamin
+for (fname, elty) in
+    ((:onemklDamin,:Float64),
+     (:onemklSamin,:Float32),
+     (:onemklZamin,:ComplexF64),
+     (:onemklCamin,:ComplexF32))
+    @eval begin
+        function iamin(x::StridedArray{$elty})
+            n = length(x)
+            result = oneArray{Int64}([0]);
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue),n, x, stride(x, 1), result)
+            return Array(result)[1]+1
+        end
+    end
+end
 
 # level 3
 
