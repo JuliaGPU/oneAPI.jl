@@ -18,15 +18,14 @@ end
 ## axpy primitive
 for (fname, elty) in 
         ((:onemklDaxpy,:Float64),
-        (:onemklSaxpy,:Float32),
-        (:onemklZaxpy,:ComplexF64),
-        (:onemklCaxpy,:ComplexF32))
+         (:onemklSaxpy,:Float32),
+         (:onemklZaxpy,:ComplexF64),
+         (:onemklCaxpy,:ComplexF32))
     @eval begin
         function axpy!(n::Integer,
                        alpha::Number,
                        x::oneStridedArray{$elty},
-                       y::oneStridedArray{$elty}
-                      )
+                       y::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
             alpha = $elty(alpha)
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1), y, stride(y,1))
@@ -34,6 +33,7 @@ for (fname, elty) in
         end
     end
 end
+
 #
 # BLAS
 #
