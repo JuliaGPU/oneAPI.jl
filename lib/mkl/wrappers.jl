@@ -17,12 +17,12 @@ end
 # level 1
 ## scal
 for (fname, elty) in
-	((:onemklDscal,:Float64),
-	 (:onemklSscal,:Float32),
-	 (:onemklZscal,:ComplexF64),
-	 (:onemklCscal,:ComplexF32))
+    ((:onemklDscal,:Float64),
+     (:onemklSscal,:Float32),
+     (:onemklZscal,:ComplexF64),
+     (:onemklCscal,:ComplexF32))
     @eval begin
-    	function scal!(n::Integer,
+        function scal!(n::Integer,
                        alpha::$elty,
                        x::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
