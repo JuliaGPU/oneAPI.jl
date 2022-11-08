@@ -1,7 +1,7 @@
 steps:
   # Julia versions
 
-  - label: "Julia 1.8 (development)"
+  - label: "Julia 1.8"
     plugins:
       - JuliaCI/julia#v1:
           version: 1.8
@@ -13,8 +13,7 @@ steps:
             - lib
             - examples
     command: |
-      julia --project=deps -e 'using Pkg; Pkg.instantiate()'
-      julia --project=deps deps/build_local.jl
+      julia --project=deps deps/build_ci.jl
     agents:
       queue: "juliagpu"
       intel: "*"
@@ -35,6 +34,8 @@ steps:
             - src
             - lib
             - examples
+    command: |
+      julia --project=deps deps/build_ci.jl
     agents:
       queue: "juliagpu"
       intel: "*"
@@ -52,6 +53,8 @@ steps:
             - src
             - lib
             - examples
+    command: |
+      julia --project=deps deps/build_ci.jl
     agents:
       queue: "juliagpu"
       intel: "*"
@@ -73,6 +76,8 @@ steps:
             - src
             - lib
             - examples
+    command: |
+      julia --project=deps deps/build_ci.jl
     env:
       ZE_ENABLE_VALIDATION_LAYER: '1'
       ZE_ENABLE_PARAMETER_VALIDATION: '1'

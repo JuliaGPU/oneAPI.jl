@@ -3,6 +3,16 @@ using Dates
 import REPL
 using Printf: @sprintf
 
+# work around JuliaLang/Pkg.jl#2500
+if VERSION < v"1.8"
+    test_project = first(Base.load_path())
+    preferences_file = joinpath(dirname(@__DIR__), "LocalPreferences.toml")
+    test_preferences_file = joinpath(dirname(test_project), "LocalPreferences.toml")
+    if isfile(preferences_file) && !isfile(test_preferences_file)
+        cp(preferences_file, test_preferences_file)
+    end
+end
+
 # parse some command-line arguments
 function extract_flag!(args, flag, default=nothing)
     for f in args
