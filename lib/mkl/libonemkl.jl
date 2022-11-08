@@ -43,27 +43,33 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
 end
 
 function onemklDscal(device_queue, n, alpha, x, incx)
-	@ccall liboneapi_support.onemklDscal(device_queue::syclQueue_t, n::Int64, alpha::Cdouble, x::ZePtr{Cdouble}, incx::Int64)::Cvoid
+	@ccall liboneapi_support.onemklDscal(device_queue::syclQueue_t, n::Int64, 
+                                        alpha::Cdouble, x::ZePtr{Cdouble}, incx::Int64)::Cvoid
 end
 
 function onemklSscal(device_queue, n, alpha, x, incx)
-	@ccall liboneapi_support.onemklSscal(device_queue::syclQueue_t, n::Int64, alpha::Cfloat, x::ZePtr{Cfloat}, incx::Int64)::Cvoid
+	@ccall liboneapi_support.onemklSscal(device_queue::syclQueue_t, n::Int64, 
+                                        alpha::Cfloat, x::ZePtr{Cfloat}, incx::Int64)::Cvoid
 end
 
 function onemklZscal(device_queue, n, alpha, x, incx)
-	@ccall liboneapi_support.onemklZscal(device_queue::syclQueue_t, n::Int64, alpha::ComplexF64, x::ZePtr{ComplexF64}, incx::Int64)::Cvoid
+	@ccall liboneapi_support.onemklZscal(device_queue::syclQueue_t, n::Int64, 
+                                        alpha::ComplexF64, x::ZePtr{ComplexF64}, incx::Int64)::Cvoid
 end
 
 function onemklZdscal(device_queue, n, alpha, x, incx)
-	@ccall liboneapi_support.onemklZdscal(device_queue::syclQueue_t, n::Int64, alpha::Cdouble, x::ZePtr{ComplexF64}, incx::Int64)::Cvoid
+	@ccall liboneapi_support.onemklZdscal(device_queue::syclQueue_t, n::Int64, 
+                                        alpha::Cdouble, x::ZePtr{ComplexF64}, incx::Int64)::Cvoid
 end
 
 function onemklCscal(device_queue, n, alpha, x, incx)
-	@ccall liboneapi_support.onemklCscal(device_queue::syclQueue_t, n::Int64, alpha::ComplexF32, x::ZePtr{ComplexF32}, incx::Int64)::Cvoid
+	@ccall liboneapi_support.onemklCscal(device_queue::syclQueue_t, n::Int64, 
+                                        alpha::ComplexF32, x::ZePtr{ComplexF32}, incx::Int64)::Cvoid
 end
 
 function onemklCsscal(device_queue, n, alpha, x, incx)
-	@ccall liboneapi_support.onemklCsscal(device_queue::syclQueue_t, n::Int64, alpha::Cfloat, x::ZePtr{ComplexF32}, incx::Int64)::Cvoid
+	@ccall liboneapi_support.onemklCsscal(device_queue::syclQueue_t, n::Int64, 
+                                        alpha::Cfloat, x::ZePtr{ComplexF32}, incx::Int64)::Cvoid
 end
 
 function onemklDcopy(device_queue, n, x, incx, y, incy)
