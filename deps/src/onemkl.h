@@ -66,6 +66,15 @@ void onemklZamin(syclQueue_t device_queue, int64_t n, const double _Complex *x, 
 void onemklCamin(syclQueue_t device_queue, int64_t n, const float _Complex *x, int64_t incx,
                  int64_t *result);
 
+void onemklSswap(syclQueue_t device_queue, int64_t n, float *x, int64_t incx,
+                float *y, int64_t incy);
+void onemklDswap(syclQueue_t device_queue, int64_t n, double *x, int64_t incx,
+                double *y, int64_t incy);
+void onemklCswap(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx,
+                float _Complex *y, int64_t incy);
+void onemklZswap(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx,
+                double _Complex *y, int64_t incy);
+
 void onemklDestroy();
 #ifdef __cplusplus
 }

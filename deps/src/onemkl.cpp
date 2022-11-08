@@ -151,6 +151,30 @@ extern "C" void onemklCamin(syclQueue_t device_queue, int64_t n, const float _Co
     status.wait();
 }
 
+extern "C" void onemklSswap(syclQueue_t device_queue, int64_t n, float *x, int64_t incx,\
+                            float *y, int64_t incy){
+    oneapi::mkl::blas::column_major::swap(device_queue->val, n, x, incx, y, incy);
+}
+
+extern "C" void onemklDswap(syclQueue_t device_queue, int64_t n, double *x, int64_t incx,
+                            double *y, int64_t incy){
+    oneapi::mkl::blas::column_major::swap(device_queue->val, n, x, incx, y, incy);
+}
+
+extern "C" void onemklCswap(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx,
+                            float _Complex *y, int64_t incy){
+    oneapi::mkl::blas::column_major::swap(device_queue->val, n,
+                            reinterpret_cast<std::complex<float> *>(x), incx,
+                            reinterpret_cast<std::complex<float> *>(y), incy);
+}
+
+extern "C" void onemklZswap(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx,
+                            double _Complex *y, int64_t incy){
+    oneapi::mkl::blas::column_major::swap(device_queue->val, n,
+                            reinterpret_cast<std::complex<double> *>(x), incx,
+                            reinterpret_cast<std::complex<double> *>(y), incy);
+}
+
 // other
 
 // oneMKL keeps a cache of SYCL queues and tries to destroy them when unloading the library.
