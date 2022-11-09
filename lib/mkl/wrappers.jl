@@ -38,6 +38,23 @@ for (fname, elty) in
     end
 end
 
+## asum
+for (fname, elty, ret_type) in 
+    ((:onemklSasum, :Float32, :Float32),
+     (:onemklDasum, :Float64, :Float64),
+     (:onemklCasum, :ComplexF32, :Float32),
+     (:onemklZasum, :ComplexF64, :Float64))
+    @eval begin
+        function asum(n::Integer,
+                      x::oneStridedArray{$elty})
+            result = oneArray{$ret_type}([0])
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
+            res = Array(result)
+            return res[1]
+        end
+    end
+end
 
 # level 3
 

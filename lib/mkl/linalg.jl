@@ -49,6 +49,9 @@ function gemm_dispatch!(C::oneStridedVecOrMat, A, B, alpha::Number=true, beta::N
     end
 end
 
+LinearAlgebra.BLAS.asum(x::oneStridedVecOrMat{<:onemklFloat}) = 
+oneMKL.asum(length(x), x)
+
 for NT in (Number, Real)
     # NOTE: alpha/beta also ::Real to avoid ambiguities with certain Base methods
     @eval begin
