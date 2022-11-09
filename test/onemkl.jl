@@ -28,13 +28,13 @@ k = 13
             if T === ComplexF32
                 alphaf32 = rand(Float32, 1)
                 oneMKL.scal!(m, alphaf32[1], gpuA)
-                @test isapprox(A .* alphaf32[1], Array(gpuA))
+                @test Array(A .* alphaf32[1]) ≈ Array(gpuA)
             end
 
             if T === ComplexF64
                 alphaf64 = rand(Float64, 1)
                 oneMKL.scal!(m, alphaf64[1], gpuA)
-                @test isapprox(A .* alphaf64[1], Array(gpuA))
+                @test Array(A .* alphaf64[1]) ≈ Array(gpuA)
             end	    
         end
     end # level 1 testset
