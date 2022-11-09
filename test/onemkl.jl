@@ -4,8 +4,6 @@ using oneAPI.oneMKL
 using LinearAlgebra
 
 m = 20
-n = 35
-k = 13
 
 ############################################################################################
 @testset "level 1" begin
@@ -18,6 +16,14 @@ k = 13
         @testset "nrm2" begin
             # Test nrm2 primitive
             @test testf(norm, rand(T,m))
+        end
+
+        @testset "iamax/iamin" begin
+            # testing oneMKL max and min
+            a = convert.(T, [1.0, 2.0, -0.8, 5.0, 3.0])
+            ca = oneArray(a)
+            @test BLAS.iamax(a)  == oneMKL.iamax(ca)
+            @test oneMKL.iamin(ca) == 3
         end
     end # level 1 testset
 end
