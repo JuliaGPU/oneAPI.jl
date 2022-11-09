@@ -15,9 +15,9 @@ k = 13
         oneMKL.copy!(m,A,B)
         @test Array(A) == Array(B)
 
-		@testset "nrm2" begin
-			# Test nrm2 primitive
-			@test testf(norm, rand(T,m))
-		end
+        @testset "nrm2" begin
+            # Test nrm2 primitive
+            @test testf(norm, rand(T,m))
+        end
     end # level 1 testset
 end

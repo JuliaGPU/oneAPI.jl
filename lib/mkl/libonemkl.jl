@@ -1,5 +1,4 @@
 using CEnum
-using oneAPI.SYCL: syclQueue_t, syclContext_t, syclDevice_t
 
 @cenum onemklTranspose::UInt32 begin
     ONEMKL_TRANSPOSE_NONTRANS = 0
