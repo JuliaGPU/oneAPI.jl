@@ -14,7 +14,23 @@ function Base.convert(::Type{onemklTranspose}, trans::Char)
     end
 end
 
-
+# level 1
+## nrm2
+for (fname, elty, ret_type) in
+    ((:onemklDnrm2, :Float64,:Float64),
+     (:onemklSnrm2, :Float32,:Float32),
+     (:onemklCnrm2, :ComplexF32,:Float32),
+     (:onemklZnrm2, :ComplexF64,:Float64))
+    @eval begin
+        function nrm2(n::Integer, x::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            result = oneArray{$ret_type}([0]);
+            $fname(sycl_queue(queue), n, x, stride(x,1), result)            
+            res = Array(result)
+            return res[1]
+        end
+    end
+end
 
 #
 # BLAS
