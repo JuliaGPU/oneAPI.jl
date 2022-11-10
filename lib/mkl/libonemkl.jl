@@ -58,6 +58,31 @@ function onemklZaxpy(device_queue, n, alpha, x, incx, y, incy)
     @ccall liboneapi_support.onemklZaxpy(device_queue::syclQueue_t, n::Int64, alpha::ComplexF64, x::ZePtr{ComplexF64}, incx::Int64, y::ZePtr{ComplexF64}, incy::Int64)::Cvoid
 end
 
+function onemklDnrm2(device_queue, n, x, incx, result)
+	@ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, 
+                                n::Int64, x::ZePtr{Cdouble}, incx::Int64, 
+                                result::RefOrZeRef{Cdouble})::Cvoid
+end
+
+function onemklSnrm2(device_queue, n, x, incx, result)
+	@ccall liboneapi_support.onemklSnrm2(device_queue::syclQueue_t, 
+                                n::Int64, x::ZePtr{Cfloat}, incx::Int64, 
+                                result::RefOrZeRef{Cfloat})::Cvoid
+end
+
+function onemklCnrm2(device_queue, n, x, incx, result)
+	@ccall liboneapi_support.onemklCnrm2(device_queue::syclQueue_t, 
+                                n::Int64, x::ZePtr{ComplexF32}, incx::Int64, 
+                                result::RefOrZeRef{Cfloat})::Cvoid
+end
+
+function onemklZnrm2(device_queue, n, x, incx, result)
+	@ccall liboneapi_support.onemklZnrm2(device_queue::syclQueue_t, 
+                                n::Int64, x::ZePtr{ComplexF64}, incx::Int64, 
+                                result::RefOrZeRef{Cdouble})::Cvoid
+end
+
+
 function onemklDcopy(device_queue, n, x, incx, y, incy)
     @ccall liboneapi_support.onemklDcopy(device_queue::syclQueue_t, n::Int64, 
                                 x::ZePtr{Cdouble}, incx::Int64,
@@ -120,4 +145,28 @@ end
 function onemklZamin(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklZamin(device_queue::syclQueue_t, n::Int64,
                              x::ZePtr{ComplexF64}, incx::Int64, result::ZePtr{Int64})::Cvoid
+end
+
+function onemklSswap(device_queue, n, x, incx, y, incy)
+    @ccall liboneapi_support.onemklSswap(device_queue::syclQueue_t, n::Cint,
+                                    x::ZePtr{Cfloat}, incx::Cint,
+                                    y::ZePtr{Cfloat}, incy::Cint)::Cvoid
+end
+
+function onemklDswap(device_queue, n, x, incx, y, incy)
+    @ccall liboneapi_support.onemklDswap(device_queue::syclQueue_t, n::Cint,
+                                    x::ZePtr{Cdouble}, incx::Cint,
+                                    y::ZePtr{Cdouble}, incy::Cint)::Cvoid
+end
+
+function onemklCswap(device_queue, n, x, incx, y, incy)
+    @ccall liboneapi_support.onemklCswap(device_queue::syclQueue_t, n::Cint,
+                                    x::ZePtr{ComplexF32}, incx::Cint,
+                                    y::ZePtr{ComplexF32}, incy::Cint)::Cvoid
+end
+
+function onemklZswap(device_queue, n, x, incx, y, incy)
+    @ccall liboneapi_support.onemklZswap(device_queue::syclQueue_t, n::Cint,
+                                    x::ZePtr{ComplexF64}, incx::Cint,
+                                    y::ZePtr{ComplexF64}, incy::Cint)::Cvoid
 end

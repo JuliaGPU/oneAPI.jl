@@ -54,6 +54,8 @@ function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{<:onemklFloat}
     oneMKL.axpy!(length(x), alpha, x, y)
 end
 
+LinearAlgebra.norm(x::oneStridedVecOrMat{<:onemklFloat}) = oneMKL.nrm2(length(x), x)
+
 for NT in (Number, Real)
     # NOTE: alpha/beta also ::Real to avoid ambiguities with certain Base methods
     @eval begin
