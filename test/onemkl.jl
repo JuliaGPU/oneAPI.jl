@@ -3,9 +3,7 @@ using oneAPI.oneMKL
 
 using LinearAlgebra
 
-m = 20 
-n = 35
-k = 13
+m = 20
 
 ############################################################################################
 @testset "level 1" begin
@@ -37,5 +35,26 @@ k = 13
                 @test Array(A .* alphaf64[1]) ≈ Array(gpuA)
             end	    
         end
-    end # level 1 testset
+
+        @testset "nrm2" begin
+            @test testf(norm, rand(T,m))
+        end
+
+        @testset "iamax/iamin" begin
+            a = convert.(T, [1.0, 2.0, -0.8, 5.0, 3.0])
+            ca = oneArray(a)
+            @test BLAS.iamax(a) == oneMKL.iamax(ca)
+            @test oneMKL.iamin(ca) == 3
+        end
+
+        @testset "swap" begin
+            x = rand(T, m)
+            y = rand(T, m)
+            dx = oneArray(x)
+            dy = oneArray(y)
+            oneMKL.swap!(m, dx, dy)
+            @test Array(dx) == y
+            @test Array(dy) == x
+        end
+    end
 end
