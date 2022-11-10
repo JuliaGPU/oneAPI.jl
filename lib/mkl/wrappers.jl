@@ -88,6 +88,23 @@ for (fname, elty) in
     end
 end
 
+## swap
+for (fname, elty) in ((:onemklSswap,:Float32),
+    (:onemklDswap,:Float64),
+    (:onemklCswap,:ComplexF32),
+    (:onemklZswap,:ComplexF64))
+    @eval begin
+        function swap!(n::Integer,
+            x::oneStridedArray{$elty},
+            y::oneStridedArray{$elty})
+            # Assuming both memory allocated on same device & context
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
+            x, y
+        end
+    end
+end
+
 # level 3
 
 for (fname, elty) in
