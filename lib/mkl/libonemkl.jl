@@ -43,7 +43,6 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
 end
 
 function onemklSasum(device_queue, n, x, incx, result)
-    println("onemklSasum")
     @ccall liboneapi_support.onemklSasum(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{Cfloat}, incx::Int64,
                                         result::ZePtr{Cfloat}
@@ -51,22 +50,21 @@ function onemklSasum(device_queue, n, x, incx, result)
 end
 
 function onemklDasum(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklSasum(device_queue::syclQueue_t, n::Int64,
+    @ccall liboneapi_support.onemklDasum(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{Cdouble}, incx::Int64,
                                         result::ZePtr{Cdouble}
                                         )::Cvoid
 end
 
 function onemklCasum(device_queue, n, x, incx, result)
-    println("onemklCasum")
-    @ccall liboneapi_support.onemklSasum(device_queue::syclQueue_t, n::Int64,
+    @ccall liboneapi_support.onemklCasum(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{ComplexF32}, incx::Int64,
                                         result::ZePtr{Cfloat}
                                         )::Cvoid
 end
 
 function onemklZasum(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklSasum(device_queue::syclQueue_t, n::Int64,
+    @ccall liboneapi_support.onemklZasum(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{ComplexF64}, incx::Int64,
                                         result::ZePtr{Cdouble}
                                         )::Cvoid
