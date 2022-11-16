@@ -14,7 +14,23 @@ function Base.convert(::Type{onemklTranspose}, trans::Char)
     end
 end
 
-
+# level 1
+## nrm2
+for (fname, elty, ret_type) in
+    ((:onemklDnrm2, :Float64,:Float64),
+     (:onemklSnrm2, :Float32,:Float32),
+     (:onemklCnrm2, :ComplexF32,:Float32),
+     (:onemklZnrm2, :ComplexF64,:Float64))
+    @eval begin
+        function nrm2(n::Integer, x::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            result = oneArray{$ret_type}([0]);
+            $fname(sycl_queue(queue), n, x, stride(x,1), result)            
+            res = Array(result)
+            return res[1]
+        end
+    end
+end
 
 #
 # BLAS
@@ -52,6 +68,57 @@ for (fname, elty, ret_type) in
             $fname(sycl_queue(queue), n, x, stride(x, 1), result)
             res = Array(result)
             return res[1]
+        end
+    end
+end
+
+## iamax
+for (fname, elty) in
+    ((:onemklDamax,:Float64),
+     (:onemklSamax,:Float32),
+     (:onemklZamax,:ComplexF64),
+     (:onemklCamax,:ComplexF32))
+    @eval begin
+        function iamax(x::oneStridedArray{$elty})
+            n = length(x)
+            queue = global_queue(context(x), device(x))
+            result = oneArray{Int64}([0]);
+            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
+            return Array(result)[1]+1
+        end
+    end
+end
+
+## iamin
+for (fname, elty) in
+    ((:onemklDamin,:Float64),
+     (:onemklSamin,:Float32),
+     (:onemklZamin,:ComplexF64),
+     (:onemklCamin,:ComplexF32))
+    @eval begin
+        function iamin(x::StridedArray{$elty})
+            n = length(x)
+            result = oneArray{Int64}([0]);
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue),n, x, stride(x, 1), result)
+            return Array(result)[1]+1
+        end
+    end
+end
+
+## swap
+for (fname, elty) in ((:onemklSswap,:Float32),
+    (:onemklDswap,:Float64),
+    (:onemklCswap,:ComplexF32),
+    (:onemklZswap,:ComplexF64))
+    @eval begin
+        function swap!(n::Integer,
+            x::oneStridedArray{$elty},
+            y::oneStridedArray{$elty})
+            # Assuming both memory allocated on same device & context
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
+            x, y
         end
     end
 end

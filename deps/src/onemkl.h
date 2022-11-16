@@ -48,6 +48,16 @@ void onemklCasum(syclQueue_t device_queue, int64_t n,
 void onemklZasum(syclQueue_t device_queue, int64_t n, 
                 const double _Complex *x, int64_t incx, double *result);
 
+// Supported Level-1: Nrm2
+void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, 
+                 int64_t incx, double *result);
+void onemklSnrm2(syclQueue_t device_queue, int64_t n, const float *x, 
+                 int64_t incx, float *result);
+void onemklCnrm2(syclQueue_t device_queue, int64_t n, const float _Complex *x, 
+                 int64_t incx, float *result);
+void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _Complex *x, 
+                 int64_t incx, double *result);
+
 void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
                  int64_t incx, double *y, int64_t incy);
 void onemklScopy(syclQueue_t device_queue, int64_t n, const float *x,
@@ -56,6 +66,33 @@ void onemklZcopy(syclQueue_t device_queue, int64_t n, const double _Complex *x,
                  int64_t incx, double _Complex *y, int64_t incy);
 void onemklCcopy(syclQueue_t device_queue, int64_t n, const float _Complex *x,
                  int64_t incx, float _Complex *y, int64_t incy);
+
+void onemklDamax(syclQueue_t device_queue, int64_t n, const double *x, int64_t incx,
+                 int64_t *result);
+void onemklSamax(syclQueue_t device_queue, int64_t n, const float  *x, int64_t incx,
+                 int64_t *result);
+void onemklZamax(syclQueue_t device_queue, int64_t n, const double _Complex *x, int64_t incx,
+                 int64_t *result);
+void onemklCamax(syclQueue_t device_queue, int64_t n, const float _Complex *x, int64_t incx,
+                 int64_t *result);
+
+void onemklDamin(syclQueue_t device_queue, int64_t n, const double *x, int64_t incx,
+                 int64_t *result);
+void onemklSamin(syclQueue_t device_queue, int64_t n, const float  *x, int64_t incx,
+                 int64_t *result);
+void onemklZamin(syclQueue_t device_queue, int64_t n, const double _Complex *x, int64_t incx,
+                 int64_t *result);
+void onemklCamin(syclQueue_t device_queue, int64_t n, const float _Complex *x, int64_t incx,
+                 int64_t *result);
+
+void onemklSswap(syclQueue_t device_queue, int64_t n, float *x, int64_t incx,
+                float *y, int64_t incy);
+void onemklDswap(syclQueue_t device_queue, int64_t n, double *x, int64_t incx,
+                double *y, int64_t incy);
+void onemklCswap(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx,
+                float _Complex *y, int64_t incy);
+void onemklZswap(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx,
+                double _Complex *y, int64_t incy);
 
 void onemklDestroy();
 #ifdef __cplusplus
