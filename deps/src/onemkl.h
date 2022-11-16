@@ -39,13 +39,16 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                 const double _Complex *B, int64_t ldb, double _Complex beta,
                 double _Complex *C, int64_t ldc);
 
-void onemklSasum(syclQueue_t device_queue, int64_t n, 
+void onemklSasum(syclQueue_t device_queue, int64_t n,
                 const float *x, int64_t incx, float *result);
-void onemklDasum(syclQueue_t device_queue, int64_t n, 
+
+void onemklDasum(syclQueue_t device_queue, int64_t n,
                 const double *x, int64_t incx, double *result);
-void onemklCasum(syclQueue_t device_queue, int64_t n, 
+
+void onemklCasum(syclQueue_t device_queue, int64_t n,
                 const float _Complex *x, int64_t incx, float *result);
-void onemklZasum(syclQueue_t device_queue, int64_t n, 
+
+void onemklZasum(syclQueue_t device_queue, int64_t n,
                 const double _Complex *x, int64_t incx, double *result);
 
 // Supported Level-1: Nrm2
