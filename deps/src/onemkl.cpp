@@ -18,6 +18,15 @@ oneapi::mkl::transpose convert(onemklTranspose val) {
     }
 }
 
+oneapi::mkl::uplo convert(onemklUplo val) {
+    switch(val) {
+        case ONEMKL_UPLO_UPPER:
+            return oneapi::mkl::uplo::upper;
+        case ONEMKL_UPLO_LOWER:
+            return oneapi::mkl::uplo::lower;
+    }
+}
+
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
                            int64_t k, sycl::half alpha, const sycl::half *A, int64_t lda,
@@ -79,6 +88,30 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
         reinterpret_cast<const std::complex<double> *>(B), ldb, beta,
         reinterpret_cast<std::complex<double> *>(C), ldc);
     return 0;
+}
+
+extern "C" void onemklChemv(syclQueue_t device_queue, onemklUplo uplo, int64_t n,
+                            float _Complex alpha, const float _Complex *a, int64_t lda,
+                            const float _Complex *x, int64_t incx, float _Complex beta,
+                            float _Complex *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::hemv(device_queue->val, convert(uplo), n,
+                                          static_cast<std::complex<float> >(alpha), 
+                                          reinterpret_cast<const std::complex<float> *>(a),
+                                          lda, reinterpret_cast<const std::complex<float> *>(x), incx,
+                                          static_cast<std::complex<float> >(beta), 
+                                          reinterpret_cast<std::complex<float> *>(y), incy);
+}
+
+extern "C" void onemklZhemv(syclQueue_t device_queue, onemklUplo uplo, int64_t n,
+                            double _Complex alpha, const double _Complex *a, int64_t lda,
+                            const double _Complex *x, int64_t incx, double _Complex beta,
+                            double _Complex *y, int64_t incy) {
+    oneapi::mkl::blas::column_major::hemv(device_queue->val, convert(uplo), n,
+                                          static_cast<std::complex<double> >(alpha), 
+                                          reinterpret_cast<const std::complex<double> *>(a),
+                                          lda, reinterpret_cast<const std::complex<double> *>(x), incx,
+                                          static_cast<std::complex<double> >(beta),
+                                          reinterpret_cast<std::complex<double> *>(y), incy);
 }
 
 extern "C" void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, 

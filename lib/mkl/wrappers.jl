@@ -14,6 +14,50 @@ function Base.convert(::Type{onemklTranspose}, trans::Char)
     end
 end
 
+function Base.convert(::Type{onemklUplo}, uplo::Char)
+    if uplo == 'U'
+        return ONEMKL_UPLO_UPPER
+    elseif uplo == 'L'
+        return ONEMKL_UPLO_LOWER
+    else
+        throw(ArgumentError("Unknown transpose $uplo"))
+    end
+end
+
+
+### hemv
+for (fname, elty) in ((:onemklChemv,:ComplexF32),
+                      (:onemklZhemv,:ComplexF64))
+    @eval begin
+        function hemv!(uplo::Char,
+                       alpha::Number,
+                       A::oneStridedVecOrMat{$elty},
+                       x::oneStridedVecOrMat{$elty},
+                       beta::Number,
+                       y::oneStridedVecOrMat{$elty})
+            # TODO: fix dimension check bug in julia
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if m != length(x) || m != length(y) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, n, alpha, A, lda, x, incx, beta, y, incy)
+            y
+        end
+
+        function hemv(uplo::Char, alpha::Number, A::oneStridedVecOrMat{$elty},
+                      x::oneStridedVecOrMat{$elty})
+            hemv!(uplo, alpha, A, x, zero($elty), similar(x))
+        end
+        function hemv(uplo::Char, A::oneStridedVecOrMat{$elty},
+                      x::oneStridedVecOrMat{$elty})
+            hemv(uplo, one($elty), A, x)
+        end
+    end
+end
+
 # level 1
 ## nrm2
 for (fname, elty, ret_type) in

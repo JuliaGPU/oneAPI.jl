@@ -4,6 +4,8 @@ using oneAPI.oneMKL
 using LinearAlgebra
 
 m = 20
+n = 35
+k = 13
 
 ############################################################################################
 @testset "level 1" begin
@@ -34,6 +36,58 @@ m = 20
             oneMKL.swap!(m, dx, dy)
             @test Array(dx) == y
             @test Array(dy) == x
+        end
+    end
+end
+
+@testset "level 2" begin
+    @testset for T in intersect(eltypes, [ComplexF32, ComplexF64])
+        alpha = rand(T)
+        beta = rand(T)
+        @testset "hemv!" begin
+            A = rand(T,m,n)
+            dA = oneArray(A)
+            sA = rand(T,m,m)
+            sA = sA + transpose(sA)
+            dsA = oneArray(sA)
+            hA = rand(T,m,m)
+            hA = hA + hA'
+            dhA = oneArray(hA)
+            x = rand(T,m)
+            dx = oneArray(x)
+            y = rand(T,m)
+            dy = oneArray(y)
+
+            # execute on host
+            BLAS.hemv!('U',alpha,hA,x,beta,y)
+            # execute on device
+            oneMKL.hemv!('U',alpha,dhA,dx,beta,dy)
+
+            # compare results
+            hy = Array(dy)
+            @test y ≈ hy
+        end
+
+        @testset "hemv" begin
+            A = rand(T,m,n)
+            dA = oneArray(A)
+            sA = rand(T,m,m)
+            sA = sA + transpose(sA)
+            dsA = oneArray(sA)
+            hA = rand(T,m,m)
+            hA = hA + hA'
+            dhA = oneArray(hA)
+            x = rand(T,m)
+            dx = oneArray(x)
+            y = rand(T,m)
+            dy = oneArray(y)
+
+            y = BLAS.hemv('U',hA,x)
+            # execute on device
+            dy = oneMKL.hemv('U',dhA,dx)
+            # compare results
+            hy = Array(dy)
+            @test y ≈ hy
         end
     end
 end

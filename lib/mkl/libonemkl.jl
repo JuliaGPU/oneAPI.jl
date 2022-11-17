@@ -6,6 +6,11 @@ using CEnum
     ONEMLK_TRANSPOSE_CONJTRANS = 2
 end
 
+@cenum onemklUplo::UInt32 begin
+    ONEMKL_UPLO_UPPER = 0
+    ONEMKL_UPLO_LOWER = 1
+end
+
 function onemklSgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C,
                      ldc)
     @ccall liboneapi_support.onemklSgemm(device_queue::syclQueue_t, transA::onemklTranspose,
@@ -40,6 +45,20 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
                                     alpha::ComplexF64, A::ZePtr{ComplexF64}, lda::Int64,
                                     B::ZePtr{ComplexF64}, ldb::Int64, beta::ComplexF64,
                                     C::ZePtr{ComplexF64}, ldc::Int64)::Cint
+end
+
+function onemklChemv(device_queue, uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+    @ccall liboneapi_support.onemklChemv(device_queue::syclQueue_t, uplo::onemklUplo,
+                                         n::Int64, alpha::ComplexF32, a::ZePtr{ComplexF32},
+                                         lda::Int64, x::ZePtr{ComplexF32}, incx::Int64,
+                                         beta::ComplexF32, y::ZePtr{ComplexF32}, incy::Int64)::Cvoid
+end
+
+function onemklZhemv(device_queue, uplo, n, alpha, a, lda, x, incx, beta, y, incy)
+    @ccall liboneapi_support.onemklZhemv(device_queue::syclQueue_t, uplo::onemklUplo,
+                                         n::Int64, alpha::ComplexF64, a::ZePtr{ComplexF64},
+                                         lda::Int64, x::ZePtr{ComplexF64}, incx::Int64,
+                                         beta::ComplexF64, y::ZePtr{ComplexF64}, incy::Int64)::Cvoid
 end
 
 function onemklDnrm2(device_queue, n, x, incx, result)
