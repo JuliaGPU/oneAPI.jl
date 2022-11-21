@@ -3,6 +3,12 @@
 
 #include <oneapi/mkl.hpp>
 
+// This is a workaround to flush MKL submissions into Level-zero queue, 
+// using unspecified but guaranteed behavior of intel-sycl runtime. 
+// Once SYCL standard committee approves sycl::queue::flush() we will change the macro to use the same 
+#define __FORCE_MKL_FLUSH__(cmd) \
+            get_native<sycl::backend::ext_oneapi_level_zero>(cmd)
+
 // gemm
 
 // https://spec.oneapi.io/versions/1.0-rev-1/elements/oneMKL/source/domains/blas/gemm.html
@@ -109,26 +115,30 @@ extern "C" void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _C
 
 extern "C" void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
                             int64_t incx, double *y, int64_t incy) {
-    oneapi::mkl::blas::column_major::copy(device_queue->val, n, x, incx, y, incy);
+    auto status = oneapi::mkl::blas::column_major::copy(device_queue->val, n, x, incx, y, incy);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklScopy(syclQueue_t device_queue, int64_t n, const float *x,
                             int64_t incx, float *y, int64_t incy) {
-    oneapi::mkl::blas::column_major::copy(device_queue->val, n, x, incx, y, incy);
+    auto status = oneapi::mkl::blas::column_major::copy(device_queue->val, n, x, incx, y, incy);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklZcopy(syclQueue_t device_queue, int64_t n, const double _Complex *x,
                             int64_t incx, double _Complex *y, int64_t incy) {
-    oneapi::mkl::blas::column_major::copy(device_queue->val, n,
+    auto status = oneapi::mkl::blas::column_major::copy(device_queue->val, n,
         reinterpret_cast<const std::complex<double> *>(x), incx,
         reinterpret_cast<std::complex<double> *>(y), incy);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklCcopy(syclQueue_t device_queue, int64_t n, const float _Complex *x,
                             int64_t incx, float _Complex *y, int64_t incy) {
-    oneapi::mkl::blas::column_major::copy(device_queue->val, n, 
+    auto status = oneapi::mkl::blas::column_major::copy(device_queue->val, n, 
         reinterpret_cast<const std::complex<float> *>(x), incx, 
         reinterpret_cast<std::complex<float> *>(y), incy);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDamax(syclQueue_t device_queue, int64_t n, const double *x,
@@ -179,26 +189,30 @@ extern "C" void onemklCamin(syclQueue_t device_queue, int64_t n, const float _Co
 
 extern "C" void onemklSswap(syclQueue_t device_queue, int64_t n, float *x, int64_t incx,\
                             float *y, int64_t incy){
-    oneapi::mkl::blas::column_major::swap(device_queue->val, n, x, incx, y, incy);
+    auto status = oneapi::mkl::blas::column_major::swap(device_queue->val, n, x, incx, y, incy);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDswap(syclQueue_t device_queue, int64_t n, double *x, int64_t incx,
                             double *y, int64_t incy){
-    oneapi::mkl::blas::column_major::swap(device_queue->val, n, x, incx, y, incy);
+    auto status = oneapi::mkl::blas::column_major::swap(device_queue->val, n, x, incx, y, incy);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklCswap(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx,
                             float _Complex *y, int64_t incy){
-    oneapi::mkl::blas::column_major::swap(device_queue->val, n,
+    auto status = oneapi::mkl::blas::column_major::swap(device_queue->val, n,
                             reinterpret_cast<std::complex<float> *>(x), incx,
                             reinterpret_cast<std::complex<float> *>(y), incy);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklZswap(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx,
                             double _Complex *y, int64_t incy){
-    oneapi::mkl::blas::column_major::swap(device_queue->val, n,
+    auto status = oneapi::mkl::blas::column_major::swap(device_queue->val, n,
                             reinterpret_cast<std::complex<double> *>(x), incx,
                             reinterpret_cast<std::complex<double> *>(y), incy);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 // other
