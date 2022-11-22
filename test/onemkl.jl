@@ -12,7 +12,12 @@ m = 20
             A = oneArray(rand(T, m))
             B = oneArray{T}(undef, m)
             oneMKL.copy!(m,A,B)
-            @test Array(A) == Array(B)       
+            @test Array(A) == Array(B)
+        end 
+
+        @testset "axpy" begin
+            alpha = rand(T,1)
+            @test testf(axpy!, alpha[1], rand(T,m), rand(T,m))
         end
         
         @testset "scal" begin

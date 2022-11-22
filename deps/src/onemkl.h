@@ -41,15 +41,21 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
 
 void onemklSasum(syclQueue_t device_queue, int64_t n,
                 const float *x, int64_t incx, float *result);
-
 void onemklDasum(syclQueue_t device_queue, int64_t n,
                 const double *x, int64_t incx, double *result);
-
 void onemklCasum(syclQueue_t device_queue, int64_t n,
                 const float _Complex *x, int64_t incx, float *result);
-
 void onemklZasum(syclQueue_t device_queue, int64_t n,
                 const double _Complex *x, int64_t incx, double *result);
+
+void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha, const float *x,
+                int64_t incx, float *y, int64_t incy);
+void onemklDaxpy(syclQueue_t device_queue, int64_t n, double alpha, const double *x,
+                int64_t incx, double *y, int64_t incy);
+void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex alpha,
+                const float _Complex *x, int64_t incx, float _Complex *y, int64_t incy);
+void onemklZaxpy(syclQueue_t device_queue, int64_t n, double _Complex alpha,
+                const double _Complex *x, int64_t incx, double _Complex *y, int64_t incy);
 
 // Level-1: scal oneMKL
 void onemklDscal(syclQueue_t device_queue, int64_t n, double alpha, 
