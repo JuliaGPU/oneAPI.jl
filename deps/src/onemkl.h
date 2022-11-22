@@ -51,6 +51,19 @@ void onemklCasum(syclQueue_t device_queue, int64_t n,
 void onemklZasum(syclQueue_t device_queue, int64_t n,
                 const double _Complex *x, int64_t incx, double *result);
 
+// Level-1: scal oneMKL
+void onemklDscal(syclQueue_t device_queue, int64_t n, double alpha, 
+                double *x, int64_t incx);
+void onemklSscal(syclQueue_t device_queue, int64_t n, float alpha, 
+                float *x, int64_t incx);
+void onemklCscal(syclQueue_t device_queue, int64_t n, float _Complex alpha, 
+                float _Complex *x, int64_t incx);
+void onemklCsscal(syclQueue_t device_queue, int64_t n, float alpha, 
+                float _Complex *x, int64_t incx);
+void onemklZscal(syclQueue_t device_queue, int64_t n, double _Complex alpha, 
+                double _Complex *x, int64_t incx);
+void onemklZdscal(syclQueue_t device_queue, int64_t n, double alpha, 
+                double _Complex *x, int64_t incx);
 // Supported Level-1: Nrm2
 void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, 
                  int64_t incx, double *result);

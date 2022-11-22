@@ -15,6 +15,23 @@ function Base.convert(::Type{onemklTranspose}, trans::Char)
 end
 
 # level 1
+## scal
+for (fname, elty) in
+    ((:onemklDscal,:Float64),
+     (:onemklSscal,:Float32),
+     (:onemklZscal,:ComplexF64),
+     (:onemklCscal,:ComplexF32))
+    @eval begin
+        function scal!(n::Integer,
+                       alpha::$elty,
+                       x::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
+            x
+        end
+    end
+end
+
 ## nrm2
 for (fname, elty, ret_type) in
     ((:onemklDnrm2, :Float64,:Float64),
@@ -32,6 +49,17 @@ for (fname, elty, ret_type) in
     end
 end
 
+for (fname, elty, celty) in ((:onemklCsscal, :Float32, :ComplexF32),
+                             (:onemklZdscal, :Float64, :ComplexF64))
+    @eval begin
+        function scal!(n::Integer, 
+                       alpha::$elty,
+                       x::oneStridedArray{$celty})
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
+        end
+    end
+end
 #
 # BLAS
 #
@@ -45,8 +73,8 @@ for (fname, elty) in
          (:onemklCcopy,:ComplexF32))
     @eval begin
         function copy!(n::Integer,
-                       x::StridedArray{$elty},
-                       y::StridedArray{$elty})
+                       x::oneStridedArray{$elty},
+                       y::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
             y
