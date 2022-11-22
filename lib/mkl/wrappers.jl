@@ -45,8 +45,8 @@ for (fname, elty) in
          (:onemklCcopy,:ComplexF32))
     @eval begin
         function copy!(n::Integer,
-                       x::StridedArray{$elty},
-                       y::StridedArray{$elty})
+                       x::oneStridedArray{$elty},
+                       y::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
             y
