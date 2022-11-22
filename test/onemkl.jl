@@ -14,13 +14,12 @@ m = 20
             oneMKL.copy!(m,A,B)
             @test Array(A) == Array(B)
         end 
-        
+
         @testset "axpy" begin
-            # Test axpy primitive
             alpha = rand(T,1)
             @test testf(axpy!, alpha[1], rand(T,m), rand(T,m))
         end
-        
+
         @testset "nrm2" begin
             @test testf(norm, rand(T,m))
         end
