@@ -61,5 +61,9 @@ m = 20
             @test Array(dx) == y
             @test Array(dy) == x
         end
+
+        @testset "asum" begin
+            @test testf(BLAS.asum, rand(T,m))
+        end
     end
 end

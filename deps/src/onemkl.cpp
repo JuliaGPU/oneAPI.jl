@@ -87,6 +87,40 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
     return 0;
 }
 
+extern "C" void onemklSasum(syclQueue_t device_queue, int64_t n, 
+                            const float *x, int64_t incx,
+                            float *result) {
+    auto status = oneapi::mkl::blas::column_major::asum(device_queue->val, n, x,
+                                                        incx, result);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklDasum(syclQueue_t device_queue, int64_t n,
+                            const double *x, int64_t incx,
+                            double *result) {
+    auto status = oneapi::mkl::blas::column_major::asum(device_queue->val, n, x,
+                                                        incx, result);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklCasum(syclQueue_t device_queue, int64_t n,
+                            const float _Complex *x, int64_t incx,
+                            float *result) {
+    auto status = oneapi::mkl::blas::column_major::asum(device_queue->val, n, 
+                                        reinterpret_cast<const std::complex<float> *>(x),
+                                        incx, result);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklZasum(syclQueue_t device_queue, int64_t n,
+                            const double _Complex *x, int64_t incx,
+                            double *result) {
+    auto status = oneapi::mkl::blas::column_major::asum(device_queue->val, n, 
+                                        reinterpret_cast<const std::complex<double> *>(x),
+                                        incx, result);
+    __FORCE_MKL_FLUSH__(status);
+}
+
 extern "C" void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha,
                             const float *x, std::int64_t incx, float *y, int64_t incy) {
     auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x,
