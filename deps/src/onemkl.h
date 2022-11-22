@@ -39,10 +39,28 @@ int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                 const double _Complex *B, int64_t ldb, double _Complex beta,
                 double _Complex *C, int64_t ldc);
 
-void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha, const float *x, int64_t incx, float *y, int64_t incy);
-void onemklDaxpy(syclQueue_t device_queue, int64_t n, double alpha, const double *x, int64_t incx, double *y, int64_t incy);
-void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex alpha, const float _Complex *x, int64_t incx, float _Complex *y, int64_t incy);
-void onemklZaxpy(syclQueue_t device_queue, int64_t n, double _Complex alpha, const double _Complex *x, int64_t incx, double _Complex *y, int64_t incy);
+void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha, const float *x,
+                int64_t incx, float *y, int64_t incy);
+void onemklDaxpy(syclQueue_t device_queue, int64_t n, double alpha, const double *x,
+                int64_t incx, double *y, int64_t incy);
+void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex alpha,
+                const float _Complex *x, int64_t incx, float _Complex *y, int64_t incy);
+void onemklZaxpy(syclQueue_t device_queue, int64_t n, double _Complex alpha,
+                const double _Complex *x, int64_t incx, double _Complex *y, int64_t incy);
+
+// Level-1: scal oneMKL
+void onemklDscal(syclQueue_t device_queue, int64_t n, double alpha, 
+                double *x, int64_t incx);
+void onemklSscal(syclQueue_t device_queue, int64_t n, float alpha, 
+                float *x, int64_t incx);
+void onemklCscal(syclQueue_t device_queue, int64_t n, float _Complex alpha, 
+                float _Complex *x, int64_t incx);
+void onemklCsscal(syclQueue_t device_queue, int64_t n, float alpha, 
+                float _Complex *x, int64_t incx);
+void onemklZscal(syclQueue_t device_queue, int64_t n, double _Complex alpha, 
+                double _Complex *x, int64_t incx);
+void onemklZdscal(syclQueue_t device_queue, int64_t n, double alpha, 
+                double _Complex *x, int64_t incx);
 // Supported Level-1: Nrm2
 void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, 
                  int64_t incx, double *result);

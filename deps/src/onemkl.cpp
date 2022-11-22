@@ -89,13 +89,15 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
 
 extern "C" void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha,
                             const float *x, std::int64_t incx, float *y, int64_t incy) {
-    auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x, incx, y, incy);
+    auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x,
+                                                incx, y, incy);
     __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDaxpy(syclQueue_t device_queue, int64_t n, double alpha, 
                             const double *x, std::int64_t incx, double *y, int64_t incy) {
-    auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x, incx, y, incy);
+    auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x,
+                                                incx, y, incy);
     __FORCE_MKL_FLUSH__(status);
 }
 
@@ -114,31 +116,80 @@ extern "C" void onemklZaxpy(syclQueue_t device_queue, int64_t n, double _Complex
                             reinterpret_cast<std::complex<double> *>(y), incy);
     __FORCE_MKL_FLUSH__(status);
 }
+// Support Level-1: SCAL primitive
+extern "C" void onemklDscal(syclQueue_t device_queue, int64_t n, double alpha,
+                            double *x, int64_t incx) {
+    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n, alpha,
+                                                    x, incx);
+    __FORCE_MKL_FLUSH__(status);
+
+}
+
+extern "C" void onemklSscal(syclQueue_t device_queue, int64_t n, float alpha,
+                            float *x, int64_t incx) {
+    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n, alpha,
+                                                         x, incx);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklCscal(syclQueue_t device_queue, int64_t n,
+                            float _Complex alpha, float _Complex *x,
+                            int64_t incx) {
+    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n,
+                                        static_cast<std::complex<float> >(alpha),
+                                        reinterpret_cast<std::complex<float> *>(x),incx);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklCsscal(syclQueue_t device_queue, int64_t n,
+                            float alpha, float _Complex *x,
+                            int64_t incx) {
+    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n, alpha,
+                                        reinterpret_cast<std::complex<float> *>(x),incx);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklZscal(syclQueue_t device_queue, int64_t n,
+                            double _Complex alpha, double _Complex *x,
+                            int64_t incx) {
+    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n,
+                                        static_cast<std::complex<double> >(alpha),
+                                        reinterpret_cast<std::complex<double> *>(x),incx);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklZdscal(syclQueue_t device_queue, int64_t n,
+                            double alpha, double _Complex *x,
+                            int64_t incx) {
+    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n, alpha,
+                                        reinterpret_cast<std::complex<double> *>(x),incx);
+    __FORCE_MKL_FLUSH__(status);
+}
 
 extern "C" void onemklDnrm2(syclQueue_t device_queue, int64_t n, const double *x, 
                             int64_t incx, double *result) {
     auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklSnrm2(syclQueue_t device_queue, int64_t n, const float *x, 
                             int64_t incx, float *result) {
     auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, x, incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklCnrm2(syclQueue_t device_queue, int64_t n, const float _Complex *x, 
                             int64_t incx, float *result) {   
     auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, 
                     reinterpret_cast<const std::complex<float> *>(x), incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _Complex *x, 
                             int64_t incx, double *result) {
     auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n, 
                     reinterpret_cast<const std::complex<double> *>(x), incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
@@ -172,47 +223,47 @@ extern "C" void onemklCcopy(syclQueue_t device_queue, int64_t n, const float _Co
 extern "C" void onemklDamax(syclQueue_t device_queue, int64_t n, const double *x,
                             int64_t incx, int64_t *result){
     auto status = oneapi::mkl::blas::column_major::iamax(device_queue->val, n, x, incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 extern "C" void onemklSamax(syclQueue_t device_queue, int64_t n, const float  *x,
                             int64_t incx, int64_t *result){
     auto status = oneapi::mkl::blas::column_major::iamax(device_queue->val, n, x, incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 extern "C" void onemklZamax(syclQueue_t device_queue, int64_t n, const double _Complex *x,
                             int64_t incx, int64_t *result){
     auto status = oneapi::mkl::blas::column_major::iamax(device_queue->val, n,
                             reinterpret_cast<const std::complex<double> *>(x), incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 extern "C" void onemklCamax(syclQueue_t device_queue, int64_t n, const float _Complex *x,
                             int64_t incx, int64_t *result){
     auto status = oneapi::mkl::blas::column_major::iamax(device_queue->val, n,
                             reinterpret_cast<const std::complex<float> *>(x), incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDamin(syclQueue_t device_queue, int64_t n, const double *x,
                             int64_t incx, int64_t *result){
     auto status = oneapi::mkl::blas::column_major::iamin(device_queue->val, n, x, incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 extern "C" void onemklSamin(syclQueue_t device_queue, int64_t n, const float  *x,
                             int64_t incx, int64_t *result){
     auto status = oneapi::mkl::blas::column_major::iamin(device_queue->val, n, x, incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 extern "C" void onemklZamin(syclQueue_t device_queue, int64_t n, const double _Complex *x,
                             int64_t incx, int64_t *result){
     auto status = oneapi::mkl::blas::column_major::iamin(device_queue->val, n,
                             reinterpret_cast<const std::complex<double> *>(x), incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 extern "C" void onemklCamin(syclQueue_t device_queue, int64_t n, const float _Complex *x,
                             int64_t incx, int64_t *result){
     auto status = oneapi::mkl::blas::column_major::iamin(device_queue->val, n,
                             reinterpret_cast<const std::complex<float> *>(x), incx, result);
-    status.wait();
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklSswap(syclQueue_t device_queue, int64_t n, float *x, int64_t incx,\
