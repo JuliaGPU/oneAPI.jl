@@ -4,6 +4,10 @@ using Pkg
 Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
+if haskey(ENV, "BUILDKITE")
+    run(`buildkite-agent annotate 'Using a locally-built support library; A bump of oneAPI_Support_jll is required before releasing this packages.' --style 'warning' --context 'ctx-deps'`)
+end
+
 using Scratch, Preferences, CMake_jll, oneAPI_Level_Zero_Headers_jll
 
 oneAPI = Base.UUID("8f75cd03-7ff8-4ecb-9b8f-daf728133b1b")
