@@ -68,6 +68,27 @@ for (fname, elty, ret_type) in
     end
 end
 
+## dot
+for (jname, fname, elty) in
+        ((:dot, :onemklSdot,:Float32),
+         (:dot, :onemklDdot,:Float64),
+         (:dotc, :onemklCdotc, :ComplexF32),
+         (:dotc, :onemklZdotc, :ComplexF64),
+         (:dotu, :onemklCdotu, :ComplexF32),
+         (:dotu, :onemklZdotu, :ComplexF64))
+    @eval begin
+        function $jname(n::Integer,
+                         x::oneStridedArray{$elty},
+                         y::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            result = oneArray{$elty}([0]);
+            $fname(sycl_queue(queue), n, x, stride(x,1), y, stride(y,1), result)
+            res = Array(result)
+            return res[1]
+        end
+    end
+end
+
 for (fname, elty, celty) in ((:onemklCsscal, :Float32, :ComplexF32),
                              (:onemklZdscal, :Float64, :ComplexF64))
     @eval begin
@@ -79,6 +100,7 @@ for (fname, elty, celty) in ((:onemklCsscal, :Float32, :ComplexF32),
         end
     end
 end
+
 #
 # BLAS
 #

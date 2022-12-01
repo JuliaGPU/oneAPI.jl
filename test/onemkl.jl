@@ -62,8 +62,18 @@ m = 20
             @test Array(dy) == x
         end
 
+        @testset "dot" begin
+            @test testf(dot, rand(T,m), rand(T,m))
+            if T == ComplexF32 || T == ComplexF64
+                @test testf(oneMKL.dotu, m, 
+                            oneArray(rand(T,m)),
+                            oneArray(rand(T,m)))
+            end
+        end
+
         @testset "asum" begin
             @test testf(BLAS.asum, rand(T,m))
+
         end
     end
 end

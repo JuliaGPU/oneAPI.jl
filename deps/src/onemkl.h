@@ -80,6 +80,28 @@ void onemklCnrm2(syclQueue_t device_queue, int64_t n, const float _Complex *x,
 void onemklZnrm2(syclQueue_t device_queue, int64_t n, const double _Complex *x, 
                  int64_t incx, double *result);
 
+void onemklSdot(syclQueue_t device_queue, int64_t n, const float *x,
+                int64_t incx, const float *y, int64_t incy, float *result);
+
+void onemklDdot(syclQueue_t device_queue, int64_t n, const double *x,
+                int64_t incx, const double *y, int64_t incy, double *result);
+
+void onemklCdotc(syclQueue_t device_queue, int64_t n, const float _Complex *x,
+                int64_t incx, const float _Complex *y, int64_t incy,
+                float _Complex *result);
+
+void onemklZdotc(syclQueue_t device_queue, int64_t n, const double _Complex *x,
+                int64_t incx, const double _Complex *y, int64_t incy,
+                double _Complex *result);
+
+void onemklCdotu(syclQueue_t device_queue, int64_t n, const float _Complex *x,
+                int64_t incx, const float _Complex *y, int64_t incy,
+                float _Complex *result);
+
+void onemklZdotu(syclQueue_t device_queue, int64_t n, const double _Complex *x,
+                int64_t incx, const double _Complex *y, int64_t incy,
+                double _Complex *result);
+
 void onemklDcopy(syclQueue_t device_queue, int64_t n, const double *x,
                  int64_t incx, double *y, int64_t incy);
 void onemklScopy(syclQueue_t device_queue, int64_t n, const float *x,
