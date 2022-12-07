@@ -14,6 +14,181 @@ function Base.convert(::Type{onemklTranspose}, trans::Char)
     end
 end
 
+function Base.convert(::Type{onemklUplo}, uplo::Char)
+    if uplo == 'U'
+        return ONEMKL_UPLO_UPPER
+    elseif uplo == 'L'
+        return ONEMKL_UPLO_LOWER
+    else
+        throw(ArgumentError("Unknown transpose $uplo"))
+    end
+end
+
+function Base.convert(::Type{onemklDiag}, diag::Char)
+    if diag == 'N'
+        return ONEMKL_DIAG_NONUNIT
+    elseif diag == 'U'
+        return ONEMKL_DIAG_UNIT
+    else
+        throw(ArgumentError("Unknown transpose $diag"))
+    end
+end
+
+# level 2
+## gemv
+for (fname, elty) in ((:onemklSgemv, :Float32),
+                      (:onemklDgemv, :Float64),
+                      (:onemklCgemv, :ComplexF32),
+                      (:onemklZgemv, :ComplexF64))
+    @eval begin
+        function gemv!(trans::Char,
+                       alpha::Number,
+                       a::oneStridedArray{$elty},
+                       x::oneStridedArray{$elty},
+                       beta::Number, 
+                       y::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+             # handle trans
+             m,n = size(a)
+             # check dimensions
+             length(x) == (trans == 'N' ? n : m) && length(y) == 
+                          (trans == 'N' ? m : n) || throw(DimensionMismatch(""))
+             # compute increments
+             lda = max(1,stride(a,2))
+             incx = stride(x,1)
+             incy = stride(y,1)
+             $fname(sycl_queue(queue), trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+             y
+        end
+
+        function gemv(trans::Char,
+                      alpha::Number,
+                      a::oneStridedArray{$elty},
+                      x::oneStridedArray{$elty})
+            gemv!(trans, alpha, a, x, zero($elty), similar(x, $elty, size(a, (trans == 'N' ? 1 : 2))))
+        end
+
+        function gemv(trans::Char,
+                      a::oneStridedArray{$elty},
+                      x::oneStridedArray{$elty})
+            gemv!(trans, one($elty), a, x, zero($elty), similar(x, $elty, size(a, (trans == 'N' ? 1 : 2))))
+        end
+    end
+end
+
+### hemv
+for (fname, elty) in ((:onemklChemv,:ComplexF32),
+                      (:onemklZhemv,:ComplexF64))
+    @eval begin
+        function hemv!(uplo::Char,
+                       alpha::Number,
+                       A::oneStridedVecOrMat{$elty},
+                       x::oneStridedVecOrMat{$elty},
+                       beta::Number,
+                       y::oneStridedVecOrMat{$elty})
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if m != length(x) || m != length(y) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, n, alpha, A, lda, x, incx, beta, y, incy)
+            y
+        end
+
+        function hemv(uplo::Char, alpha::Number, A::oneStridedVecOrMat{$elty},
+                      x::oneStridedVecOrMat{$elty})
+            hemv!(uplo, alpha, A, x, zero($elty), similar(x))
+        end
+        function hemv(uplo::Char, A::oneStridedVecOrMat{$elty},
+                      x::oneStridedVecOrMat{$elty})
+            hemv(uplo, one($elty), A, x)
+        end
+    end
+end
+
+### hbmv, (HB) Hermitian banded matrix-vector multiplication
+for (fname, elty) in ((:onemklChbmv,:ComplexF32),
+                      (:onemklZhbmv,:ComplexF64))
+    @eval begin
+
+        function hbmv!(uplo::Char,
+                       k::Integer,
+                       alpha::Number,
+                       A::oneStridedMatrix{$elty},
+                       x::oneStridedVector{$elty},
+                       beta::Number,
+                       y::oneStridedVector{$elty})
+            m, n = size(A)
+            if !(1<=(1+k)<=n) throw(DimensionMismatch("Incorrect number of bands")) end
+            if m < 1+k throw(DimensionMismatch("Array A has fewer than 1+k rows")) end
+            if n != length(x) || n != length(y) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, n, k, alpha, A, lda, x, incx, beta, y, incy)
+            y
+        end
+
+        function hbmv(uplo::Char, k::Integer, alpha::Number,
+                      A::oneStridedMatrix{$elty}, x::oneStridedVector{$elty})
+            n = size(A,2)
+            hbmv!(uplo, k, alpha, A, x, zero($elty), similar(x, $elty, n))
+        end
+
+        function hbmv(uplo::Char, k::Integer, A::oneStridedMatrix{$elty},
+                      x::oneStridedVector{$elty})
+            hbmv(uplo, k, one($elty), A, x)
+        end
+
+    end
+end
+
+### her
+for (fname, elty) in ((:onemklCher,:ComplexF32),
+                      (:onemklZher,:ComplexF64))
+    @eval begin
+        function her!(uplo::Char,
+                      alpha::Number,
+                      x::oneStridedVecOrMat{$elty},
+                      A::oneStridedVecOrMat{$elty})
+            m, n = size(A)
+            m == n || throw(DimensionMismatch("Matrix A is $m by $n but must be square"))
+            length(x) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
+            incx = stride(x,1)
+            lda = max(1,stride(A,2))
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, n, alpha, x, incx, A, lda)
+            A
+        end
+    end
+end
+
+### her2
+for (fname, elty) in ((:onemklCher2,:ComplexF32),
+                      (:onemklZher2,:ComplexF64))
+    @eval begin
+        function her2!(uplo::Char,
+                      alpha::Number,
+                      x::oneStridedVecOrMat{$elty},
+                      y::oneStridedVecOrMat{$elty},
+                      A::oneStridedVecOrMat{$elty})
+            m, n = size(A)
+            m == n || throw(DimensionMismatch("Matrix A is $m by $n but must be square"))
+            length(x) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
+            length(y) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            lda = max(1,stride(A,2))
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, n, alpha, x, incx, y, incy, A, lda)
+            A
+        end
+    end
+end
+
 # level 1
 ## axpy primitive
 for (fname, elty) in 
@@ -61,7 +236,7 @@ for (fname, elty, ret_type) in
         function nrm2(n::Integer, x::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
             result = oneArray{$ret_type}([0]);
-            $fname(sycl_queue(queue), n, x, stride(x,1), result)            
+            $fname(sycl_queue(queue), n, x, stride(x,1), result)
             res = Array(result)
             return res[1]
         end
@@ -89,6 +264,45 @@ for (jname, fname, elty) in
     end
 end
 
+# level 2
+# sbmv, symmetric banded matrix-vector multiplication
+for (fname, elty) in ((:onemklSsbmv, :Float32),
+                      (:onemklDsbmv, :Float64))
+    @eval begin
+        function sbmv!(uplo::Char,
+                       k::Integer,
+                       alpha::Number,
+                       a::oneStridedVecOrMat{$elty},
+                       x::oneStridedVecOrMat{$elty},
+                       beta::Number,
+                       y::oneStridedVecOrMat{$elty})
+            m, n = size(a)
+            if !(1<=(1+k)<=n) throw(DimensionMismatch("Incorrect number of bands")) end
+            if m < 1+k throw(DimensionMismatch("Array A has fewer than 1+k rows")) end
+            if n != length(x) || n != length(y) throw(DimensionMismatch("")) end
+            queue = global_queue(context(x), device(x))
+            lda = max(1, stride(a,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            alpha = $elty(alpha)
+            beta = $elty(beta)
+            $fname(sycl_queue(queue), uplo, n, k, alpha, a, lda, x, incx, beta, y, incy)
+            y
+        end
+
+        function sbmv(uplo::Char, k::Integer, alpha::Number,
+                      a::oneStridedArray{$elty}, x::oneStridedArray{$elty})
+            n = size(a,2)
+            sbmv!(uplo, k, alpha, a, x, zero($elty), similar(x, $elty, n))
+        end
+
+        function sbmv(uplo::Char, k::Integer, a::oneStridedArray{$elty},
+                      x::oneStridedArray{$elty})
+            sbmv(uplo, k, one($elty), a, x)
+        end
+    end
+end
+
 for (fname, elty, celty) in ((:onemklCsscal, :Float32, :ComplexF32),
                              (:onemklZdscal, :Float64, :ComplexF64))
     @eval begin
@@ -97,6 +311,79 @@ for (fname, elty, celty) in ((:onemklCsscal, :Float32, :ComplexF32),
                        x::oneStridedArray{$celty})
             queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
+        end
+    end
+end
+
+# level 2
+# ger
+for (fname, elty) in ((:onemklSger, :Float32),
+                      (:onemklDger, :Float64),
+                      (:onemklCgerc, :ComplexF32),
+                      (:onemklZgerc, :ComplexF64))
+    @eval begin
+        function ger!(alpha::Number,
+                      x::oneStridedVecOrMat{$elty},
+                      y::oneStridedVecOrMat{$elty},
+                      a::oneStridedVecOrMat{$elty})
+            m,n = size(a)
+            m == length(x) || throw(DimensionMismatch(""))
+            n == length(y) || throw(DimensionMismatch(""))
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), m, n, alpha, x, stride(x,1), y, stride(y,1), a, max(1,stride(a,2)))
+            a
+        end
+    end
+end
+
+#symv
+for (fname, elty) in ((:onemklSsymv,:Float32),
+                      (:onemklDsymv,:Float64))
+    # Note that the complex symv are not BLAS but auiliary functions in LAPACK
+    @eval begin
+        function symv!(uplo::Char,
+                       alpha::Number,
+                       A::oneStridedVecOrMat{$elty},
+                       x::oneStridedVecOrMat{$elty},
+                       beta::Number,
+                       y::oneStridedVecOrMat{$elty})
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if m != length(x) || m != length(y) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, n, alpha, A, lda, x, incx, beta, y, incy)
+            y
+        end
+
+        function symv(uplo::Char, alpha::Number, A::oneStridedVecOrMat{$elty}, x::oneStridedVecOrMat{$elty})
+                symv!(uplo, alpha, A, x, zero($elty), similar(x))
+        end
+        function symv(uplo::Char, A::oneStridedVecOrMat{$elty}, x::oneStridedVecOrMat{$elty})
+            symv(uplo, one($elty), A, x)
+        end
+
+    end
+end
+
+# syr
+for (fname, elty) in ((:onemklSsyr,:Float32),
+                      (:onemklDsyr,:Float64))
+    @eval begin
+        function syr!(uplo::Char,
+                      alpha::Number,
+                      x::oneStridedVecOrMat{$elty},
+                      A::oneStridedVecOrMat{$elty})
+            m, n = size(A)
+            m == n || throw(DimensionMismatch("Matrix A is $m by $n but must be square"))
+            length(x) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
+            incx = stride(x,1)
+            lda = max(1,stride(A,2))
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, n, alpha, x, incx, A, lda)
+            A
         end
     end
 end
@@ -188,6 +475,158 @@ for (fname, elty) in ((:onemklSswap,:Float32),
             queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
             x, y
+        end
+    end
+end
+
+# level 2
+# gbmv
+for (fname, elty) in ((:onemklSgbmv, :Float32),
+                      (:onemklDgbmv, :Float64),
+                      (:onemklCgbmv, :ComplexF32),
+                      (:onemklZgbmv, :ComplexF64))
+    @eval begin
+        function gbmv!(trans::Char,
+                       m::Integer,
+                       kl::Integer,
+                       ku::Integer,
+                       alpha::Number,
+                       a::oneStridedArray{$elty},
+                       x::oneStridedArray{$elty},
+                       beta::Number,
+                       y::oneStridedArray{$elty})
+            n = size(a,2)
+            length(x) == (trans == 'N' ? n : m) && length(y) == 
+                         (trans == 'N' ? m : n) || throw(DimensionMismatch(""))
+            queue = global_queue(context(x), device(x))
+            lda = max(1, stride(a,2))
+            incx = stride(x,1)
+            incy = stride(y,1)
+            $fname(sycl_queue(queue), trans, m, n, kl, ku, alpha, a, lda, x, incx, beta, y, incy)
+            y
+        end
+
+        function gbmv(trans::Char,
+                      m::Integer, 
+                      kl::Integer,
+                      ku::Integer,
+                      alpha::Number,
+                      a::oneStridedArray{$elty},
+                      x::oneStridedArray{$elty})
+            n = size(a,2)
+            leny = trans == 'N' ? m : n
+            queue = global_queue(context(x), device(x))
+            gbmv!(trans, m, kl, ku, alpha, a, x, zero($elty), similar(x, $elty, leny))   
+        end
+
+        function gbmv(trans::Char,
+                      m::Integer,
+                      kl::Integer,
+                      ku::Integer,
+                      a::oneStridedArray{$elty},
+                      x::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            gbmv(trans, m, kl, ku, one($elty), a, x)
+        end
+    end
+end
+
+# tbmv
+### tbmv, (TB) triangular banded matrix-vector multiplication
+for (fname, elty) in ((:onemklStbmv,:Float32),
+                      (:onemklDtbmv,:Float64),
+                      (:onemklCtbmv,:ComplexF32),
+                      (:onemklZtbmv,:ComplexF64))
+    @eval begin
+        function tbmv!(uplo::Char,
+                       trans::Char,
+                       diag::Char,
+                       k::Integer,
+                       A::oneStridedVecOrMat{$elty},
+                       x::oneStridedVecOrMat{$elty})
+            m, n = size(A)
+            if !(1<=(1+k)<=n) throw(DimensionMismatch("Incorrect number of bands")) end
+            if m < 1+k throw(DimensionMismatch("Array A has fewer than 1+k rows")) end
+            if n != length(x) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, trans, diag, n, k, A, lda, x, incx)
+            x
+        end
+
+        function tbmv(uplo::Char,
+                      trans::Char,
+                      diag::Char,
+                      k::Integer,
+                      A::oneStridedVecOrMat{$elty},
+                      x::oneStridedVecOrMat{$elty})
+            tbmv!(uplo, trans, diag, k, A, copy(x))
+        end
+    end
+end
+
+### trmv, Triangular matrix-vector multiplication
+for (fname, elty) in ((:onemklStrmv, :Float32),
+                      (:onemklDtrmv, :Float64),
+                      (:onemklCtrmv, :ComplexF32),
+                      (:onemklZtrmv, :ComplexF64))
+    @eval begin
+        function trmv!(uplo::Char,
+                       trans::Char,
+                       diag::Char,
+                       A::oneStridedVecOrMat{$elty},
+                       x::oneStridedVecOrMat{$elty})
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if n != length(x)
+                throw(DimensionMismatch("length(x)=$(length(x)) does not match size(A)=$(size(A))"))
+            end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, trans, diag, n, A, lda, x, incx)
+            x
+        end
+
+        function trmv(uplo::Char,
+                      trans::Char,
+                      diag::Char,
+                      A::oneStridedVecOrMat{$elty},
+                      x::oneStridedVecOrMat{$elty})
+            trmv!(uplo, trans, diag, A, copy(x))
+        end
+    end
+end
+
+### trsv, Triangular matrix-vector solve
+for (fname, elty) in ((:onemklStrsv, :Float32),
+                      (:onemklDtrsv, :Float64),
+                      (:onemklCtrsv, :ComplexF32),
+                      (:onemklZtrsv, :ComplexF64))
+    @eval begin
+        function trsv!(uplo::Char,
+                       trans::Char,
+                       diag::Char,
+                       A::oneStridedVecOrMat{$elty},
+                       x::oneStridedVecOrMat{$elty})
+            m, n = size(A)
+            if m != n throw(DimensionMismatch("Matrix A is $m by $n but must be square")) end
+            if n != length(x)
+                throw(DimensionMismatch("length(x)=$(length(x)) does not match size(A)=$(size(A))"))
+            end
+            lda = max(1,stride(A,2))
+            incx = stride(x,1)
+            queue = global_queue(context(x), device(x))
+            $fname(sycl_queue(queue), uplo, trans, diag, n, A, lda, x, incx)
+            x
+        end
+        function trsv(uplo::Char,
+                      trans::Char,
+                      diag::Char,
+                      A::oneStridedVecOrMat{$elty},
+                      x::oneStridedVecOrMat{$elty})
+            trsv!(uplo, trans, diag, A, copy(x))
         end
     end
 end

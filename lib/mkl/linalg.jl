@@ -76,6 +76,76 @@ function LinearAlgebra.dot(x::oneStridedArray{T}, y::oneStridedArray{T}) where T
     oneMKL.dotc(n, x, y)
 end
 
+@inline function LinearAlgebra.mul!(y::oneStridedVecOrMat{T}, A::Hermitian{T,<:oneStridedVecOrMat}, x::oneStridedVecOrMat{T},
+             α::Number, β::Number) where {T<:Union{ComplexF32,ComplexF64}}
+    alpha, beta = promote(α, β, zero(T))
+    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
+        return oneMKL.hemv!(A.uplo, alpha, A.data, x, beta, y)
+    else
+        error("only supports BLAS type, got $T")
+    end
+end
+
+# symmetric mul!
+# level 2
+@inline function LinearAlgebra.mul!(y::oneStridedVecOrMat{T}, A::Hermitian{T,<:oneStridedVecOrMat}, x::oneStridedVecOrMat{T},
+             α::Number, β::Number) where {T<:Union{Float32,Float64}}
+    alpha, beta = promote(α, β, zero(T))
+    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
+        return oneMKL.symv!(A.uplo, alpha, A.data, x, beta, y)
+    else
+        error("only supports BLAS type, got $T")
+    end
+end
+
+## direct multiplication/division
+for (t, uploc, isunitc) in ((:LowerTriangular, 'L', 'N'),
+                            (:UnitLowerTriangular, 'L', 'U'),
+                            (:UpperTriangular, 'U', 'N'),
+                            (:UnitUpperTriangular, 'U', 'U'))
+    @eval begin
+        # Multiplication
+        LinearAlgebra.lmul!(A::$t{T,<:oneStridedVecOrMat},
+                            b::oneStridedVecOrMat{T}) where {T<:onemklFloat} =
+            oneMKL.trmv!($uploc, 'N', $isunitc, parent(A), b)
+
+        # Left division
+        LinearAlgebra.ldiv!(A::$t{T,<:oneStridedVecOrMat},
+                            B::oneStridedVecOrMat{T}) where {T<:onemklFloat} =
+            oneMKL.trsv!($uploc, 'N', $isunitc, parent(A), B)
+    end
+end
+
+## adjoint/transpose multiplication ('uploc' reversed)
+for (t, uploc, isunitc) in ((:LowerTriangular, 'U', 'N'),
+                            (:UnitLowerTriangular, 'U', 'U'),
+                            (:UpperTriangular, 'L', 'N'),
+                            (:UnitUpperTriangular, 'L', 'U'))
+    @eval begin
+        # Multiplication
+        LinearAlgebra.lmul!(A::$t{<:Any,<:Transpose{T,<:oneStridedMatrix}},
+                            b::oneStridedVector{T}) where {T<:onemklFloat} =
+            oneMKL.trmv!($uploc, 'T', $isunitc, parent(parent(A)), b)
+        LinearAlgebra.lmul!(A::$t{<:Any,<:Adjoint{T,<:oneStridedMatrix}},
+                            b::oneStridedVector{T}) where {T<:Union{Float32,Float64}} =
+            oneMKL.trmv!($uploc, 'T', $isunitc, parent(parent(A)), b)
+        LinearAlgebra.lmul!(A::$t{<:Any,<:Adjoint{T,<:oneStridedMatrix}},
+                            b::oneStridedVector{T}) where {T<:Union{ComplexF32,ComplexF64}} =
+            oneMKL.trmv!($uploc, 'C', $isunitc, parent(parent(A)), b)
+
+        # Left division
+        LinearAlgebra.ldiv!(A::$t{<:Any,<:Transpose{T,<:oneStridedMatrix}},
+                            B::oneStridedVector{T}) where {T<:onemklFloat} =
+            oneMKL.trsv!($uploc, 'T', $isunitc, parent(parent(A)), B)
+        LinearAlgebra.ldiv!(A::$t{<:Any,<:Adjoint{T,<:oneStridedMatrix}},
+                            B::oneStridedVector{T}) where {T<:Union{Float32,Float64}} =
+            oneMKL.trsv!($uploc, 'T', $isunitc, parent(parent(A)), B)
+        LinearAlgebra.ldiv!(A::$t{<:Any,<:Adjoint{T,<:oneStridedMatrix}},
+                            B::oneStridedVector{T}) where {T<:Union{ComplexF32,ComplexF64}} =
+            oneMKL.trsv!($uploc, 'C', $isunitc, parent(parent(A)), B)
+    end
+end
+
 for NT in (Number, Real)
     # NOTE: alpha/beta also ::Real to avoid ambiguities with certain Base methods
     @eval begin
