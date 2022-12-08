@@ -314,7 +314,6 @@ end
                 # compare
                 h_y = Array(d_y)
                 @test y ≈ h_y
-                #@test_throws DimensionMismatch CUBLAS.trsv!('U','N','N',dA,CUDA.rand(elty,m+1))
             end
 
             @testset "trsv" begin
