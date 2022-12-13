@@ -236,6 +236,44 @@ for (mmname, smname, elty) in
     end
 end
 
+## hemm
+for (fname, elty) in ((:onemklZhemm,:ComplexF64),
+                      (:onemklChemm,:ComplexF32))
+    @eval begin
+        function hemm!(side::Char,
+                       uplo::Char,
+                       alpha::Number,
+                       A::oneStridedMatrix{$elty},
+                       B::oneStridedMatrix{$elty},
+                       beta::Number,
+                       C::oneStridedMatrix{$elty})
+            mA, nA = size(A)
+            m, n = size(B)
+            mC, nC = size(C)
+            if mA != nA throw(DimensionMismatch("A must be square")) end
+            if ((m != mC) || (n != nC)) throw(DimensionMismatch("B and C must have same dimensions")) end
+            if ((side == 'L') && (mA != m)) throw(DimensionMismatch("")) end
+            if ((side == 'R') && (mA != n)) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            queue = global_queue(context(A), device(A))
+            $fname(sycl_queue(queue), side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
+            C
+        end
+        function hemm(uplo::Char,
+                      trans::Char,
+                      alpha::Number,
+                      A::oneStridedMatrix{$elty},
+                      B::oneStridedMatrix{$elty})
+            m,n = size(B)
+            hemm!( uplo, trans, alpha, A, B, zero($elty), similar(B, $elty, (m,n) ) )
+        end
+        hemm( uplo::Char, trans::Char, A::oneStridedMatrix{$elty}, B::oneStridedMatrix{$elty}) =
+            hemm( uplo, trans, one($elty), A, B)
+    end
+end
+
 # level 2
 ## gemv
 for (fname, elty) in ((:onemklSgemv, :Float32),

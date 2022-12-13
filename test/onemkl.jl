@@ -606,6 +606,7 @@ end
             h_C = Array(dB)
             @test C ≈ h_C
         end
+
         @testset "trmm" begin
             A = triu(rand(T, m, m))
             B = rand(T,m,n)
@@ -684,6 +685,39 @@ end
                 C = alpha*(A/transpose(B))
                 dC = oneMKL.trsm('R','U','T','N',alpha,dB,dA)
                 @test C ≈ Array(dC)
+            end
+        end
+        if T <:Union{ComplexF32,ComplexF64}
+            @testset "hemm!" begin
+                B = rand(T,m,n)
+                C = rand(T,m,n)
+                d_B = oneArray(B)
+                d_C = oneArray(C)
+                hA = rand(T,m,m)
+                hA = hA + hA'
+                dhA = oneArray(hA)
+                # compute
+                C = alpha*(hA*B) + beta*C
+                oneMKL.hemm!('L','L',alpha,dhA,d_B,beta,d_C)
+                # move to host and compare
+                h_C = Array(d_C)
+                @test C ≈ h_C
+            end
+
+            @testset "hemm" begin
+                B = rand(T,m,n)
+                C = rand(T,m,n)
+                d_B = oneArray(B)
+                d_C = oneArray(C)
+                hA = rand(T,m,m)
+                hA = hA + hA'
+                dhA = oneArray(hA)
+
+                C = hA*B
+                d_C = oneMKL.hemm('L','U',dhA,d_B)
+                # move to host and compare
+                h_C = Array(d_C)
+                @test C ≈ h_C
             end
         end
     end
