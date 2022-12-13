@@ -127,6 +127,51 @@ for (fname, elty) in ((:onemklDsyrk,:Float64),
     end
 end
 
+## syr2k
+for (fname, elty) in ((:onemklDsyr2k,:Float64),
+                      (:onemklSsyr2k,:Float32),
+                      (:onemklZsyr2k,:ComplexF64),
+                      (:onemklCsyr2k,:ComplexF32))
+    @eval begin
+        function syr2k!(uplo::Char,
+                        trans::Char,
+                        alpha::Number,
+                        A::oneStridedVecOrMat{$elty},
+                        B::oneStridedVecOrMat{$elty},
+                        beta::Number,
+                        C::oneStridedVecOrMat{$elty})
+            m, n = size(C)
+            if m != n throw(DimensionMismatch("C must be square")) end
+            nA = size(A, trans == 'N' ? 1 : 2)
+            nB = size(B, trans == 'N' ? 1 : 2)
+            if nA != n throw(DimensionMismatch("First dimension of op(A) must match C")) end
+            if nB != n throw(DimensionMismatch("First dimension of op(B.') must match C")) end
+            k  = size(A, trans == 'N' ? 2 : 1)
+            if k != size(B, trans == 'N' ? 2 : 1) throw(DimensionMismatch(
+                "Inner dimensions of op(A) and op(B.') must match")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            queue = global_queue(context(A), device(A))
+            $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+            C
+        end
+
+        function syr2k(uplo::Char,
+                       trans::Char,
+                       alpha::Number,
+                       A::oneStridedVecOrMat,
+                       B::oneStridedVecOrMat)
+                T = eltype(A)
+                n = size(A, trans == 'N' ? 1 : 2)
+                syr2k!(uplo, trans, convert(T,alpha), A, B, zero(T), similar(A, T, (n, n)))
+        end
+
+        syr2k(uplo::Char, trans::Char, A::oneStridedVecOrMat, B::oneStridedVecOrMat) =
+                syr2k(uplo, trans, one(eltype(A)), A, B)
+    end
+end
+
 # level 2
 ## gemv
 for (fname, elty) in ((:onemklSgemv, :Float32),
