@@ -103,6 +103,39 @@ void onemklZsyr2k(syclQueue_t device_queue, onemklUplo upper_lower, onemklTransp
                 int64_t lda, const double _Complex *b, int64_t ldb, double _Complex beta,
                 double _Complex *c, int64_t ldc);
 
+void onemklStrmm(syclQueue_t device_queue, onemklSide left_right,
+                onemklUplo uppler_lower, onemklTranspose trans,
+                onemklDiag diag, int64_t m, int64_t n, float alpha,
+                const float *a, int64_t lda, float *b, int64_t ldb);
+void onemklDtrmm(syclQueue_t device_queue, onemklSide left_right,
+                onemklUplo uppler_lower, onemklTranspose trans,
+                onemklDiag diag, int64_t m, int64_t n, double alpha,
+                const double *a, int64_t lda, double *b, int64_t ldb);
+void onemklCtrmm(syclQueue_t device_queue, onemklSide left_right,
+                onemklUplo uppler_lower, onemklTranspose trans,
+                onemklDiag diag, int64_t m, int64_t n, float _Complex alpha,
+                const float _Complex *a, int64_t lda, float _Complex *b,
+                int64_t ldb);
+void onemklZtrmm(syclQueue_t device_queue, onemklSide left_right,
+                onemklUplo uppler_lower, onemklTranspose trans,
+                onemklDiag diag, int64_t m, int64_t n, double _Complex alpha,
+                const double _Complex *a, int64_t lda, double _Complex *b, int64_t ldb);
+
+void onemklStrsm(syclQueue_t device_queue, onemklSide left_right, onemklUplo upper_lower,
+                onemklTranspose transa, onemklDiag unit_diag, int64_t m, int64_t n,
+                float alpha, const float *a, int64_t lda, float *b, int64_t ldb);
+void onemklDtrsm(syclQueue_t device_queue, onemklSide left_right, onemklUplo upper_lower,
+                onemklTranspose transa, onemklDiag unit_diag, int64_t m, int64_t n,
+                double alpha, const double *a, int64_t lda, double *b, int64_t ldb);
+void onemklCtrsm(syclQueue_t device_queue, onemklSide left_right, onemklUplo upper_lower,
+                onemklTranspose transa, onemklDiag unit_diag, int64_t m, int64_t n,
+                float _Complex alpha, const float _Complex *a, int64_t lda, float _Complex *b,
+                int64_t ldb);
+void onemklZtrsm(syclQueue_t device_queue, onemklSide left_right, onemklUplo upper_lower,
+                onemklTranspose transa, onemklDiag unit_diag, int64_t m, int64_t n,
+                double _Complex alpha, const double _Complex *a, int64_t lda, double _Complex *b,
+                int64_t ldb);
+
 void onemklSgbmv(syclQueue_t device_queue, onemklTranspose trans, int64_t m,
                 int64_t n, int64_t kl, int64_t ku, float alpha, const float *a,
                 int64_t lda, const float *x, int64_t incx, float beta, float *y,

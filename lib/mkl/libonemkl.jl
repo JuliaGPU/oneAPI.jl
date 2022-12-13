@@ -175,6 +175,70 @@ function onemklZsyr2k(device_queue, upper_lower, trans, n, k, alpha, a, lda, b, 
                                           beta::ComplexF64, c::ZePtr{ComplexF64}, ldc::Int64)::Cvoid
 end
 
+function onemklStrmm(device_queue, left_right, upper_lower, trana, unit_diag, m, n, alpha,
+                     a, lda, b, ldb)
+    @ccall liboneapi_support.onemklStrmm(device_queue::syclQueue_t, left_right::onemklSide,
+                                         upper_lower::onemklUplo, trana::onemklTranspose,
+                                         unit_diag::onemklDiag, m::Int64, n::Int64, alpha::Cfloat,
+                                         a::ZePtr{Cfloat}, lda::Int64, b::ZePtr{Cfloat}, ldb::Int64)::Cvoid
+end
+
+function onemklDtrmm(device_queue, left_right, upper_lower, trana, unit_diag, m, n, alpha,
+                    a, lda, b, ldb)
+    @ccall liboneapi_support.onemklDtrmm(device_queue::syclQueue_t, left_right::onemklSide,
+                                        upper_lower::onemklUplo, trana::onemklTranspose,
+                                        unit_diag::onemklDiag, m::Int64, n::Int64, alpha::Cdouble,
+                                        a::ZePtr{Cdouble}, lda::Int64, b::ZePtr{Cdouble}, ldb::Int64)::Cvoid
+end
+
+function onemklCtrmm(device_queue, left_right, upper_lower, trana, unit_diag, m, n, alpha,
+                    a, lda, b, ldb)
+    @ccall liboneapi_support.onemklCtrmm(device_queue::syclQueue_t, left_right::onemklSide,
+                                        upper_lower::onemklUplo, trana::onemklTranspose,
+                                        unit_diag::onemklDiag, m::Int64, n::Int64, alpha::ComplexF32,
+                                        a::ZePtr{ComplexF32}, lda::Int64, b::ZePtr{ComplexF32}, ldb::Int64)::Cvoid
+end
+
+function onemklZtrmm(device_queue, left_right, upper_lower, trana, unit_diag, m, n, alpha,
+                    a, lda, b, ldb)
+    @ccall liboneapi_support.onemklZtrmm(device_queue::syclQueue_t, left_right::onemklSide,
+                                        upper_lower::onemklUplo, trana::onemklTranspose,
+                                        unit_diag::onemklDiag, m::Int64, n::Int64, alpha::ComplexF64,
+                                        a::ZePtr{ComplexF64}, lda::Int64, b::ZePtr{ComplexF64}, ldb::Int64)::Cvoid
+end
+
+function onemklStrsm(device_queue, left_right, upper_lower, transa, unit_diag, m, n, alpha, a, lda, b, ldb)
+    @ccall liboneapi_support.onemklStrsm(device_queue::syclQueue_t, left_right::onemklSide,
+                                         upper_lower::onemklUplo, transa::onemklTranspose,
+                                         unit_diag::onemklDiag, m::Int64, n::Int64, alpha::Cfloat,
+                                         a::ZePtr{Cfloat}, lda::Int64, b::ZePtr{Cfloat},
+                                         ldb::Int64)::Cvoid
+end
+
+function onemklDtrsm(device_queue, left_right, upper_lower, transa, unit_diag, m, n, alpha, a, lda, b, ldb)
+    @ccall liboneapi_support.onemklDtrsm(device_queue::syclQueue_t, left_right::onemklSide,
+                                         upper_lower::onemklUplo, transa::onemklTranspose,
+                                         unit_diag::onemklDiag, m::Int64, n::Int64, alpha::Cdouble,
+                                         a::ZePtr{Cdouble}, lda::Int64, b::ZePtr{Cdouble},
+                                         ldb::Int64)::Cvoid
+end
+
+function onemklCtrsm(device_queue, left_right, upper_lower, transa, unit_diag, m, n, alpha, a, lda, b, ldb)
+    @ccall liboneapi_support.onemklCtrsm(device_queue::syclQueue_t, left_right::onemklSide,
+                                         upper_lower::onemklUplo, transa::onemklTranspose,
+                                         unit_diag::onemklDiag, m::Int64, n::Int64, alpha::ComplexF32,
+                                         a::ZePtr{ComplexF32}, lda::Int64, b::ZePtr{ComplexF32},
+                                         ldb::Int64)::Cvoid
+end
+
+function onemklZtrsm(device_queue, left_right, upper_lower, transa, unit_diag, m, n, alpha, a, lda, b, ldb)
+    @ccall liboneapi_support.onemklZtrsm(device_queue::syclQueue_t, left_right::onemklSide,
+                                         upper_lower::onemklUplo, transa::onemklTranspose,
+                                         unit_diag::onemklDiag, m::Int64, n::Int64, alpha::ComplexF64,
+                                         a::ZePtr{ComplexF64}, lda::Int64, b::ZePtr{ComplexF64},
+                                         ldb::Int64)::Cvoid
+end
+
 function onemklSdot(device_queue, n, x, incx, y, incy, result)
     @ccall liboneapi_support.onemklSdot(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{Cfloat}, incx::Int64, y::ZePtr{Cfloat},
