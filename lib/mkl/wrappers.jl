@@ -2,6 +2,16 @@
 # Auxiliary
 #
 
+function Base.convert(::Type{onemklSide}, side::Char)
+    if side == 'L'
+        return ONEMKL_SIDE_LEFT
+    elseif side == 'R'
+        return ONEMKL_SIDE_RIGHT
+    else
+        throw(ArgumentError("Unknown transpose $side"))
+    end
+end
+
 function Base.convert(::Type{onemklTranspose}, trans::Char)
     if trans == 'N'
         return ONEMKL_TRANSPOSE_NONTRANS
@@ -31,6 +41,52 @@ function Base.convert(::Type{onemklDiag}, diag::Char)
         return ONEMKL_DIAG_UNIT
     else
         throw(ArgumentError("Unknown transpose $diag"))
+    end
+end
+
+## (L3: symm) symmetric matrix-matrix and matrix-vector multiplication
+for (fname, elty) in ((:onemklSsymm, :Float32),
+                      (:onemklDsymm, :Float64),
+                      (:onemklCsymm, :ComplexF32),
+                      (:onemklZsymm, :ComplexF64))
+    @eval begin
+        function symm!(side::Char,
+                       uplo::Char,
+                       alpha::Number,
+                       A::oneStridedVecOrMat{$elty},
+                       B::oneStridedVecOrMat{$elty},
+                       beta::Number,
+                       C::oneStridedVecOrMat{$elty})
+            k, nA = size(A)
+            if k != nA throw(DimensionMismatch("Matrix A must be square")) end
+            m = side == 'L' ? k : size(B,1)
+            n = side == 'L' ? size(B,2) : k
+            if m != size(C,1) || n != size(C,2) || k != size(B, side == 'L' ? 1 : 2)
+                throw(DimensionMismatch(""))
+            end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            queue = global_queue(context(A), device(A))
+            $fname(sycl_queue(queue), side, uplo, m, n, alpha, A, lda, B, ldb,
+                   beta, C, ldc)
+            C
+        end
+
+        function symm(side::Char,
+                      uplo::Char,
+                      alpha::Number,
+                      A::oneStridedVecOrMat{$elty},
+                      B::oneStridedVecOrMat{$elty})
+            symm!(side, uplo, alpha, A, B, zero($elty), similar(B))
+        end
+
+        function symm(side::Char,
+                      uplo::Char,
+                      A::oneStridedVecOrMat{$elty},
+                      B::oneStridedVecOrMat{$elty})
+            symm(side, uplo, one($elty), A, B)
+        end
     end
 end
 

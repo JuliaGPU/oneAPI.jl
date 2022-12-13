@@ -518,3 +518,37 @@ end
         end
     end
 end
+
+@testset "level 3" begin
+    @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
+        alpha = rand(T)
+        beta = rand(T)
+        B = rand(T,m,n)
+        C = rand(T,m,n)
+        Bbad = rand(T,m+1,n+1)
+        d_B = oneArray(B)
+        d_C = oneArray(C)
+        d_Bbad = oneArray(Bbad)
+        sA = rand(T,m,m)
+        sA = sA + transpose(sA)
+        dsA = oneArray(sA)
+
+        @testset "symm!" begin
+            oneMKL.symm!('L','U',alpha,dsA,d_B,beta,d_C)
+            C = (alpha*sA)*B + beta*C
+            # compare
+            h_C = Array(d_C)
+            @test C ≈ h_C
+            @test_throws DimensionMismatch oneMKL.symm!('L','U',alpha,dsA,d_Bbad,beta,d_C)
+        end
+
+        @testset "symm" begin
+            d_C = oneMKL.symm('L','U',dsA,d_B)
+            C = sA*B
+            # compare
+            h_C = Array(d_C)
+            @test C ≈ h_C
+            @test_throws DimensionMismatch oneMKL.symm('L','U',dsA,d_Bbad)
+        end
+    end
+end
