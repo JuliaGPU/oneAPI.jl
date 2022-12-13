@@ -304,6 +304,49 @@ for (fname, elty) in ((:onemklZherk, :ComplexF64),
    end
 end
 
+## her2k
+for (fname, elty) in ((:onemklZher2k,:ComplexF64),
+                      (:onemklCher2k,:ComplexF32))
+    @eval begin
+        function her2k!(uplo::Char,
+                        trans::Char,
+                        alpha::Number,
+                        A::oneStridedVecOrMat{$elty},
+                        B::oneStridedVecOrMat{$elty},
+                        beta::Real,
+                        C::oneStridedMatrix{$elty})
+            m, n = size(C)
+            if m != n throw(DimensionMismatch("C must be square")) end
+            nA = size(A, trans == 'N' ? 1 : 2)
+            nB = size(B, trans == 'N' ? 1 : 2)
+            if nA != n throw(DimensionMismatch("First dimension of op(A) must match C")) end
+            if nB != n throw(DimensionMismatch("First dimension of op(B.') must match C")) end
+            k  = size(A, trans == 'N' ? 2 : 1)
+            if k != size(B, trans == 'N' ? 2 : 1)
+                throw(DimensionMismatch("Inner dimensions of op(A) and op(B.') must match"))
+            end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            queue = global_queue(context(A), device(A))
+            $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+            C
+        end
+        function her2k(uplo::Char,
+                       trans::Char,
+                       alpha::Number,
+                       A::oneStridedVecOrMat{$elty},
+                       B::oneStridedVecOrMat{$elty})
+            n = size(A, trans == 'N' ? 1 : 2)
+            her2k!(uplo, trans, alpha, A, B, zero(real($elty)), similar(A, $elty, (n,n)))
+        end
+        her2k(uplo::Char,
+              trans::Char,
+              A::oneStridedVecOrMat{$elty},
+              B::oneStridedVecOrMat{$elty}) = her2k(uplo, trans, one($elty), A, B)
+   end
+end
+
 # level 2
 ## gemv
 for (fname, elty) in ((:onemklSgemv, :Float32),

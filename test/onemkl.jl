@@ -758,6 +758,54 @@ end
                 h_C = triu(C)
                 @test C ≈ h_C
             end
+
+            @testset "her2k!" begin
+                A = rand(T,m,k)
+                B = rand(T,m,k)
+                Bbad = rand(T,m+1,k+1)
+                C = rand(T,m,m)
+                C = C + transpose(C)
+                # move to device
+                d_A = oneArray(A)
+                d_B = oneArray(B)
+                d_Bbad = oneArray(Bbad)
+                d_C = oneArray(C)
+                elty1 = T
+                elty2 = real(T)
+                # generate parameters
+                α = rand(elty1)
+                β = rand(elty2)
+                C = C + C'
+                d_C = oneArray(C)
+                C = α*(A*B') + conj(α)*(B*A') + β*C
+                oneMKL.her2k!('U','N',α,d_A,d_B,β,d_C)
+                # move back to host and compare
+                C = triu(C)
+                h_C = Array(d_C)
+                h_C = triu(h_C)
+                @test C ≈ h_C
+                @test_throws DimensionMismatch oneMKL.her2k!('U','N',α,d_A,d_Bbad,β,d_C)
+            end
+    
+            @testset "her2k" begin
+                A = rand(T,m,k)
+                B = rand(T,m,k)
+                Bbad = rand(T,m+1,k+1)
+                C = rand(T,m,m)
+                C = C + transpose(C)
+                # move to device
+                d_A = oneArray(A)
+                d_B = oneArray(B)
+                d_Bbad = oneArray(Bbad)
+                d_C = oneArray(C)
+                C = A*B' + B*A'
+                d_C = oneMKL.her2k('U','N',d_A,d_B)
+                # move back to host and compare
+                C = triu(C)
+                h_C = Array(d_C)
+                h_C = triu(h_C)
+                @test C ≈ h_C
+            end
         end
     end
 end
