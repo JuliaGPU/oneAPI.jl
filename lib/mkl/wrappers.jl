@@ -274,6 +274,36 @@ for (fname, elty) in ((:onemklZhemm,:ComplexF64),
     end
 end
 
+## herk
+for (fname, elty) in ((:onemklZherk, :ComplexF64),
+                      (:onemklCherk, :ComplexF32))
+    @eval begin
+        function herk!(uplo::Char,
+                       trans::Char,
+                       alpha::Real,
+                       A::oneStridedVecOrMat{$elty},
+                       beta::Real,
+                       C::oneStridedMatrix{$elty})
+            mC, n = size(C)
+            if mC != n throw(DimensionMismatch("C must be square")) end
+            nn = size(A, trans == 'N' ? 1 : 2)
+            if nn != n throw(DimensionMismatch("herk!")) end
+            k  = size(A, trans == 'N' ? 2 : 1)
+            lda = max(1,stride(A,2))
+            ldc = max(1,stride(C,2))
+            queue = global_queue(context(A), device(A))
+            $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+            C
+        end
+        function herk(uplo::Char, trans::Char, alpha::Real, A::oneStridedVecOrMat{$elty})
+            n = size(A, trans == 'N' ? 1 : 2)
+            herk!(uplo, trans, alpha, A, zero(real($elty)), similar(A, $elty, (n,n)))
+        end
+        herk(uplo::Char, trans::Char, A::oneStridedVecOrMat{$elty}) =
+            herk(uplo, trans, one(real($elty)), A)
+   end
+end
+
 # level 2
 ## gemv
 for (fname, elty) in ((:onemklSgemv, :Float32),

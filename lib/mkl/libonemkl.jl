@@ -255,6 +255,20 @@ function onemklZhemm(device_queue, left_right, upper_lower, m, n, alpha, a, lda,
                                         beta::ComplexF64, c::ZePtr{ComplexF64}, ldc::Int64)::Cvoid
 end
 
+function onemklCherk(device_queue, upper_lower, trans, n, k, alpha, a, lda, beta, c, ldc)
+    @ccall liboneapi_support.onemklCherk(device_queue::syclQueue_t, upper_lower::onemklUplo,
+                                         trans::onemklTranspose, n::Int64, k::Int64, alpha::Cfloat,
+                                         a::ZePtr{ComplexF32}, lda::Int64, beta::Cfloat,
+                                         c::ZePtr{ComplexF32}, ldc::Int64)::Cvoid
+end
+
+function onemklZherk(device_queue, upper_lower, trans, n, k, alpha, a, lda, beta, c, ldc)
+    @ccall liboneapi_support.onemklZherk(device_queue::syclQueue_t, upper_lower::onemklUplo,
+                                         trans::onemklTranspose, n::Int64, k::Int64, alpha::Cdouble,
+                                         a::ZePtr{ComplexF64}, lda::Int64, beta::Cdouble,
+                                         c::ZePtr{ComplexF64}, ldc::Int64)::Cvoid
+end
+
 function onemklSdot(device_queue, n, x, incx, y, incy, result)
     @ccall liboneapi_support.onemklSdot(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{Cfloat}, incx::Int64, y::ZePtr{Cfloat},

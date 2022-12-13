@@ -719,6 +719,45 @@ end
                 h_C = Array(d_C)
                 @test C ≈ h_C
             end
+
+            @testset "herk!" begin
+                B = rand(T,m,n)
+                C = rand(T,m,n)
+                d_B = oneArray(B)
+                d_C = oneArray(C)
+                hA = rand(T,m,m)
+                hA = hA + hA'
+                dhA = oneArray(hA)
+                A = rand(T,m,k)
+                d_A = oneArray(A)
+                d_C = oneArray(dhA)
+                oneMKL.herk!('U','N',real(alpha),d_A,real(beta),d_C)
+                C = real(alpha)*(A*A') + real(beta)*hA
+                C = triu(C)
+                # move to host and compare
+                h_C = Array(d_C)
+                h_C = triu(C)
+                @test C ≈ h_C
+            end
+    
+            @testset "herk" begin
+                B = rand(T,m,n)
+                C = rand(T,m,n)
+                d_B = oneArray(B)
+                d_C = oneArray(C)
+                hA = rand(T,m,m)
+                hA = hA + hA'
+                dhA = oneArray(hA)
+                A = rand(T,m,k)
+                d_A = oneArray(A)
+                d_C = oneMKL.herk('U','N',d_A)
+                C = A*A'
+                C = triu(C)
+                # move to host and compare
+                h_C = Array(d_C)
+                h_C = triu(C)
+                @test C ≈ h_C
+            end
         end
     end
 end
