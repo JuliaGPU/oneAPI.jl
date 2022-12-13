@@ -73,6 +73,21 @@ void onemklZsymm(syclQueue_t device_queue, onemklSide left_right,
                 const double _Complex *b, int64_t ldb, double _Complex beta,
                 double _Complex *c, int64_t ldc);
 
+void onemklSsyrk(syclQueue_t device_queue, onemklUplo upper_lower,
+                onemklTranspose trans, int64_t n, int64_t k, float alpha,
+                const float *a, int64_t lda, float beta, float *c, int64_t ldc);
+void onemklDsyrk(syclQueue_t device_queue, onemklUplo upper_lower,
+                onemklTranspose trans, int64_t n, int64_t k, double alpha,
+                const double *a, int64_t lda, double beta, double *c, int64_t ldc);
+void onemklCsyrk(syclQueue_t device_queue, onemklUplo upper_lower,
+                onemklTranspose trans, int64_t n, int64_t k, float _Complex alpha,
+                const float _Complex *a, int64_t lda, float _Complex beta, float _Complex *c,
+                int64_t ldc);
+void onemklZsyrk(syclQueue_t device_queue, onemklUplo upper_lower,
+                onemklTranspose trans, int64_t n, int64_t k, double _Complex alpha,
+                const double _Complex *a, int64_t lda, double _Complex beta, double _Complex *c,
+                int64_t ldc);
+
 void onemklSgbmv(syclQueue_t device_queue, onemklTranspose trans, int64_t m,
                 int64_t n, int64_t kl, int64_t ku, float alpha, const float *a,
                 int64_t lda, const float *x, int64_t incx, float beta, float *y,

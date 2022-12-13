@@ -550,5 +550,17 @@ end
             @test C ≈ h_C
             @test_throws DimensionMismatch oneMKL.symm('L','U',dsA,d_Bbad)
         end
+
+        @testset "syrk" begin
+            A = rand(T,m,k)
+            d_A = oneArray(A)
+            d_C = oneMKL.syrk('U','N',d_A)
+            C = A*transpose(A)
+            C = triu(C)
+            # move to host and compare
+            h_C = Array(d_C)
+            h_C = triu(C)
+            @test C ≈ h_C
+        end
     end
 end
