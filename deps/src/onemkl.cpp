@@ -56,9 +56,10 @@ extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            int64_t k, sycl::half alpha, const sycl::half *A, int64_t lda,
                            const sycl::half *B, int64_t ldb, sycl::half beta, sycl::half *C,
                            int64_t ldc) {
-    oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
+    auto status = oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
                                           convert(transB), m, n, k, alpha, A,
                                           lda, B, ldb, beta, C, ldc);
+    __FORCE_MKL_FLUSH__(status);
     return 0;
 }
 
@@ -67,9 +68,10 @@ extern "C" int onemklSgemm(syclQueue_t device_queue, onemklTranspose transA,
                            int64_t k, float alpha, const float *A, int64_t lda,
                            const float *B, int64_t ldb, float beta, float *C,
                            int64_t ldc) {
-    oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
+    auto status = oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
                                           convert(transB), m, n, k, alpha, A,
                                           lda, B, ldb, beta, C, ldc);
+    __FORCE_MKL_FLUSH__(status);
     return 0;
 }
 
@@ -78,9 +80,10 @@ extern "C" int onemklDgemm(syclQueue_t device_queue, onemklTranspose transA,
                            int64_t k, double alpha, const double *A,
                            int64_t lda, const double *B, int64_t ldb,
                            double beta, double *C, int64_t ldc) {
-    oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
+    auto status = oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
                                           convert(transB), m, n, k, alpha, A,
                                           lda, B, ldb, beta, C, ldc);
+    __FORCE_MKL_FLUSH__(status);
     return 0;
 }
 
@@ -91,11 +94,12 @@ extern "C" int onemklCgemm(syclQueue_t device_queue, onemklTranspose transA,
                            const float _Complex *B, int64_t ldb,
                            float _Complex beta, float _Complex *C,
                            int64_t ldc) {
-    oneapi::mkl::blas::column_major::gemm(
+    auto status = oneapi::mkl::blas::column_major::gemm(
         device_queue->val, convert(transA), convert(transB), m, n, k, alpha,
         reinterpret_cast<const std::complex<float> *>(A), lda,
         reinterpret_cast<const std::complex<float> *>(B), ldb, beta,
         reinterpret_cast<std::complex<float> *>(C), ldc);
+    __FORCE_MKL_FLUSH__(status);
     return 0;
 }
 
@@ -106,11 +110,12 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
                            const double _Complex *B, int64_t ldb,
                            double _Complex beta, double _Complex *C,
                            int64_t ldc) {
-    oneapi::mkl::blas::column_major::gemm(
+    auto status = oneapi::mkl::blas::column_major::gemm(
         device_queue->val, convert(transA), convert(transB), m, n, k, alpha,
         reinterpret_cast<const std::complex<double> *>(A), lda,
         reinterpret_cast<const std::complex<double> *>(B), ldb, beta,
         reinterpret_cast<std::complex<double> *>(C), ldc);
+    __FORCE_MKL_FLUSH__(status);
     return 0;
 }
 
@@ -118,18 +123,20 @@ extern "C" void onemklSsymm(syclQueue_t device_queue, onemklSide left_right,
                             onemklUplo upper_lower, int64_t m, int64_t n,
                             float alpha, const float *a, int64_t lda, const float *b,
                             int64_t ldb, float beta, float *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::symm(device_queue->val, convert(left_right),
-                                          convert(upper_lower), m, n, alpha, a, lda, b,
-                                          ldb, beta, c, ldc);
+    auto status = oneapi::mkl::blas::column_major::symm(device_queue->val,
+                                        convert(left_right), convert(upper_lower),
+                                        m, n, alpha, a, lda, b, ldb, beta, c, ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDsymm(syclQueue_t device_queue, onemklSide left_right,
                             onemklUplo upper_lower, int64_t m, int64_t n,
                             double alpha, const double *a, int64_t lda, const double *b,
                             int64_t ldb, double beta, double *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::symm(device_queue->val, convert(left_right),
+    auto status = oneapi::mkl::blas::column_major::symm(device_queue->val, convert(left_right),
                                           convert(upper_lower), m, n, alpha, a, lda, b,
                                           ldb, beta, c, ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklCsymm(syclQueue_t device_queue, onemklSide left_right,
@@ -137,12 +144,13 @@ extern "C" void onemklCsymm(syclQueue_t device_queue, onemklSide left_right,
                             float _Complex alpha, const float _Complex *a, int64_t lda,
                             const float _Complex *b, int64_t ldb, float _Complex beta,
                             float _Complex *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::symm(device_queue->val, convert(left_right),
+    auto status = oneapi::mkl::blas::column_major::symm(device_queue->val, convert(left_right),
                                           convert(upper_lower), m, n,
                                           static_cast<std::complex<float> >(alpha),
                                           reinterpret_cast<const std::complex<float> *>(a),
                                           lda, reinterpret_cast<const std::complex<float> *>(b),
                                           ldb, beta, reinterpret_cast<std::complex<float> *>(c), ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklZsymm(syclQueue_t device_queue, onemklSide left_right,
@@ -150,87 +158,98 @@ extern "C" void onemklZsymm(syclQueue_t device_queue, onemklSide left_right,
                             double _Complex alpha, const double _Complex *a, int64_t lda,
                             const double _Complex *b, int64_t ldb, double _Complex beta,
                             double _Complex *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::symm(device_queue->val, convert(left_right),
+    auto status = oneapi::mkl::blas::column_major::symm(device_queue->val, convert(left_right),
                                           convert(upper_lower), m, n,
                                           static_cast<std::complex<double> >(alpha),
                                           reinterpret_cast<const std::complex<double> *>(a), lda,
                                           reinterpret_cast<const std::complex<double> *>(b), ldb,
                                           static_cast<std::complex<double> >(beta),
                                           reinterpret_cast<std::complex<double> *>(c), ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklSsyrk(syclQueue_t device_queue, onemklUplo upper_lower,
                             onemklTranspose trans, int64_t n, int64_t k, float alpha,
                             const float *a, int64_t lda, float beta, float *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::syrk(device_queue->val, convert(upper_lower), convert(trans),
-                                          n, k, alpha, a, lda, beta, c, ldc);
+    auto status = oneapi::mkl::blas::column_major::syrk(device_queue->val, convert(upper_lower),
+                                        convert(trans), n, k, alpha, a, lda, beta, c, ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDsyrk(syclQueue_t device_queue, onemklUplo upper_lower,
                             onemklTranspose trans, int64_t n, int64_t k, double alpha,
                             const double *a, int64_t lda, double beta, double *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::syrk(device_queue->val, convert(upper_lower), convert(trans),
-                                          n, k, alpha, a, lda, beta, c, ldc);
+    auto status = oneapi::mkl::blas::column_major::syrk(device_queue->val, convert(upper_lower),
+                                        convert(trans), n, k, alpha, a, lda, beta, c, ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklCsyrk(syclQueue_t device_queue, onemklUplo upper_lower,
-                            onemklTranspose trans, int64_t n, int64_t k, float _Complex alpha,
-                            const float _Complex *a, int64_t lda, float _Complex beta, float _Complex *c,
-                            int64_t ldc) {
-    oneapi::mkl::blas::column_major::syrk(device_queue->val, convert(upper_lower), convert(trans),
-                                          n, k, static_cast<std::complex<float> >(alpha),
-                                          reinterpret_cast<const std::complex<float> *>(a), lda,
-                                          static_cast<std::complex<float> >(beta),
-                                          reinterpret_cast<std::complex<float> *>(c), ldc);
+                            onemklTranspose trans, int64_t n, int64_t k,
+                            float _Complex alpha, const float _Complex *a,
+                            int64_t lda, float _Complex beta,
+                            float _Complex *c, int64_t ldc) {
+    auto status = oneapi::mkl::blas::column_major::syrk(device_queue->val, convert(upper_lower),
+                                        convert(trans), n, k, static_cast<std::complex<float> >(alpha),
+                                        reinterpret_cast<const std::complex<float> *>(a), lda,
+                                        static_cast<std::complex<float> >(beta),
+                                        reinterpret_cast<std::complex<float> *>(c), ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklZsyrk(syclQueue_t device_queue, onemklUplo upper_lower,
-                            onemklTranspose trans, int64_t n, int64_t k, double _Complex alpha,
-                            const double _Complex *a, int64_t lda, double _Complex beta, double _Complex *c,
-                            int64_t ldc) {
-    oneapi::mkl::blas::column_major::syrk(device_queue->val, convert(upper_lower), convert(trans),
-                                          n, k, static_cast<std::complex<float> >(alpha),
-                                          reinterpret_cast<const std::complex<double> *>(a), lda,
-                                          static_cast<std::complex<double> >(beta),
-                                          reinterpret_cast<std::complex<double> *>(c), ldc);
+                            onemklTranspose trans, int64_t n, int64_t k,
+                            double _Complex alpha, const double _Complex *a,
+                            int64_t lda, double _Complex beta,
+                            double _Complex *c, int64_t ldc) {
+    auto status = oneapi::mkl::blas::column_major::syrk(device_queue->val, convert(upper_lower),
+                                        convert(trans), n, k, static_cast<std::complex<float> >(alpha),
+                                        reinterpret_cast<const std::complex<double> *>(a), lda,
+                                        static_cast<std::complex<double> >(beta),
+                                        reinterpret_cast<std::complex<double> *>(c), ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklSsyr2k(syclQueue_t device_queue, onemklUplo upper_lower, onemklTranspose trans,
                              int64_t n, int64_t k, float alpha, const float *a, int64_t lda,
                              const float *b, int64_t ldb, float beta, float *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::syr2k(device_queue->val, convert(upper_lower), convert(trans),
-                                           n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+    auto status = oneapi::mkl::blas::column_major::syr2k(device_queue->val, convert(upper_lower),
+                                        convert(trans), n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDsyr2k(syclQueue_t device_queue, onemklUplo upper_lower, onemklTranspose trans,
                              int64_t n, int64_t k, double alpha, const double *a, int64_t lda,
                              const double *b, int64_t ldb, double beta, double *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::syr2k(device_queue->val, convert(upper_lower), convert(trans),
-                                           n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+    auto status = oneapi::mkl::blas::column_major::syr2k(device_queue->val, convert(upper_lower),
+                                        convert(trans), n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklCsyr2k(syclQueue_t device_queue, onemklUplo upper_lower, onemklTranspose trans,
                              int64_t n, int64_t k, float _Complex alpha, const float _Complex *a,
                              int64_t lda, const float _Complex *b, int64_t ldb, float _Complex beta,
                              float _Complex *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::syr2k(device_queue->val, convert(upper_lower), convert(trans),
-                                           n, k, static_cast<std::complex<float> >(alpha),
-                                           reinterpret_cast<const std::complex<float> *>(a), lda,
-                                           reinterpret_cast<const std::complex<float> *>(b), ldb,
-                                           static_cast<std::complex<float> >(beta),
-                                           reinterpret_cast<std::complex<float> *>(c), ldc);
+    auto status = oneapi::mkl::blas::column_major::syr2k(device_queue->val, convert(upper_lower),
+                                        convert(trans), n, k, static_cast<std::complex<float> >(alpha),
+                                        reinterpret_cast<const std::complex<float> *>(a), lda,
+                                        reinterpret_cast<const std::complex<float> *>(b), ldb,
+                                        static_cast<std::complex<float> >(beta),
+                                        reinterpret_cast<std::complex<float> *>(c), ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklZsyr2k(syclQueue_t device_queue, onemklUplo upper_lower, onemklTranspose trans,
                              int64_t n, int64_t k, double _Complex alpha, const double _Complex *a,
                              int64_t lda, const double _Complex *b, int64_t ldb, double _Complex beta,
                              double _Complex *c, int64_t ldc) {
-    oneapi::mkl::blas::column_major::syr2k(device_queue->val, convert(upper_lower), convert(trans),
-                                           n, k, static_cast<std::complex<double> >(alpha),
-                                           reinterpret_cast<const std::complex<double> *>(a), lda,
-                                           reinterpret_cast<const std::complex<double> *>(b), ldb,
-                                           static_cast<std::complex<double> >(beta),
-                                           reinterpret_cast<std::complex<double> *>(c), ldc);
+    auto status = oneapi::mkl::blas::column_major::syr2k(device_queue->val, convert(upper_lower),
+                                        convert(trans), n, k, static_cast<std::complex<double> >(alpha),
+                                        reinterpret_cast<const std::complex<double> *>(a), lda,
+                                        reinterpret_cast<const std::complex<double> *>(b), ldb,
+                                        static_cast<std::complex<double> >(beta),
+                                        reinterpret_cast<std::complex<double> *>(c), ldc);
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklStrmm(syclQueue_t device_queue, onemklSide left_right,
