@@ -14,7 +14,7 @@ include("libonemkl.jl")
 
 # Exclude Float16 for now, since many oneMKL functions - copy, scal, do not take Float16
 const onemklFloat = Union{Float64,Float32,ComplexF64,ComplexF32}
-
+const onemklComplex = Union{ComplexF32,ComplexF64}
 include("wrappers.jl")
 include("linalg.jl")
 

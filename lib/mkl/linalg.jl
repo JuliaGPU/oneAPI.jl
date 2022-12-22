@@ -76,6 +76,60 @@ function LinearAlgebra.dot(x::oneStridedArray{T}, y::oneStridedArray{T}) where T
     oneMKL.dotc(n, x, y)
 end
 
+# level 3
+@inline function LinearAlgebra.mul!(C::oneStridedVecOrMat{T}, A::Hermitian{T,<:oneStridedVecOrMat}, B::oneStridedVecOrMat{T},
+                                    α::Number, β::Number) where {T<:Union{Float32,Float64}}
+    alpha, beta = promote(α, β, zero(T))
+    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
+        return oneMKL.symm!('L', A.uplo, alpha, A.data, B, beta, C)
+    else
+        error("only supports BLAS type, got $T")
+    end
+end
+
+@inline function LinearAlgebra.mul!(C::oneStridedVecOrMat{T}, A::oneStridedVecOrMat{T}, B::Hermitian{T,<:oneStridedVecOrMat},
+                                    α::Number, β::Number) where {T<:Union{Float32,Float64}}
+    alpha, beta = promote(α, β, zero(T))
+    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
+        return oneMKL.symm!('R', B.uplo, alpha, B.data, A, beta, C)
+    else
+        error("only supports BLAS type, got $T")
+    end
+end
+
+@inline function LinearAlgebra.mul!(C::oneStridedVecOrMat{T}, A::Hermitian{T,<:oneStridedVecOrMat}, B::oneStridedVecOrMat{T},
+                                    α::Number, β::Number) where {T<:onemklComplex}
+    alpha, beta = promote(α, β, zero(T))
+    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
+        return oneMKL.hemm!('L', A.uplo, alpha, A.data, B, beta, C)
+    else
+        error("only supports BLAS type, got $T")
+    end
+end
+
+# triangular
+## direct multiplication/division
+for (t, uploc, isunitc) in ((:LowerTriangular, 'L', 'N'),
+                            (:UnitLowerTriangular, 'L', 'U'),
+                            (:UpperTriangular, 'U', 'N'),
+                            (:UnitUpperTriangular, 'U', 'U'))
+    @eval begin
+        # Multiplication
+        LinearAlgebra.lmul!(A::$t{T,<:oneStridedVecOrMat},
+                            B::oneStridedVecOrMat{T}) where {T<:onemklFloat} =
+            oneMKL.trmm!('L', $uploc, 'N', $isunitc, one(T), parent(A), B, B)
+        LinearAlgebra.rmul!(A::oneStridedVecOrMat{T},
+                            B::$t{T,<:oneStridedVecOrMat}) where {T<:onemklFloat} =
+            oneMKL.trmm!('R', $uploc, 'N', $isunitc, one(T), parent(B), A, A)
+
+        # Left division
+        LinearAlgebra.ldiv!(A::$t{T,<:oneStridedVecOrMat},
+                            B::oneStridedVecOrMat{T}) where {T<:onemklFloat} =
+            oneMKL.trsm!('L', $uploc, 'N', $isunitc, one(T), parent(A), B)
+    end
+
+end
+
 @inline function LinearAlgebra.mul!(y::oneStridedVecOrMat{T}, A::Hermitian{T,<:oneStridedVecOrMat}, x::oneStridedVecOrMat{T},
              α::Number, β::Number) where {T<:Union{ComplexF32,ComplexF64}}
     alpha, beta = promote(α, β, zero(T))
