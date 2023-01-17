@@ -72,22 +72,20 @@ for (fname, elty) in ((:onemklSsymm, :Float32),
                    beta, C, ldc)
             C
         end
-
-        function symm(side::Char,
-                      uplo::Char,
-                      alpha::Number,
-                      A::oneStridedVecOrMat{$elty},
-                      B::oneStridedVecOrMat{$elty})
-            symm!(side, uplo, alpha, A, B, zero($elty), similar(B))
-        end
-
-        function symm(side::Char,
-                      uplo::Char,
-                      A::oneStridedVecOrMat{$elty},
-                      B::oneStridedVecOrMat{$elty})
-            symm(side, uplo, one($elty), A, B)
-        end
     end
+end
+function symm(side::Char,
+                uplo::Char,
+                alpha::Number,
+                A::oneStridedVecOrMat{T},
+                B::oneStridedVecOrMat{T}) where T
+    symm!(side, uplo, alpha, A, B, zero(T), similar(B))
+end
+function symm(side::Char,
+                uplo::Char,
+                A::oneStridedVecOrMat{T},
+                B::oneStridedVecOrMat{T}) where T
+    symm(side, uplo, one(T), A, B)
 end
 
 ## syrk
@@ -113,19 +111,17 @@ for (fname, elty) in ((:onemklDsyrk,:Float64),
             $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
             C
         end
-        function syrk(uplo::Char,
-                      trans::Char,
-                      alpha::Number,
-                      A::oneStridedVecOrMat)
-                T = eltype(A)
-                n = size(A, trans == 'N' ? 1 : 2)
-                syrk!(uplo, trans, alpha, A, zero(T), similar(A, T, (n, n)))
-        end
-        syrk(uplo::Char, trans::Char, A::oneStridedVecOrMat) =
-            syrk(uplo, trans, one(eltype(A)), A)
-
     end
 end
+function syrk(uplo::Char,
+               trans::Char,
+               alpha::Number,
+               A::oneStridedVecOrMat{T}) where T
+        n = size(A, trans == 'N' ? 1 : 2)
+        syrk!(uplo, trans, alpha, A, zero(T), similar(A, (n, n)))
+end
+syrk(uplo::Char, trans::Char, A::oneStridedVecOrMat) =
+    syrk(uplo, trans, one(eltype(A)), A)
 
 ## syr2k
 for (fname, elty) in ((:onemklDsyr2k,:Float64),
@@ -156,21 +152,18 @@ for (fname, elty) in ((:onemklDsyr2k,:Float64),
             $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
             C
         end
-
-        function syr2k(uplo::Char,
-                       trans::Char,
-                       alpha::Number,
-                       A::oneStridedVecOrMat,
-                       B::oneStridedVecOrMat)
-                T = eltype(A)
-                n = size(A, trans == 'N' ? 1 : 2)
-                syr2k!(uplo, trans, convert(T,alpha), A, B, zero(T), similar(A, T, (n, n)))
-        end
-
-        syr2k(uplo::Char, trans::Char, A::oneStridedVecOrMat, B::oneStridedVecOrMat) =
-                syr2k(uplo, trans, one(eltype(A)), A, B)
     end
 end
+function syr2k(uplo::Char,
+               trans::Char,
+               alpha::Number,
+               A::oneStridedVecOrMat{T},
+               B::oneStridedVecOrMat{T}) where T
+        n = size(A, trans == 'N' ? 1 : 2)
+        syr2k!(uplo, trans, convert(T, alpha), A, B, zero(T), similar(A, (n, n)))
+end
+syr2k(uplo::Char, trans::Char, A::oneStridedVecOrMat, B::oneStridedVecOrMat) =
+        syr2k(uplo, trans, one(eltype(A)), A, B)
 
 ## (TR) Triangular matrix and vector multiplication and solution
 for (mmname, smname, elty) in
@@ -197,15 +190,6 @@ for (mmname, smname, elty) in
             B
         end
 
-        function trmm(side::Char,
-                      uplo::Char,
-                      transa::Char,
-                      diag::Char,
-                      alpha::Number,
-                      A::oneStridedMatrix{$elty},
-                      B::oneStridedMatrix{$elty})
-            trmm!(side, uplo, transa, diag, alpha, A, B)
-        end
         function trsm!(side::Char,
                        uplo::Char,
                        transa::Char,
@@ -223,17 +207,25 @@ for (mmname, smname, elty) in
             $smname(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb)
             B
         end
-
-        function trsm(side::Char,
-                      uplo::Char,
-                      transa::Char,
-                      diag::Char,
-                      alpha::Number,
-                      A::oneStridedMatrix{$elty},
-                      B::oneStridedMatrix{$elty})
-            trsm!(side, uplo, transa, diag, alpha, A, copy(B))
-        end
     end
+end
+function trmm(side::Char,
+              uplo::Char,
+              transa::Char,
+              diag::Char,
+              alpha::Number,
+              A::oneStridedMatrix{T},
+              B::oneStridedMatrix{T}) where T
+    trmm!(side, uplo, transa, diag, alpha, A, B)
+end
+function trsm(side::Char,
+                uplo::Char,
+                transa::Char,
+                diag::Char,
+                alpha::Number,
+                A::oneStridedMatrix{T},
+                B::oneStridedMatrix{T}) where T
+    trsm!(side, uplo, transa, diag, alpha, A, copy(B))
 end
 
 ## hemm
@@ -261,18 +253,18 @@ for (fname, elty) in ((:onemklZhemm,:ComplexF64),
             $fname(sycl_queue(queue), side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
             C
         end
-        function hemm(uplo::Char,
-                      trans::Char,
-                      alpha::Number,
-                      A::oneStridedMatrix{$elty},
-                      B::oneStridedMatrix{$elty})
-            m,n = size(B)
-            hemm!( uplo, trans, alpha, A, B, zero($elty), similar(B, $elty, (m,n) ) )
-        end
-        hemm( uplo::Char, trans::Char, A::oneStridedMatrix{$elty}, B::oneStridedMatrix{$elty}) =
-            hemm( uplo, trans, one($elty), A, B)
     end
 end
+function hemm(uplo::Char,
+                trans::Char,
+                alpha::Number,
+                A::oneStridedMatrix{T},
+                B::oneStridedMatrix{T}) where T
+    m,n = size(B)
+    hemm!( uplo, trans, alpha, A, B, zero(T), similar(B, (m,n) ) )
+end
+hemm(uplo::Char, trans::Char, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where T=
+    hemm( uplo, trans, one(T), A, B)
 
 ## herk
 for (fname, elty) in ((:onemklZherk, :ComplexF64),
@@ -295,14 +287,14 @@ for (fname, elty) in ((:onemklZherk, :ComplexF64),
             $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
             C
         end
-        function herk(uplo::Char, trans::Char, alpha::Real, A::oneStridedVecOrMat{$elty})
-            n = size(A, trans == 'N' ? 1 : 2)
-            herk!(uplo, trans, alpha, A, zero(real($elty)), similar(A, $elty, (n,n)))
-        end
-        herk(uplo::Char, trans::Char, A::oneStridedVecOrMat{$elty}) =
-            herk(uplo, trans, one(real($elty)), A)
    end
 end
+function herk(uplo::Char, trans::Char, alpha::Real, A::oneStridedVecOrMat{T}) where T
+    n = size(A, trans == 'N' ? 1 : 2)
+    herk!(uplo, trans, alpha, A, zero(real(T)), similar(A, (n,n)))
+end
+herk(uplo::Char, trans::Char, A::oneStridedVecOrMat{T}) where T =
+    herk(uplo, trans, one(real(T)), A)
 
 ## her2k
 for (fname, elty) in ((:onemklZher2k,:ComplexF64),
@@ -332,20 +324,19 @@ for (fname, elty) in ((:onemklZher2k,:ComplexF64),
             $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
             C
         end
-        function her2k(uplo::Char,
-                       trans::Char,
-                       alpha::Number,
-                       A::oneStridedVecOrMat{$elty},
-                       B::oneStridedVecOrMat{$elty})
-            n = size(A, trans == 'N' ? 1 : 2)
-            her2k!(uplo, trans, alpha, A, B, zero(real($elty)), similar(A, $elty, (n,n)))
-        end
-        her2k(uplo::Char,
-              trans::Char,
-              A::oneStridedVecOrMat{$elty},
-              B::oneStridedVecOrMat{$elty}) = her2k(uplo, trans, one($elty), A, B)
    end
 end
+function her2k(uplo::Char,
+                trans::Char,
+                alpha::Number,
+                A::oneStridedVecOrMat{T},
+                B::oneStridedVecOrMat{T}) where T
+    n = size(A, trans == 'N' ? 1 : 2)
+    her2k!(uplo, trans, alpha, A, B, zero(real(T)), similar(A, (n,n)))
+end
+her2k(uplo::Char, trans::Char,
+      A::oneStridedVecOrMat{T}, B::oneStridedVecOrMat{T}) where T =
+    her2k(uplo, trans, one(T), A, B)
 
 # level 2
 ## gemv
@@ -358,13 +349,13 @@ for (fname, elty) in ((:onemklSgemv, :Float32),
                        alpha::Number,
                        a::oneStridedArray{$elty},
                        x::oneStridedArray{$elty},
-                       beta::Number, 
+                       beta::Number,
                        y::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
              # handle trans
              m,n = size(a)
              # check dimensions
-             length(x) == (trans == 'N' ? n : m) && length(y) == 
+             length(x) == (trans == 'N' ? n : m) && length(y) ==
                           (trans == 'N' ? m : n) || throw(DimensionMismatch(""))
              # compute increments
              lda = max(1,stride(a,2))
@@ -373,20 +364,19 @@ for (fname, elty) in ((:onemklSgemv, :Float32),
              $fname(sycl_queue(queue), trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
              y
         end
-
-        function gemv(trans::Char,
-                      alpha::Number,
-                      a::oneStridedArray{$elty},
-                      x::oneStridedArray{$elty})
-            gemv!(trans, alpha, a, x, zero($elty), similar(x, $elty, size(a, (trans == 'N' ? 1 : 2))))
-        end
-
-        function gemv(trans::Char,
-                      a::oneStridedArray{$elty},
-                      x::oneStridedArray{$elty})
-            gemv!(trans, one($elty), a, x, zero($elty), similar(x, $elty, size(a, (trans == 'N' ? 1 : 2))))
-        end
     end
+end
+function gemv(trans::Char,
+              alpha::Number,
+              a::oneStridedArray{T},
+              x::oneStridedArray{T}) where T
+    gemv!(trans, alpha, a, x, zero(T), similar(x, size(a, (trans == 'N' ? 1 : 2))))
+end
+
+function gemv(trans::Char,
+              a::oneStridedArray{T},
+              x::oneStridedArray{T}) where T
+    gemv!(trans, one(T), a, x, zero(T), similar(x, size(a, (trans == 'N' ? 1 : 2))))
 end
 
 ### hemv
@@ -409,16 +399,15 @@ for (fname, elty) in ((:onemklChemv,:ComplexF32),
             $fname(sycl_queue(queue), uplo, n, alpha, A, lda, x, incx, beta, y, incy)
             y
         end
-
-        function hemv(uplo::Char, alpha::Number, A::oneStridedVecOrMat{$elty},
-                      x::oneStridedVecOrMat{$elty})
-            hemv!(uplo, alpha, A, x, zero($elty), similar(x))
-        end
-        function hemv(uplo::Char, A::oneStridedVecOrMat{$elty},
-                      x::oneStridedVecOrMat{$elty})
-            hemv(uplo, one($elty), A, x)
-        end
     end
+end
+function hemv(uplo::Char, alpha::Number, A::oneStridedVecOrMat{T},
+                x::oneStridedVecOrMat{T}) where T
+    hemv!(uplo, alpha, A, x, zero(T), similar(x))
+end
+function hemv(uplo::Char, A::oneStridedVecOrMat{T},
+                x::oneStridedVecOrMat{T}) where T
+    hemv(uplo, one(T), A, x)
 end
 
 ### hbmv, (HB) Hermitian banded matrix-vector multiplication
@@ -444,19 +433,16 @@ for (fname, elty) in ((:onemklChbmv,:ComplexF32),
             $fname(sycl_queue(queue), uplo, n, k, alpha, A, lda, x, incx, beta, y, incy)
             y
         end
-
-        function hbmv(uplo::Char, k::Integer, alpha::Number,
-                      A::oneStridedMatrix{$elty}, x::oneStridedVector{$elty})
-            n = size(A,2)
-            hbmv!(uplo, k, alpha, A, x, zero($elty), similar(x, $elty, n))
-        end
-
-        function hbmv(uplo::Char, k::Integer, A::oneStridedMatrix{$elty},
-                      x::oneStridedVector{$elty})
-            hbmv(uplo, k, one($elty), A, x)
-        end
-
     end
+end
+function hbmv(uplo::Char, k::Integer, alpha::Number,
+                A::oneStridedMatrix{T}, x::oneStridedVector{T}) where T
+    n = size(A,2)
+    hbmv!(uplo, k, alpha, A, x, zero(T), similar(x, n))
+end
+function hbmv(uplo::Char, k::Integer, A::oneStridedMatrix{T},
+                x::oneStridedVector{T}) where T
+    hbmv(uplo, k, one(T), A, x)
 end
 
 ### her
@@ -504,7 +490,7 @@ end
 
 # level 1
 ## axpy primitive
-for (fname, elty) in 
+for (fname, elty) in
         ((:onemklDaxpy,:Float64),
          (:onemklSaxpy,:Float32),
          (:onemklZaxpy,:ComplexF64),
@@ -602,24 +588,22 @@ for (fname, elty) in ((:onemklSsbmv, :Float32),
             $fname(sycl_queue(queue), uplo, n, k, alpha, a, lda, x, incx, beta, y, incy)
             y
         end
-
-        function sbmv(uplo::Char, k::Integer, alpha::Number,
-                      a::oneStridedArray{$elty}, x::oneStridedArray{$elty})
-            n = size(a,2)
-            sbmv!(uplo, k, alpha, a, x, zero($elty), similar(x, $elty, n))
-        end
-
-        function sbmv(uplo::Char, k::Integer, a::oneStridedArray{$elty},
-                      x::oneStridedArray{$elty})
-            sbmv(uplo, k, one($elty), a, x)
-        end
     end
+end
+function sbmv(uplo::Char, k::Integer, alpha::Number,
+                a::oneStridedArray{T}, x::oneStridedArray{T}) where T
+    n = size(a,2)
+    sbmv!(uplo, k, alpha, a, x, zero(T), similar(x, n))
+end
+function sbmv(uplo::Char, k::Integer, a::oneStridedArray{T},
+                x::oneStridedArray{T}) where T
+    sbmv(uplo, k, one(T), a, x)
 end
 
 for (fname, elty, celty) in ((:onemklCsscal, :Float32, :ComplexF32),
                              (:onemklZdscal, :Float64, :ComplexF64))
     @eval begin
-        function scal!(n::Integer, 
+        function scal!(n::Integer,
                        alpha::$elty,
                        x::oneStridedArray{$celty})
             queue = global_queue(context(x), device(x))
@@ -670,15 +654,13 @@ for (fname, elty) in ((:onemklSsymv,:Float32),
             $fname(sycl_queue(queue), uplo, n, alpha, A, lda, x, incx, beta, y, incy)
             y
         end
-
-        function symv(uplo::Char, alpha::Number, A::oneStridedVecOrMat{$elty}, x::oneStridedVecOrMat{$elty})
-                symv!(uplo, alpha, A, x, zero($elty), similar(x))
-        end
-        function symv(uplo::Char, A::oneStridedVecOrMat{$elty}, x::oneStridedVecOrMat{$elty})
-            symv(uplo, one($elty), A, x)
-        end
-
     end
+end
+function symv(uplo::Char, alpha::Number, A::oneStridedVecOrMat{T}, x::oneStridedVecOrMat{T}) where T
+        symv!(uplo, alpha, A, x, zero(T), similar(x))
+end
+function symv(uplo::Char, A::oneStridedVecOrMat{T}, x::oneStridedVecOrMat{T}) where T
+    symv(uplo, one(T), A, x)
 end
 
 # syr
@@ -724,7 +706,7 @@ for (fname, elty) in
 end
 
 ## asum
-for (fname, elty, ret_type) in 
+for (fname, elty, ret_type) in
     ((:onemklSasum, :Float32, :Float32),
      (:onemklDasum, :Float64, :Float64),
      (:onemklCasum, :ComplexF32, :Float32),
@@ -809,7 +791,7 @@ for (fname, elty) in ((:onemklSgbmv, :Float32),
                        beta::Number,
                        y::oneStridedArray{$elty})
             n = size(a,2)
-            length(x) == (trans == 'N' ? n : m) && length(y) == 
+            length(x) == (trans == 'N' ? n : m) && length(y) ==
                          (trans == 'N' ? m : n) || throw(DimensionMismatch(""))
             queue = global_queue(context(x), device(x))
             lda = max(1, stride(a,2))
@@ -818,30 +800,28 @@ for (fname, elty) in ((:onemklSgbmv, :Float32),
             $fname(sycl_queue(queue), trans, m, n, kl, ku, alpha, a, lda, x, incx, beta, y, incy)
             y
         end
-
-        function gbmv(trans::Char,
-                      m::Integer, 
-                      kl::Integer,
-                      ku::Integer,
-                      alpha::Number,
-                      a::oneStridedArray{$elty},
-                      x::oneStridedArray{$elty})
-            n = size(a,2)
-            leny = trans == 'N' ? m : n
-            queue = global_queue(context(x), device(x))
-            gbmv!(trans, m, kl, ku, alpha, a, x, zero($elty), similar(x, $elty, leny))   
-        end
-
-        function gbmv(trans::Char,
-                      m::Integer,
-                      kl::Integer,
-                      ku::Integer,
-                      a::oneStridedArray{$elty},
-                      x::oneStridedArray{$elty})
-            queue = global_queue(context(x), device(x))
-            gbmv(trans, m, kl, ku, one($elty), a, x)
-        end
     end
+end
+function gbmv(trans::Char,
+              m::Integer,
+              kl::Integer,
+              ku::Integer,
+              alpha::Number,
+              a::oneStridedArray{T},
+              x::oneStridedArray{T}) where T
+    n = size(a,2)
+    leny = trans == 'N' ? m : n
+    queue = global_queue(context(x), device(x))
+    gbmv!(trans, m, kl, ku, alpha, a, x, zero(T), similar(x, leny))
+end
+function gbmv(trans::Char,
+              m::Integer,
+              kl::Integer,
+              ku::Integer,
+              a::oneStridedArray{T},
+              x::oneStridedArray{T}) where T
+    queue = global_queue(context(x), device(x))
+    gbmv(trans, m, kl, ku, one(T), a, x)
 end
 
 # tbmv
@@ -867,16 +847,15 @@ for (fname, elty) in ((:onemklStbmv,:Float32),
             $fname(sycl_queue(queue), uplo, trans, diag, n, k, A, lda, x, incx)
             x
         end
-
-        function tbmv(uplo::Char,
-                      trans::Char,
-                      diag::Char,
-                      k::Integer,
-                      A::oneStridedVecOrMat{$elty},
-                      x::oneStridedVecOrMat{$elty})
-            tbmv!(uplo, trans, diag, k, A, copy(x))
-        end
     end
+end
+function tbmv(uplo::Char,
+                trans::Char,
+                diag::Char,
+                k::Integer,
+                A::oneStridedVecOrMat{T},
+                x::oneStridedVecOrMat{T}) where T
+    tbmv!(uplo, trans, diag, k, A, copy(x))
 end
 
 ### trmv, Triangular matrix-vector multiplication
@@ -901,15 +880,14 @@ for (fname, elty) in ((:onemklStrmv, :Float32),
             $fname(sycl_queue(queue), uplo, trans, diag, n, A, lda, x, incx)
             x
         end
-
-        function trmv(uplo::Char,
-                      trans::Char,
-                      diag::Char,
-                      A::oneStridedVecOrMat{$elty},
-                      x::oneStridedVecOrMat{$elty})
-            trmv!(uplo, trans, diag, A, copy(x))
-        end
     end
+end
+function trmv(uplo::Char,
+              trans::Char,
+              diag::Char,
+              A::oneStridedVecOrMat{T},
+              x::oneStridedVecOrMat{T}) where T
+    trmv!(uplo, trans, diag, A, copy(x))
 end
 
 ### trsv, Triangular matrix-vector solve
@@ -934,14 +912,14 @@ for (fname, elty) in ((:onemklStrsv, :Float32),
             $fname(sycl_queue(queue), uplo, trans, diag, n, A, lda, x, incx)
             x
         end
-        function trsv(uplo::Char,
-                      trans::Char,
-                      diag::Char,
-                      A::oneStridedVecOrMat{$elty},
-                      x::oneStridedVecOrMat{$elty})
-            trsv!(uplo, trans, diag, A, copy(x))
-        end
     end
+end
+function trsv(uplo::Char,
+                trans::Char,
+                diag::Char,
+                A::oneStridedVecOrMat{T},
+                x::oneStridedVecOrMat{T}) where T
+    trsv!(uplo, trans, diag, A, copy(x))
 end
 
 # level 3
@@ -981,22 +959,20 @@ for (fname, elty) in
             $fname(sycl_queue(queue), transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
             C
         end
-
-        function gemm(transA::Char,
-                      transB::Char,
-                      alpha::Number,
-                      A::oneStridedVecOrMat{$elty},
-                      B::oneStridedVecOrMat{$elty})
-            gemm!(transA, transB, alpha, A, B, zero($elty),
-                  similar(B, $elty, (size(A, transA == 'N' ? 1 : 2),
-                                     size(B, transB == 'N' ? 2 : 1))))
-        end
-
-        function gemm(transA::Char,
-                      transB::Char,
-                      A::oneStridedVecOrMat{$elty},
-                      B::oneStridedVecOrMat{$elty})
-            gemm(transA, transB, one($elty), A, B)
-        end
     end
+end
+function gemm(transA::Char,
+                transB::Char,
+                alpha::Number,
+                A::oneStridedVecOrMat{T},
+                B::oneStridedVecOrMat{T}) where T
+    gemm!(transA, transB, alpha, A, B, zero(T),
+            similar(B, (size(A, transA == 'N' ? 1 : 2),
+                        size(B, transB == 'N' ? 2 : 1))))
+end
+function gemm(transA::Char,
+                transB::Char,
+                A::oneStridedVecOrMat{T},
+                B::oneStridedVecOrMat{T}) where T
+    gemm(transA, transB, one(T), A, B)
 end
