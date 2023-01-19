@@ -82,7 +82,7 @@ function description(err::ZeError)
         "value of kernel attribute is not valid for the kernel or device"
     elseif err.code == RESULT_ERROR_INVALID_COMMAND_LIST_TYPE
         "command list type does not match command queue type"
-    elseif err.code == RESULT_ERROR_OVERLAPPING_REGIONSf
+    elseif err.code == RESULT_ERROR_OVERLAPPING_REGIONS
         "copy operations do not support overlapping regions of memory"
     elseif err.code == RESULT_ERROR_UNKNOWN
         "unknown or internal error"
