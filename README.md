@@ -224,3 +224,39 @@ The discovered paths will be written to a global file with preferences, typicall
 `$HOME/.julia/environments/vX.Y/LocalPreferences.toml` (where `vX.Y` refers to the Julia
 version you are using). You can modify this file, or remove it when you want to revert to
 default set of binaries.
+
+
+## `Float64` support
+
+Not all oneAPI GPUs support Float64 datatypes. You can test if your GPU does using
+the following code:
+
+```julia
+julia> using oneAPI
+julia> oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+false
+```
+
+If your GPU doesn't, executing code that relies on Float64 values will result in an error:
+
+```julia
+julia> oneArray([1.]) .+ 1
+┌ Error: Module compilation failed:
+│
+│ error: Double type is not supported on this platform.
+```
+
+Since it is easy to run into code that relies on Float64 values, it might be
+interesting to enable Float64 emulation when initially porting code to oneAPI.jl.
+This can be accomplished by setting two environment variables:
+
+```julia
+julia> ENV["OverrideDefaultFP64Settings"] = "1"
+julia> ENV["IGC_EnableDPEmulation"] = "1"
+julia> using oneAPI
+julia> oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+true
+julia> oneArray([1.]) .+ 1
+1-element oneVector{Float64, oneAPI.oneL0.DeviceBuffer}:
+ 2.0
+```
