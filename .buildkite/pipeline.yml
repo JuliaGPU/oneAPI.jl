@@ -14,6 +14,9 @@ steps:
             - examples
     command: |
       julia --project=deps deps/build_ci.jl
+    env:
+      OverrideDefaultFP64Settings: "1"
+      IGC_EnableDPEmulation: "1"
     agents:
       queue: "juliagpu"
       intel: "*"

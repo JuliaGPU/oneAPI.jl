@@ -55,6 +55,8 @@ include("setup.jl")     # make sure everything is precompiled
 
 @info "Using oneAPI support library at " * oneAPI.liboneapi_support
 
+@info "Running GPUArrays tests with the following types: $(join(eltypes, ", "))"
+
 # choose tests
 const tests = []
 const test_runners = Dict()
