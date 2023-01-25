@@ -86,6 +86,7 @@ end
 function sycl_queue(queue)
     get!(task_local_storage(), (:SYCLQueue, queue.context, queue.device)) do
         syclQueue(sycl_context(queue.context, queue.device),
+                  sycl_device(queue.device),
                   global_queue(queue.context, queue.device))
     end
 end
