@@ -25,6 +25,8 @@ This package is still under significant development, so expect bugs and missing 
 
 You need to use Julia 1.6 or higher, and it is strongly advised to use [the official
 binaries](https://julialang.org/downloads/). For now, only Linux is supported.
+**If you're using Alchemist hardware, you need to use at least Linux 6.2.** For other
+hardware, any recent Linux distribution should work.
 
 Once you have installed Julia, proceed by entering the package manager REPL mode by pressing
 `]` and adding theoneAPI package:
@@ -62,9 +64,9 @@ pkg> test oneAPI
 Testing finished in 16 minutes, 27 seconds, 506 milliseconds
 
 Test Summary: | Pass  Total  Time
-  Overall     | 4945   4945      
+  Overall     | 4945   4945
     SUCCESS
-     Testing oneAPI tests passed 
+     Testing oneAPI tests passed
 ```
 
 
