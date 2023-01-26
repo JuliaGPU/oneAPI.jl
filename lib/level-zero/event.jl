@@ -22,6 +22,9 @@ end
 
 Base.unsafe_convert(::Type{ze_event_pool_handle_t}, pool::ZeEventPool) = pool.handle
 
+Base.:(==)(a::ZeEventPool, b::ZeEventPool) = a.handle == b.handle
+Base.hash(e::ZeEventPool, h::UInt) = hash(e.handle, h)
+
 Base.getindex(pool::ZeEventPool, i::Integer) = ZeEvent(pool, i)
 
 
@@ -46,6 +49,9 @@ mutable struct ZeEvent
 end
 
 Base.unsafe_convert(::Type{ze_event_handle_t}, event::ZeEvent) = event.handle
+
+Base.:(==)(a::ZeEvent, b::ZeEvent) = a.handle == b.handle
+Base.hash(e::ZeEvent, h::UInt) = hash(e.handle, h)
 
 signal(event::ZeEvent) = zeEventHostSignal(event)
 append_signal!(list::ZeCommandList, event::ZeEvent) = zeCommandListAppendSignalEvent(list, event)

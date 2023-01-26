@@ -28,6 +28,9 @@ end
 
 Base.unsafe_convert(::Type{ze_command_queue_handle_t}, queue::ZeCommandQueue) = queue.handle
 
+Base.:(==)(a::ZeCommandQueue, b::ZeCommandQueue) = a.handle == b.handle
+Base.hash(e::ZeCommandQueue, h::UInt) = hash(e.handle, h)
+
 synchronize(queue::ZeCommandQueue, timeout::Number=typemax(UInt64)) =
     zeCommandQueueSynchronize(queue, timeout)
 

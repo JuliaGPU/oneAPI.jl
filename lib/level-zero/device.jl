@@ -11,6 +11,9 @@ end
 
 Base.unsafe_convert(::Type{ze_device_handle_t}, dev::ZeDevice) = dev.handle
 
+Base.:(==)(a::ZeDevice, b::ZeDevice) = a.handle == b.handle
+Base.hash(e::ZeDevice, h::UInt) = hash(e.handle, h)
+
 function Base.show(io::IO, ::MIME"text/plain", dev::ZeDevice)
     props = properties(dev)
     print(io, "ZeDevice(")

@@ -20,6 +20,9 @@ end
 
 Base.unsafe_convert(::Type{ze_fence_handle_t}, fence::ZeFence) = fence.handle
 
+Base.:(==)(a::ZeFence, b::ZeFence) = a.handle == b.handle
+Base.hash(e::ZeFence, h::UInt) = hash(e.handle, h)
+
 Base.wait(fence::ZeFence, timeout::Number=typemax(UInt64)) =
     zeFenceHostSynchronize(fence, timeout)
 

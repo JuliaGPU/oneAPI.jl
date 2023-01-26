@@ -68,6 +68,9 @@ end
 
 Base.unsafe_convert(::Type{ze_module_handle_t}, mod::ZeModule) = mod.handle
 
+Base.:(==)(a::ZeModule, b::ZeModule) = a.handle == b.handle
+Base.hash(e::ZeModule, h::UInt) = hash(e.handle, h)
+
 
 ## kernels
 
@@ -93,6 +96,9 @@ mutable struct ZeKernel
 end
 
 Base.unsafe_convert(::Type{ze_kernel_handle_t}, kernel::ZeKernel) = kernel.handle
+
+Base.:(==)(a::ZeKernel, b::ZeKernel) = a.handle == b.handle
+Base.hash(e::ZeKernel, h::UInt) = hash(e.handle, h)
 
 
 ## kernel iteration

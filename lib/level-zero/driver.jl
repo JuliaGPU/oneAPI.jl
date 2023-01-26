@@ -9,6 +9,9 @@ end
 
 Base.unsafe_convert(::Type{ze_driver_handle_t}, drv::ZeDriver) = drv.handle
 
+Base.:(==)(a::ZeDriver, b::ZeDriver) = a.handle == b.handle
+Base.hash(e::ZeDriver, h::UInt) = hash(e.handle, h)
+
 function api_version(drv::ZeDriver)
     version_ref = Ref{ze_api_version_t}()
     zeDriverGetApiVersion(drv, version_ref)
