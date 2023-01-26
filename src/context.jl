@@ -28,6 +28,7 @@ end
 function device!(drv::ZeDevice)
     task_local_storage(:ZeDevice, drv)
 end
+device!(i::Int) = device!(devices(driver())[i])
 
 const global_contexts = Dict{ZeDriver,ZeContext}()
 
@@ -57,6 +58,10 @@ end
 function oneL0.synchronize()
     oneL0.synchronize(global_queue(context(), device()))
 end
+
+# re-export and augment parts of oneL0 to make driver and device selection easier
+export drivers, devices
+oneL0.devices() = devices(driver())
 
 
 ## SYCL state

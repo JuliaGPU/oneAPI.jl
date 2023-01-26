@@ -6,6 +6,7 @@ using oneAPI.oneL0
 drvs = drivers()
 @assert !isempty(drvs)
 drv = first(drvs)
+@test drv == drvs[1]
 show(devnull, drv)
 show(devnull, MIME("text/plain"), drv)
 
@@ -25,8 +26,12 @@ drv = first(drivers())
 devs = devices(drv)
 @assert !isempty(devs)
 dev = first(devs)
+@test dev == devs[1]
 show(devnull, dev)
 show(devnull, MIME("text/plain"), dev)
+
+@test collect(devices()) == collect(devices(drv))
+@test device!(dev) == dev
 
 properties(dev)
 compute_properties(dev)

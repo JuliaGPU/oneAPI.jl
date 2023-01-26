@@ -192,7 +192,7 @@ struct ZeDevices
     end
 end
 
-devices(drv) = ZeDevices(drv)
+devices(drv::ZeDriver) = ZeDevices(drv)
 
 Base.eltype(::ZeDevices) = ZeDevice
 
@@ -213,3 +213,6 @@ function Base.show(io::IO, ::MIME"text/plain", iter::ZeDevices)
         end
     end
 end
+
+Base.getindex(iter::ZeDevices, i::Integer) =
+    ZeDevice(iter.handles[i], iter.driver)

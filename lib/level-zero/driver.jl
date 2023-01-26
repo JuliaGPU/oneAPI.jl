@@ -71,6 +71,8 @@ function Base.show(io::IO, mime::MIME"text/plain", iter::ZeDrivers)
     end
 end
 
+Base.getindex(iter::ZeDrivers, i::Integer) = ZeDriver(iter.handles[i])
+
 
 
 ## properties
