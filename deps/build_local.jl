@@ -8,7 +8,7 @@ if haskey(ENV, "BUILDKITE")
     run(`buildkite-agent annotate 'Using a locally-built support library; A bump of oneAPI_Support_jll is required before releasing this packages.' --style 'warning' --context 'ctx-deps'`)
 end
 
-using Scratch, Preferences, CMake_jll, oneAPI_Level_Zero_Headers_jll
+using Scratch, Preferences, CMake_jll, Ninja_jll, oneAPI_Level_Zero_Headers_jll
 
 oneAPI = Base.UUID("8f75cd03-7ff8-4ecb-9b8f-daf728133b1b")
 
@@ -51,13 +51,14 @@ include_dir = joinpath(oneAPI_Level_Zero_Headers_jll.artifact_dir, "include")
 # build and install
 withenv("PATH"=>"$(ENV["PATH"]):$(Conda.bin_dir(conda_dir))",
         "LD_LIBRARY_PATH"=>Conda.lib_dir(conda_dir)) do
-    run(```$(cmake()) -DCMAKE_CXX_COMPILER="icpx"
-                      -DCMAKE_CXX_FLAGS="-isystem $(conda_dir)/include -isystem $include_dir"
-                      -DCMAKE_INSTALL_RPATH=$(Conda.lib_dir(conda_dir))
-                      -DCMAKE_INSTALL_PREFIX=$install_dir
-                      -S $(@__DIR__) -B $build_dir```)
-    run(`$(cmake()) --build $(build_dir) --parallel $(Sys.CPU_THREADS)`)
-    run(`$(cmake()) --install $(build_dir)`)
+    ninja() do ninja_path
+        run(```$(cmake()) -DCMAKE_CXX_COMPILER="icpx"
+                          -DCMAKE_CXX_FLAGS="-isystem $(conda_dir)/include -isystem $include_dir"
+                          -DCMAKE_INSTALL_RPATH=$(Conda.lib_dir(conda_dir))
+                          -DCMAKE_INSTALL_PREFIX=$install_dir
+                          -GNinja -S $(@__DIR__) -B $build_dir```)
+        run(`$ninja_path -C $(build_dir) install`)
+    end
 end
 
 # TODO: adapt when we support more platforms
