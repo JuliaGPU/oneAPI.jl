@@ -24,6 +24,9 @@ end
 
 Base.unsafe_convert(::Type{ze_command_list_handle_t}, list::ZeCommandList) = list.handle
 
+Base.:(==)(a::ZeCommandList, b::ZeCommandList) = a.handle == b.handle
+Base.hash(e::ZeCommandList, h::UInt) = hash(e.handle, h)
+
 Base.close(list::ZeCommandList) = zeCommandListClose(list)
 
 Base.reset(list::ZeCommandList) = zeCommandListReset(list)

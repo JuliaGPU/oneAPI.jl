@@ -9,15 +9,24 @@ end
 
 Base.unsafe_convert(::Type{ze_driver_handle_t}, drv::ZeDriver) = drv.handle
 
+Base.:(==)(a::ZeDriver, b::ZeDriver) = a.handle == b.handle
+Base.hash(e::ZeDriver, h::UInt) = hash(e.handle, h)
+
 function api_version(drv::ZeDriver)
     version_ref = Ref{ze_api_version_t}()
     zeDriverGetApiVersion(drv, version_ref)
     unmake_version(version_ref[])
 end
 
-function Base.show(io::IO, ::MIME"text/plain", drv::ZeDriver)
+function Base.show(io::IO, drv::ZeDriver)
     props = properties(drv)
-    print(io, "ZeDriver($(props.uuid), version $(props.driverVersion))")
+    print(io, "ZeDriver($(props.uuid))")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", drv::ZeDriver)
+    show(io, drv)
+    props = properties(drv)
+    print(io, ": version $(props.driverVersion)")
 end
 
 
@@ -50,6 +59,20 @@ end
 Base.length(iter::ZeDrivers) = length(iter.handles)
 
 Base.IteratorSize(::ZeDrivers) = Base.HasLength()
+
+function Base.show(io::IO, mime::MIME"text/plain", iter::ZeDrivers)
+    print(io, "ZeDriver iterator for $(length(iter)) drivers")
+    if !isempty(iter)
+        print(io, ":")
+        for (i,drv) in enumerate(iter)
+            print(io, "\n$(i). ")
+            show(io, mime, drv)
+        end
+    end
+end
+
+Base.getindex(iter::ZeDrivers, i::Integer) = ZeDriver(iter.handles[i])
+
 
 
 ## properties

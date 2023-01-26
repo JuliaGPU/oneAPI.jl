@@ -11,7 +11,10 @@ end
 
 Base.unsafe_convert(::Type{ze_device_handle_t}, dev::ZeDevice) = dev.handle
 
-function Base.show(io::IO, ::MIME"text/plain", dev::ZeDevice)
+Base.:(==)(a::ZeDevice, b::ZeDevice) = a.handle == b.handle
+Base.hash(e::ZeDevice, h::UInt) = hash(e.handle, h)
+
+function Base.show(io::IO, dev::ZeDevice)
     props = properties(dev)
     print(io, "ZeDevice(")
     if props.type == ZE_DEVICE_TYPE_GPU
@@ -27,7 +30,13 @@ function Base.show(io::IO, ::MIME"text/plain", dev::ZeDevice)
         print(io, ", sub-device ")
         show(io, props.subdeviceId)
     end
-    print(io, "): $(props.name)")
+    print(io, ")")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", dev::ZeDevice)
+    show(io, dev)
+    props = properties(dev)
+    print(io, ": $(props.name)")
 end
 
 
@@ -183,7 +192,7 @@ struct ZeDevices
     end
 end
 
-devices(drv) = ZeDevices(drv)
+devices(drv::ZeDriver) = ZeDevices(drv)
 
 Base.eltype(::ZeDevices) = ZeDevice
 
@@ -194,3 +203,16 @@ end
 Base.length(iter::ZeDevices) = length(iter.handles)
 
 Base.IteratorSize(::ZeDevices) = Base.HasLength()
+
+function Base.show(io::IO, ::MIME"text/plain", iter::ZeDevices)
+    print(io, "ZeDevice iterator for $(length(iter)) devices")
+    if !isempty(iter)
+        print(io, ":")
+        for (i,dev) in enumerate(iter)
+            print(io, "\n$(i). $(properties(dev).name)")
+        end
+    end
+end
+
+Base.getindex(iter::ZeDevices, i::Integer) =
+    ZeDevice(iter.handles[i], iter.driver)

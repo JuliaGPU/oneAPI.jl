@@ -19,4 +19,7 @@ end
 
 Base.unsafe_convert(::Type{ze_context_handle_t}, dev::ZeContext) = dev.handle
 
+Base.:(==)(a::ZeContext, b::ZeContext) = a.handle == b.handle
+Base.hash(e::ZeContext, h::UInt) = hash(e.handle, h)
+
 status(ctx::ZeContext) = zeContextGetStatus(ctx)
