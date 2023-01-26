@@ -17,6 +17,14 @@ conda_dir = get_scratch!(oneAPI, "conda")
 install_dir = get_scratch!(oneAPI, "deps")
 rm(install_dir; recursive=true)
 
+# get build directory
+build_dir = if isempty(ARGS)
+    mktempdir()
+else
+    ARGS[1]
+end
+mkpath(build_dir)
+
 # install the toolchain
 try
     using Conda
@@ -43,7 +51,6 @@ include_dir =  joinpath(oneAPI_Level_Zero_Headers_jll.artifact_dir, "include")
 # build and install
 withenv("PATH"=>"$(ENV["PATH"]):$(Conda.bin_dir(conda_dir))",
         "LD_LIBRARY_PATH"=>Conda.lib_dir(conda_dir)) do
-mktempdir() do build_dir
     run(```$(cmake()) -DCMAKE_CXX_COMPILER="dpcpp"
                       -DCMAKE_CXX_FLAGS="-isystem $include_dir"
                       -DCMAKE_INSTALL_RPATH=$(Conda.lib_dir(conda_dir))
@@ -51,7 +58,6 @@ mktempdir() do build_dir
                       -S $(@__DIR__) -B $build_dir```)
     run(`$(cmake()) --build $(build_dir) --parallel $(Sys.CPU_THREADS)`)
     run(`$(cmake()) --install $(build_dir)`)
-end
 end
 
 # TODO: adapt when we support more platforms
