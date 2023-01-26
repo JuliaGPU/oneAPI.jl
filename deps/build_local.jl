@@ -53,7 +53,7 @@ withenv("PATH"=>"$(ENV["PATH"]):$(Conda.bin_dir(conda_dir))",
         "LD_LIBRARY_PATH"=>Conda.lib_dir(conda_dir)) do
     ninja() do ninja_path
         run(```$(cmake()) -DCMAKE_CXX_COMPILER="icpx"
-                          -DCMAKE_CXX_FLAGS="-isystem $(conda_dir)/include -isystem $include_dir"
+                          -DCMAKE_CXX_FLAGS="-fsycl -isystem $(conda_dir)/include -isystem $include_dir"
                           -DCMAKE_INSTALL_RPATH=$(Conda.lib_dir(conda_dir))
                           -DCMAKE_INSTALL_PREFIX=$install_dir
                           -GNinja -S $(@__DIR__) -B $build_dir```)
