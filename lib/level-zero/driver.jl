@@ -18,9 +18,15 @@ function api_version(drv::ZeDriver)
     unmake_version(version_ref[])
 end
 
-function Base.show(io::IO, ::MIME"text/plain", drv::ZeDriver)
+function Base.show(io::IO, drv::ZeDriver)
     props = properties(drv)
-    print(io, "ZeDriver($(props.uuid), version $(props.driverVersion))")
+    print(io, "ZeDriver($(props.uuid))")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", drv::ZeDriver)
+    show(io, drv)
+    props = properties(drv)
+    print(io, ": version $(props.driverVersion)")
 end
 
 
@@ -53,6 +59,18 @@ end
 Base.length(iter::ZeDrivers) = length(iter.handles)
 
 Base.IteratorSize(::ZeDrivers) = Base.HasLength()
+
+function Base.show(io::IO, mime::MIME"text/plain", iter::ZeDrivers)
+    print(io, "ZeDriver iterator for $(length(iter)) drivers")
+    if !isempty(iter)
+        print(io, ":")
+        for (i,drv) in enumerate(iter)
+            print(io, "\n$(i). ")
+            show(io, mime, drv)
+        end
+    end
+end
+
 
 
 ## properties

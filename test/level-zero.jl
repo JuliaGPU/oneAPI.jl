@@ -7,6 +7,7 @@ drvs = drivers()
 @assert !isempty(drvs)
 drv = first(drvs)
 show(devnull, drv)
+show(devnull, MIME("text/plain"), drv)
 
 api_version(drv)
 
@@ -25,6 +26,7 @@ devs = devices(drv)
 @assert !isempty(devs)
 dev = first(devs)
 show(devnull, dev)
+show(devnull, MIME("text/plain"), dev)
 
 properties(dev)
 compute_properties(dev)
