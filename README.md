@@ -21,7 +21,7 @@ Runtime](https://github.com/intel/compute-runtime), only available on Linux.
 This package is still under significant development, so expect bugs and missing features.
 
 
-## Installation
+## Quick start
 
 You need to use Julia 1.6 or higher, and it is strongly advised to use [the official
 binaries](https://julialang.org/downloads/). For now, only Linux is supported.
@@ -40,18 +40,45 @@ oneAPI loader, several SPIR-V tools, etc. For now, the oneAPI.jl package also de
 [the Intel implementation](https://github.com/intel/compute-runtime) of the oneAPI spec.
 That means you need compatible hardware; refer to the Intel documentation for more details.
 
-Once you have oneAPI.jl installed, you can perform a smoke-test using the low-level wrappers
-for the Level Zero library:
+Once you have oneAPI.jl installed, perform a smoke test by calling the `versioninfo()` function:
 
 ```julia
 julia> using oneAPI
 
-julia> using oneAPI.oneL0
+julia> oneAPI.versioninfo()
+Binary dependencies:
+- NEO_jll: 22.43.24595+0
+- libigc_jll: 1.0.12504+0
+- gmmlib_jll: 22.3.0+0
+- SPIRV_LLVM_Translator_unified_jll: 0.2.0+0
+- SPIRV_Tools_jll: 2022.1.0+0
 
-julia> drv = first(drivers());
+Toolchain:
+- Julia: 1.8.5
+- LLVM: 13.0.1
 
-julia> dev = first(devices(drv))
-ZeDevice(GPU, vendor 0x8086, device 0x1912): Intel(R) Gen9
+1 driver:
+- 00000000-0000-0000-173d-d94201036013 (v1.3.24595, API v1.3.0)
+
+2 devices:
+- Intel(R) Graphics [0x56a0]
+- Intel(R) HD Graphics P630 [0x591d]
+```
+
+If you have multiple compatible drivers or devices, use the `driver!` and `device!`
+functions to configure which one to use in the current task:
+
+```julia
+julia> devices()
+ZeDevice iterator for 2 devices:
+1. Intel(R) Graphics [0x56a0]
+2. Intel(R) HD Graphics P630 [0x591d]
+
+julia> device()
+ZeDevice(GPU, vendor 0x8086, device 0x56a0): Intel(R) Graphics [0x56a0]
+
+julia> device!(2)
+ZeDevice(GPU, vendor 0x8086, device 0x591d): Intel(R) HD Graphics P630 [0x591d]
 ```
 
 To ensure other functionality works as expected, you can run the test suite from the package
@@ -187,8 +214,9 @@ kernel programming capabilties, and as a demonstration of that it fully implemen
 GPUArrays.jl array interfaces. This results in a full-featured GPU array type.
 
 However, the package has not been extensively tested, and performance issues might be
-present. There is no integration with vendor libraries like oneMKL or oneDNN, and as a
-result certain operations (like matrix multiplication) will be unavailable or slow.
+present. The integration with vendor libraries like oneMKL or oneDNN is still in
+development, and as result certain operations (like matrix multiplication) may be
+unavailable or slow.
 
 
 ## Using a local toolchain
