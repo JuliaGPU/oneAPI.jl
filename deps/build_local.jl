@@ -40,8 +40,7 @@ if !isfile(joinpath(conda_dir, "condarc-julia.yml"))
     mkpath(joinpath(conda_dir, "conda-meta"))
     touch(joinpath(conda_dir, "conda-meta", "history"))
 end
-Conda.add("dpcpp_linux-64", conda_dir; channel="intel")
-Conda.add("mkl-devel-dpcpp", conda_dir; channel="intel")
+Conda.add(["dpcpp_linux-64", "mkl-devel-dpcpp"], conda_dir; channel="intel")
 
 Conda.list(conda_dir)
 
