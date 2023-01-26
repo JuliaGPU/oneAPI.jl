@@ -23,7 +23,7 @@ int syclContextCreate(syclContext_t *obj, syclDevice_t *devices, size_t ndevices
 int syclContextDestroy(syclContext_t obj);
 
 typedef struct syclQueue_st *syclQueue_t;
-int syclQueueCreate(syclQueue_t *obj, syclContext_t context,
+int syclQueueCreate(syclQueue_t *obj, syclContext_t context, syclDevice_t device,
                     ze_command_queue_handle_t queue, int keep_ownership);
 int syclQueueDestroy(syclQueue_t obj);
 

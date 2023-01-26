@@ -67,12 +67,13 @@ Base.unsafe_convert(::Type{syclContext_t}, ctx::syclContext) =
 mutable struct syclQueue
   handle::syclQueue_t
   ctx::syclContext
+  dev::syclDevice
   ze_queue::ZeCommandQueue
 
-  function syclQueue(ctx::syclContext, ze_queue::ZeCommandQueue)
+  function syclQueue(ctx::syclContext, dev::syclDevice, ze_queue::ZeCommandQueue)
     handle = Ref{syclQueue_t}()
-    syclQueueCreate(handle, ctx, ze_queue, true)
-    obj = new(handle[], ctx, ze_queue)
+    syclQueueCreate(handle, ctx, dev, ze_queue, true)
+    obj = new(handle[], ctx, dev, ze_queue)
     finalizer(obj) do queue
       syclQueueDestroy(queue)
     end

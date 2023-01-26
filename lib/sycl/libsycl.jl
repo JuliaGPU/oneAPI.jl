@@ -45,8 +45,9 @@ mutable struct syclQueue_st end
 
 const syclQueue_t = Ptr{syclQueue_st}
 
-function syclQueueCreate(obj, context, queue, keep_ownership)
+function syclQueueCreate(obj, context, device, queue, keep_ownership)
     @ccall liboneapi_support.syclQueueCreate(obj::Ptr{syclQueue_t}, context::syclContext_t,
+                                        device::syclDevice_t,
                                         queue::ze_command_queue_handle_t,
                                         keep_ownership::Cint)::Cint
 end
