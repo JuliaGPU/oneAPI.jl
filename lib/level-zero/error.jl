@@ -93,11 +93,3 @@ end
 ## COV_EXCL_STOP
 
 @enum_without_prefix _ze_result_t ZE_
-
-
-## API call wrapper
-
-# outlined functionality to avoid GC frame allocation
-@noinline function throw_api_error(res)
-    throw(ZeError(res))
-end

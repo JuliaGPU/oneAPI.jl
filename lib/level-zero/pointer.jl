@@ -58,7 +58,7 @@ Base.unsafe_convert(::Type{P}, x::ZePtr) where {P<:ZePtr} = convert(P, x)
 
 # from arrays
 Base.unsafe_convert(::Type{ZePtr{S}}, a::AbstractArray{T}) where {S,T} =
-    convert(CuPtr{S}, Base.unsafe_convert(CuPtr{T}, a))
+    convert(ZePtr{S}, Base.unsafe_convert(ZePtr{T}, a))
 Base.unsafe_convert(::Type{ZePtr{T}}, a::AbstractArray{T}) where {T} =
     error("conversion to pointer not defined for $(typeof(a))")
 

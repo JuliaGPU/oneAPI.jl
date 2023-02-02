@@ -1,0 +1,183 @@
+[general]
+library_name = "liboneapi_support"
+output_file_path = "../lib/mkl/libonemkl.jl"
+#prologue_file_path = "./libonemkl_prologue.jl"
+
+
+[codegen]
+use_ccall_macro = true
+
+
+[api.onemklXgbmv.argtypes]
+8 = "ZePtr{T}"
+10 = "ZePtr{T}"
+13 = "ZePtr{T}"
+
+[api.onemklXgemm.argtypes]
+8 = "ZePtr{T}"
+10 = "ZePtr{T}"
+13 = "ZePtr{T}"
+
+[api.onemklXsymm.argtypes]
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+12 = "ZePtr{T}"
+
+[api.onemklXsyrk.argtypes]
+7 = "ZePtr{T}"
+10 = "ZePtr{T}"
+
+[api.onemklXsyr2k.argtypes]
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+12 = "ZePtr{T}"
+
+[api.onemklXtrmm.argtypes]
+9 = "ZePtr{T}"
+11 = "ZePtr{T}"
+
+[api.onemklXtrsm.argtypes]
+9 = "ZePtr{T}"
+11 = "ZePtr{T}"
+
+[api.onemklXhemm.argtypes]
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+12 = "ZePtr{T}"
+
+[api.onemklXherk.argtypes]
+7 = "ZePtr{T}"
+10 = "ZePtr{T}"
+
+[api.onemklXher2k.argtypes]
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+12 = "ZePtr{T}"
+
+[api.onemklXdot.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
+7 = "RefOrZeRef{T}"
+
+[api.onemklXdotc.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
+7 = "RefOrZeRef{T}"
+
+[api.onemklXdotu.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
+7 = "RefOrZeRef{T}"
+
+[api.onemklXasum.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
+
+[api.onemklCasum.argtypes]
+3 = "ZePtr{ComplexF32}"
+5 = "ZePtr{Cfloat}"
+
+[api.onemklZasum.argtypes]
+3 = "ZePtr{ComplexF64}"
+5 = "ZePtr{Float64}"
+
+[api.onemklXaxpy.argtypes]
+4 = "ZePtr{T}"
+6 = "ZePtr{T}"
+
+[api.onemklXscal.argtypes]
+4 = "ZePtr{T}"
+
+[api.onemklXdscal.argtypes]
+4 = "ZePtr{T}"
+
+[api.onemklXsscal.argtypes]
+4 = "ZePtr{T}"
+
+[api.onemklXgemv.argtypes]
+6 = "ZePtr{T}"
+8 = "ZePtr{T}"
+11 = "ZePtr{T}"
+
+[api.onemklXger.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+
+[api.onemklXgerc.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+
+[api.onemklXhemv.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+10 = "ZePtr{T}"
+
+[api.onemklXhbmv.argtypes]
+6 = "ZePtr{T}"
+8 = "ZePtr{T}"
+11 = "ZePtr{T}"
+
+[api.onemklXher.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+
+[api.onemklXher2.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+
+[api.onemklXsbmv.argtypes]
+6 = "ZePtr{T}"
+8 = "ZePtr{T}"
+11 = "ZePtr{T}"
+
+[api.onemklXsymv.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+10 = "ZePtr{T}"
+
+[api.onemklXsyr.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+
+[api.onemklXtbmv.argtypes]
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+
+[api.onemklXtrmv.argtypes]
+6 = "ZePtr{T}"
+8 = "ZePtr{T}"
+
+[api.onemklXtrsv.argtypes]
+6 = "ZePtr{T}"
+8 = "ZePtr{T}"
+
+[api.onemklXnrm2.argtypes]
+3 = "ZePtr{T}"
+5 = "RefOrZeRef{T}"
+
+[api.onemklCnrm2.argtypes]
+3 = "ZePtr{ComplexF32}"
+5 = "RefOrZeRef{Cfloat}"
+
+[api.onemklZnrm2.argtypes]
+3 = "ZePtr{ComplexF64}"
+5 = "RefOrZeRef{Cdouble}"
+
+[api.onemklXcopy.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
+
+[api.onemklXamax.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{Int64}"
+
+[api.onemklXamin.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{Int64}"
+
+[api.onemklXswap.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
