@@ -1,5 +1,27 @@
 using CEnum
 
+# outlined functionality to avoid GC frame allocation
+@noinline function throw_api_error(res)
+    throw(ZeError(res))
+end
+
+macro check(ex)
+    is_oom = :(isequal(res, RESULT_ERROR_OUT_OF_HOST_MEMORY) ||
+               isequal(res, RESULT_ERROR_OUT_OF_DEVICE_MEMORY))
+
+    quote
+        res = @retry_reclaim res -> $is_oom $(esc(ex))
+
+        if $is_oom
+            throw(OutOfMemoryError())
+        elseif res != RESULT_SUCCESS
+            throw_api_error(res)
+        end
+
+        return
+    end
+end
+
 const ze_bool_t = UInt8
 
 mutable struct _ze_driver_handle_t end
@@ -58,6 +80,14 @@ mutable struct _ze_physical_mem_handle_t end
 
 const ze_physical_mem_handle_t = Ptr{_ze_physical_mem_handle_t}
 
+mutable struct _ze_fabric_vertex_handle_t end
+
+const ze_fabric_vertex_handle_t = Ptr{_ze_fabric_vertex_handle_t}
+
+mutable struct _ze_fabric_edge_handle_t end
+
+const ze_fabric_edge_handle_t = Ptr{_ze_fabric_edge_handle_t}
+
 struct _ze_ipc_mem_handle_t
     data::NTuple{64,Cchar}
 end
@@ -80,9 +110,13 @@ const ze_ipc_event_pool_handle_t = _ze_ipc_event_pool_handle_t
     ZE_RESULT_ERROR_MODULE_LINK_FAILURE = 1879048197
     ZE_RESULT_ERROR_DEVICE_REQUIRES_RESET = 1879048198
     ZE_RESULT_ERROR_DEVICE_IN_LOW_POWER_STATE = 1879048199
+    ZE_RESULT_EXP_ERROR_DEVICE_IS_NOT_VERTEX = 2146435073
+    ZE_RESULT_EXP_ERROR_VERTEX_IS_NOT_DEVICE = 2146435074
+    ZE_RESULT_EXP_ERROR_REMOTE_DEVICE = 2146435075
     ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS = 1879113728
     ZE_RESULT_ERROR_NOT_AVAILABLE = 1879113729
     ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE = 1879179264
+    ZE_RESULT_WARNING_DROPPED_DATA = 1879179265
     ZE_RESULT_ERROR_UNINITIALIZED = 2013265921
     ZE_RESULT_ERROR_UNSUPPORTED_VERSION = 2013265922
     ZE_RESULT_ERROR_UNSUPPORTED_FEATURE = 2013265923
@@ -109,6 +143,7 @@ const ze_ipc_event_pool_handle_t = _ze_ipc_event_pool_handle_t
     ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED = 2013265944
     ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE = 2013265945
     ZE_RESULT_ERROR_OVERLAPPING_REGIONS = 2013265946
+    ZE_RESULT_WARNING_ACTION_REQUIRED = 2013265947
     ZE_RESULT_ERROR_UNKNOWN = 2147483646
     ZE_RESULT_FORCE_UINT32 = 2147483647
 end
@@ -163,6 +198,8 @@ const ze_result_t = _ze_result_t
     ZE_STRUCTURE_TYPE_MEMORY_FREE_EXT_DESC = 65546
     ZE_STRUCTURE_TYPE_MEMORY_COMPRESSION_HINTS_EXT_DESC = 65547
     ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES = 65548
+    ZE_STRUCTURE_TYPE_DEVICE_LUID_EXT_PROPERTIES = 65549
+    ZE_STRUCTURE_TYPE_DEVICE_MEMORY_EXT_PROPERTIES = 65550
     ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 131073
     ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC = 131074
     ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_PROPERTIES = 131075
@@ -171,6 +208,10 @@ const ze_result_t = _ze_result_t
     ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2 = 131078
     ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES = 131079
     ZE_STRUCTURE_TYPE_POWER_SAVING_HINT_EXP_DESC = 131080
+    ZE_STRUCTURE_TYPE_COPY_BANDWIDTH_EXP_PROPERTIES = 131081
+    ZE_STRUCTURE_TYPE_DEVICE_P2P_BANDWIDTH_EXP_PROPERTIES = 131082
+    ZE_STRUCTURE_TYPE_FABRIC_VERTEX_EXP_PROPERTIES = 131083
+    ZE_STRUCTURE_TYPE_FABRIC_EDGE_EXP_PROPERTIES = 131084
     ZE_STRUCTURE_TYPE_FORCE_UINT32 = 2147483647
 end
 
@@ -191,6 +232,31 @@ const ze_external_memory_type_flags_t = UInt32
 end
 
 const ze_external_memory_type_flag_t = _ze_external_memory_type_flag_t
+
+@cenum _ze_bandwidth_unit_t::UInt32 begin
+    ZE_BANDWIDTH_UNIT_UNKNOWN = 0
+    ZE_BANDWIDTH_UNIT_BYTES_PER_NANOSEC = 1
+    ZE_BANDWIDTH_UNIT_BYTES_PER_CLOCK = 2
+    ZE_BANDWIDTH_UNIT_FORCE_UINT32 = 2147483647
+end
+
+const ze_bandwidth_unit_t = _ze_bandwidth_unit_t
+
+@cenum _ze_latency_unit_t::UInt32 begin
+    ZE_LATENCY_UNIT_UNKNOWN = 0
+    ZE_LATENCY_UNIT_NANOSEC = 1
+    ZE_LATENCY_UNIT_CLOCK = 2
+    ZE_LATENCY_UNIT_HOP = 3
+    ZE_LATENCY_UNIT_FORCE_UINT32 = 2147483647
+end
+
+const ze_latency_unit_t = _ze_latency_unit_t
+
+struct _ze_uuid_t
+    id::NTuple{16,UInt8}
+end
+
+const ze_uuid_t = _ze_uuid_t
 
 struct _ze_base_properties_t
     stype::ze_structure_type_t
@@ -1078,6 +1144,136 @@ end
 
 const ze_memory_free_ext_desc_t = _ze_memory_free_ext_desc_t
 
+struct _ze_device_p2p_bandwidth_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    logicalBandwidth::UInt32
+    physicalBandwidth::UInt32
+    bandwidthUnit::ze_bandwidth_unit_t
+    logicalLatency::UInt32
+    physicalLatency::UInt32
+    latencyUnit::ze_latency_unit_t
+end
+
+const ze_device_p2p_bandwidth_exp_properties_t = _ze_device_p2p_bandwidth_exp_properties_t
+
+struct _ze_copy_bandwidth_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    copyBandwidth::UInt32
+    copyBandwidthUnit::ze_bandwidth_unit_t
+end
+
+const ze_copy_bandwidth_exp_properties_t = _ze_copy_bandwidth_exp_properties_t
+
+struct _ze_device_luid_ext_t
+    id::NTuple{8,UInt8}
+end
+
+const ze_device_luid_ext_t = _ze_device_luid_ext_t
+
+struct _ze_device_luid_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    luid::ze_device_luid_ext_t
+    nodeMask::UInt32
+end
+
+const ze_device_luid_ext_properties_t = _ze_device_luid_ext_properties_t
+
+struct _ze_fabric_vertex_pci_exp_address_t
+    domain::UInt32
+    bus::UInt32
+    device::UInt32
+    _function::UInt32
+end
+
+const ze_fabric_vertex_pci_exp_address_t = _ze_fabric_vertex_pci_exp_address_t
+
+@cenum _ze_fabric_vertex_exp_type_t::UInt32 begin
+    ZE_FABRIC_VERTEX_EXP_TYPE_UNKNOWN = 0
+    ZE_FABRIC_VERTEX_EXP_TYPE_DEVICE = 1
+    ZE_FABRIC_VERTEX_EXP_TYPE_SUBEVICE = 2
+    ZE_FABRIC_VERTEX_EXP_TYPE_SWITCH = 3
+    ZE_FABRIC_VERTEX_EXP_TYPE_FORCE_UINT32 = 2147483647
+end
+
+const ze_fabric_vertex_exp_type_t = _ze_fabric_vertex_exp_type_t
+
+struct _ze_fabric_vertex_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    uuid::ze_uuid_t
+    type::ze_fabric_vertex_exp_type_t
+    remote::ze_bool_t
+    address::ze_fabric_vertex_pci_exp_address_t
+end
+
+const ze_fabric_vertex_exp_properties_t = _ze_fabric_vertex_exp_properties_t
+
+@cenum _ze_fabric_edge_exp_duplexity_t::UInt32 begin
+    ZE_FABRIC_EDGE_EXP_DUPLEXITY_UNKNOWN = 0
+    ZE_FABRIC_EDGE_EXP_DUPLEXITY_HALF_DUPLEX = 1
+    ZE_FABRIC_EDGE_EXP_DUPLEXITY_FULL_DUPLEX = 2
+    ZE_FABRIC_EDGE_EXP_DUPLEXITY_FORCE_UINT32 = 2147483647
+end
+
+const ze_fabric_edge_exp_duplexity_t = _ze_fabric_edge_exp_duplexity_t
+
+struct _ze_fabric_edge_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    uuid::ze_uuid_t
+    model::NTuple{256,Cchar}
+    bandwidth::UInt32
+    bandwidthUnit::ze_bandwidth_unit_t
+    latency::UInt32
+    latencyUnit::ze_latency_unit_t
+    duplexity::ze_fabric_edge_exp_duplexity_t
+end
+
+const ze_fabric_edge_exp_properties_t = _ze_fabric_edge_exp_properties_t
+
+@cenum _ze_device_memory_ext_type_t::UInt32 begin
+    ZE_DEVICE_MEMORY_EXT_TYPE_HBM = 0
+    ZE_DEVICE_MEMORY_EXT_TYPE_HBM2 = 1
+    ZE_DEVICE_MEMORY_EXT_TYPE_DDR = 2
+    ZE_DEVICE_MEMORY_EXT_TYPE_DDR2 = 3
+    ZE_DEVICE_MEMORY_EXT_TYPE_DDR3 = 4
+    ZE_DEVICE_MEMORY_EXT_TYPE_DDR4 = 5
+    ZE_DEVICE_MEMORY_EXT_TYPE_DDR5 = 6
+    ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR = 7
+    ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR3 = 8
+    ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR4 = 9
+    ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR5 = 10
+    ZE_DEVICE_MEMORY_EXT_TYPE_SRAM = 11
+    ZE_DEVICE_MEMORY_EXT_TYPE_L1 = 12
+    ZE_DEVICE_MEMORY_EXT_TYPE_L3 = 13
+    ZE_DEVICE_MEMORY_EXT_TYPE_GRF = 14
+    ZE_DEVICE_MEMORY_EXT_TYPE_SLM = 15
+    ZE_DEVICE_MEMORY_EXT_TYPE_GDDR4 = 16
+    ZE_DEVICE_MEMORY_EXT_TYPE_GDDR5 = 17
+    ZE_DEVICE_MEMORY_EXT_TYPE_GDDR5X = 18
+    ZE_DEVICE_MEMORY_EXT_TYPE_GDDR6 = 19
+    ZE_DEVICE_MEMORY_EXT_TYPE_GDDR6X = 20
+    ZE_DEVICE_MEMORY_EXT_TYPE_GDDR7 = 21
+    ZE_DEVICE_MEMORY_EXT_TYPE_FORCE_UINT32 = 2147483647
+end
+
+const ze_device_memory_ext_type_t = _ze_device_memory_ext_type_t
+
+struct _ze_device_memory_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    type::ze_device_memory_ext_type_t
+    physicalSize::UInt64
+    readBandwidth::UInt32
+    writeBandwidth::UInt32
+    bandwidthUnit::ze_bandwidth_unit_t
+end
+
+const ze_device_memory_ext_properties_t = _ze_device_memory_ext_properties_t
+
 const ze_init_flags_t = UInt32
 
 @cenum _ze_init_flag_t::UInt32 begin
@@ -1102,7 +1298,8 @@ end
     ZE_API_VERSION_1_1 = 65537
     ZE_API_VERSION_1_2 = 65538
     ZE_API_VERSION_1_3 = 65539
-    ZE_API_VERSION_CURRENT = 65539
+    ZE_API_VERSION_1_4 = 65540
+    ZE_API_VERSION_CURRENT = 65540
     ZE_API_VERSION_FORCE_UINT32 = 2147483647
 end
 
@@ -2497,6 +2694,67 @@ const ze_driver_memory_free_policy_ext_flag_t = _ze_driver_memory_free_policy_ex
                                      pMemFreeDesc::Ptr{ze_memory_free_ext_desc_t},
                                      ptr::PtrOrZePtr{Cvoid})::ze_result_t
 end
+
+@cenum _ze_device_luid_ext_version_t::UInt32 begin
+    ZE_DEVICE_LUID_EXT_VERSION_1_0 = 65536
+    ZE_DEVICE_LUID_EXT_VERSION_CURRENT = 65536
+    ZE_DEVICE_LUID_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_device_luid_ext_version_t = _ze_device_luid_ext_version_t
+
+@checked function zeFabricVertexGetExp(hDriver, pCount, phVertices)
+    @ccall libze_loader.zeFabricVertexGetExp(hDriver::ze_driver_handle_t,
+                                             pCount::Ptr{UInt32},
+                                             phVertices::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
+end
+
+@checked function zeFabricVertexGetSubVerticesExp(hVertex, pCount, phSubvertices)
+    @ccall libze_loader.zeFabricVertexGetSubVerticesExp(hVertex::ze_fabric_vertex_handle_t,
+                                                        pCount::Ptr{UInt32},
+                                                        phSubvertices::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
+end
+
+@checked function zeFabricVertexGetPropertiesExp(hVertex, pVertexProperties)
+    @ccall libze_loader.zeFabricVertexGetPropertiesExp(hVertex::ze_fabric_vertex_handle_t,
+                                                       pVertexProperties::Ptr{ze_fabric_vertex_exp_properties_t})::ze_result_t
+end
+
+@checked function zeFabricVertexGetDeviceExp(hVertex, phDevice)
+    @ccall libze_loader.zeFabricVertexGetDeviceExp(hVertex::ze_fabric_vertex_handle_t,
+                                                   phDevice::Ptr{ze_device_handle_t})::ze_result_t
+end
+
+@checked function zeDeviceGetFabricVertexExp(hDevice, phVertex)
+    @ccall libze_loader.zeDeviceGetFabricVertexExp(hDevice::ze_device_handle_t,
+                                                   phVertex::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
+end
+
+@checked function zeFabricEdgeGetExp(hVertexA, hVertexB, pCount, phEdges)
+    @ccall libze_loader.zeFabricEdgeGetExp(hVertexA::ze_fabric_vertex_handle_t,
+                                           hVertexB::ze_fabric_vertex_handle_t,
+                                           pCount::Ptr{UInt32},
+                                           phEdges::Ptr{ze_fabric_edge_handle_t})::ze_result_t
+end
+
+@checked function zeFabricEdgeGetVerticesExp(hEdge, phVertexA, phVertexB)
+    @ccall libze_loader.zeFabricEdgeGetVerticesExp(hEdge::ze_fabric_edge_handle_t,
+                                                   phVertexA::Ptr{ze_fabric_vertex_handle_t},
+                                                   phVertexB::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
+end
+
+@checked function zeFabricEdgeGetPropertiesExp(hEdge, pEdgeProperties)
+    @ccall libze_loader.zeFabricEdgeGetPropertiesExp(hEdge::ze_fabric_edge_handle_t,
+                                                     pEdgeProperties::Ptr{ze_fabric_edge_exp_properties_t})::ze_result_t
+end
+
+@cenum _ze_device_memory_properties_ext_version_t::UInt32 begin
+    ZE_DEVICE_MEMORY_PROPERTIES_EXT_VERSION_1_0 = 65536
+    ZE_DEVICE_MEMORY_PROPERTIES_EXT_VERSION_CURRENT = 65536
+    ZE_DEVICE_MEMORY_PROPERTIES_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_device_memory_properties_ext_version_t = _ze_device_memory_properties_ext_version_t
 
 struct _ze_init_params_t
     pflags::Ptr{ze_init_flags_t}
@@ -4088,6 +4346,8 @@ const ze_callbacks_t = _ze_callbacks_t
 
 const ZE_MAX_IPC_HANDLE_SIZE = 64
 
+const ZE_MAX_UUID_SIZE = 16
+
 const ZE_MAX_DRIVER_UUID_SIZE = 16
 
 const ZE_MAX_EXTENSION_NAME = 256
@@ -4147,3 +4407,15 @@ const ZE_LINKAGE_INSPECTION_EXT_NAME = "ZE_extension_linkage_inspection"
 const ZE_MEMORY_COMPRESSION_HINTS_EXT_NAME = "ZE_extension_memory_compression_hints"
 
 const ZE_MEMORY_FREE_POLICIES_EXT_NAME = "ZE_extension_memory_free_policies"
+
+const ZE_BANDWIDTH_PROPERTIES_EXP_NAME = "ZE_experimental_bandwidth_properties"
+
+const ZE_DEVICE_LUID_EXT_NAME = "ZE_extension_device_luid"
+
+const ZE_MAX_DEVICE_LUID_SIZE_EXT = 8
+
+const ZE_FABRIC_EXP_NAME = "ZE_experimental_fabric"
+
+const ZE_MAX_FABRIC_EDGE_MODEL_EXP_SIZE = 256
+
+const ZE_DEVICE_MEMORY_PROPERTIES_EXT_NAME = "ZE_extension_device_memory_properties"

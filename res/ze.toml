@@ -1,0 +1,64 @@
+[general]
+library_name = "libze_loader"
+output_file_path = "../lib/level-zero/libze.jl"
+prologue_file_path = "./libze_prologue.jl"
+
+
+[codegen]
+use_ccall_macro = true
+
+[api]
+checked_rettypes = [ "ze_result_t" ]
+
+
+[api.zeCommandListAppendMemoryCopy.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+3 = "PtrOrZePtr{Cvoid}"
+
+[api.zeCommandListAppendMemoryFill.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+3 = "PtrOrZePtr{Cvoid}"
+
+[api.zeCommandListAppendMemoryCopyRegion.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+6 = "PtrOrZePtr{Cvoid}"
+
+[api.zeCommandListAppendMemoryCopyFromContext.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+4 = "PtrOrZePtr{Cvoid}"
+
+[api.zeCommandListAppendMemoryPrefetch.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+
+[api.zeCommandListAppendMemAdvise.argtypes]
+3 = "PtrOrZePtr{Cvoid}"
+
+[api.zeMemFree.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+
+[api.zeMemFreeExt.argtypes]
+3 = "PtrOrZePtr{Cvoid}"
+
+[api.zeMemGetAllocProperties.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+
+[api.zeMemGetAddressRange.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+
+[api.zeMemGetIpcHandle.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+
+[api.zeMemOpenIpcHandle.argtypes]
+5 = "Ptr{PtrOrZePtr{Cvoid}}"
+
+[api.zeMemCloseIpcHandle.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
+
+[api.zeContextEvictMemory.argtypes]
+3 = "PtrOrZePtr{Cvoid}"
+
+[api.zeContextMakeMemoryResident.argtypes]
+3 = "PtrOrZePtr{Cvoid}"
+
+[api.zeVirtualMemFree.argtypes]
+2 = "PtrOrZePtr{Cvoid}"
