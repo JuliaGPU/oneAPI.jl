@@ -131,6 +131,15 @@ function onemklZgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ld
                                          ldc::Int64)::Cint
 end
 
+function onemklHgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C,
+    ldc)
+    @ccall liboneapi_support.onemklHgemm(device_queue::syclQueue_t, transA::onemklTranspose,
+                   transB::onemklTranspose, m::Int64, n::Int64, k::Int64,
+                   alpha::Float16, A::ZePtr{Float16}, lda::Int64,
+                   B::ZePtr{Float16}, ldb::Int64, beta::Float16,
+                   C::ZePtr{Float16}, ldc::Int64)::Cint
+end
+
 function onemklSsymm(device_queue, left_right, upper_lower, m, n, alpha, a, lda, b, ldb,
                      beta, c, ldc)
     @ccall liboneapi_support.onemklSsymm(device_queue::syclQueue_t, left_right::onemklSide,
@@ -594,6 +603,16 @@ function onemklZdrot(device_queue, n, x, incx, y, incy, c, s)
                                          s::Cdouble)::Cvoid
 end
 
+function onemklHaxpy(device_queue, n, alpha, x, incx, y, incy)
+    @ccall liboneapi_support.onemklHaxpy(device_queue::syclQueue_t, n::Int64, alpha::Float16,
+                        x::ZePtr{Float16}, incx::Int64, y::ZePtr{Float16}, incy::Int64)::Cvoid
+end
+
+function onemklHscal(device_queue, n, alpha, x, incx)
+	@ccall liboneapi_support.onemklHscal(device_queue::syclQueue_t, n::Int64, 
+                                        alpha::Float16, x::ZePtr{Float16}, incx::Int64)::Cvoid
+end
+
 function onemklDscal(device_queue, n, alpha, x, incx)
     @ccall liboneapi_support.onemklDscal(device_queue::syclQueue_t, n::Int64,
                                          alpha::Cdouble, x::ZePtr{Cdouble},
@@ -818,6 +837,12 @@ function onemklZtrsv(device_queue, uplo, trans, diag, n, a, lda, x, incx)
                                          x::ZePtr{ComplexF64}, incx::Int64)::Cvoid
 end
 
+function onemklHnrm2(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklHnrm2(device_queue::syclQueue_t,
+                                n::Int64, x::ZePtr{Float16}, incx::Int64,
+                                result::RefOrZeRef{Float16})::Cvoid
+end
+
 function onemklDnrm2(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklDnrm2(device_queue::syclQueue_t, n::Int64,
                                          x::ZePtr{Cdouble}, incx::Int64,
@@ -846,6 +871,12 @@ function onemklSdot(device_queue, n, x, incx, y, incy, result)
     @ccall liboneapi_support.onemklSdot(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{Cfloat}, incx::Int64, y::ZePtr{Cfloat},
                                         incy::Int64, result::RefOrZeRef{Cfloat})::Cvoid
+end
+
+function onemklHdot(device_queue, n, x, incx, y, incy, result)
+    @ccall liboneapi_support.onemklHdot(device_queue::syclQueue_t, n::Int64,
+                                        x::ZePtr{Float16}, incx::Int64, y::ZePtr{Float16},
+                                        incy::Int64, result::RefOrZeRef{Float16})::Cvoid
 end
 
 function onemklDdot(device_queue, n, x, incx, y, incy, result)

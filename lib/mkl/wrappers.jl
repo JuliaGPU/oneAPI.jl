@@ -392,6 +392,7 @@ end
 for (fname, elty) in
         ((:onemklDaxpy,:Float64),
          (:onemklSaxpy,:Float32),
+         (:onemklHaxpy,:Float16),
          (:onemklZaxpy,:ComplexF64),
          (:onemklCaxpy,:ComplexF32))
     @eval begin
@@ -450,10 +451,23 @@ for (fname, elty, cty, sty, supty) in ((:onemklSrot,:Float32,:Float32,:Float32,:
     end
 end
 
+function axpy!(n::Integer, 
+            alpha::Number,
+            x::oneStridedArray{ComplexF16},
+            y::oneStridedArray{ComplexF16})
+    wide_x = widen.(x)
+    wide_y = widen.(y)
+    axpy!(n, alpha, wide_x, wide_y)
+    thin_y = convert(typeof(y), wide_y)
+    copyto!(y, thin_y)
+    return y
+end
+
 ## scal
 for (fname, elty) in
     ((:onemklDscal,:Float64),
      (:onemklSscal,:Float32),
+     (:onemklHscal,:Float16),
      (:onemklZscal,:ComplexF64),
      (:onemklCscal,:ComplexF32))
     @eval begin
@@ -467,10 +481,21 @@ for (fname, elty) in
     end
 end
 
+function scal!(n::Integer,
+            alpha::Number,
+            x::oneStridedArray{ComplexF16})
+    wide_x = widen.(x)
+    scal!(n, convert(ComplexF32, alpha), wide_x)
+    thin_x = convert(typeof(x), wide_x)
+    copyto!(x, thin_x)
+    return x
+end
+
 ## nrm2
 for (fname, elty, ret_type) in
     ((:onemklDnrm2, :Float64,:Float64),
      (:onemklSnrm2, :Float32,:Float32),
+     (:onemklHnrm2, :Float16,:Float16),
      (:onemklCnrm2, :ComplexF32,:Float32),
      (:onemklZnrm2, :ComplexF64,:Float64))
     @eval begin
@@ -484,10 +509,19 @@ for (fname, elty, ret_type) in
     end
 end
 
+nrm2(x::oneStridedArray) = nrm2(length(x), x)
+
+function nrm2(n::Integer, x::oneStridedArray{ComplexF16})
+    wide_x = widen.(x)
+    nrm = nrm2(n, wide_x)
+    return convert(Float16, nrm)
+end
+
 ## dot
 for (jname, fname, elty) in
         ((:dot, :onemklSdot,:Float32),
          (:dot, :onemklDdot,:Float64),
+         (:dot, :onemklHdot,:Float16),
          (:dotc, :onemklCdotc, :ComplexF32),
          (:dotc, :onemklZdotc, :ComplexF64),
          (:dotu, :onemklCdotu, :ComplexF32),
@@ -503,6 +537,14 @@ for (jname, fname, elty) in
             return res[1]
         end
     end
+end
+
+function dotc(n::Integer, x::oneStridedArray{ComplexF16}, y::oneStridedArray{ComplexF16})
+    convert(ComplexF16, dotc(n, convert(oneArray{ComplexF32}, x), convert(oneArray{ComplexF32}, y)))
+end
+
+function dotu(n::Integer, x::oneStridedArray{ComplexF16}, y::oneStridedArray{ComplexF16})
+    convert(ComplexF16, dotu(n, convert(oneArray{ComplexF32}, x), convert(oneArray{ComplexF32}, y)))
 end
 
 # level 2
@@ -645,6 +687,10 @@ for (fname, elty) in
             y
         end
     end
+end
+
+function copy!(n::Integer, x::oneStridedArray{T}, y::oneStridedArray{T}) where {T <: Union{Float16, ComplexF16}}
+    copyto!(y,x)
 end
 
 ## asum

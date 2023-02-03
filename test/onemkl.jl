@@ -94,6 +94,32 @@ k = 13
 
         end
     end
+
+    @testset for T in [Float16, ComplexF16]
+        alpha = rand(T,1)
+        A = oneArray(rand(T, m))
+        B = oneArray{T}(undef, m)
+        oneMKL.copy!(m,A,B)
+        @test Array(A) == Array(B)
+
+        @test testf(axpy!, alpha[1], rand(T,m), rand(T,m))
+        @test testf(norm, rand(T,m))
+        @test testf(dot, rand(T, m), rand(T, m))
+        @test testf(*, transpose(rand(T, m)), rand(T,m))
+        @test testf(*, rand(T, m)', rand(T,m))
+        @test testf(rmul!, rand(T,m), alpha[1])
+
+        if T <: ComplexF16
+            @test testf(dot, rand(T, m), rand(T, m))
+            x = rand(T, m)
+            y = rand(T, m)
+            dx = oneArray(x)
+            dy = oneArray(y)
+            dz = dot(dx, dy)
+            z = dot(x, y)
+            @test dz ≈ z
+        end
+    end
 end
 
 @testset "level 2" begin
@@ -822,6 +848,48 @@ end
                 h_C = triu(h_C)
                 @test C ≈ h_C
             end
+        end
+    end
+
+    @testset for T in intersect(eltypes, [Float16, Float32, Float64, ComplexF32, ComplexF64])
+        @testset "gemm!" begin
+            alpha = rand(T)
+            beta = rand(T)
+            A = rand(T,m,k)
+            B = rand(T,k,n)
+            Bbad = rand(T,k+1,n+1)
+            C1 = rand(T,m,n)
+            C2 = copy(C1)
+            d_A = oneArray(A)
+            d_B = oneArray(B)
+            d_Bbad = oneArray(Bbad)
+            d_C1 = oneArray(C1)
+            d_C2 = oneArray(C2)
+            hA = rand(T,m,m)
+            hA = hA + hA'
+            dhA = oneArray(hA)
+            sA = rand(T,m,m)
+            sA = sA + transpose(sA)
+            dsA = oneArray(sA)
+            oneMKL.gemm!('N','N',alpha,d_A,d_B,beta,d_C1)
+            mul!(d_C2, d_A, d_B)
+            h_C1 = Array(d_C1)
+            h_C2 = Array(d_C2)
+            C1 = (alpha*A)*B + beta*C1
+            C2 = A*B
+            # compare
+            @test C1 ≈ h_C1
+            @test C2 ≈ h_C2
+            @test_throws ArgumentError mul!(dhA, dhA, dsA)
+            @test_throws DimensionMismatch mul!(d_C1, d_A, dsA)
+
+            d_c = oneMKL.gemm('N', 'N', d_A, d_B)
+            C = A * B
+            C2 = d_A * d_B
+            h_C = Array(d_c)
+            h_C2 = Array(C2)
+            @test C ≈ h_C
+            @test C ≈ h_C2
         end
     end
 end

@@ -11,28 +11,37 @@ using LinearAlgebra: Transpose, Adjoint,
 # BLAS 1
 #
 
-LinearAlgebra.rmul!(x::oneStridedVecOrMat{T}, k::Number) where T<:onemklFloat = scal!(length(x), T(k), x)
+LinearAlgebra.rmul!(x::oneStridedVecOrMat{T}, k::Number) where T<:Union{onemklHalf,onemklFloat} =
+    scal!(length(x), T(k), x)
 
 # Work around ambiguity with GPUArrays wrapper
 LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Real) =
 	invoke(LinearAlgebra.rmul!, Tuple{typeof(x), Number}, x, k)
-LinearAlgebra.norm(x::oneStridedVecOrMat{<:onemklFloat}) = nrm2(length(x), x)
 
-function LinearAlgebra.dot(x::oneStridedVector{T}, y::oneStridedVector{T}) where T<:Union{Float32, Float64}
+LinearAlgebra.norm(x::oneStridedVecOrMat{<:Union{Float16,ComplexF16,onemklFloat}}) = nrm2(length(x), x)
+
+function LinearAlgebra.dot(x::oneStridedArray{T}, y::oneStridedArray{T}) where T<:Union{Float16, Float32, Float64}
     n = length(x)
     n == length(y) || throw(DimensionMismatch("dot product arguments have lengths $(length(x)) and $(length(y))"))
     dot(n, x, y)
 end
 
-function LinearAlgebra.dot(x::oneStridedVector{T}, y::oneStridedVector{T}) where T<:Union{ComplexF32, ComplexF64}
+function LinearAlgebra.dot(x::oneStridedArray{T}, y::oneStridedArray{T}) where T<:Union{ComplexF16,ComplexF32, ComplexF64}
     n = length(x)
     n == length(y) || throw(DimensionMismatch("dot product arguments have lengths $(length(x)) and $(length(y))"))
     dotc(n, x, y)
 end
 
+function LinearAlgebra.:(*)(transx::Transpose{<:Any,<:oneStridedVector{T}}, y::oneStridedVector{T}) where T <:Union{ComplexF16, ComplexF32, ComplexF64}
+    x = transx.parent
+    n = length(x)
+    n == length(y) || throw(DimensionMismatch("dot product arguments have lengths $(length(x)) and $(length(y))"))
+    oneMKL.dotu(n, x, y)
+end
+
 LinearAlgebra.BLAS.asum(x::oneStridedVecOrMat{<:onemklFloat}) = asum(length(x), x)
 
-function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}) where T<:onemklFloat
+function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}) where T<:Union{onemklHalf,onemklFloat}
     length(x)==length(y) || throw(DimensionMismatch("axpy arguments have lengths $(length(x)) and $(length(y))"))
     axpy!(length(x), alpha, x, y)
 end
