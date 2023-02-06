@@ -68,11 +68,11 @@ include("utils.jl")
 
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
-    if !precompiling
-        eval(overrides)
-    end
+    precompiling && return
 
-    # ensure that libopencl.so
+    eval(overrides)
+
+    # ensure that the OpenCL runtime dispatcher finds the ICD files from our artifacts
     ENV["OCL_ICD_VENDORS"] = oneL0.NEO_jll.libigdrcl
 end
 
