@@ -81,18 +81,28 @@ include("residency.jl")
 const functional = Ref{Bool}(false)
 
 function __init__()
-    res = unsafe_zeInit(0)
-    if res == RESULT_ERROR_UNINITIALIZED
-        @error """No compatible oneAPI driver implementation found.
-                  Your hardware probably is not supported by any oneAPI driver.
+    precompiling = ccall(:jl_generating_output, Cint, ()) != 0
+    precompiling && return
 
-                  oneAPI.jl currently only supports the Intel Compute runtime,
-                  consult their README for a list of compatible hardware:
-                  https://github.com/intel/compute-runtime#supported-platforms"""
-    elseif res !== RESULT_SUCCESS
-        throw_api_error(res)
-    else
+    if !oneAPI_Level_Zero_Loader_jll.is_available()
+        @error """No oneAPI Level Zero loader found for your platform. Currently, only Linux x86 is supported.
+                  If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
+        return
+    end
+
+    if !NEO_jll.is_available()
+        @error """No oneAPI driver found for your platform. Currently, only Linux x86_64 is supported.
+                  If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
+        return
+    end
+
+    try
+        zeInit(0)
         functional[] = true
+    catch err
+        @error "Failed to initialize oneAPI" exception=(err,catch_backtrace())
+        functional[] = false
+        return
     end
 end
 
