@@ -78,6 +78,13 @@ end
 Base.getindex(r::ZeRefValue) = r.x
 Adapt.adapt_structure(to::KernelAdaptor, r::Base.RefValue) = ZeRefValue(adapt(to, r[]))
 
+# broadcast sometimes passes a ref(type), resulting in a GPU-incompatible DataType box.
+# avoid that by using a special kind of ref that knows about the boxed type.
+struct oneRefType{T} <: Ref{DataType} end
+Base.getindex(r::oneRefType{T}) where T = T
+Adapt.adapt_structure(to::KernelAdaptor, r::Base.RefValue{<:Union{DataType,Type}}) =
+    oneRefType{r[]}()
+
 """
     kernel_convert(x)
 
