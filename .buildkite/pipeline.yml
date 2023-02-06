@@ -61,6 +61,25 @@ steps:
         if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
         timeout_in_minutes: 60
 
+      - label: "Julia 1.9"
+        plugins:
+          - JuliaCI/julia#v1:
+              version: 1.9-nightly
+          - JuliaCI/julia-test#v1: ~
+          - JuliaCI/julia-coverage#v1:
+              codecov: true
+              dirs:
+                - src
+                - lib
+                - examples
+        command: |
+          julia --project=deps deps/build_ci.jl
+        agents:
+          queue: "juliagpu"
+          intel: "*"
+        if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
+        timeout_in_minutes: 60
+
   # Special tests
   - group: ":eyes: Special"
     depends_on: "julia"
