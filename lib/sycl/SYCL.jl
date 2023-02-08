@@ -1,14 +1,10 @@
 module SYCL
 
 using ..oneAPI
-using ..oneAPI: liboneapi_support
 
-using ..oneAPI.oneL0
-using ..oneAPI.oneL0:
-  ze_driver_handle_t, ze_device_handle_t, ze_context_handle_t,
-  ze_command_queue_handle_t, ze_event_handle_t
+using ..oneL0
 
-include("libsycl.jl")
+using ..Support
 
 export syclPlatform, syclDevice, syclContext, syclQueue, syclEvent
 

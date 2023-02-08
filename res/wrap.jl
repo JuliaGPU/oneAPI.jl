@@ -111,9 +111,9 @@ using oneAPI_Level_Zero_Headers_jll
 
 function main()
     wrap("ze", oneAPI_Level_Zero_Headers_jll.ze_api)
-    wrap("sycl", joinpath(dirname(@__DIR__), "deps", "src", "sycl.h"); dependents=false,
-         include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))])
-    wrap("onemkl", joinpath(dirname(@__DIR__), "deps", "src", "onemkl.h"); dependents=false,
+    wrap("support",
+         joinpath(dirname(@__DIR__), "deps", "src", "sycl.h"),
+         joinpath(dirname(@__DIR__), "deps", "src", "onemkl.h"); dependents=false,
          include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))])
 end
 

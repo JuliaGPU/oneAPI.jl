@@ -15,15 +15,12 @@ using Core: LLVMPtr
 
 using SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll
 
-using oneAPI_Support_jll
-
 export oneL0, SYCL
-
-const liboneapi_support = oneAPI_Support_jll.liboneapi_support
 
 # core library
 include("../lib/utils/APIUtils.jl")
 include("../lib/level-zero/oneL0.jl")
+include("../lib/support/Support.jl")
 include("../lib/sycl/SYCL.jl")
 using .oneL0, .SYCL
 functional() = oneL0.functional[]
