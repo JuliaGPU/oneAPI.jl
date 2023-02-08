@@ -53,7 +53,7 @@ do_quickfail, _ = extract_flag!(ARGS, "--quickfail")
 include("setup.jl")     # make sure everything is precompiled
 @info "System information:\n" * sprint(io->oneAPI.versioninfo(io))
 
-@info "Using oneAPI support library at " * oneAPI.liboneapi_support
+@info "Using oneAPI support library at " * oneAPI.Support.liboneapi_support
 
 # choose tests
 const tests = []

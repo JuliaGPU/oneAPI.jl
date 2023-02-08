@@ -1,8 +1,0 @@
-[general]
-library_name = "liboneapi_support"
-output_file_path = "../lib/sycl/libsycl.jl"
-prologue_file_path = "./libsycl_prologue.jl"
-
-
-[codegen]
-use_ccall_macro = true
