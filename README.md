@@ -275,18 +275,3 @@ julia> oneArray([1.]) .+ 1
 │
 │ error: Double type is not supported on this platform.
 ```
-
-Since it is easy to run into code that relies on Float64 values, it might be
-interesting to enable Float64 emulation when initially porting code to oneAPI.jl.
-This can be accomplished by setting two environment variables:
-
-```julia
-julia> ENV["OverrideDefaultFP64Settings"] = "1"
-julia> ENV["IGC_EnableDPEmulation"] = "1"
-julia> using oneAPI
-julia> oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
-true
-julia> oneArray([1.]) .+ 1
-1-element oneVector{Float64, oneAPI.oneL0.DeviceBuffer}:
- 2.0
-```
