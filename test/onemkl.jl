@@ -25,7 +25,7 @@ k = 13
         @testset "axpby" begin
             alpha = rand(T)
             beta = rand(T)
-            @test testf(axpy!, alpha, rand(T,m), beta, rand(T,m))
+            @test testf(axpby!, alpha, rand(T,m), beta, rand(T,m))
         end
 
         @testset "scal" begin
