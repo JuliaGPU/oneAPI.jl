@@ -11,8 +11,8 @@ using LinearAlgebra: Transpose, Adjoint,
 # BLAS 1
 #
 
-LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Number) =
-	scal!(length(x), convert(eltype(x),k), x)
+LinearAlgebra.rmul!(x::oneStridedVecOrMat{T}, k::Number) = where T<:onemklFloat
+	scal!(length(x), T(k), x)
 
 # Work around ambiguity with GPUArrays wrapper
 LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Real) =
@@ -35,10 +35,14 @@ LinearAlgebra.BLAS.asum(x::oneStridedVecOrMat{<:onemklFloat}) = asum(length(x), 
 
 function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}) where T<:onemklFloat
     length(x)==length(y) || throw(DimensionMismatch("axpy arguments have lengths $(length(x)) and $(length(y))"))
-    axpy!(length(x), alpha, x, y)
+    axpy!(length(x), T(alpha), x, y)
 end
 
-
+function LinearAlgebra.axpby!(alpha::Number, x::oneStridedVecOrMat{T}, beta::Number, y::oneStridedVecOrMat{T}) where T<:onemklFloat
+    length(x)==length(y) || throw(DimensionMismatch("axpby arguments have lengths $(length(x)) and $(length(y))"))
+    scal!(length(y), T(beta), y)
+    axpby!(length(x), T(alpha), x, y)
+end
 
 #
 # BLAS 2
