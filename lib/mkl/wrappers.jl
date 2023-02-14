@@ -388,7 +388,7 @@ for (fname, elty) in ((:onemklCher2,:ComplexF32),
 end
 
 # level 1
-## axpy primitive
+## axpy
 for (fname, elty) in
         ((:onemklDaxpy,:Float64),
          (:onemklSaxpy,:Float32),
@@ -406,6 +406,48 @@ for (fname, elty) in
         end
     end
 end
+
+## axpby
+for (fname, elty) in
+        ((:onemklDaxpby,:Float64),
+         (:onemklSaxpby,:Float32),
+         (:onemklZaxpby,:ComplexF64),
+         (:onemklCaxpby,:ComplexF32))
+    @eval begin
+        function axpby!(n::Integer,
+                        alpha::Number,
+                        x::oneStridedArray{$elty},
+                        beta::Number,
+                        y::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            alpha = $elty(alpha)
+            beta = $elty(beta)
+            $fname(sycl_queue(queue), n, alpha, x, stride(x,1), beta, y, stride(y,1))
+            y
+        end
+    end
+end
+
+#=## rot
+for (fname, elty, real_type) in
+        ((:onemklDrot,:Float64,:Float64),
+         (:onemklSrot,:Float32,:Float32),
+         (:onemklZrot,:ComplexF64,:Float64),
+         (:onemklCrot,:ComplexF32,:Float32))
+    @eval begin
+        function rot!(n::Integer,
+                      x::oneStridedArray{$elty},
+                      y::oneStridedArray{$elty},
+                      c::Real,
+                      s::Real)
+            queue = global_queue(context(x), device(x))
+            c = $real_type(c)
+            s = $real_type(s)
+            $fname(sycl_queue(queue), n, x, stride(x,1), y, stride(y,1), c, s)
+            x, y
+        end
+    end
+end=#
 
 ## scal
 for (fname, elty) in

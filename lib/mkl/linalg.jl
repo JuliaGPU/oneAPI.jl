@@ -34,13 +34,12 @@ LinearAlgebra.BLAS.asum(x::oneStridedVecOrMat{<:onemklFloat}) = asum(length(x), 
 
 function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}) where T<:onemklFloat
     length(x)==length(y) || throw(DimensionMismatch("axpy arguments have lengths $(length(x)) and $(length(y))"))
-    axpy!(length(x), T(alpha), x, y)
+    axpy!(length(x), alpha, x, y)
 end
 
 function LinearAlgebra.axpby!(alpha::Number, x::oneStridedVecOrMat{T}, beta::Number, y::oneStridedVecOrMat{T}) where T<:onemklFloat
     length(x)==length(y) || throw(DimensionMismatch("axpby arguments have lengths $(length(x)) and $(length(y))"))
-    scal!(length(y), T(beta), y)
-    axpy!(length(x), T(alpha), x, y)
+    axpby!(length(x), alpha, x, beta, y)
 end
 
 #
