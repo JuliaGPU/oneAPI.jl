@@ -626,14 +626,14 @@ extern "C" void onemklDrot(syclQueue_t device_queue, int64_t n, double *x, int64
     __FORCE_MKL_FLUSH__(status);
 }
 
-extern "C" void onemklCrot(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx, float _Complex *y, int64_t incy, float c, float s) {
+extern "C" void onemklCrot(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx, float _Complex *y, int64_t incy, float c, float _Complex s) {
     auto status = oneapi::mkl::blas::column_major::rot(device_queue->val, n,
                             reinterpret_cast<std::complex<float> *>(x), incx,
                             reinterpret_cast<std::complex<float> *>(y), incy, c, static_cast<std::complex<float> >(s));
     __FORCE_MKL_FLUSH__(status);
 }
 
-extern "C" void onemklZrot(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, double _Complex *y, int64_t incy, double c, double s) {
+extern "C" void onemklZrot(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, double _Complex *y, int64_t incy, double c, double _Complex s) {
     auto status = oneapi::mkl::blas::column_major::rot(device_queue->val, n,
                             reinterpret_cast<std::complex<double> *>(x), incx,
                             reinterpret_cast<std::complex<double> *>(y), incy, c, static_cast<std::complex<double> >(s));

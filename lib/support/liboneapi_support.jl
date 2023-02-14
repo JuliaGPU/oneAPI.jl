@@ -570,14 +570,14 @@ function onemklCrot(device_queue, n, x, incx, y, incy, c, s)
     @ccall liboneapi_support.onemklCrot(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{ComplexF32}, incx::Int64,
                                         y::ZePtr{ComplexF32}, incy::Int64, c::Cfloat,
-                                        s::Cfloat)::Cvoid
+                                        s::ComplexF32)::Cvoid
 end
 
 function onemklZrot(device_queue, n, x, incx, y, incy, c, s)
     @ccall liboneapi_support.onemklZrot(device_queue::syclQueue_t, n::Int64,
                                         x::ZePtr{ComplexF64}, incx::Int64,
                                         y::ZePtr{ComplexF64}, incy::Int64, c::Cdouble,
-                                        s::Cdouble)::Cvoid
+                                        s::ComplexF32)::Cvoid
 end
 
 function onemklCsrot(device_queue, n, x, incx, y, incy, c, s)

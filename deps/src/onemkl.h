@@ -244,9 +244,9 @@ void onemklSrot(syclQueue_t device_queue, int64_t n, float *x,
 void onemklDrot(syclQueue_t device_queue, int64_t n, double *x,
                 int64_t incx, double *y, int64_t incy, double c, double s);
 void onemklCrot(syclQueue_t device_queue, int64_t n, float _Complex *x,
-                int64_t incx, float _Complex *y, int64_t incy, float c, float s);
+                int64_t incx, float _Complex *y, int64_t incy, float c, float _Complex s);
 void onemklZrot(syclQueue_t device_queue, int64_t n, double _Complex *x,
-                int64_t incx, double _Complex *y, int64_t incy, double c, double s);
+                int64_t incx, double _Complex *y, int64_t incy, double c, double _Complex s);
 void onemklCsrot(syclQueue_t device_queue, int64_t n, float _Complex *x,
                 int64_t incx, float _Complex *y, int64_t incy, float c, float s);
 void onemklZdrot(syclQueue_t device_queue, int64_t n, double _Complex *x,
