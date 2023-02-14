@@ -248,9 +248,9 @@ void onemklCrot(syclQueue_t device_queue, int64_t n, float _Complex *x,
 void onemklZrot(syclQueue_t device_queue, int64_t n, double _Complex *x,
                 int64_t incx, double _Complex *y, int64_t incy, double c, double s);
 void onemklCsrot(syclQueue_t device_queue, int64_t n, float _Complex *x,
-                int64_t incx, float _Complex *y, int64_t incy, float c, float _Complex s);
+                int64_t incx, float _Complex *y, int64_t incy, float c, float s);
 void onemklZdrot(syclQueue_t device_queue, int64_t n, double _Complex *x,
-                int64_t incx, double _Complex *y, int64_t incy, double c, double _Complex s);
+                int64_t incx, double _Complex *y, int64_t incy, double c, double s);
 
 // Level-1: scal oneMKL
 void onemklDscal(syclQueue_t device_queue, int64_t n, double alpha,

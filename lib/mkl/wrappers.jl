@@ -429,21 +429,21 @@ for (fname, elty) in
 end
 
 ## rot
-for (fname, elty, real_type, sty) in ((:onemklSrot,:Float32,:Float32,:Number),
-                                      (:onemklDrot,:Float64,:Float64,:Number),
-                                      (:onemklCrot,:ComplexF32,:Float32,:Number),
-                                      (:onemklZrot,:ComplexF64,:Float64,:Number),
-                                      (:onemklCsrot,:ComplexF32,:Float32,:Real),
-                                      (:onemklZdrot,:ComplexF64,:Float64,:Real))
+for (fname, elty, cty, sty, supty) in ((:onemklSrot,:Float32,:Float32,:Float32,:Number),
+                                       (:onemklDrot,:Float64,:Float64,:Float64,:Number),
+                                       (:onemklCrot,:ComplexF32,:Float32,:ComplexF32,:Number),
+                                       (:onemklZrot,:ComplexF64,:Float64,:ComplexF64,:Number),
+                                       (:onemklCsrot,:ComplexF32,:Float32,:Float32,:Real),
+                                       (:onemklZdrot,:ComplexF64,:Float64,:Float64,:Real))
     @eval begin
         function rot!(n::Integer,
                       x::oneStridedArray{$elty},
                       y::oneStridedArray{$elty},
                       c::Real,
-                      s::$sty)
+                      s::$supty)
             queue = global_queue(context(x), device(x))
-            c = $real_type(c)
-            s = $elty(s)
+            c = $cty(c)
+            s = $sty(s)
             $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1), c, s)
             x, y
         end
