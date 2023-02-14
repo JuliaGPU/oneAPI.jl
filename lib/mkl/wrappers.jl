@@ -428,26 +428,27 @@ for (fname, elty) in
     end
 end
 
-#=## rot
-for (fname, elty, real_type) in
-        ((:onemklDrot,:Float64,:Float64),
-         (:onemklSrot,:Float32,:Float32),
-         (:onemklZrot,:ComplexF64,:Float64),
-         (:onemklCrot,:ComplexF32,:Float32))
+## rot
+for (fname, elty, real_type, sty) in ((:onemklSrot,:Float32,:Float32,:Number),
+                                      (:onemklDrot,:Float64,:Float64,:Number),
+                                      (:onemklCrot,:ComplexF32,:Float32,:Number),
+                                      (:onemklZrot,:ComplexF64,:Float64,:Number),
+                                      (:onemklCsrot,:ComplexF32,:Float32,:Real),
+                                      (:onemklZdrot,:ComplexF64,:Float64,:Real))
     @eval begin
         function rot!(n::Integer,
                       x::oneStridedArray{$elty},
                       y::oneStridedArray{$elty},
                       c::Real,
-                      s::Real)
+                      s::$sty)
             queue = global_queue(context(x), device(x))
             c = $real_type(c)
-            s = $real_type(s)
-            $fname(sycl_queue(queue), n, x, stride(x,1), y, stride(y,1), c, s)
+            s = $elty(s)
+            $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1), c, s)
             x, y
         end
     end
-end=#
+end
 
 ## scal
 for (fname, elty) in

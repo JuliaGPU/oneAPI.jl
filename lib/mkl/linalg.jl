@@ -42,6 +42,22 @@ function LinearAlgebra.axpby!(alpha::Number, x::oneStridedVecOrMat{T}, beta::Num
     axpby!(length(x), alpha, x, beta, y)
 end
 
+function LinearAlgebra.rotate!(x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}, c::Number, s::Number) where T<:onemklFloat
+    nx = length(x)
+    ny = length(y)
+    nx==ny || throw(DimensionMismatch("rotate arguments have lengths $nx and $ny"))
+    rot!(nx, x, y, c, s)
+end
+
+function LinearAlgebra.reflect!(x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}, c::Number, s::Number) where T<:onemklFloat
+    nx = length(x)
+    ny = length(y)
+    nx==ny || throw(DimensionMismatch("reflect arguments have lengths $nx and $ny"))
+    rot!(nx, x, y, c, s)
+    scal!(ny, -one(real(T)), y)
+    x, y
+end
+
 #
 # BLAS 2
 #

@@ -230,23 +230,27 @@ void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex alpha,
 void onemklZaxpy(syclQueue_t device_queue, int64_t n, double _Complex alpha,
                 const double _Complex *x, int64_t incx, double _Complex *y, int64_t incy);
 
-void onemklSaxpby(syclQueue_t device_queue, int64_t n, float alpha, float *x,
+void onemklSaxpby(syclQueue_t device_queue, int64_t n, float alpha, const float *x,
                   int64_t incx, float beta, float *y, int64_t incy);
-void onemklDaxpby(syclQueue_t device_queue, int64_t n, double alpha, double *x,
+void onemklDaxpby(syclQueue_t device_queue, int64_t n, double alpha, const double *x,
                   int64_t incx, double beta, double *y, int64_t incy);
 void onemklCaxpby(syclQueue_t device_queue, int64_t n, float _Complex alpha,
-                  float _Complex *x, int64_t incx, float _Complex beta, float _Complex *y, int64_t incy);
+                  const float _Complex *x, int64_t incx, float _Complex beta, float _Complex *y, int64_t incy);
 void onemklZaxpby(syclQueue_t device_queue, int64_t n, double _Complex alpha,
-                  double _Complex *x, int64_t incx, double _Complex beta, double _Complex *y, int64_t incy);
+                  const double _Complex *x, int64_t incx, double _Complex beta, double _Complex *y, int64_t incy);
 
-/*void onemklSrot(syclQueue_t device_queue, int64_t n, float *x,
+void onemklSrot(syclQueue_t device_queue, int64_t n, float *x,
                 int64_t incx, float *y, int64_t incy, float c, float s);
 void onemklDrot(syclQueue_t device_queue, int64_t n, double *x,
-                int64_t incx, double *y, int64_t incy, double c);
+                int64_t incx, double *y, int64_t incy, double c, double s);
 void onemklCrot(syclQueue_t device_queue, int64_t n, float _Complex *x,
                 int64_t incx, float _Complex *y, int64_t incy, float c, float s);
 void onemklZrot(syclQueue_t device_queue, int64_t n, double _Complex *x,
-                int64_t incx, double _Complex *y, int64_t incy, double c, double s);*/
+                int64_t incx, double _Complex *y, int64_t incy, double c, double s);
+void onemklCsrot(syclQueue_t device_queue, int64_t n, float _Complex *x,
+                int64_t incx, float _Complex *y, int64_t incy, float c, float _Complex s);
+void onemklZdrot(syclQueue_t device_queue, int64_t n, double _Complex *x,
+                int64_t incx, double _Complex *y, int64_t incy, double c, double _Complex s);
 
 // Level-1: scal oneMKL
 void onemklDscal(syclQueue_t device_queue, int64_t n, double alpha,
