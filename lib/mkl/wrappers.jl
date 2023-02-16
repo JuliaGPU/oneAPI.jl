@@ -165,107 +165,6 @@ end
 syr2k(uplo::Char, trans::Char, A::oneStridedVecOrMat, B::oneStridedVecOrMat) =
         syr2k(uplo, trans, one(eltype(A)), A, B)
 
-## (TR) Triangular matrix and vector multiplication and solution
-for (mmname, smname, elty) in
-        ((:onemklDtrmm, :onemklDtrsm, :Float64),
-         (:onemklStrmm, :onemklStrsm, :Float32),
-         (:onemklZtrmm, :onemklZtrsm, :ComplexF64),
-         (:onemklCtrmm, :onemklCtrsm, :ComplexF32))
-    @eval begin
-        function trmm!(side::Char,
-                       uplo::Char,
-                       transa::Char,
-                       diag::Char,
-                       alpha::Number,
-                       A::oneStridedMatrix{$elty},
-                       B::oneStridedMatrix{$elty})
-            m, n = size(B)
-            mA, nA = size(A)
-            if mA != nA throw(DimensionMismatch("A must be square")) end
-            if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trmm!")) end
-            lda = max(1,stride(A,2))
-            ldb = max(1,stride(B,2))
-            queue = global_queue(context(A), device(A))
-            $mmname(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb)
-            B
-        end
-
-        function trsm!(side::Char,
-                       uplo::Char,
-                       transa::Char,
-                       diag::Char,
-                       alpha::Number,
-                       A::oneStridedMatrix{$elty},
-                       B::oneStridedMatrix{$elty})
-            m, n = size(B)
-            mA, nA = size(A)
-            if mA != nA throw(DimensionMismatch("A must be square")) end
-            if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm!")) end
-            lda = max(1,stride(A,2))
-            ldb = max(1,stride(B,2))
-            queue = global_queue(context(A), device(A))
-            $smname(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb)
-            B
-        end
-    end
-end
-function trmm(side::Char,
-              uplo::Char,
-              transa::Char,
-              diag::Char,
-              alpha::Number,
-              A::oneStridedMatrix{T},
-              B::oneStridedMatrix{T}) where T
-    trmm!(side, uplo, transa, diag, alpha, A, B)
-end
-function trsm(side::Char,
-                uplo::Char,
-                transa::Char,
-                diag::Char,
-                alpha::Number,
-                A::oneStridedMatrix{T},
-                B::oneStridedMatrix{T}) where T
-    trsm!(side, uplo, transa, diag, alpha, A, copy(B))
-end
-
-## hemm
-for (fname, elty) in ((:onemklZhemm,:ComplexF64),
-                      (:onemklChemm,:ComplexF32))
-    @eval begin
-        function hemm!(side::Char,
-                       uplo::Char,
-                       alpha::Number,
-                       A::oneStridedMatrix{$elty},
-                       B::oneStridedMatrix{$elty},
-                       beta::Number,
-                       C::oneStridedMatrix{$elty})
-            mA, nA = size(A)
-            m, n = size(B)
-            mC, nC = size(C)
-            if mA != nA throw(DimensionMismatch("A must be square")) end
-            if ((m != mC) || (n != nC)) throw(DimensionMismatch("B and C must have same dimensions")) end
-            if ((side == 'L') && (mA != m)) throw(DimensionMismatch("")) end
-            if ((side == 'R') && (mA != n)) throw(DimensionMismatch("")) end
-            lda = max(1,stride(A,2))
-            ldb = max(1,stride(B,2))
-            ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device(A))
-            $fname(sycl_queue(queue), side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
-            C
-        end
-    end
-end
-function hemm(uplo::Char,
-                trans::Char,
-                alpha::Number,
-                A::oneStridedMatrix{T},
-                B::oneStridedMatrix{T}) where T
-    m,n = size(B)
-    hemm!( uplo, trans, alpha, A, B, zero(T), similar(B, (m,n) ) )
-end
-hemm(uplo::Char, trans::Char, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where T=
-    hemm( uplo, trans, one(T), A, B)
-
 ## herk
 for (fname, elty) in ((:onemklZherk, :ComplexF64),
                       (:onemklCherk, :ComplexF32))
@@ -489,7 +388,7 @@ for (fname, elty) in ((:onemklCher2,:ComplexF32),
 end
 
 # level 1
-## axpy primitive
+## axpy
 for (fname, elty) in
         ((:onemklDaxpy,:Float64),
          (:onemklSaxpy,:Float32),
@@ -504,6 +403,49 @@ for (fname, elty) in
             alpha = $elty(alpha)
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1), y, stride(y,1))
             y
+        end
+    end
+end
+
+## axpby
+for (fname, elty) in
+        ((:onemklDaxpby,:Float64),
+         (:onemklSaxpby,:Float32),
+         (:onemklZaxpby,:ComplexF64),
+         (:onemklCaxpby,:ComplexF32))
+    @eval begin
+        function axpby!(n::Integer,
+                        alpha::Number,
+                        x::oneStridedArray{$elty},
+                        beta::Number,
+                        y::oneStridedArray{$elty})
+            queue = global_queue(context(x), device(x))
+            alpha = $elty(alpha)
+            beta = $elty(beta)
+            $fname(sycl_queue(queue), n, alpha, x, stride(x,1), beta, y, stride(y,1))
+            y
+        end
+    end
+end
+
+## rot
+for (fname, elty, cty, sty, supty) in ((:onemklSrot,:Float32,:Float32,:Float32,:Number),
+                                       (:onemklDrot,:Float64,:Float64,:Float64,:Number),
+                                       (:onemklCrot,:ComplexF32,:Float32,:ComplexF32,:Number),
+                                       (:onemklZrot,:ComplexF64,:Float64,:ComplexF64,:Number),
+                                       (:onemklCsrot,:ComplexF32,:Float32,:Float32,:Real),
+                                       (:onemklZdrot,:ComplexF64,:Float64,:Float64,:Real))
+    @eval begin
+        function rot!(n::Integer,
+                      x::oneStridedArray{$elty},
+                      y::oneStridedArray{$elty},
+                      c::Real,
+                      s::$supty)
+            queue = global_queue(context(x), device(x))
+            c = $cty(c)
+            s = $sty(s)
+            $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1), c, s)
+            x, y
         end
     end
 end
@@ -924,10 +866,110 @@ end
 
 # level 3
 
+for (mmname, smname, elty) in
+        ((:onemklDtrmm, :onemklDtrsm, :Float64),
+         (:onemklStrmm, :onemklStrsm, :Float32),
+         (:onemklZtrmm, :onemklZtrsm, :ComplexF64),
+         (:onemklCtrmm, :onemklCtrsm, :ComplexF32))
+    @eval begin
+        function trmm!(side::Char,
+                       uplo::Char,
+                       transa::Char,
+                       diag::Char,
+                       alpha::Number,
+                       A::oneStridedMatrix{$elty},
+                       B::oneStridedMatrix{$elty})
+            m, n = size(B)
+            mA, nA = size(A)
+            if mA != nA throw(DimensionMismatch("A must be square")) end
+            if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trmm!")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            queue = global_queue(context(A), device(A))
+            $mmname(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb)
+            B
+        end
+
+        function trsm!(side::Char,
+                       uplo::Char,
+                       transa::Char,
+                       diag::Char,
+                       alpha::Number,
+                       A::oneStridedMatrix{$elty},
+                       B::oneStridedMatrix{$elty})
+            m, n = size(B)
+            mA, nA = size(A)
+            if mA != nA throw(DimensionMismatch("A must be square")) end
+            if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm!")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            queue = global_queue(context(A), device(A))
+            $smname(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb)
+            B
+        end
+    end
+end
+function trmm(side::Char,
+              uplo::Char,
+              transa::Char,
+              diag::Char,
+              alpha::Number,
+              A::oneStridedMatrix{T},
+              B::oneStridedMatrix{T}) where T
+    trmm!(side, uplo, transa, diag, alpha, A, B)
+end
+function trsm(side::Char,
+                uplo::Char,
+                transa::Char,
+                diag::Char,
+                alpha::Number,
+                A::oneStridedMatrix{T},
+                B::oneStridedMatrix{T}) where T
+    trsm!(side, uplo, transa, diag, alpha, A, copy(B))
+end
+
+## hemm
+for (fname, elty) in ((:onemklZhemm,:ComplexF64),
+                      (:onemklChemm,:ComplexF32))
+    @eval begin
+        function hemm!(side::Char,
+                       uplo::Char,
+                       alpha::Number,
+                       A::oneStridedMatrix{$elty},
+                       B::oneStridedMatrix{$elty},
+                       beta::Number,
+                       C::oneStridedMatrix{$elty})
+            mA, nA = size(A)
+            m, n = size(B)
+            mC, nC = size(C)
+            if mA != nA throw(DimensionMismatch("A must be square")) end
+            if ((m != mC) || (n != nC)) throw(DimensionMismatch("B and C must have same dimensions")) end
+            if ((side == 'L') && (mA != m)) throw(DimensionMismatch("")) end
+            if ((side == 'R') && (mA != n)) throw(DimensionMismatch("")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            queue = global_queue(context(A), device(A))
+            $fname(sycl_queue(queue), side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
+            C
+        end
+    end
+end
+function hemm(uplo::Char,
+                trans::Char,
+                alpha::Number,
+                A::oneStridedMatrix{T},
+                B::oneStridedMatrix{T}) where T
+    m,n = size(B)
+    hemm!( uplo, trans, alpha, A, B, zero(T), similar(B, (m,n) ) )
+end
+hemm(uplo::Char, trans::Char, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where T=
+    hemm( uplo, trans, one(T), A, B)
+
 for (fname, elty) in
         ((:onemklDgemm,:Float64),
          (:onemklSgemm,:Float32),
-         (:onemklHgemm, :Float16),
+         (:onemklHgemm,:Float16),
          (:onemklZgemm,:ComplexF64),
          (:onemklCgemm,:ComplexF32))
     @eval begin

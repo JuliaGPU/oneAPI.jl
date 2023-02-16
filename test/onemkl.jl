@@ -18,10 +18,26 @@ k = 13
         end 
 
         @testset "axpy" begin
-            alpha = rand(T,1)
-            @test testf(axpy!, alpha[1], rand(T,m), rand(T,m))
+            alpha = rand(T)
+            @test testf(axpy!, alpha, rand(T,m), rand(T,m))
         end
-        
+
+        @testset "axpby" begin
+            alpha = rand(T)
+            beta = rand(T)
+            @test testf(axpby!, alpha, rand(T,m), beta, rand(T,m))
+        end
+
+        @testset "rotate" begin
+            @test testf(rotate!, rand(T, m), rand(T, m), rand(real(T)), rand(real(T)))
+            @test testf(rotate!, rand(T, m), rand(T, m), rand(real(T)), rand(T))
+        end
+
+        @testset "reflect" begin
+            @test testf(reflect!, rand(T, m), rand(T, m), rand(real(T)), rand(real(T)))
+            @test testf(reflect!, rand(T, m), rand(T, m), rand(real(T)), rand(T))
+        end
+
         @testset "scal" begin
             # Test scal primitive [alpha/x: F32, F64, CF32, CF64]
             alpha = rand(T,1)

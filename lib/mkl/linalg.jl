@@ -11,8 +11,7 @@ using LinearAlgebra: Transpose, Adjoint,
 # BLAS 1
 #
 
-LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Number) =
-	scal!(length(x), convert(eltype(x),k), x)
+LinearAlgebra.rmul!(x::oneStridedVecOrMat{T}, k::Number) where T<:onemklFloat = scal!(length(x), T(k), x)
 
 # Work around ambiguity with GPUArrays wrapper
 LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Real) =
@@ -38,7 +37,26 @@ function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{T}, y::oneStri
     axpy!(length(x), alpha, x, y)
 end
 
+function LinearAlgebra.axpby!(alpha::Number, x::oneStridedVecOrMat{T}, beta::Number, y::oneStridedVecOrMat{T}) where T<:onemklFloat
+    length(x)==length(y) || throw(DimensionMismatch("axpby arguments have lengths $(length(x)) and $(length(y))"))
+    axpby!(length(x), alpha, x, beta, y)
+end
 
+function LinearAlgebra.rotate!(x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}, c::Number, s::Number) where T<:onemklFloat
+    nx = length(x)
+    ny = length(y)
+    nx==ny || throw(DimensionMismatch("rotate arguments have lengths $nx and $ny"))
+    rot!(nx, x, y, c, s)
+end
+
+function LinearAlgebra.reflect!(x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}, c::Number, s::Number) where T<:onemklFloat
+    nx = length(x)
+    ny = length(y)
+    nx==ny || throw(DimensionMismatch("reflect arguments have lengths $nx and $ny"))
+    rot!(nx, x, y, c, s)
+    scal!(ny, -one(real(T)), y)
+    x, y
+end
 
 #
 # BLAS 2

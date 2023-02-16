@@ -110,6 +110,24 @@ use_ccall_macro = true
 4 = "ZePtr{T}"
 6 = "ZePtr{T}"
 
+[api.onemklXaxpby.argtypes]
+3 = "T"
+4 = "ZePtr{T}"
+6 = "T"
+7 = "ZePtr{T}"
+
+[api.onemklXrot.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
+
+[api.onemklXdrot.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
+
+[api.onemklXsrot.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{T}"
+
 [api.onemklXscal.argtypes]
 3 = "T"
 4 = "ZePtr{T}"

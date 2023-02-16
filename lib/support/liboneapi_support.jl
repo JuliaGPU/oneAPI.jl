@@ -526,6 +526,74 @@ function onemklZaxpy(device_queue, n, alpha, x, incx, y, incy)
                                          incy::Int64)::Cvoid
 end
 
+function onemklSaxpby(device_queue, n, alpha, x, incx, beta, y, incy)
+    @ccall liboneapi_support.onemklSaxpby(device_queue::syclQueue_t, n::Int64,
+                                          alpha::Cfloat, x::ZePtr{Cfloat}, incx::Int64,
+                                          beta::Cfloat, y::ZePtr{Cfloat},
+                                          incy::Int64)::Cvoid
+end
+
+function onemklDaxpby(device_queue, n, alpha, x, incx, beta, y, incy)
+    @ccall liboneapi_support.onemklDaxpby(device_queue::syclQueue_t, n::Int64,
+                                          alpha::Cdouble, x::ZePtr{Cdouble}, incx::Int64,
+                                          beta::Cdouble, y::ZePtr{Cdouble},
+                                          incy::Int64)::Cvoid
+end
+
+function onemklCaxpby(device_queue, n, alpha, x, incx, beta, y, incy)
+    @ccall liboneapi_support.onemklCaxpby(device_queue::syclQueue_t, n::Int64,
+                                          alpha::ComplexF32, x::ZePtr{ComplexF32},
+                                          incx::Int64, beta::ComplexF32,
+                                          y::ZePtr{ComplexF32}, incy::Int64)::Cvoid
+end
+
+function onemklZaxpby(device_queue, n, alpha, x, incx, beta, y, incy)
+    @ccall liboneapi_support.onemklZaxpby(device_queue::syclQueue_t, n::Int64,
+                                          alpha::ComplexF64, x::ZePtr{ComplexF64},
+                                          incx::Int64, beta::ComplexF64,
+                                          y::ZePtr{ComplexF64}, incy::Int64)::Cvoid
+end
+
+function onemklSrot(device_queue, n, x, incx, y, incy, c, s)
+    @ccall liboneapi_support.onemklSrot(device_queue::syclQueue_t, n::Int64,
+                                        x::ZePtr{Cfloat}, incx::Int64, y::ZePtr{Cfloat},
+                                        incy::Int64, c::Cfloat, s::Cfloat)::Cvoid
+end
+
+function onemklDrot(device_queue, n, x, incx, y, incy, c, s)
+    @ccall liboneapi_support.onemklDrot(device_queue::syclQueue_t, n::Int64,
+                                        x::ZePtr{Cdouble}, incx::Int64, y::ZePtr{Cdouble},
+                                        incy::Int64, c::Cdouble, s::Cdouble)::Cvoid
+end
+
+function onemklCrot(device_queue, n, x, incx, y, incy, c, s)
+    @ccall liboneapi_support.onemklCrot(device_queue::syclQueue_t, n::Int64,
+                                        x::ZePtr{ComplexF32}, incx::Int64,
+                                        y::ZePtr{ComplexF32}, incy::Int64, c::Cfloat,
+                                        s::ComplexF32)::Cvoid
+end
+
+function onemklZrot(device_queue, n, x, incx, y, incy, c, s)
+    @ccall liboneapi_support.onemklZrot(device_queue::syclQueue_t, n::Int64,
+                                        x::ZePtr{ComplexF64}, incx::Int64,
+                                        y::ZePtr{ComplexF64}, incy::Int64, c::Cdouble,
+                                        s::ComplexF32)::Cvoid
+end
+
+function onemklCsrot(device_queue, n, x, incx, y, incy, c, s)
+    @ccall liboneapi_support.onemklCsrot(device_queue::syclQueue_t, n::Int64,
+                                         x::ZePtr{ComplexF32}, incx::Int64,
+                                         y::ZePtr{ComplexF32}, incy::Int64, c::Cfloat,
+                                         s::Cfloat)::Cvoid
+end
+
+function onemklZdrot(device_queue, n, x, incx, y, incy, c, s)
+    @ccall liboneapi_support.onemklZdrot(device_queue::syclQueue_t, n::Int64,
+                                         x::ZePtr{ComplexF64}, incx::Int64,
+                                         y::ZePtr{ComplexF64}, incy::Int64, c::Cdouble,
+                                         s::Cdouble)::Cvoid
+end
+
 function onemklDscal(device_queue, n, alpha, x, incx)
     @ccall liboneapi_support.onemklDscal(device_queue::syclQueue_t, n::Int64,
                                          alpha::Cdouble, x::ZePtr{Cdouble},
