@@ -25,6 +25,7 @@ This package is still under significant development, so expect bugs and missing 
 
 You need to use Julia 1.6 or higher, and it is strongly advised to use [the official
 binaries](https://julialang.org/downloads/). For now, only Linux is supported.
+On Windows, you need to use the second generation Windows Subsystem for Linux (WSL2).
 **If you're using Alchemist hardware, you need to use at least Linux 6.2.** For other
 hardware, any recent Linux distribution should work.
 
