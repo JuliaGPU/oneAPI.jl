@@ -20,13 +20,13 @@ LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Real) =
 
 LinearAlgebra.norm(x::oneStridedVecOrMat{<:Union{Float16,ComplexF16,onemklFloat}}) = nrm2(length(x), x)
 
-function LinearAlgebra.dot(x::oneStridedArray{T}, y::oneStridedArray{T}) where T<:Union{Float16, Float32, Float64}
+function LinearAlgebra.dot(x::oneStridedVector{T}, y::oneStridedVector{T}) where T<:Union{Float16, Float32, Float64}
     n = length(x)
     n == length(y) || throw(DimensionMismatch("dot product arguments have lengths $(length(x)) and $(length(y))"))
     dot(n, x, y)
 end
 
-function LinearAlgebra.dot(x::oneStridedArray{T}, y::oneStridedArray{T}) where T<:Union{ComplexF16,ComplexF32, ComplexF64}
+function LinearAlgebra.dot(x::oneStridedVector{T}, y::oneStridedVector{T}) where T<:Union{ComplexF16,ComplexF32, ComplexF64}
     n = length(x)
     n == length(y) || throw(DimensionMismatch("dot product arguments have lengths $(length(x)) and $(length(y))"))
     dotc(n, x, y)
