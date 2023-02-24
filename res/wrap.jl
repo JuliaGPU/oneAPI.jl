@@ -68,7 +68,7 @@ function rewriter!(ctx, options)
                     arg_exprs[i].args[2] = Meta.parse(typ)
                 end
             elseif startswith(fn, "onemkl")
-                # oneMKL contains many almost-identical functions, e.g., `onemkl[SDCZ]gemm`,
+                # oneMKL contains many almost-identical functions, e.g., `onemkl[SDCZH]gemm`,
                 # for which we only register a single `onemklXgemm` with `T` placeholders.
                 generic_fn = "onemklX" * fn[8:end]
                 if haskey(options["api"], generic_fn)
@@ -78,6 +78,7 @@ function rewriter!(ctx, options)
                     T = typcode == 'S' ? "Cfloat" :
                         typcode == 'D' ? "Cdouble" :
                         typcode == 'C' ? "ComplexF32" :
+                        typcode == 'H' ? "Float16" :
                         typcode == 'Z' ? "ComplexF64" : error("unknown type code $typcode")
 
                     for (arg, typ) in argtypes
