@@ -107,6 +107,48 @@ function gemm_batched(transA::Char, transB::Char,
     gemm_batched(transA, transB, one(T), A, B)
 end
 
+## (TR) triangular triangular matrix solution batched
+for (fname, elty) in
+        ((:onemklDtrsmBatched,:Float64),
+         (:onemklStrsmBatched,:Float32),
+         (:onemklCtrsmBatched,:ComplexF32),
+         (:onemklZtrsmBatched,:ComplexF64))
+    @eval begin
+        function trsm_batched!(side::Char,
+                               uplo::Char,
+                               transa::Char,
+                               diag::Char,
+                               alpha::Number,
+                               A::Vector{<:oneStridedMatrix{$elty}},
+                               B::Vector{<:oneStridedMatrix{$elty}})
+            if length(A) != length(B)
+                throw(DimensionMismatch(""))
+            end
+            for (As,Bs) in zip(A,B)
+                mA, nA = size(As)
+                m,n = size(Bs)
+                if mA != nA throw(DimensionMismatch("A must be square")) end
+                if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm_batched!")) end
+            end
+
+            m,n = size(B[1])
+            lda = max(1,stride(A[1],2))
+            ldb = max(1,stride(B[1],2))
+            Aptrs = unsafe_batch(A)
+            Bptrs = unsafe_batch(B)
+            queue = global_queue(context(A[1]), device(A[1]))
+            $fname(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, Aptrs, lda, Bptrs, ldb, length(A))
+            unsafe_free!(Bptrs)
+            unsafe_free!(Aptrs)
+            B
+        end
+    end
+end
+function trsm_batched(side::Char, uplo::Char, transa::Char, diag::Char, alpha::Number,
+                      A::Vector{<:oneStridedMatrix{T}}, B::Vector{<:oneStridedMatrix{T}}) where T
+    trsm_batched!(side, uplo, transa, diag, alpha, A, copy(B) )
+end
+
 ## (L3: symm) symmetric matrix-matrix and matrix-vector multiplication
 for (fname, elty) in ((:onemklSsymm, :Float32),
                       (:onemklDsymm, :Float64),

@@ -180,6 +180,30 @@ void onemklZtrsm(syclQueue_t device_queue, onemklSide left_right, onemklUplo upp
                 double _Complex alpha, const double _Complex *a, int64_t lda, double _Complex *b,
                 int64_t ldb);
 
+void onemklStrsmBatched(syclQueue_t device_queue, onemklSide left_right,
+                onemklUplo upper_lower, onemklTranspose transa,
+                onemklDiag unit_diag, int64_t m, int64_t n,
+                float alpha, const float **a, int64_t lda,
+                float **b, int64_t ldb, int64_t group_count);
+
+void onemklDtrsmBatched(syclQueue_t device_queue, onemklSide left_right,
+                onemklUplo upper_lower, onemklTranspose transa,
+                onemklDiag unit_diag, int64_t m, int64_t n,
+                double alpha, const double **a, int64_t lda,
+                double **b, int64_t ldb, int64_t group_count);
+
+void onemklCtrsmBatched(syclQueue_t device_queue, onemklSide left_right,
+                onemklUplo upper_lower, onemklTranspose transa,
+                onemklDiag unit_diag, int64_t m, int64_t n,
+                float _Complex alpha, const float _Complex **a, int64_t lda,
+                float _Complex **b, int64_t ldb, int64_t group_count);
+
+void onemklZtrsmBatched(syclQueue_t device_queue, onemklSide left_right,
+                onemklUplo upper_lower, onemklTranspose transa,
+                onemklDiag unit_diag, int64_t m, int64_t n,
+                double _Complex alpha, const double _Complex **a, int64_t lda,
+                double _Complex **b, int64_t ldb, int64_t group_count);
+
 void onemklChemm(syclQueue_t device_queue, onemklSide left_right,
                             onemklUplo upper_lower, int64_t m, int64_t n,
                             float _Complex alpha, const float _Complex *a,

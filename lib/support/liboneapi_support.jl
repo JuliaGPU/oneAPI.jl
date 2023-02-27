@@ -387,6 +387,54 @@ function onemklZtrsm(device_queue, left_right, upper_lower, transa, unit_diag, m
                                          ldb::Int64)::Cvoid
 end
 
+function onemklStrsmBatched(device_queue, left_right, upper_lower, transa, unit_diag, m, n,
+                            alpha, a, lda, b, ldb, group_count)
+    @ccall liboneapi_support.onemklStrsmBatched(device_queue::syclQueue_t,
+                                                left_right::onemklSide,
+                                                upper_lower::onemklUplo,
+                                                transa::onemklTranspose,
+                                                unit_diag::onemklDiag, m::Int64, n::Int64,
+                                                alpha::Cfloat, a::ZePtr{Ptr{Cfloat}},
+                                                lda::Int64, b::ZePtr{Ptr{Cfloat}}, ldb::Int64,
+                                                group_count::Int64)::Cvoid
+end
+
+function onemklDtrsmBatched(device_queue, left_right, upper_lower, transa, unit_diag, m, n,
+                            alpha, a, lda, b, ldb, group_count)
+    @ccall liboneapi_support.onemklDtrsmBatched(device_queue::syclQueue_t,
+                                                left_right::onemklSide,
+                                                upper_lower::onemklUplo,
+                                                transa::onemklTranspose,
+                                                unit_diag::onemklDiag, m::Int64, n::Int64,
+                                                alpha::Cdouble, a::ZePtr{Ptr{Cdouble}},
+                                                lda::Int64, b::ZePtr{Ptr{Cdouble}},
+                                                ldb::Int64, group_count::Int64)::Cvoid
+end
+
+function onemklCtrsmBatched(device_queue, left_right, upper_lower, transa, unit_diag, m, n,
+                            alpha, a, lda, b, ldb, group_count)
+    @ccall liboneapi_support.onemklCtrsmBatched(device_queue::syclQueue_t,
+                                                left_right::onemklSide,
+                                                upper_lower::onemklUplo,
+                                                transa::onemklTranspose,
+                                                unit_diag::onemklDiag, m::Int64, n::Int64,
+                                                alpha::ComplexF32, a::ZePtr{Ptr{ComplexF32}},
+                                                lda::Int64, b::ZePtr{Ptr{ComplexF32}},
+                                                ldb::Int64, group_count::Int64)::Cvoid
+end
+
+function onemklZtrsmBatched(device_queue, left_right, upper_lower, transa, unit_diag, m, n,
+                            alpha, a, lda, b, ldb, group_count)
+    @ccall liboneapi_support.onemklZtrsmBatched(device_queue::syclQueue_t,
+                                                left_right::onemklSide,
+                                                upper_lower::onemklUplo,
+                                                transa::onemklTranspose,
+                                                unit_diag::onemklDiag, m::Int64, n::Int64,
+                                                alpha::ComplexF64, a::ZePtr{Ptr{ComplexF64}},
+                                                lda::Int64, b::ZePtr{Ptr{ComplexF64}},
+                                                ldb::Int64, group_count::Int64)::Cvoid
+end
+
 function onemklChemm(device_queue, left_right, upper_lower, m, n, alpha, a, lda, b, ldb,
                      beta, c, ldc)
     @ccall liboneapi_support.onemklChemm(device_queue::syclQueue_t, left_right::onemklSide,
