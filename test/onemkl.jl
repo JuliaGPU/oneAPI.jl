@@ -893,3 +893,50 @@ end
         end
     end
 end
+
+@testset "Batch Primitives" begin
+    @testset for T in [Float16, Float32, Float64, ComplexF32, ComplexF64]
+        alpha = rand(T)  
+        beta = rand(T)
+        group_count = 20
+        # generate matrices
+        bA = [rand(T,m,k) for i in 1:group_count]
+        bB = [rand(T,k,n) for i in 1:group_count]
+        bC = [rand(T,m,n) for i in 1:group_count]
+        # move to device
+        bd_A = oneArray{T, 2}[]
+        bd_B = oneArray{T, 2}[]
+        bd_C = oneArray{T, 2}[]
+        bd_bad = oneArray{T, 2}[]
+        for i in 1:length(bA)
+            push!(bd_A,oneArray(bA[i]))
+            push!(bd_B,oneArray(bB[i]))
+            push!(bd_C,oneArray(bC[i]))
+            if i < length(bA) - 2
+                push!(bd_bad,oneArray(bC[i]))
+            end
+        end
+
+        @testset "gemm_batched!" begin
+            # C = (alpha*A)*B + beta*C
+            oneMKL.gemm_batched!('N','N',alpha,bd_A,bd_B,beta,bd_C)
+            for i in 1:length(bd_C)
+                bC[i] = (alpha*bA[i])*bB[i] + beta*bC[i]
+                h_C = Array(bd_C[i])
+                #compare
+                @test bC[i] ≈ h_C
+            end
+            @test_throws DimensionMismatch oneMKL.gemm_batched!('N','N',alpha,bd_A,bd_bad,beta,bd_C)
+        end
+
+        @testset "gemm_batched" begin
+            bd_C = oneMKL.gemm_batched('N','N',bd_A,bd_B)
+            for i in 1:length(bA)
+                bC = bA[i]*bB[i]
+                h_C = Array(bd_C[i])
+                @test bC ≈ h_C
+            end
+            @test_throws DimensionMismatch oneMKL.gemm_batched('N','N',alpha,bd_A,bd_bad)
+        end
+    end
+end

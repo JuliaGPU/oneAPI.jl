@@ -1,6 +1,8 @@
 #include "onemkl.h"
 #include "sycl.hpp"
-
+#include <iostream>
+#include <exception>
+#include <memory>
 #include <oneapi/mkl.hpp>
 
 // This is a workaround to flush MKL submissions into Level-zero queue, using
@@ -50,6 +52,90 @@ oneapi::mkl::side convert(onemklSide val) {
         return oneapi::mkl::side::right;
     }
 }
+
+template <typename T>
+class gemmBatchInfo {
+    public:
+        int64_t *m_mbuf = nullptr;
+        int64_t *m_nbuf = nullptr;
+        int64_t *m_kbuf = nullptr;
+        int64_t *m_ldabuf = nullptr;
+        int64_t *m_ldbbuf = nullptr;
+        int64_t *m_ldcbuf = nullptr;
+        oneapi::mkl::transpose *m_transa = nullptr;
+        oneapi::mkl::transpose *m_transb = nullptr;
+        T *m_alphabuf = nullptr;
+        T *m_betabuf = nullptr;
+        int64_t *m_group_size = nullptr;
+        sycl::device m_device;
+        sycl::context m_context;
+        oneapi::mkl::transpose m_ta;
+        oneapi::mkl::transpose m_tb;
+
+        // Constructor
+        gemmBatchInfo(syclQueue_t device_queue,
+                    int64_t group_count,
+                    onemklTranspose transa,
+                    onemklTranspose transb,
+                    int64_t m, int64_t n, int64_t k,
+                    int64_t lda, int64_t ldb, int64_t ldc,
+                    T alpha, T beta) {
+            // Get device and context info from device_queue
+            auto main_queue = device_queue->val;
+            m_device = main_queue.get_device();
+            m_context = main_queue.get_context();
+            try {
+                // Allocate uniform arrays of m,n,k,lda,ldb,ldc,alpha,beta
+                // group_size and transpose_a, transpose_b supporting oneMKL
+                // gemm_batch API
+                m_mbuf = (int64_t *) malloc_shared(group_count * sizeof(int64_t), m_device, m_context);
+                m_nbuf = (int64_t *) malloc_shared(group_count * sizeof(int64_t), m_device, m_context);
+                m_kbuf = (int64_t *) malloc_shared(group_count * sizeof(int64_t), m_device, m_context);
+                m_ldabuf = (int64_t *) malloc_shared(group_count * sizeof(int64_t), m_device, m_context);
+                m_ldbbuf = (int64_t *) malloc_shared(group_count * sizeof(int64_t), m_device, m_context);
+                m_ldcbuf = (int64_t *) malloc_shared(group_count * sizeof(int64_t), m_device, m_context);
+                m_alphabuf = (T *) malloc_shared(group_count * sizeof(T), m_device, m_context);
+                m_betabuf = (T *) malloc_shared(group_count * sizeof(T), m_device, m_context);
+                m_transa = (oneapi::mkl::transpose *) malloc_shared(group_count * sizeof(oneapi::mkl::transpose),
+                                                                    m_device, m_context);
+                m_transb = (oneapi::mkl::transpose *) malloc_shared(group_count * sizeof(oneapi::mkl::transpose),
+                                                                    m_device, m_context);
+                m_ta = convert(transa);
+                m_tb = convert(transb);
+                m_group_size = (int64_t *) malloc_shared(group_count * sizeof(int64_t), m_device, m_context);
+            } catch(const std::bad_alloc& e) {
+                std::cerr << "Error: " << e.what() << std::endl;
+            }
+            for (int i = 0; i < group_count; i++) {
+                m_mbuf[i] = m;
+                m_nbuf[i] = n;
+                m_kbuf[i] = k;
+                m_ldabuf[i] = lda;
+                m_ldbbuf[i] = ldb;
+                m_ldcbuf[i] = ldc;
+                m_alphabuf[i] = alpha;
+                m_betabuf[i] = beta;
+                m_transa[i] = m_ta;
+                m_transb[i] = m_tb;
+                m_group_size[i] = 1;
+            }
+        };
+
+        // Destructor
+        ~gemmBatchInfo() {
+            free(m_mbuf, m_context);
+            free(m_nbuf, m_context);
+            free(m_kbuf, m_context);
+            free(m_ldabuf, m_context);
+            free(m_ldbbuf, m_context);
+            free(m_ldcbuf, m_context);
+            free(m_alphabuf, m_context);
+            free(m_betabuf, m_context);
+            free(m_transa, m_context);
+            free(m_transb, m_context);
+            free(m_group_size, m_context);
+        }
+};
 
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
@@ -120,6 +206,124 @@ extern "C" int onemklZgemm(syclQueue_t device_queue, onemklTranspose transA,
         reinterpret_cast<std::complex<double> *>(C), ldc);
     __FORCE_MKL_FLUSH__(status);
     return 0;
+}
+
+extern "C" void onemklHgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t m,
+                                  int64_t n, int64_t k, uint16_t alpha,
+                                  const short **a, int64_t lda, const short **b,
+                                  int64_t ldb, uint16_t beta, short **c,
+                                  int64_t ldc, int64_t group_count) {
+    gemmBatchInfo<sycl::half> gemmInfo(device_queue, group_count, transa, transb,
+                          m, n, k, lda, ldb, ldc, sycl::bit_cast<sycl::half>(alpha),
+                          sycl::bit_cast<sycl::half>(beta));
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        &gemmInfo.m_mbuf[0], &gemmInfo.m_nbuf[0],
+                        &gemmInfo.m_kbuf[0], &gemmInfo.m_alphabuf[0],
+                        reinterpret_cast<const sycl::half **>(&a[0]), &gemmInfo.m_ldabuf[0],
+                        reinterpret_cast<const sycl::half **>(&b[0]), &gemmInfo.m_ldbbuf[0],
+                        &gemmInfo.m_betabuf[0], reinterpret_cast<sycl::half **>(&c[0]),
+                        &gemmInfo.m_ldcbuf[0], group_count, &gemmInfo.m_group_size[0]);
+
+    __FORCE_MKL_FLUSH__(status);
+
+}
+
+extern "C" void onemklSgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t m,
+                                  int64_t n, int64_t k, float alpha,
+                                  const float **a, int64_t lda, const float **b,
+                                  int64_t ldb, float beta, float **c,
+                                  int64_t ldc, int64_t group_count) {
+    gemmBatchInfo<float> gemmInfo(device_queue, group_count, transa, transb,
+                          m, n, k, lda, ldb, ldc, alpha, beta);
+
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        &gemmInfo.m_mbuf[0], &gemmInfo.m_nbuf[0],
+                        &gemmInfo.m_kbuf[0], &gemmInfo.m_alphabuf[0],
+                        (const float **)&a[0], &gemmInfo.m_ldabuf[0],
+                        (const float **)&b[0], &gemmInfo.m_ldbbuf[0],
+                        &gemmInfo.m_betabuf[0], &c[0], &gemmInfo.m_ldcbuf[0],
+                        group_count, &gemmInfo.m_group_size[0]);
+
+    __FORCE_MKL_FLUSH__(status);
+
+}
+
+extern "C" void onemklDgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t m,
+                                  int64_t n, int64_t k, double alpha,
+                                  const double **a, int64_t lda, const double **b,
+                                  int64_t ldb, double beta, double **c,
+                                  int64_t ldc, int64_t group_count) {
+    gemmBatchInfo<double> gemmInfo(device_queue, group_count, transa, transb,
+                          m, n, k, lda, ldb, ldc, alpha, beta);
+
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        &gemmInfo.m_mbuf[0], &gemmInfo.m_nbuf[0],
+                        &gemmInfo.m_kbuf[0], &gemmInfo.m_alphabuf[0],
+                        (const double **)&a[0], &gemmInfo.m_ldabuf[0],
+                        (const double **)&b[0], &gemmInfo.m_ldbbuf[0],
+                        &gemmInfo.m_betabuf[0], &c[0], &gemmInfo.m_ldcbuf[0],
+                        group_count, &gemmInfo.m_group_size[0]);
+
+    __FORCE_MKL_FLUSH__(status);
+
+}
+
+extern "C" void onemklCgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t m,
+                                  int64_t n, int64_t k, float _Complex alpha,
+                                  const float _Complex **a, int64_t lda,
+                                  const float _Complex **b,
+                                  int64_t ldb, float _Complex beta, float _Complex **c,
+                                  int64_t ldc, int64_t group_count) {
+    gemmBatchInfo<std::complex<float>> gemmInfo(device_queue, group_count, transa, transb,
+                          m, n, k, lda, ldb, ldc, alpha, beta);
+
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        &gemmInfo.m_mbuf[0], &gemmInfo.m_nbuf[0],
+                        &gemmInfo.m_kbuf[0], &gemmInfo.m_alphabuf[0],
+                        reinterpret_cast<const std::complex<float> **>(&a[0]),
+                        &gemmInfo.m_ldabuf[0],
+                        reinterpret_cast<const std::complex<float> **>(&b[0]),
+                        &gemmInfo.m_ldbbuf[0],
+                        &gemmInfo.m_betabuf[0],
+                        reinterpret_cast<std::complex<float> **>(&c[0]), &gemmInfo.m_ldcbuf[0],
+                        group_count, &gemmInfo.m_group_size[0]);
+
+    __FORCE_MKL_FLUSH__(status);
+
+}
+
+extern "C" void onemklZgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t m,
+                                  int64_t n, int64_t k, double _Complex alpha,
+                                  const double _Complex **a, int64_t lda,
+                                  const double _Complex **b,
+                                  int64_t ldb, double _Complex beta,
+                                  double _Complex **c,
+                                  int64_t ldc, int64_t group_count) {
+    gemmBatchInfo<std::complex<double>> gemmInfo(device_queue, group_count, transa, transb,
+                          m, n, k, lda, ldb, ldc, alpha, beta);
+
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        &gemmInfo.m_mbuf[0], &gemmInfo.m_nbuf[0],
+                        &gemmInfo.m_kbuf[0], &gemmInfo.m_alphabuf[0],
+                        reinterpret_cast<const std::complex<double> **>(&a[0]),
+                        &gemmInfo.m_ldabuf[0],
+                        reinterpret_cast<const std::complex<double> **>(&b[0]),
+                        &gemmInfo.m_ldbbuf[0],
+                        &gemmInfo.m_betabuf[0],
+                        reinterpret_cast<std::complex<double> **>(&c[0]), &gemmInfo.m_ldcbuf[0],
+                        group_count, &gemmInfo.m_group_size[0]);
+
+    __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklSsymm(syclQueue_t device_queue, onemklSide left_right,

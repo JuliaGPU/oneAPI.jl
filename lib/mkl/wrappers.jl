@@ -44,6 +44,69 @@ function Base.convert(::Type{onemklDiag}, diag::Char)
     end
 end
 
+# create a batch of pointers in device memory from a batch of device arrays
+@inline function unsafe_batch(batch::Vector{<:oneArray{T}}) where {T}
+    ptrs = pointer.(batch)
+    return oneArray(ptrs)
+end
+
+## (GE) general matrix-matrix multiplication batched
+for (fname, elty) in
+        ((:onemklDgemmBatched,:Float64),
+         (:onemklSgemmBatched,:Float32),
+         (:onemklHgemmBatched,:Float16),
+         (:onemklCgemmBatched,:ComplexF32),
+         (:onemklZgemmBatched,:ComplexF64))
+    @eval begin
+        function gemm_batched!(transA::Char,
+                               transB::Char,
+                               alpha::Number,
+                               A::Vector{<:oneStridedMatrix{$elty}},
+                               B::Vector{<:oneStridedMatrix{$elty}},
+                               beta::Number,
+                               C::Vector{<:oneStridedMatrix{$elty}})
+            if length(A) != length(B) || length(A) != length(C)
+                throw(DimensionMismatch(""))
+            end
+            for (As,Bs,Cs) in zip(A,B,C)
+                m = size(As, transA == 'N' ? 1 : 2)
+                k = size(As, transA == 'N' ? 2 : 1)
+                n = size(Bs, transB == 'N' ? 2 : 1)
+                if m != size(Cs,1) || n != size(Cs,2) || k != size(Bs, transB == 'N' ? 1 : 2)
+                    throw(DimensionMismatch(""))
+                end
+            end
+
+            m = size(A[1], transA == 'N' ? 1 : 2)
+            k = size(A[1], transA == 'N' ? 2 : 1)
+            n = size(B[1], transB == 'N' ? 2 : 1)
+            lda = max(1,stride(A[1],2))
+            ldb = max(1,stride(B[1],2))
+            ldc = max(1,stride(C[1],2))
+            Aptrs = unsafe_batch(A)
+            Bptrs = unsafe_batch(B)
+            Cptrs = unsafe_batch(C)
+            queue = global_queue(context(A[1]), device(A[1]))
+            $fname(sycl_queue(queue), transA, transB, m, n, k, alpha, Aptrs, lda, Bptrs,
+                   ldb, beta, Cptrs, ldc, length(A))
+            unsafe_free!(Cptrs)
+            unsafe_free!(Bptrs)
+            unsafe_free!(Aptrs)
+            C
+        end
+    end
+end
+
+function gemm_batched(transA::Char, transB::Char, alpha::Number,
+                      A::Vector{<:oneStridedMatrix{T}}, B::Vector{<:oneStridedMatrix{T}}) where T
+    C = oneMatrix{T}[similar(B[1], (size(A[1], transA == 'N' ? 1 : 2),size(B[1], transB == 'N' ? 2 : 1))) for i in 1:length(A)]
+    gemm_batched!(transA, transB, alpha, A, B, zero(T), C )
+end
+function gemm_batched(transA::Char, transB::Char,
+                      A::Vector{<:oneStridedMatrix{T}}, B::Vector{<:oneStridedMatrix{T}}) where T
+    gemm_batched(transA, transB, one(T), A, B)
+end
+
 ## (L3: symm) symmetric matrix-matrix and matrix-vector multiplication
 for (fname, elty) in ((:onemklSsymm, :Float32),
                       (:onemklDsymm, :Float64),

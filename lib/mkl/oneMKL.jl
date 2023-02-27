@@ -1,7 +1,7 @@
 module oneMKL
 
 using ..oneAPI
-
+using ..oneAPI: unsafe_free!
 using ..oneL0
 
 using ..Support
