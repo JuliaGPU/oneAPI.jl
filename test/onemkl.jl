@@ -895,7 +895,7 @@ end
 end
 
 @testset "Batch Primitives" begin
-    @testset for T in [Float16, Float32, Float64, ComplexF32, ComplexF64]
+    @testset for T in intersect(eltypes, [Float16, Float32, Float64, ComplexF32, ComplexF64])
         alpha = rand(T)  
         beta = rand(T)
         group_count = 10
