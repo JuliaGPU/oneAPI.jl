@@ -67,6 +67,11 @@ function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
 
+    if !Sys.islinux()
+        @error("oneAPI.jl is only supported on Linux")
+        return
+    end
+
     eval(overrides)
 
     # ensure that the OpenCL runtime dispatcher finds the ICD files from our artifacts
