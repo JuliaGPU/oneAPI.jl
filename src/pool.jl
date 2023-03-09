@@ -7,6 +7,17 @@ function allocate(::Type{oneL0.DeviceBuffer}, ctx, dev, bytes::Int, alignment::I
     return buf
 end
 
+function allocate(::Type{oneL0.SharedBuffer}, ctx, dev, bytes::Int, alignment::Int)
+    bytes == 0 && return oneL0.SharedBuffer(ZE_NULL, bytes, ctx, dev)
+
+    # TODO: support cross-device shared buffers (by setting `dev=nothing`)
+
+    buf = shared_alloc(ctx, dev, bytes, alignment)
+    make_resident(ctx, dev, buf)
+
+    return buf
+end
+
 function release(buf::oneL0.AbstractBuffer)
     sizeof(buf) == 0 && return
 

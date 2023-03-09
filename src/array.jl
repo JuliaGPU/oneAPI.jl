@@ -337,8 +337,6 @@ end
 
 ## gpu array adaptor
 
-
-
 # We don't convert isbits types in `adapt`, since they are already
 # considered GPU-compatible.
 
@@ -348,6 +346,7 @@ Adapt.adapt_storage(::Type{oneArray}, xs::AT) where {AT<:AbstractArray} =
 # if an element type is specified, convert to it
 Adapt.adapt_storage(::Type{<:oneArray{T}}, xs::AT) where {T, AT<:AbstractArray} =
   isbitstype(AT) ? xs : convert(oneArray{T}, xs)
+
 
 ## utilities
 
@@ -427,3 +426,19 @@ context(a::Base.ReinterpretArray) = context(parent(a))
 
 Base.unsafe_convert(::Type{ZePtr{T}}, a::Base.ReinterpretArray{T,N,S} where N) where {T,S} =
   ZePtr{T}(Base.unsafe_convert(ZePtr{S}, parent(a)))
+
+
+## unsafe_wrap
+
+"""
+    unsafe_wrap(Array, arr::oneArray{_,_,oneL0.SharedBuffer})
+
+Wrap a Julia `Array` around the buffer that backs a `oneArray`. This is only possible if the
+GPU array is backed by a shared buffer, i.e. if it was created with `oneArray{T}(undef, ...)`.
+"""
+function Base.unsafe_wrap(::Type{Array}, arr::oneArray{T,N,oneL0.SharedBuffer}) where {T,N}
+  # TODO: can we make this more convenient by increasing the buffer's refcount and using
+  #       a finalizer on the Array? does that work when taking views etc of the Array?
+  ptr = reinterpret(Ptr{T}, pointer(arr))
+  unsafe_wrap(Array, ptr, size(arr))
+end
