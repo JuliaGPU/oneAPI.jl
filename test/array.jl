@@ -42,3 +42,19 @@ end
   fill!(view(xs, 2:2), 1)
   @test Array(xs) == [0,1,0]
 end
+
+@testset "shared buffers & unsafe_wrap" begin
+  a = oneVector{Int,oneL0.SharedBuffer}(undef, 2)
+
+  # check that basic operations work on arrays backed by shared memory
+  fill!(a, 40)
+  a .+= 2
+  @test Array(a) == [42, 42]
+
+  # derive an Array object and test that the memory keeps in sync
+  b = unsafe_wrap(Array, a)
+  b[1] = 100
+  @test Array(a) == [100, 42]
+  oneAPI.@sync copyto!(a, 2, [200], 1, 1)
+  @test b == [100, 200]
+end
