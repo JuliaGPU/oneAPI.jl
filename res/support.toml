@@ -7,10 +7,10 @@ output_file_path = "../lib/support/liboneapi_support.jl"
 use_ccall_macro = true
 
 [api.onemklXgemmBatched.argtypes]
-7 = "T"
+7 = "Ptr{T}"
 8 = "ZePtr{Ptr{T}}"
 10 = "ZePtr{Ptr{T}}"
-12 = "T"
+12 = "Ptr{T}"
 13 = "ZePtr{Ptr{T}}"
 
 [api.onemklXtrsmBatched.argtypes]
