@@ -51,9 +51,33 @@ export @device_code_lowered, @device_code_typed, @device_code_warntype,
        @device_code_llvm, @device_code_spirv,
        @device_code
 
+# forward to GPUCompiler
 @eval $(Symbol("@device_code_lowered")) = $(getfield(GPUCompiler, Symbol("@device_code_lowered")))
 @eval $(Symbol("@device_code_typed")) = $(getfield(GPUCompiler, Symbol("@device_code_typed")))
 @eval $(Symbol("@device_code_warntype")) = $(getfield(GPUCompiler, Symbol("@device_code_warntype")))
 @eval $(Symbol("@device_code_llvm")) = $(getfield(GPUCompiler, Symbol("@device_code_llvm")))
 @eval $(Symbol("@device_code_spirv")) = $(getfield(GPUCompiler, Symbol("@device_code_native")))
 @eval $(Symbol("@device_code")) = $(getfield(GPUCompiler, Symbol("@device_code")))
+
+
+#
+# other
+#
+
+"""
+    Metal.return_type(f, tt) -> r::Type
+
+Return a type `r` such that `f(args...)::r` where `args::tt`.
+"""
+function return_type(@nospecialize(func), @nospecialize(tt))
+    source = FunctionSpec(typeof(func), tt)
+    config = compiler_config(device())
+    job = CompilerJob(source, config)
+    interp = GPUCompiler.get_interpreter(job)
+    if VERSION >= v"1.8-"
+        sig = Base.signature_type(func, tt)
+        Core.Compiler.return_type(interp, sig)
+    else
+        Core.Compiler.return_type(interp, func, tt)
+    end
+end

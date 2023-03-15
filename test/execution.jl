@@ -91,6 +91,11 @@ end
         k = zefunction(dummy, name="mykernel")
         k()
     end)))
+
+    @test oneAPI.return_type(identity, Tuple{Int}) === Int
+    @test oneAPI.return_type(sin, Tuple{Float32}) === Float32
+    @test oneAPI.return_type(getindex, Tuple{oneDeviceArray{Float32,1,1},Int32}) === Float32
+    @test oneAPI.return_type(getindex, Tuple{Base.RefValue{Integer}}) === Integer
 end
 
 
