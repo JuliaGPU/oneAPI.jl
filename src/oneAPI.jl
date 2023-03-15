@@ -43,7 +43,7 @@ include("device/quirks.jl")
 include("context.jl")
 
 # compiler implementation
-include("compiler/gpucompiler.jl")
+include("compiler/compilation.jl")
 include("compiler/execution.jl")
 include("compiler/reflection.jl")
 
