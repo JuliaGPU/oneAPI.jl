@@ -1,5 +1,12 @@
 export @oneapi, zefunction, kernel_convert
 
+
+## high-level @oneapi interface
+
+const MACRO_KWARGS = [:launch]
+const COMPILER_KWARGS = [:kernel, :name, :always_inline]
+const LAUNCH_KWARGS = [:groups, :items, :queue]
+
 macro oneapi(ex...)
     call = ex[end]
     kwargs = ex[1:end-1]
@@ -14,7 +21,7 @@ macro oneapi(ex...)
 
     # group keyword argument
     macro_kwargs, compiler_kwargs, call_kwargs, other_kwargs =
-        split_kwargs(kwargs, [:launch], [:name], [:groups, :items, :queue])
+        split_kwargs(kwargs, MACRO_KWARGS, COMPILER_KWARGS, LAUNCH_KWARGS)
     if !isempty(other_kwargs)
         key,val = first(other_kwargs).args
         throw(ArgumentError("Unsupported keyword argument '$key'"))
@@ -139,40 +146,33 @@ end
 
 ## host-side API
 
-function zefunction(f::F, tt::TT=Tuple{}; name=nothing, kwargs...) where {F,TT}
+const zefunction_lock = ReentrantLock()
+
+function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
     dev = device()
-    cache = get!(()->Dict{UInt,Any}(), zefunction_cache, dev)
-    source = FunctionSpec(f, tt, true, name)
-    target = SPIRVCompilerTarget(; kwargs...)
-    params = oneAPICompilerParams()
-    job = CompilerJob(target, source, params)
-    kernel = GPUCompiler.cached_compilation(cache, job,
-                                            zefunction_compile, zefunction_link)
-    # compilation is cached on the function type, so we can only create a kernel object here
-    # (as it captures the function _instance_). we may want to cache those objects.
-    HostKernel{F,tt}(f, kernel)
-end
 
-const zefunction_cache = Dict{Any,Any}()
+    Base.@lock zefunction_lock begin
+        # compile the function
+        cache = compiler_cache(dev)
+        config = compiler_config(dev; kwargs...)::oneAPICompilerConfig
+        fun = GPUCompiler.cached_compilation(cache, config, F, tt,
+                                             compile, link)
 
-function zefunction_compile(@nospecialize(job::CompilerJob))
-    # TODO: on 1.9, this actually creates a context. cache those.
-    JuliaContext() do ctx
-        mi, mi_meta = GPUCompiler.emit_julia(job)
-        ir, ir_meta = GPUCompiler.emit_llvm(job, mi; ctx)
-        asm, asm_meta = GPUCompiler.emit_asm(job, ir; format=LLVM.API.LLVMObjectFile)
-
-        (image=asm, entry=LLVM.name(ir_meta.entry))
+        # create a callable object that captures the function instance. we don't need to think
+        # about world age here, as GPUCompiler already does and will return a different object
+        h = hash(fun, hash(f, hash(tt)))
+        kernel = get(_kernel_instances, h, nothing)
+        if kernel === nothing
+            # create the kernel state object
+            kernel = HostKernel{F,tt}(f, fun)
+            _kernel_instances[h] = kernel
+        end
+        return kernel::HostKernel{F,tt}
     end
 end
 
-# JIT into an executable kernel object
-function zefunction_link(@nospecialize(job::CompilerJob), compiled)
-    ctx = context()
-    dev = device()
-    mod = ZeModule(ctx, dev, compiled.image)
-    kernels(mod)[compiled.entry]
-end
+# cache of kernel instances
+const _kernel_instances = Dict{UInt, Any}()
 
 @inline function onecall(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
                          queue::ZeCommandQueue=global_queue(context(), device()))

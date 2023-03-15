@@ -6,6 +6,21 @@
 # code_* replacements
 #
 
+# function to split off certain kwargs for selective forwarding, at run time.
+# `@oneapi` does something similar at parse time, using `GPUCompiler.split_kwargs`.
+function split_kwargs_runtime(kwargs, wanted::Vector{Symbol})
+    remaining = Dict{Symbol, Any}()
+    extracted = Dict{Symbol, Any}()
+    for (key, value) in kwargs
+        if key in wanted
+            extracted[key] = value
+        else
+            remaining[key] = value
+        end
+    end
+    return extracted, remaining
+end
+
 for method in (:code_typed, :code_warntype, :code_llvm, :code_native)
     # only code_typed doesn't take a io argument
     args = method == :code_typed ? (:job,) : (:io, :job)
@@ -13,10 +28,10 @@ for method in (:code_typed, :code_warntype, :code_llvm, :code_native)
     @eval begin
         function $method(io::IO, @nospecialize(func), @nospecialize(types);
                          kernel::Bool=false, kwargs...)
-            source = FunctionSpec(func, Base.to_tuple_type(types), kernel)
-            target = SPIRVCompilerTarget()
-            params = oneAPICompilerParams()
-            job = CompilerJob(target, source, params)
+            compiler_kwargs, kwargs = split_kwargs_runtime(kwargs, COMPILER_KWARGS)
+            source = FunctionSpec(typeof(func), Base.to_tuple_type(types))
+            config = compiler_config(device(); kernel, compiler_kwargs...)
+            job = CompilerJob(source, config)
             GPUCompiler.$method($(args...); kwargs...)
         end
         $method(@nospecialize(func), @nospecialize(types); kwargs...) =
