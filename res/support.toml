@@ -14,7 +14,7 @@ use_ccall_macro = true
 13 = "ZePtr{Ptr{T}}"
 
 [api.onemklXtrsmBatched.argtypes]
-8 = "T"
+8 = "Ptr{T}"
 9 = "ZePtr{Ptr{T}}"
 11 = "ZePtr{Ptr{T}}"
 
