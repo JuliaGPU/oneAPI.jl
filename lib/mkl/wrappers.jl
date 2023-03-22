@@ -44,6 +44,144 @@ function Base.convert(::Type{onemklDiag}, diag::Char)
     end
 end
 
+# create a batch of pointers in device memory from a batch of device arrays
+@inline function unsafe_batch(batch::Vector{<:oneArray{T}}) where {T}
+    ptrs = pointer.(batch)
+    return oneArray(ptrs)
+end
+
+## (GE) general matrix-matrix multiplication batched
+for (fname, elty) in
+        ((:onemklDgemmBatched,:Float64),
+         (:onemklSgemmBatched,:Float32),
+         (:onemklHgemmBatched,:Float16),
+         (:onemklCgemmBatched,:ComplexF32),
+         (:onemklZgemmBatched,:ComplexF64))
+    @eval begin
+        function gemm_batched!(transA::Char,
+                               transB::Char,
+                               alpha::Number,
+                               A::Vector{<:oneStridedMatrix{$elty}},
+                               B::Vector{<:oneStridedMatrix{$elty}},
+                               beta::Number,
+                               C::Vector{<:oneStridedMatrix{$elty}})
+            if length(A) != length(B) || length(A) != length(C)
+                throw(DimensionMismatch(""))
+            end
+            for (As,Bs,Cs) in zip(A,B,C)
+                m = size(As, transA == 'N' ? 1 : 2)
+                k = size(As, transA == 'N' ? 2 : 1)
+                n = size(Bs, transB == 'N' ? 2 : 1)
+                if m != size(Cs,1) || n != size(Cs,2) || k != size(Bs, transB == 'N' ? 1 : 2)
+                    throw(DimensionMismatch(""))
+                end
+            end
+
+            m = size(A[1], transA == 'N' ? 1 : 2)
+            k = size(A[1], transA == 'N' ? 2 : 1)
+            n = size(B[1], transB == 'N' ? 2 : 1)
+            lda = max(1,stride(A[1],2))
+            ldb = max(1,stride(B[1],2))
+            ldc = max(1,stride(C[1],2))
+            Aptrs = unsafe_batch(A)
+            Bptrs = unsafe_batch(B)
+            Cptrs = unsafe_batch(C)
+            bsize = length(A)
+            m_dev = oneVector{Int}(fill(m,bsize))
+            n_dev = oneVector{Int}(fill(n,bsize))
+            k_dev = oneVector{Int}(fill(k,bsize))
+            lda_dev = oneVector{Int}(fill(lda,bsize))
+            ldb_dev = oneVector{Int}(fill(ldb,bsize))
+            ldc_dev = oneVector{Int}(fill(ldc,bsize))
+            alpha_dev = oneVector{$elty}(fill(alpha,bsize))
+            beta_dev = oneVector{$elty}(fill(beta,bsize))
+            groupsize_dev = oneVector{Int}(fill(1,bsize))
+
+            queue = global_queue(context(A[1]), device(A[1]))
+            $fname(sycl_queue(queue), transA, transB, m_dev, n_dev, k_dev, alpha_dev, Aptrs, lda_dev, Bptrs,
+                   ldb_dev, beta_dev, Cptrs, ldc_dev, length(A), groupsize_dev)
+            unsafe_free!(Cptrs)
+            unsafe_free!(Bptrs)
+            unsafe_free!(Aptrs)
+            unsafe_free!(m_dev)
+            unsafe_free!(n_dev)
+            unsafe_free!(k_dev)
+            unsafe_free!(lda_dev)
+            unsafe_free!(ldb_dev)
+            unsafe_free!(ldc_dev)
+            unsafe_free!(alpha_dev)
+            unsafe_free!(beta_dev)
+            unsafe_free!(groupsize_dev)
+            C
+        end
+    end
+end
+
+function gemm_batched(transA::Char, transB::Char, alpha::Number,
+                      A::Vector{<:oneStridedMatrix{T}}, B::Vector{<:oneStridedMatrix{T}}) where T
+    C = oneMatrix{T}[similar(B[1], (size(A[1], transA == 'N' ? 1 : 2),size(B[1], transB == 'N' ? 2 : 1))) for i in 1:length(A)]
+    gemm_batched!(transA, transB, alpha, A, B, zero(T), C )
+end
+function gemm_batched(transA::Char, transB::Char,
+                      A::Vector{<:oneStridedMatrix{T}}, B::Vector{<:oneStridedMatrix{T}}) where T
+    gemm_batched(transA, transB, one(T), A, B)
+end
+
+## (TR) triangular triangular matrix solution batched
+for (fname, elty) in
+        ((:onemklDtrsmBatched,:Float64),
+         (:onemklStrsmBatched,:Float32),
+         (:onemklCtrsmBatched,:ComplexF32),
+         (:onemklZtrsmBatched,:ComplexF64))
+    @eval begin
+        function trsm_batched!(side::Char,
+                               uplo::Char,
+                               transa::Char,
+                               diag::Char,
+                               alpha::Number,
+                               A::Vector{<:oneStridedMatrix{$elty}},
+                               B::Vector{<:oneStridedMatrix{$elty}})
+            if length(A) != length(B)
+                throw(DimensionMismatch(""))
+            end
+            for (As,Bs) in zip(A,B)
+                mA, nA = size(As)
+                m,n = size(Bs)
+                if mA != nA throw(DimensionMismatch("A must be square")) end
+                if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm_batched!")) end
+            end
+
+            m,n = size(B[1])
+            lda = max(1,stride(A[1],2))
+            ldb = max(1,stride(B[1],2))
+            Aptrs = unsafe_batch(A)
+            Bptrs = unsafe_batch(B)
+            bsize = length(A)
+            m_dev = oneVector{Int}(fill(m,bsize))
+            n_dev = oneVector{Int}(fill(n,bsize))
+            lda_dev = oneVector{Int}(fill(lda,bsize))
+            ldb_dev = oneVector{Int}(fill(ldb,bsize))
+            alpha_dev = oneVector{$elty}(fill(alpha,bsize))
+            groupsize_dev = oneVector{Int}(fill(1,bsize))
+            queue = global_queue(context(A[1]), device(A[1]))
+            $fname(sycl_queue(queue), side, uplo, transa, diag, m_dev, n_dev, alpha_dev, Aptrs, lda_dev, Bptrs, ldb_dev, length(A), groupsize_dev)
+            unsafe_free!(Bptrs)
+            unsafe_free!(Aptrs)
+            unsafe_free!(m_dev)
+            unsafe_free!(n_dev)
+            unsafe_free!(lda_dev)
+            unsafe_free!(ldb_dev)
+            unsafe_free!(alpha_dev)
+            unsafe_free!(groupsize_dev)
+            B
+        end
+    end
+end
+function trsm_batched(side::Char, uplo::Char, transa::Char, diag::Char, alpha::Number,
+                      A::Vector{<:oneStridedMatrix{T}}, B::Vector{<:oneStridedMatrix{T}}) where T
+    trsm_batched!(side, uplo, transa, diag, alpha, A, copy(B) )
+end
+
 ## (L3: symm) symmetric matrix-matrix and matrix-vector multiplication
 for (fname, elty) in ((:onemklSsymm, :Float32),
                       (:onemklDsymm, :Float64),
