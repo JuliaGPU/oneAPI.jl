@@ -63,6 +63,10 @@ include("gpuarrays.jl")
 include("random.jl")
 include("utils.jl")
 
+include("oneAPIKernels.jl")
+import .oneAPIKernels: oneAPIBackend
+export oneAPIBackend
+
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
