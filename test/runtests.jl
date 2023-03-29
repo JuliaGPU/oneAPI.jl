@@ -42,18 +42,20 @@ if do_help
                --help             Show this text.
                --list             List all available tests.
                --quickfail        Fail the entire run as soon as a single test errored.
-               --jobs=N           Launch `N` processes to perform tests (default: Threads.nthreads()).
+               --jobs=N           Launch `N` processes to perform tests (default: Sys.CPU_THREADS).
 
                Remaining arguments filter the tests that will be executed.""")
     exit(0)
 end
-_, jobs = extract_flag!(ARGS, "--jobs", Threads.nthreads())
+_, jobs = extract_flag!(ARGS, "--jobs", Sys.CPU_THREADS)
 do_quickfail, _ = extract_flag!(ARGS, "--quickfail")
 
 include("setup.jl")     # make sure everything is precompiled
 @info "System information:\n" * sprint(io->oneAPI.versioninfo(io))
 
 @info "Using oneAPI support library at " * oneAPI.Support.liboneapi_support
+
+@info "Running $jobs tests in parallel. If this is too many, specify the `--jobs` argument to the tests, or set the JULIA_CPU_THREADS environment variable."
 
 # choose tests
 const tests = []
