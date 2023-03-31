@@ -997,3 +997,67 @@ end
         end
     end
 end
+
+@testset "gemm_batch_strided" begin
+    @testset for elty in intersect(eltypes, [Float16, Float32, Float64, ComplexF32, ComplexF64])
+        nbatch = 10
+        alpha = rand(elty)
+        beta = rand(elty)
+        @testset "gemm_strided_batched!" begin
+            bA = rand(elty, m, k, nbatch)
+            bB = rand(elty, k, n, nbatch)
+            bC = rand(elty, m, n, nbatch)
+            bbad = rand(elty, m+1, n+1, nbatch)
+            # move to device
+            bd_A = oneArray{elty, 3}(bA)
+            bd_B = oneArray{elty, 3}(bB)
+            bd_C = oneArray{elty, 3}(bC)
+            bd_bad = oneArray{elty, 3}(bbad)
+
+            oneMKL.gemm_strided_batched!('N', 'N', alpha, bd_A, bd_B, beta, bd_C)
+            for i in 1:nbatch
+                bC[:, :, i] = (alpha * bA[:, :, i]) * bB[:, :, i] + beta * bC[:, :, i]
+            end
+            h_C = Array(bd_C)
+            @test bC ≈ h_C
+            
+            @test_throws DimensionMismatch oneMKL.gemm_strided_batched!('N', 'N', alpha, bd_A, bd_B, beta, bd_bad)
+        end
+
+        @testset "gemm_strided_batched" begin
+            # Host buffers
+            bA = rand(elty, m, k, nbatch)
+            bB = rand(elty, k, n, nbatch)
+            bC = rand(elty, m, n, nbatch)
+            bbad = rand(elty, m+1, n+1, nbatch)
+            # Move host data to device
+            bd_A = oneArray{elty, 3}(bA)
+            bd_B = oneArray{elty, 3}(bB)
+            bd_C = oneArray{elty, 3}(bC)
+            bd_bad = oneArray{elty, 3}(bbad)
+            # Compute oneMKL strided batch
+            bd_C = oneMKL.gemm_strided_batched('N', 'N', bd_A, bd_B)
+            #Compute Host 
+            for i in 1:nbatch
+                bC[:, :, i] = bA[:, :, i] * bB[:, :, i]
+            end
+            h_C = Array(bd_C)
+            @test bC ≈ h_C
+
+            # generate matrices
+            bA = rand(elty, k, m, nbatch)
+            bB = rand(elty, k, n, nbatch)
+            bC = zeros(elty, m, n, nbatch)
+            # move to device
+            bd_A = oneArray{elty, 3}(bA)
+            bd_B = oneArray{elty, 3}(bB)
+            bd_C = oneMKL.gemm_strided_batched('T', 'N', bd_A, bd_B)
+            for i in 1:nbatch
+                bC[:, :, i] = transpose(bA[:, :, i]) * bB[:, :, i]
+            end
+            h_C = Array(bd_C)
+            @test bC ≈ h_C
+            @test_throws DimensionMismatch oneMKL.gemm_strided_batched('N', 'N', alpha, bd_A, bd_bad)
+        end
+    end
+end

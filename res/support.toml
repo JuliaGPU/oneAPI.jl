@@ -30,6 +30,13 @@ use_ccall_macro = true
 12 = "ZePtr{Int64}"
 14 = "ZePtr{Int64}"
 
+[api.onemklXgemmBatchStrided.argtypes]
+7 = "T"
+8 = "ZePtr{T}"
+11 = "ZePtr{T}"
+14 = "T"
+15 = "ZePtr{T}"
+
 [api.onemklXgemm.argtypes]
 7 = "T"
 8 = "ZePtr{T}"

@@ -1202,3 +1202,55 @@ function gemm(transA::Char,
                 B::oneStridedVecOrMat{T}) where T
     gemm(transA, transB, one(T), A, B)
 end
+for (fname, elty) in 
+        ((:onemklSgemmBatchStrided, Float32),
+         (:onemklDgemmBatchStrided, Float64),
+         (:onemklCgemmBatchStrided, ComplexF32),
+         (:onemklZgemmBatchStrided, ComplexF64),
+         (:onemklHgemmBatchStrided, Float16))
+    @eval begin
+        function gemm_strided_batched!(transA::Char,
+                                    transB::Char,
+                                    alpha::Number,
+                                    A::AbstractArray{$elty, 3},
+                                    B::AbstractArray{$elty, 3},
+                                    beta::Number,
+                                    C::AbstractArray{$elty, 3})
+            m = size(A, transA == 'N' ? 1 : 2)
+            k = size(A, transA == 'N' ? 2 : 1)
+            n = size(B, transB == 'N' ? 2 : 1)
+
+            @assert size(A, 3) == size(C, 3) || size(A, 3) == 1 "batch size mismatch: A != C"
+            @assert size(B, 3) == size(C, 3) || size(B, 3) == 1 "batch size mismatch: B != C"
+
+            if m != size(C,1) || n != size(C,2) || k != size(B, transB == 'N' ? 1 : 2)
+                throw(DimensionMismatch(""))
+            end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+
+            strideA = size(A, 3) == 1 ? 0 : stride(A, 3)
+            strideB = size(B, 3) == 1 ? 0 : stride(B, 3)
+            strideC = stride(C, 3)
+            batchCount = size(C, 3)
+            queue = global_queue(context(A), device(A))
+            alpha = $elty(alpha)
+            beta = $elty(beta)
+            $fname(sycl_queue(queue), transA, transB, m, n, k, alpha, A, lda, strideA, B,
+                    ldb, strideB, beta, C, ldc, strideC, batchCount)
+            C
+        end
+    end
+end
+function gemm_strided_batched(transA::Char, transB::Char, alpha::Number,
+                              A::AbstractArray{T, 3}, B::AbstractArray{T, 3}) where T
+    C = similar(B, (size(A, transA == 'N' ? 1 : 2),
+                    size(B, transB == 'N' ? 2 : 1),
+                    max(size(A, 3), size(B, 3))))
+    gemm_strided_batched!(transA, transB, alpha, A, B, zero(T), C )
+end
+function gemm_strided_batched(transA::Char, transB::Char, A::AbstractArray{T, 3},
+                              B::AbstractArray{T,3}) where T
+    gemm_strided_batched(transA, transB, one(T), A, B)
+end
