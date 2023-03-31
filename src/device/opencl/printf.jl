@@ -39,7 +39,7 @@ end
         mod = LLVM.parent(llvm_f)
 
         # generate IR
-        Builder(ctx) do builder
+        IRBuilder(ctx) do builder
             entry = BasicBlock(llvm_f, "entry"; ctx)
             position!(builder, entry)
 
@@ -49,7 +49,7 @@ end
             printf_typ = LLVM.FunctionType(T_int32, [T_pint8]; vararg=true)
             printf = LLVM.Function(mod, "printf", printf_typ)
             push!(function_attributes(printf), EnumAttribute("nobuiltin"; ctx))
-            chars = call!(builder, printf, [str, parameters(llvm_f)...])
+            chars = call!(builder, printf_typ, printf, [str, parameters(llvm_f)...])
 
             ret!(builder, chars)
         end

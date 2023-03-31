@@ -39,11 +39,11 @@ end
         alignment!(gv, Base.datatype_alignment(T))
 
         # generate IR
-        Builder(ctx) do builder
+        IRBuilder(ctx) do builder
             entry = BasicBlock(llvm_f, "entry"; ctx)
             position!(builder, entry)
 
-            ptr = gep!(builder, gv, [ConstantInt(0; ctx), ConstantInt(0; ctx)])
+            ptr = gep!(builder, gv_typ, gv, [ConstantInt(0; ctx), ConstantInt(0; ctx)])
 
             untyped_ptr = bitcast!(builder, ptr, T_ptr)
 
