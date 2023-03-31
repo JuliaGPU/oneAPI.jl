@@ -68,9 +68,9 @@ end
     @test_throws ErrorException @device_code_lowered nothing
 
     # make sure kernel name aliases are preserved in the generated code
-    @test occursin("julia_dummy", sprint(io->(@device_code_llvm io=io optimize=false @oneapi dummy())))
-    @test occursin("julia_dummy", sprint(io->(@device_code_llvm io=io @oneapi dummy())))
-    @test occursin("julia_dummy", sprint(io->(@device_code_spirv io=io @oneapi dummy())))
+    @test occursin("dummy", sprint(io->(@device_code_llvm io=io optimize=false @oneapi dummy())))
+    @test occursin("dummy", sprint(io->(@device_code_llvm io=io @oneapi dummy())))
+    @test occursin("dummy", sprint(io->(@device_code_spirv io=io @oneapi dummy())))
 
     # make sure invalid kernels can be partially reflected upon
     let
@@ -87,7 +87,7 @@ end
     end
 
     # set name of kernel
-    @test occursin("julia_mykernel", sprint(io->(@device_code_llvm io=io begin
+    @test occursin("mykernel", sprint(io->(@device_code_llvm io=io begin
         k = zefunction(dummy, name="mykernel")
         k()
     end)))
