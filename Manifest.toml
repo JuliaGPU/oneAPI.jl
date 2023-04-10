@@ -319,9 +319,9 @@ version = "0.2.1"
 
 [[UnsafeAtomicsLLVM]]
 deps = ["LLVM", "UnsafeAtomics"]
-git-tree-sha1 = "33af9d2031d0dc09e2be9a0d4beefec4466def8e"
+git-tree-sha1 = "ea37e6066bf194ab78f4e747f5245261f17a7175"
 uuid = "d80eeb9a-aca5-4d75-85e5-170c8b632249"
-version = "0.1.0"
+version = "0.1.2"
 
 [[Zlib_jll]]
 deps = ["Libdl"]
