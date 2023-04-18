@@ -63,10 +63,11 @@ function compiler_config(dev; kwargs...)
     return config
 end
 @noinline function _compiler_config(dev; kernel=true, name=nothing, always_inline=false, kwargs...)
-    # TODO: configure the compiler target based on the device
+    supports_fp16 = oneL0.module_properties(device()).fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
+    supports_fp64 = oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
 
     # create GPUCompiler objects
-    target = SPIRVCompilerTarget(; kwargs...)
+    target = SPIRVCompilerTarget(; supports_fp16, supports_fp64, kwargs...)
     params = oneAPICompilerParams()
     CompilerConfig(target, params; kernel, name, always_inline)
 end

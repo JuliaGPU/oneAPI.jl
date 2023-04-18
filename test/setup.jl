@@ -14,7 +14,7 @@ const eltypes = [Int16, Int32, Int64,
                  Complex{Int16}, Complex{Int32}, Complex{Int64},
                  Float16, Float32,
                  ComplexF32]
-const float16_supported = oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
+const float16_supported = oneL0.module_properties(device()).fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
 if float16_supported
     append!(eltypes, [#=Float16,=# ComplexF16])
 end
