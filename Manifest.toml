@@ -178,10 +178,10 @@ uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 
 [[NEO_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "3f5813b9c2919ce53a5934aea0324e3c1edcca37"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg", "TOML", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
+git-tree-sha1 = "4d9647b216d16c41be59eafc0b2e2d2c4e7619f4"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
-version = "22.53.25593+0"
+version = "22.53.25593+1"
 
 [[NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -334,10 +334,10 @@ uuid = "09858cae-167c-5acb-9302-fddc6874d481"
 version = "22.3.0+0"
 
 [[libigc_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "d59696fb131df7d841401e9c544facbb8d3475e8"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg", "TOML"]
+git-tree-sha1 = "11f8cdd1508899f350c6c8d4608b4113a1a3ecfb"
 uuid = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-version = "1.0.13230+0"
+version = "1.0.13230+1"
 
 [[nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]

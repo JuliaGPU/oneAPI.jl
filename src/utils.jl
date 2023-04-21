@@ -9,8 +9,17 @@ function versioninfo(io::IO=stdout)
     versions = Dict(map(uuid->deps[uuid].name => deps[uuid].version, collect(keys(deps))))
 
     println(io, "Binary dependencies:")
-    for pkg in ["NEO_jll", "libigc_jll", "gmmlib_jll", "SPIRV_LLVM_Translator_unified_jll", "SPIRV_Tools_jll"]
-        println(io, "- $pkg: $(versions[pkg])")
+    for jll in [oneL0.NEO_jll, oneL0.NEO_jll.libigc_jll, oneL0.NEO_jll.gmmlib_jll,
+                SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll]
+        name = string(jll)
+        print(io, "- $(name[1:end-4]): $(versions[name])")
+        if jll.host_platform !== nothing
+            debug = tryparse(Bool, get(jll.host_platform.tags, "debug", "false"))
+            if debug === true
+                print(io, " (debug)")
+            end
+        end
+        println(io)
     end
     println(io)
 

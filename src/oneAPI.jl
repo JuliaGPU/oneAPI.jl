@@ -9,6 +9,8 @@ import ExprTools
 
 using SpecialFunctions
 
+import Preferences
+
 using LLVM
 using LLVM.Interop
 using Core: LLVMPtr
@@ -80,6 +82,13 @@ function __init__()
 
     # ensure that the OpenCL runtime dispatcher finds the ICD files from our artifacts
     ENV["OCL_ICD_VENDORS"] = oneL0.NEO_jll.libigdrcl
+end
+
+function set_debug!(debug::Bool)
+    for jll in [oneL0.NEO_jll, oneL0.NEO_jll.libigc_jll]
+        Preferences.set_preferences!(jll, "debug" => string(debug); force=true)
+    end
+    @info "oneAPI debug mode $(debug ? "enabled" : "disabled"); please re-start Julia."
 end
 
 end
