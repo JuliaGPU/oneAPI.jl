@@ -81,9 +81,9 @@ version = "0.1.4"
 
 [[GPUCompiler]]
 deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "Scratch", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "24e605f328bdb086c61716bb79383cdf7b6e4f59"
+git-tree-sha1 = "e9a9173cd77e16509cdf9c1663fda19b22a518b7"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.19.2"
+version = "0.19.3"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -335,9 +335,9 @@ version = "22.3.0+0"
 
 [[libigc_jll]]
 deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg", "TOML"]
-git-tree-sha1 = "11f8cdd1508899f350c6c8d4608b4113a1a3ecfb"
+git-tree-sha1 = "a4b9585cbd75441b0d28d0e3391e625662dd9591"
 uuid = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-version = "1.0.13230+1"
+version = "1.0.13230+2"
 
 [[nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
