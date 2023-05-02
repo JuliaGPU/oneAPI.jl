@@ -1,5 +1,11 @@
 using oneAPI.oneL0
 
+# ensure that the driver we loaded is a versioned library, matching the Level Zero loader.
+# otherwise we risk loading multiple drivers, e.g., if a system driver is available.
+if oneL0.NEO_jll.is_available()
+    @test endswith(oneL0.NEO_jll.libze_intel_gpu, ".1")
+end
+
 
 @testset "driver" begin
 
