@@ -154,9 +154,9 @@ function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
     Base.@lock zefunction_lock begin
         # compile the function
         cache = compiler_cache(dev)
+        source = methodinstance(F, tt)
         config = compiler_config(dev; kwargs...)::oneAPICompilerConfig
-        fun = GPUCompiler.cached_compilation(cache, config, F, tt,
-                                             compile, link)
+        fun = GPUCompiler.cached_compilation(cache, source, config, compile, link)
 
         # create a callable object that captures the function instance. we don't need to think
         # about world age here, as GPUCompiler already does and will return a different object
