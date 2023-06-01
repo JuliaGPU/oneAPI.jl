@@ -213,7 +213,7 @@ function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStr
     end
 
     if all(in(('N', 'T', 'C')), (tA, tB))
-        if T <: onemklFloat && eltype(A) == eltype(B) == T && T != Float16 # onemklHgemm is currently not hooked-up
+        if T <: onemklFloat && eltype(A) == eltype(B) == T
             gemm!(tA, tB, alpha, A, B, beta, C)
         end
     end
