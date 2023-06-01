@@ -28,7 +28,7 @@ else
         end
     end
 end
-                    
+
 #
 # BLAS 1
 #
@@ -93,31 +93,49 @@ end
 # BLAS 2
 #
 
-# TODO: Should there be a LinearAlgebra._generic_matvecmul! that dispatches to gemv!, symv! and hemv! ?
-# hermitian
-@inline function LinearAlgebra.mul!(y::oneStridedVector{T},
-                                    A::Hermitian{T,<:oneStridedMatrix},
-                                    x::oneStridedVector{T},
-             α::Number, β::Number) where {T<:Union{ComplexF32,ComplexF64}}
-    alpha, beta = promote(α, β, zero(T))
-    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
-        return hemv!(A.uplo, alpha, A.data, x, beta, y)
-    else
-        error("only supports BLAS type, got $T")
+function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul)
+    mA, nA = tA == 'N' ? size(A) : reverse(size(A))
+
+    if nA != length(B)
+        throw(DimensionMismatch("second dimension of A, $nA, does not match length of B, $(length(B))"))
     end
+
+    if mA != length(Y)
+        throw(DimensionMismatch("first dimension of A, $mA, does not match length of Y, $(length(Y))"))
+    end
+
+    if mA == 0
+        return Y
+    end
+
+    if nA == 0
+        return rmul!(Y, 0)
+    end
+
+    T = eltype(Y)
+    alpha, beta = promote(_add.alpha, _add.beta, zero(T))
+    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
+        if T <: onemklFloat && eltype(A) == eltype(B) == T
+            if tA in ('N', 'T', 'C')
+                gemv!(tA, alpha, A, B, beta, Y)
+            elseif tA in ('S', 's')
+                return symv!(tA == 'S' ? 'U' : 'L', alpha, A, x, beta, y)
+            elseif tA in ('H', 'h')
+                return hemv!(tA == 'H' ? 'U' : 'L', alpha, A, x, beta, y)
+            end
+        end
+    else
+        error("only supports BLAS type, got $T") # error if alpha or beta are too big
+    end
+    LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, MulAddMul(alpha, beta))
 end
 
-# symmetric
-@inline function LinearAlgebra.mul!(y::oneStridedVector{T},
-                                    A::Hermitian{T,<:oneStridedMatrix},
-                                    x::oneStridedVector{T},
-                                    α::Number, β::Number) where {T<:Union{Float32,Float64}}
-    alpha, beta = promote(α, β, zero(T))
-    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
-        return symv!(A.uplo, alpha, A.data, x, beta, y)
-    else
-        error("only supports BLAS type, got $T")
-    end
+if VERSION < v"1.10.0-DEV.1365"
+@inline LinearAlgebra.gemv!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, a::Number, b::Number) =
+    LinearAlgebra.generic_matvecmul!(Y, tA, A, B, MulAddMul(a, b))
+# disambiguation with LinearAlgebra.jl
+@inline LinearAlgebra.gemv!(Y::oneVector{T}, tA::AbstractChar, A::oneStridedMatrix{T}, B::oneStridedVector{T}, a::Number, b::Number) where {T<:onemklFloat} =
+    LinearAlgebra.generic_matvecmul!(Y, tA, A, B, MulAddMul(a, b))
 end
 
 # triangular
