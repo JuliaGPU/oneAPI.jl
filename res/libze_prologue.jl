@@ -8,7 +8,9 @@ macro check(ex)
                isequal(res, RESULT_ERROR_OUT_OF_DEVICE_MEMORY))
 
     quote
-        res = @retry_reclaim res->$is_oom $(esc(ex))
+        res = retry_reclaim(err -> $is_oom) do
+            $(esc(ex))
+        end
 
         if $is_oom
             throw(OutOfMemoryError())
