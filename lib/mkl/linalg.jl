@@ -137,6 +137,14 @@ if VERSION < v"1.10.0-DEV.1365"
 end
 
 # triangular
+if isdefined(LinearAlgebra, :generic_trimatmul!) # VERSION >= v"1.10-DEVXYZ"
+# multiplication
+LinearAlgebra.generic_trimatmul!(c::oneStridedVector{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, b::AbstractVector{T}) where {T<:onemklFloat} =
+    trmv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, A, c === b ? c : copyto!(c, b))
+# division
+LinearAlgebra.generic_trimatdiv!(C::oneStridedVector{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::AbstractVector{T}) where {T<:CublasFloat} =
+    trsv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, A, C === B ? C : copyto!(C, B))
+else
 ## direct multiplication/division
 for (t, uploc, isunitc) in ((:LowerTriangular, 'L', 'N'),
                             (:UnitLowerTriangular, 'L', 'U'),
@@ -183,6 +191,7 @@ for (t, uploc, isunitc) in ((:LowerTriangular, 'U', 'N'),
             trsv!($uploc, 'C', $isunitc, parent(parent(A)), B)
     end
 end
+end # VERSION
 
 
 #
@@ -254,6 +263,16 @@ end
 end # VERSION
 
 # triangular
+if isdefined(LinearAlgebra, :generic_trimatmul!) # VERSION >= v"1.10-DEVXYZ"
+LinearAlgebra.generic_trimatmul!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
+    trmm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, C === B ? C : copyto!(C, B))
+LinearAlgebra.generic_mattrimul!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
+    trmm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, C === A ? C : copyto!(C, A))
+LinearAlgebra.generic_trimatdiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
+    trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, C === B ? C : copyto!(C, B))
+LinearAlgebra.generic_mattridiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
+    trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, C === A ? C : copyto!(C, A))
+else
 ## direct multiplication/division
 for (t, uploc, isunitc) in ((:LowerTriangular, 'L', 'N'),
                             (:UnitLowerTriangular, 'L', 'U'),
@@ -261,16 +280,17 @@ for (t, uploc, isunitc) in ((:LowerTriangular, 'L', 'N'),
                             (:UnitUpperTriangular, 'U', 'U'))
     @eval begin
         # Multiplication
-        LinearAlgebra.lmul!(A::$t{T,<:oneStridedVecOrMat},
-                            B::oneStridedVecOrMat{T}) where {T<:onemklFloat} =
-            trmm!('L', $uploc, 'N', $isunitc, one(T), parent(A), B, B)
-        LinearAlgebra.rmul!(A::oneStridedVecOrMat{T},
-                            B::$t{T,<:oneStridedVecOrMat}) where {T<:onemklFloat} =
-            trmm!('R', $uploc, 'N', $isunitc, one(T), parent(B), A, A)
+        LinearAlgebra.lmul!(A::$t{T,<:oneStridedMatrix},
+                            B::oneStridedMatrix{T}) where {T<:onemklFloat} =
+            trmm!('L', $uploc, 'N', $isunitc, one(T), parent(A), B)
+        LinearAlgebra.rmul!(A::oneStridedMatrix{T},
+                            B::$t{T,<:oneStridedMatrix}) where {T<:onemklFloat} =
+            trmm!('R', $uploc, 'N', $isunitc, one(T), parent(B), A)
 
         # Left division
-        LinearAlgebra.ldiv!(A::$t{T,<:oneStridedVecOrMat},
-                            B::oneStridedVecOrMat{T}) where {T<:onemklFloat} =
+        LinearAlgebra.ldiv!(A::$t{T,<:oneStridedMatrix},
+                            B::oneStridedMatrix{T}) where {T<:onemklFloat} =
             trsm!('L', $uploc, 'N', $isunitc, one(T), parent(A), B)
     end
 end
+end # VERSION

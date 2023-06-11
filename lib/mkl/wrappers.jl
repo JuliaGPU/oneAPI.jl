@@ -1100,7 +1100,7 @@ function trmm(side::Char,
               alpha::Number,
               A::oneStridedMatrix{T},
               B::oneStridedMatrix{T}) where T
-    trmm!(side, uplo, transa, diag, alpha, A, B)
+    trmm!(side, uplo, transa, diag, alpha, A, copy(B))
 end
 function trsm(side::Char,
                 uplo::Char,
