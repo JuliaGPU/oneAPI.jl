@@ -655,9 +655,9 @@ end
             dA = oneArray(A)
             dB = oneArray(B)
             C = alpha*A*B
-            oneMKL.trmm('L','U','N','N',alpha,dA,dB)
+            dC = oneMKL.trmm('L','U','N','N',alpha,dA,dB)
             # move to host and compare
-            h_C = Array(dB)
+            h_C = Array(dC)
             @test C ≈ h_C
         end
 
