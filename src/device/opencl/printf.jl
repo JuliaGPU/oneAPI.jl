@@ -29,18 +29,18 @@ end
     arg_types = [argspec...]
 
     Context() do ctx
-        T_void = LLVM.VoidType(ctx)
-        T_int32 = LLVM.Int32Type(ctx)
-        T_pint8 = LLVM.PointerType(LLVM.Int8Type(ctx))
+        T_void = LLVM.VoidType()
+        T_int32 = LLVM.Int32Type()
+        T_pint8 = LLVM.PointerType(LLVM.Int8Type())
 
         # create functions
-        param_types = LLVMType[convert(LLVMType, typ; ctx) for typ in arg_types]
+        param_types = LLVMType[convert(LLVMType, typ) for typ in arg_types]
         llvm_f, _ = create_function(T_int32, param_types)
         mod = LLVM.parent(llvm_f)
 
         # generate IR
-        IRBuilder(ctx) do builder
-            entry = BasicBlock(llvm_f, "entry"; ctx)
+        IRBuilder() do builder
+            entry = BasicBlock(llvm_f, "entry")
             position!(builder, entry)
 
             str = globalstring_ptr!(builder, String(fmt))
@@ -48,7 +48,7 @@ end
             # invoke printf and return
             printf_typ = LLVM.FunctionType(T_int32, [T_pint8]; vararg=true)
             printf = LLVM.Function(mod, "printf", printf_typ)
-            push!(function_attributes(printf), EnumAttribute("nobuiltin"; ctx))
+            push!(function_attributes(printf), EnumAttribute("nobuiltin"))
             chars = call!(builder, printf_typ, printf, [str, parameters(llvm_f)...])
 
             ret!(builder, chars)

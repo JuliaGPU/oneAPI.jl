@@ -21,8 +21,8 @@ end
 # get a pointer to local memory, with known (static) or zero length (dynamic)
 @generated function emit_localmemory(::Type{T}, ::Val{len}=Val(0)) where {T,len}
     Context() do ctx
-        eltyp = convert(LLVMType, T; ctx)
-        T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local}; ctx)
+        eltyp = convert(LLVMType, T)
+        T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local})
 
         # create a function
         llvm_f, _ = create_function(T_ptr)
@@ -39,11 +39,11 @@ end
         alignment!(gv, Base.datatype_alignment(T))
 
         # generate IR
-        IRBuilder(ctx) do builder
-            entry = BasicBlock(llvm_f, "entry"; ctx)
+        IRBuilder() do builder
+            entry = BasicBlock(llvm_f, "entry")
             position!(builder, entry)
 
-            ptr = gep!(builder, gv_typ, gv, [ConstantInt(0; ctx), ConstantInt(0; ctx)])
+            ptr = gep!(builder, gv_typ, gv, [ConstantInt(0), ConstantInt(0)])
 
             untyped_ptr = bitcast!(builder, ptr, T_ptr)
 
