@@ -23,17 +23,16 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module)
     invoke(GPUCompiler.finish_module!,
            Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod)},
            job, mod)
-    ctx = LLVM.context(mod)
 
     # OpenCL 2.0
     push!(metadata(mod)["opencl.ocl.version"],
-          MDNode([ConstantInt(Int32(2); ctx),
-                  ConstantInt(Int32(0); ctx)]; ctx))
+          MDNode([ConstantInt(Int32(2)),
+                  ConstantInt(Int32(0))]))
 
     # SPIR-V 1.5
     push!(metadata(mod)["opencl.spirv.version"],
-          MDNode([ConstantInt(Int32(1); ctx),
-                  ConstantInt(Int32(5); ctx)]; ctx))
+          MDNode([ConstantInt(Int32(1)),
+                  ConstantInt(Int32(5))]))
 end
 
 
@@ -78,12 +77,9 @@ end
 # compile to executable machine code
 function compile(@nospecialize(job::CompilerJob))
     # TODO: on 1.9, this actually creates a context. cache those.
-    JuliaContext() do ctx
-        compile(job, ctx)
+    asm, meta = JuliaContext() do ctx
+        GPUCompiler.compile(:obj, job)
     end
-end
-function compile(@nospecialize(job::CompilerJob), ctx)
-    asm, meta = GPUCompiler.compile(:obj, job; ctx)
 
     (image=asm, entry=LLVM.name(meta.entry))
 end
