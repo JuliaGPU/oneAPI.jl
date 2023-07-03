@@ -178,10 +178,10 @@ uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 
 [[NEO_jll]]
-deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg", "TOML", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "4d9647b216d16c41be59eafc0b2e2d2c4e7619f4"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
+git-tree-sha1 = "9846d87fd254cdaa1879dff93999e1bc32ed2658"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
-version = "22.53.25593+1"
+version = "23.17.26241+0"
 
 [[NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -334,10 +334,10 @@ uuid = "09858cae-167c-5acb-9302-fddc6874d481"
 version = "22.3.0+0"
 
 [[libigc_jll]]
-deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg", "TOML"]
-git-tree-sha1 = "a4b9585cbd75441b0d28d0e3391e625662dd9591"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
+git-tree-sha1 = "7c0b5fa2ff90d96af106fd4a67ff6923cd3f9cb9"
 uuid = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-version = "1.0.13230+2"
+version = "1.0.13822+0"
 
 [[nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -345,15 +345,15 @@ uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
 
 [[oneAPI_Level_Zero_Headers_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "f46de664cb4e560f045cd3d30ad2d811ab1acb2d"
+git-tree-sha1 = "412efcf5d55c65d3352c3915cffec1e53955570f"
 uuid = "f4bc562b-d309-54f8-9efb-476e56f0410d"
-version = "1.5.8+0"
+version = "1.6.3+0"
 
 [[oneAPI_Level_Zero_Loader_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "8eb79e3c6cd5c1211a18f712677aa93a45de8ff5"
+git-tree-sha1 = "87980483b19f0a00c8d62e8b6682acac1894c638"
 uuid = "13eca655-d68d-5b81-8367-6d99d727ab01"
-version = "1.9.4+0"
+version = "1.11.0+0"
 
 [[oneAPI_Support_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "oneAPI_Level_Zero_Loader_jll"]
