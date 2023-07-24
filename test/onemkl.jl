@@ -1061,3 +1061,15 @@ end
         end
     end
 end
+
+@testset "Blas-Extension" begin
+    @testset for T in intersect(eltypes, [Float32, Float64])
+        @testset "geqrf" begin
+            A = rand(T, m, n)
+            d_A = oneArray(A)
+            tau, d_A = oneMKL.geqrf!(d_A, m, n)
+            @show tau
+            @show Array(d_A)
+        end
+    end
+end

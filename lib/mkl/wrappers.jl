@@ -50,6 +50,24 @@ end
     return oneArray(ptrs)
 end
 
+## geqrf implementation
+for (fname, elty) in
+        ((:onemklSgeqrf, :Float32),
+         (:onemklDgeqrf, :Float64))
+    @eval begin
+        function geqrf!(A::oneStridedVecOrMat{$elty},
+                        m::Number,
+                        n::Number)
+            lda = max(1, m)
+            hTauArray = zeros($elty, min(m,n))
+            TauArray = oneArray(hTauArray)
+            queue = global_queue(context(A), device(A))
+            $fname(sycl_queue(queue), m, n, A, lda, TauArray)
+            TauArray,A
+        end
+    end
+end
+
 ## (GE) general matrix-matrix multiplication batched
 for (fname, elty) in
         ((:onemklDgemmBatched,:Float64),

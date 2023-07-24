@@ -93,6 +93,16 @@ end
     ONEMKL_SIDE_RIGHT = 1
 end
 
+function onemklSgeqrf(device_queue, m, n, a, lda, tau)
+    @ccall liboneapi_support.onemklSgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{Cfloat}, lda::Int64, tau::ZePtr{Cfloat})::Cvoid
+end
+
+function onemklDgeqrf(device_queue, m, n, a, lda, tau)
+    @ccall liboneapi_support.onemklDgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{Cdouble}, lda::Int64, tau::ZePtr{Cdouble})::Cvoid
+end
+
 function onemklSgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C,
                      ldc)
     @ccall liboneapi_support.onemklSgemm(device_queue::syclQueue_t, transA::onemklTranspose,

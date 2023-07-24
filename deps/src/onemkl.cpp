@@ -4,6 +4,7 @@
 #include <exception>
 #include <memory>
 #include <oneapi/mkl.hpp>
+#include "oneapi/mkl/lapack.hpp"
 
 // This is a workaround to flush MKL submissions into Level-zero queue, using
 // unspecified but guaranteed behavior of intel-sycl runtime. Once SYCL standard
@@ -157,6 +158,27 @@ class trsmBatchInfo {
         }
 };
 
+extern "C" void onemklSgeqrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                            float *a, int64_t lda, float *tau) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto geqrf_scratchpad_size = oneapi::mkl::lapack::geqrf_scratchpad_size<float>(device_queue->val, m, n, lda);
+    auto scratch_pad = (float *) malloc_device(geqrf_scratchpad_size * sizeof(float), device, context);
+    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, a, lda,
+                                      tau, scratch_pad, geqrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklDgeqrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                            double *a, int64_t lda, double *tau) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto geqrf_scratchpad_size = oneapi::mkl::lapack::geqrf_scratchpad_size<double>(device_queue->val, m, n, lda);
+    auto scratch_pad = (double *) malloc_device(geqrf_scratchpad_size * sizeof(double), device, context);
+    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, a, lda,
+                                      tau, scratch_pad, geqrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
 
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
