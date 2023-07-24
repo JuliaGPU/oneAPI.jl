@@ -53,7 +53,9 @@ end
 ## geqrf implementation
 for (fname, elty) in
         ((:onemklSgeqrf, :Float32),
-         (:onemklDgeqrf, :Float64))
+         (:onemklDgeqrf, :Float64),
+         (:onemklCgeqrf, :ComplexF32),
+         (:onemklZgeqrf, :ComplexF64))
     @eval begin
         function geqrf!(A::oneStridedVecOrMat{$elty},
                         m::Number,
