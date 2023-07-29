@@ -31,7 +31,8 @@ steps:
               - "1.6"
               - "1.7"
               - "1.8"
-              - "1.9-nightly"
+              - "1.9"
+              - "1.10-nightly"
               - "nightly"
           adjustments:
             - with:
