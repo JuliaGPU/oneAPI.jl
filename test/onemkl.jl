@@ -1069,6 +1069,9 @@ end
             A = rand(T, m, n)
             d_A = oneArray(A)
             tau, d_A = oneMKL.geqrf!(d_A, m, n)
+            tau_c = zeros(T, m)
+            LinearAlgebra.LAPACK.geqrf!(A,tau_c)
+            @test tau_c ≈ Array(tau)
         end
 
         @testset "gelsBatched" begin
@@ -1083,6 +1086,7 @@ end
                 push!(d_C, oneArray(C[i]))
             end
             d_A, d_C = oneMKL.gels_batched!('N', d_A, d_C)
+            LinearAlgebra.LAPACK.gels_batched()
         end
 
         @testset "dgmm_batch" begin
