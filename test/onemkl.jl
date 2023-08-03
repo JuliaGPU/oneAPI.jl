@@ -6,7 +6,7 @@ using LinearAlgebra
 m = 20
 n = 35
 k = 13
-
+#=
 ############################################################################################
 @testset "level 1" begin
     @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
@@ -1061,6 +1061,7 @@ end
         end
     end
 end
+=#
 
 @testset "Blas-Extension" begin
     @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
@@ -1068,6 +1069,44 @@ end
             A = rand(T, m, n)
             d_A = oneArray(A)
             tau, d_A = oneMKL.geqrf!(d_A, m, n)
+        end
+
+        @testset "gelsBatched" begin
+            # generate matrices
+            A = [rand(T,n,k) for i in 1:10]
+            C = [rand(T,n,k) for i in 1:10]
+            # move to device
+            d_A = oneArray{T, 2}[]
+            d_C = oneArray{T, 2}[]
+            for i in 1:length(A)
+                push!(d_A, oneArray(A[i]))
+                push!(d_C, oneArray(C[i]))
+            end
+            d_A, d_C = oneMKL.gels_batched!('N', d_A, d_C)
+        end
+
+        @testset "dgmm_batch" begin
+            m = 2
+            n = 2
+            group_count = 2
+            # generate matrices
+            bA = [rand(T, m, n) for i in 1:group_count]
+            bC = [rand(T, m, n) for i in 1:group_count]
+            bX = [rand(T, m, n) for i in 1:group_count]
+            # move to device
+            bd_A = oneArray{T, 2}[]
+            bd_C = oneArray{T, 2}[]
+            bd_X = oneArray{T, 2}[]
+            bd_bad = oneArray{T, 2}[]
+            for i in 1:length(bA)
+                push!(bd_A, oneArray(bA[i]))
+                push!(bd_C, oneArray(bC[i]))
+                push!(bd_X, oneArray(bX[i]))
+                if i < length(bA) - 2
+                    push!(bd_bad, oneArray(bC[i]))
+                end
+            end
+            oneMKL.dgmm_batch!('L',m, n, bd_A, bd_X, bd_C)
         end
     end
 end

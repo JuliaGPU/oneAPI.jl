@@ -39,6 +39,40 @@ void onemklCgeqrf(syclQueue_t device_queue, int64_t m, int64_t n,
 void onemklZgeqrf(syclQueue_t device_queue, int64_t m, int64_t n,
                 double _Complex *a, int64_t lda, double _Complex *tau);
 
+void onemklSgelsBatched(syclQueue_t device_queue, onemklTranspose trans,
+                        int64_t m, int64_t n, int64_t nrhs, float *a,
+                        int64_t lda, int64_t stride_a, float *b,
+                        int64_t ldb, int64_t stride_b, int64_t batch_size);
+void onemklDgelsBatched(syclQueue_t device_queue, onemklTranspose trans,
+                        int64_t m, int64_t n, int64_t nrhs, double *a,
+                        int64_t lda, int64_t stride_a, double *b,
+                        int64_t ldb, int64_t stride_b, int64_t batch_size);
+void onemklCgelsBatched(syclQueue_t device_queue, onemklTranspose trans,
+                        int64_t m, int64_t n, int64_t nrhs, float _Complex *a,
+                        int64_t lda, int64_t stride_a, float _Complex *b,
+                        int64_t ldb, int64_t stride_b, int64_t batch_size);
+void onemklZgelsBatched(syclQueue_t device_queue, onemklTranspose trans,
+                        int64_t m, int64_t n, int64_t nrhs, double _Complex *a,
+                        int64_t lda, int64_t stride_a, double _Complex *b,
+                        int64_t ldb, int64_t stride_b, int64_t batch_size);
+
+void onemklSdgmmBatched(syclQueue_t device_queue, onemklSide left_right,
+                                   int64_t *m, int64_t *n, const float **a, int64_t *lda,
+                                   const float **x, int64_t *incx, float **c, int64_t *ldc,
+                                   int64_t group_count, int64_t *group_size);
+void onemklDdgmmBatched(syclQueue_t device_queue, onemklSide left_right,
+                                   int64_t *m, int64_t *n, const double **a, int64_t *lda,
+                                   const double **x, int64_t *incx, double **c, int64_t *ldc,
+                                   int64_t group_count, int64_t *group_size);
+void onemklCdgmmBatched(syclQueue_t device_queue, onemklSide left_right,
+                                   int64_t *m, int64_t *n, const float _Complex **a, int64_t *lda,
+                                   const float _Complex **x, int64_t *incx, float _Complex **c,
+                                   int64_t *ldc, int64_t group_count, int64_t *group_size);
+void onemklZdgmmBatched(syclQueue_t device_queue, onemklSide left_right,
+                                   int64_t *m, int64_t *n, const double _Complex **a, int64_t *lda,
+                                   const double _Complex **x, int64_t *incx, double _Complex **c,
+                                   int64_t *ldc, int64_t group_count, int64_t *group_size);
+
 // XXX: how to expose half in C?
 // int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
 //                onemklTranspose transB, int64_t m, int64_t n, int64_t k,

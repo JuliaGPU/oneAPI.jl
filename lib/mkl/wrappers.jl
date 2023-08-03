@@ -70,6 +70,98 @@ for (fname, elty) in
     end
 end
 
+## gels_batched
+for (fname, elty) in
+            ((:onemklSgelsBatched, :Float32),
+             (:onemklDgelsBatched, :Float64),
+             (:onemklCgelsBatched, :ComplexF32),
+             (:onemklZgelsBatched, :ComplexF64))
+    @eval begin
+        function gels_batched!(trans::Char,
+                               A::Vector{<:oneStridedMatrix{$elty}},
+                               C::Vector{<:oneStridedMatrix{$elty}})
+            if (length(A) != length(C))
+                throw(DimensionMismatch(""))
+            end
+            m,n = size(A[1])
+            mC,nC = size(C[1])
+            if mC != m
+                throw(DimensionMismatch("Leading dimensions of arrays must match"))
+            end
+            for (As, Cs) in zip(A,C)
+                ms,ns = size(As)
+                mCs,nCs = size(Cs)
+                if (size(As) != (m, n)) || (size(Cs) != (mC, nC))
+                    throw(DimensionMismatch("Dimensions of batched array entries must be invariant"))
+                end
+            end
+            if m < n
+                throw(ArgumentError("System must be overdetermined"))
+            end
+
+            nrhs = size(C[1])[2]
+            lda = max(1,stride(A[1],2))
+            ldc = max(1,stride(A[1],2))
+            stride_a = max(1, lda * n)
+            stride_b = max(1, ldc * nrhs)
+            Aptrs = unsafe_batch(A)
+            Cptrs = unsafe_batch(C)
+            queue = global_queue(context(A[1]), device(A[1]))
+            $fname(sycl_queue(queue), trans, m, n, nrhs, Aptrs, lda, stride_a, Cptrs, ldc, stride_b, length(A))
+            unsafe_free!(Cptrs)
+            unsafe_free!(Aptrs)
+            A, C
+        end
+    end
+end
+
+### DGMM Batch
+for (fname, elty) in
+        ((:onemklSdgmmBatched, :Float32),
+         (:onemklDdgmmBatched, :Float64),
+         (:onemklCdgmmBatched, :ComplexF32),
+         (:onemklZdgmmBatched, :ComplexF64))
+    @eval begin
+        function dgmm_batch!(left_right::Char,
+                             m::Number,
+                             n::Number,
+                             A::Vector{<:oneStridedMatrix{$elty}},
+                             X::Vector{<:oneStridedMatrix{$elty}},
+                             C::Vector{<:oneStridedMatrix{$elty}})
+            if length(A) != length(X) || length(A) != length(C)
+                throw(DimensionMismatch(""))
+            end
+            lda = max(1, stride(A[1],2))
+            incx = stride(X[1],1)
+            ldc = max(1,stride(C[1],2))
+            Aptrs = unsafe_batch(A)
+            Xptrs = unsafe_batch(X)
+            Cptrs = unsafe_batch(C)
+            bsize = length(A)
+            m_dev = oneVector{Int}(fill(m, bsize))
+            n_dev = oneVector{Int}(fill(n, bsize))
+            incx_dev = oneVector{Int}(fill(incx, bsize))
+            lda_dev = oneVector{Int}(fill(lda, bsize))
+            ldc_dev = oneVector{Int}(fill(ldc, bsize))
+            groupsize_dev = oneVector{Int}(fill(1,bsize))
+            queue = global_queue(context(A[1]), device(A[1]))
+            $fname(sycl_queue(queue), left_right, m_dev, n_dev, Aptrs, lda_dev, Xptrs, incx_dev, Cptrs, ldc_dev, bsize, groupsize_dev);
+            unsafe_free!(Aptrs)
+            unsafe_free!(Xptrs)
+            unsafe_free!(Cptrs)
+            unsafe_free!(m_dev)
+            unsafe_free!(n_dev)
+            unsafe_free!(incx_dev)
+            unsafe_free!(lda_dev)
+            unsafe_free!(ldc_dev)
+            unsafe_free!(groupsize_dev)
+            unsafe_free!(Aptrs)
+            unsafe_free!(Xptrs)
+            unsafe_free!(Cptrs)
+        end
+    end
+end
+
 ## (GE) general matrix-matrix multiplication batched
 for (fname, elty) in
         ((:onemklDgemmBatched,:Float64),
