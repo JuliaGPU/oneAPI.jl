@@ -126,11 +126,8 @@ for (fname, elty) in
                              m::Number,
                              n::Number,
                              A::Vector{<:oneStridedMatrix{$elty}},
-                             X::Vector{<:oneStridedMatrix{$elty}},
+                             X::Vector{<:oneStridedVector{$elty}},
                              C::Vector{<:oneStridedMatrix{$elty}})
-            if length(A) != length(X) || length(A) != length(C)
-                throw(DimensionMismatch(""))
-            end
             lda = max(1, stride(A[1],2))
             incx = stride(X[1],1)
             ldc = max(1,stride(C[1],2))
@@ -138,12 +135,12 @@ for (fname, elty) in
             Xptrs = unsafe_batch(X)
             Cptrs = unsafe_batch(C)
             bsize = length(A)
-            m_dev = oneVector{Int}(fill(m, bsize))
-            n_dev = oneVector{Int}(fill(n, bsize))
-            incx_dev = oneVector{Int}(fill(incx, bsize))
-            lda_dev = oneVector{Int}(fill(lda, bsize))
-            ldc_dev = oneVector{Int}(fill(ldc, bsize))
-            groupsize_dev = oneVector{Int}(fill(1,bsize))
+            m_dev = oneVector{Int64}(fill(m, bsize))
+            n_dev = oneVector{Int64}(fill(n, bsize))
+            lda_dev = oneVector{Int64}(fill(lda, bsize))
+            ldc_dev = oneVector{Int64}(fill(ldc, bsize))
+            incx_dev = oneVector{Int64}(fill(incx, bsize))
+            groupsize_dev = oneVector{Int64}(fill(1,bsize))
             queue = global_queue(context(A[1]), device(A[1]))
             $fname(sycl_queue(queue), left_right, m_dev, n_dev, Aptrs, lda_dev, Xptrs, incx_dev, Cptrs, ldc_dev, bsize, groupsize_dev);
             unsafe_free!(Aptrs)

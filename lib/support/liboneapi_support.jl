@@ -154,8 +154,8 @@ end
 
 function onemklDdgmmBatched(device_queue, trans, m, n, a, lda, x, incx, c, ldc, group_count, group_size)
     @ccall liboneapi_support.onemklSdgmmBatched(device_queue::syclQueue_t, trans::onemklSide,
-                                m::ZePtr{Int64}, n::ZePtr{Int64}, a::ZePtr{Ptr{Cfloat}}, lda::ZePtr{Int64},
-                                x::ZePtr{Ptr{Cfloat}}, incx::ZePtr{Int64}, c::ZePtr{Ptr{Cfloat}}, ldc::ZePtr{Int64},
+                                m::ZePtr{Int64}, n::ZePtr{Int64}, a::ZePtr{Ptr{Cdouble}}, lda::ZePtr{Int64},
+                                x::ZePtr{Ptr{Cdouble}}, incx::ZePtr{Int64}, c::ZePtr{Ptr{Cdouble}}, ldc::ZePtr{Int64},
                                 group_count::Int64, group_size::ZePtr{Int64})::Cvoid
 end
 

@@ -2,6 +2,7 @@ using oneAPI
 using oneAPI.oneMKL: band, bandex
 
 using LinearAlgebra
+using StaticArrays
 
 m = 20
 n = 35
@@ -1086,31 +1087,36 @@ end
                 push!(d_C, oneArray(C[i]))
             end
             d_A, d_C = oneMKL.gels_batched!('N', d_A, d_C)
-            LinearAlgebra.LAPACK.gels_batched()
         end
 
         @testset "dgmm_batch" begin
-            m = 2
-            n = 2
-            group_count = 2
+            group_count = 10
             # generate matrices
             bA = [rand(T, m, n) for i in 1:group_count]
             bC = [rand(T, m, n) for i in 1:group_count]
-            bX = [rand(T, m, n) for i in 1:group_count]
+            bX = [rand(T, m) for i in 1:group_count]
+
             # move to device
             bd_A = oneArray{T, 2}[]
-            bd_C = oneArray{T, 2}[]
-            bd_X = oneArray{T, 2}[]
+            bd_C = oneArray{T, 2}[] 
+            bd_X = oneArray{T, 1}[]
             bd_bad = oneArray{T, 2}[]
             for i in 1:length(bA)
                 push!(bd_A, oneArray(bA[i]))
                 push!(bd_C, oneArray(bC[i]))
-                push!(bd_X, oneArray(bX[i]))
                 if i < length(bA) - 2
                     push!(bd_bad, oneArray(bC[i]))
                 end
             end
+            for i in 1:length(bX)
+                push!(bd_X, oneArray(bX[i]))
+            end
             oneMKL.dgmm_batch!('L',m, n, bd_A, bd_X, bd_C)
+
+            for i in 1:group_count
+                hC = diagm(0 => bX[i]) * bA[i]
+                @test hC ≈ Array(bd_C[i])
+            end
         end
     end
 end
