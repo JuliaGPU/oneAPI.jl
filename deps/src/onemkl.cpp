@@ -359,9 +359,9 @@ extern "C" void onemklSgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
                                                 device, context);
     int64_t *ipiv = (int64_t *) malloc_device((m*n) * sizeof(int64_t), device, context);
 
-    auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, a, lda, ipiv,
-                                            scratchpad_dev, scratchpad_size);
-    __FORCE_MKL_FLUSH__(status);
+    //auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, a, lda, ipiv,
+    //                                        scratchpad_dev, scratchpad_size);
+    //__FORCE_MKL_FLUSH__(status);
 
     free(scratchpad_dev, context);
     free(ipiv, context);
@@ -379,9 +379,9 @@ extern "C" void onemklDgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
                                                 device, context);
     int64_t *ipiv = (int64_t *) malloc_device((m*n) * sizeof(int64_t), device, context);
 
-    auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, a, lda, ipiv,
-                                            scratchpad_dev, scratchpad_size);
-    __FORCE_MKL_FLUSH__(status);
+    //auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, a, lda, ipiv,
+    //                                        scratchpad_dev, scratchpad_size);
+    //__FORCE_MKL_FLUSH__(status);
 
     free(scratchpad_dev, context);
     free(ipiv, context);
