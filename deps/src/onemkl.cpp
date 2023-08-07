@@ -347,6 +347,47 @@ extern "C" void onemklZdgmmBatched(syclQueue_t device_queue, onemklSide left_rig
     __FORCE_MKL_FLUSH__(status);
 }
 
+extern "C" void onemklSgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                             float *a, int64_t lda) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<float>(device_queue->val,
+                            m, n, lda);
+
+    float *scratchpad_dev = (float *) malloc_device(scratchpad_size * sizeof(float),
+                                                device, context);
+    int64_t *ipiv = (int64_t *) malloc_device((m*n) * sizeof(int64_t), device, context);
+
+    auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, a, lda, ipiv,
+                                            scratchpad_dev, scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+
+    free(scratchpad_dev, context);
+    free(ipiv, context);
+}
+
+extern "C" void onemklDgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                             double *a, int64_t lda) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<double>(device_queue->val,
+                            m, n, lda);
+
+    double *scratchpad_dev = (double *) malloc_device(scratchpad_size * sizeof(double),
+                                                device, context);
+    int64_t *ipiv = (int64_t *) malloc_device((m*n) * sizeof(int64_t), device, context);
+
+    auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, a, lda, ipiv,
+                                            scratchpad_dev, scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+
+    free(scratchpad_dev, context);
+    free(ipiv, context);
+}
+
+
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
                            int64_t k, uint16_t alpha, const short *A, int64_t lda,

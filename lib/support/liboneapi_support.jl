@@ -173,6 +173,16 @@ function onemklZdgmmBatched(device_queue, trans, m, n, a, lda, x, incx, c, ldc, 
                                 group_count::Int64, group_size::ZePtr{Int64})::Cvoid
 end
 
+function onemklSgetrf(device_queue, m, n, a, lda)
+    @ccall liboneapi_support.onemklSgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{Cfloat}, lda::Int64)::Cvoid
+end
+
+function onemklDgetrf(device_queue, m, n, a, lda)
+    @ccall liboneapi_support.onemklDgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{Cdouble}, lda::Int64)::Cvoid
+end
+
 function onemklSgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C,
                      ldc)
     @ccall liboneapi_support.onemklSgemm(device_queue::syclQueue_t, transA::onemklTranspose,

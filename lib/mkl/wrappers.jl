@@ -159,6 +159,21 @@ for (fname, elty) in
     end
 end
 
+for (fname, elty) in
+        ((:onemklSgetrf, :Float32),
+         (:onemklDgetrf, :Float64))
+    @eval begin
+        function getrf!(m::Number,
+                        n::Number,
+                        a::oneStridedVecOrMat{$elty})
+            lda = max(m,n)
+            queue = global_queue(context(a), device(a))
+            $fname(sycl_queue(queue), m, n, a, lda)
+            a
+        end
+    end
+end
+
 ## (GE) general matrix-matrix multiplication batched
 for (fname, elty) in
         ((:onemklDgemmBatched,:Float64),
