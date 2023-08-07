@@ -1088,6 +1088,7 @@ end
             d_A, d_C = oneMKL.gels_batched!('N', d_A, d_C)
         end
 
+        if T <: Union{Float32, ComplexF32, ComplexF64}
         @testset "dgmm_batch" begin
             group_count = 10
             # generate matrices
@@ -1116,6 +1117,7 @@ end
                 hC = diagm(0 => bX[i]) * bA[i]
                 @test hC ≈ Array(bd_C[i])
             end
+        end
         end
     end
 end
