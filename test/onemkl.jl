@@ -1065,6 +1065,7 @@ end
 
 @testset "Blas-Extension" begin
     @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
+
         @testset "geqrf" begin
             A = rand(T, m, n)
             d_A = oneArray(A)
@@ -1073,15 +1074,15 @@ end
             LinearAlgebra.LAPACK.geqrf!(A,tau_c)
             @test tau_c ≈ Array(tau)
         end
-        if T <: Union{Float32, Float64}
-            @testset "getrf" begin
-                A = rand(T, m, m)
-                d_A = oneArray(A)
-                oneMKL.getrf!(m, m, d_A)
-                hA, ipiv = LinearAlgebra.LAPACK.getrf!(A)
-                @test hA ≈ Array(d_A)
-            end
+
+        @testset "getrf" begin
+            A = rand(T, m, m)
+            d_A = oneArray(A)
+            ipiv = oneMKL.getrf!(m, m, d_A)
+            hA, ipiv = LinearAlgebra.LAPACK.getrf!(A)
+            @test hA ≈ Array(d_A)
         end
+
         @testset "gelsBatched" begin
             # generate matrices
             A = [rand(T,n,k) for i in 1:10]

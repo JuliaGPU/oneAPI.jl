@@ -161,15 +161,19 @@ end
 
 for (fname, elty) in
         ((:onemklSgetrf, :Float32),
-         (:onemklDgetrf, :Float64))
+         (:onemklDgetrf, :Float64),
+         (:onemklCgetrf, :ComplexF32),
+         (:onemklZgetrf, :ComplexF64))
     @eval begin
         function getrf!(m::Number,
                         n::Number,
                         a::oneStridedVecOrMat{$elty})
             lda = max(m,n)
+            hipiv = zeros(Int64, max(1, min(m,n)))
+            dipiv = oneArray(hipiv)
             queue = global_queue(context(a), device(a))
-            $fname(sycl_queue(queue), m, n, a, lda)
-            a
+            $fname(sycl_queue(queue), m, n, a, lda, dipiv)
+            a,dipiv
         end
     end
 end
