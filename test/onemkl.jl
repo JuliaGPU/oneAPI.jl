@@ -2,7 +2,6 @@ using oneAPI
 using oneAPI.oneMKL: band, bandex
 
 using LinearAlgebra
-using StaticArrays
 
 m = 20
 n = 35
