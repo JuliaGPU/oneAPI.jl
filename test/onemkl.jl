@@ -1075,7 +1075,6 @@ end
         end
         if T <: Union{Float32, Float64}
             @testset "getrf" begin
-                m = 4
                 A = rand(T, m, m)
                 d_A = oneArray(A)
                 oneMKL.getrf!(m, m, d_A)
