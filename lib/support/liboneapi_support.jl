@@ -193,6 +193,16 @@ function onemklZgetrf(device_queue, m, n, a, lda, ipiv)
                                           a::ZePtr{ComplexF64}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
 end
 
+function onemklSgetri(device_queue, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklSgetri(device_queue::syclQueue_t, n::Int64,
+                                          a::ZePtr{Cfloat}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklDgetri(device_queue, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklDgetri(device_queue::syclQueue_t, n::Int64,
+                                          a::ZePtr{Cdouble}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
 function onemklSgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C,
                      ldc)
     @ccall liboneapi_support.onemklSgemm(device_queue::syclQueue_t, transA::onemklTranspose,

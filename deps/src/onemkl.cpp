@@ -418,6 +418,50 @@ extern "C" void onemklZgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
     free(scratchpad_dev, context);
 }
 
+extern "C" void onemklSgetri(syclQueue_t device_queue, int64_t n, float *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t getri_scratchpad_size = oneapi::mkl::lapack::getri_scratchpad_size<float>(device_queue->val,
+                                                    n, lda);
+    int64_t getrf_scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<float>(device_queue->val,
+                                                    n, n, lda);
+    float *getrf_scratchpad_dev = (float *) malloc_device(getrf_scratchpad_size * sizeof(float),
+                                                device, context);
+    float *getri_scratchpad_dev = (float *) malloc_device(getri_scratchpad_size * sizeof(float),
+                                                device, context);
+    auto getrf_status = oneapi::mkl::lapack::getrf(device_queue->val, n, n, a, lda, ipiv, getrf_scratchpad_dev,
+                                              getrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getrf_status);
+    auto getri_status = oneapi::mkl::lapack::getri(device_queue->val, n, a, lda, ipiv, getri_scratchpad_dev,
+                                              getri_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getri_status);
+    //free(getrf_scratchpad_dev);
+    //free(getri_scratchpad_dev);
+}
+
+extern "C" void onemklDgetri(syclQueue_t device_queue, int64_t n, double *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t getri_scratchpad_size = oneapi::mkl::lapack::getri_scratchpad_size<float>(device_queue->val,
+                                                    n, lda);
+    int64_t getrf_scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<float>(device_queue->val,
+                                                    n, n, lda);
+    double *getrf_scratchpad_dev = (double *) malloc_device(getrf_scratchpad_size * sizeof(float),
+                                                device, context);
+    double *getri_scratchpad_dev = (double *) malloc_device(getri_scratchpad_size * sizeof(float),
+                                                device, context);
+    auto getrf_status = oneapi::mkl::lapack::getrf(device_queue->val, n, n, a, lda, ipiv, getrf_scratchpad_dev,
+                                              getrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getrf_status);
+    auto getri_status = oneapi::mkl::lapack::getri(device_queue->val, n, a, lda, ipiv, getri_scratchpad_dev,
+                                              getri_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getri_status);
+    //free(getrf_scratchpad_dev);
+    //free(getri_scratchpad_dev);
+}
+
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
                            int64_t k, uint16_t alpha, const short *A, int64_t lda,
