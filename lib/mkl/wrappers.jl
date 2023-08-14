@@ -180,7 +180,9 @@ end
 
 for (fname, elty) in
         ((:onemklSgetri, :Float32),
-         (:onemklDgetri, :Float64))
+         (:onemklDgetri, :Float64),
+         (:onemklCgetri, :ComplexF32),
+         (:onemklZgetri, :ComplexF64))
     @eval begin
         function getri!(n::Number,
                         a::oneStridedVecOrMat{$elty})

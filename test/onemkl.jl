@@ -1065,7 +1065,7 @@ end
 
 @testset "Blas-Extension" begin
     @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
-#=
+
         @testset "geqrf" begin
             A = rand(T, m, n)
             d_A = oneArray(A)
@@ -1082,17 +1082,14 @@ end
             hA, ipiv = LinearAlgebra.LAPACK.getrf!(A)
             @test hA ≈ Array(d_A)
         end
-=#
-        if T <: Float32
+
         @testset "getri" begin
-            n = 8
             A = rand(T, n, n)
             d_A = oneArray(A)
             hipiv = zeros(Int64, n)
             daout, ipiv = oneMKL.getri!(n,d_A)
             hC = inv(A)
             @test hC ≈ Array(d_A) rtol=1e-2
-        end
         end
 
 #=
@@ -1109,38 +1106,35 @@ end
             end
             d_A, d_C = oneMKL.gels_batched!('N', d_A, d_C)
         end
+=#
+        @testset "dgmm_batch" begin
+            group_count = 10
+            # generate matrices
+            bA = [rand(T, m, n) for i in 1:group_count]
+            bC = [rand(T, m, n) for i in 1:group_count]
+            bX = [rand(T, m) for i in 1:group_count]
 
-        if T <: Union{Float32, ComplexF32, ComplexF64}
-            @testset "dgmm_batch" begin
-                group_count = 10
-                # generate matrices
-                bA = [rand(T, m, n) for i in 1:group_count]
-                bC = [rand(T, m, n) for i in 1:group_count]
-                bX = [rand(T, m) for i in 1:group_count]
-
-                # move to device
-                bd_A = oneArray{T, 2}[]
-                bd_C = oneArray{T, 2}[] 
-                bd_X = oneArray{T, 1}[]
-                bd_bad = oneArray{T, 2}[]
-                for i in 1:length(bA)
-                    push!(bd_A, oneArray(bA[i]))
-                    push!(bd_C, oneArray(bC[i]))
-                    if i < length(bA) - 2
-                        push!(bd_bad, oneArray(bC[i]))
-                    end
-                end
-                for i in 1:length(bX)
-                    push!(bd_X, oneArray(bX[i]))
-                end
-                oneMKL.dgmm_batch!('L',m, n, bd_A, bd_X, bd_C)
-
-                for i in 1:group_count
-                    hC = diagm(0 => bX[i]) * bA[i]
-                    @test hC ≈ Array(bd_C[i])
+            # move to device
+            bd_A = oneArray{T, 2}[]
+            bd_C = oneArray{T, 2}[] 
+            bd_X = oneArray{T, 1}[]
+            bd_bad = oneArray{T, 2}[]
+            for i in 1:length(bA)
+                push!(bd_A, oneArray(bA[i]))
+                push!(bd_C, oneArray(bC[i]))
+                if i < length(bA) - 2
+                    push!(bd_bad, oneArray(bC[i]))
                 end
             end
+            for i in 1:length(bX)
+                push!(bd_X, oneArray(bX[i]))
+            end
+            oneMKL.dgmm_batch!('L',m, n, bd_A, bd_X, bd_C)
+
+            for i in 1:group_count
+                hC = diagm(0 => bX[i]) * bA[i]
+                @test hC ≈ Array(bd_C[i])
+            end
         end
-=#
     end
 end

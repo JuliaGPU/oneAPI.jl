@@ -203,6 +203,16 @@ function onemklDgetri(device_queue, n, a, lda, ipiv)
                                           a::ZePtr{Cdouble}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
 end
 
+function onemklCgetri(device_queue, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklCgetri(device_queue::syclQueue_t, n::Int64,
+                                          a::ZePtr{ComplexF32}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklZgetri(device_queue, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklZgetri(device_queue::syclQueue_t, n::Int64,
+                                          a::ZePtr{ComplexF64}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
 function onemklSgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C,
                      ldc)
     @ccall liboneapi_support.onemklSgemm(device_queue::syclQueue_t, transA::onemklTranspose,
