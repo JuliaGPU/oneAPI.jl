@@ -2,7 +2,7 @@ module oneAPIKernels
 
 import KernelAbstractions
 import oneAPI
-import oneAPI: oneL0
+import oneAPI: oneL0, @device_override
 import GPUCompiler
 
 import UnsafeAtomicsLLVM
@@ -102,32 +102,6 @@ function (obj::Kernel{oneAPIBackend})(args...; ndrange=nothing, workgroupsize=no
     kernel(ctx, args...; items=threads, groups=nblocks)
 
     return nothing
-end
-
-# XXX: using the override macro from oneAPI.jl doesn't work
-const overrides = Expr[]
-macro device_override(ex)
-    ex = macroexpand(__module__, ex)
-    if Meta.isexpr(ex, :call)
-        @show ex = eval(ex)
-        error()
-    end
-    code = quote
-        $GPUCompiler.@override($oneAPI.method_table, $ex)
-    end
-    if isdefined(Base.Experimental, Symbol("@overlay"))
-        return esc(code)
-    else
-        push!(overrides, code)
-        return
-    end
-end
-function __init__()
-    precompiling = ccall(:jl_generating_output, Cint, ()) != 0
-    precompiling && return
-    # register device overrides
-    eval(Expr(:block, overrides...))
-    empty!(overrides)
 end
 
 import KernelAbstractions: CompilerMetadata, DynamicCheck, LinearIndices

@@ -78,8 +78,6 @@ function __init__()
         return
     end
 
-    eval(overrides)
-
     # ensure that the OpenCL runtime dispatcher finds the ICD files from our artifacts
     ENV["OCL_ICD_VENDORS"] = oneL0.NEO_jll.libigdrcl
 end
