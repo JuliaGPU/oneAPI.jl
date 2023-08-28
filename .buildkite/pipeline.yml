@@ -19,17 +19,11 @@ steps:
           intel: "*"
         commands: |
           julia --project=deps deps/build_ci.jl
-          julia --project -e '
-              # make sure the 1.6-era Manifest works on this Julia version
-              using Pkg
-              Pkg.resolve()'
         if: build.message !~ /\[skip tests\]/
         timeout_in_minutes: 120
         matrix:
           setup:
             julia:
-              - "1.6"
-              - "1.7"
               - "1.8"
               - "1.9"
               - "1.10-nightly"
@@ -76,5 +70,5 @@ steps:
         timeout_in_minutes: 60
 
 env:
-  JULIA_PKG_SERVER: "" # it often struggles with our large artifacts
+  JULIA_PKG_SERVER_REGISTRY_PREFERENCE: "eager" # OK to downloading JLLs from GitHub
   SECRET_CODECOV_TOKEN: "OYpS8fj3vGhj7iZf9vLAeapyxQNSOEW6mApcSvGboL9AlS+0nfOSFjFrIBNnIU0prxQQy1gR9AwR/JO1m2OFWeRhjYtkQPPhk4xVtSKmv0LLTL0snA8IohUopqfu722i7zLrPcz/A0LFIFsb0ey+oReJs2xnGOshNIJu4FDowUV3wmZvfKWNsSK4cGN+HFQ3387Ow4SsmiUr7oqh0iMBQNqaY8oZ2BY1dFOgPaOegIp70YEFRdJ8DKaLd7WGxFLY9oQEhZZdmx/zx0xo56/NGtDwVYkDPa4qPhJczDBoIn5XvcRiIW0VJ/MaRARxnpenBX5H6gwdcZYUGtjXWIRXBw==;U2FsdGVkX1/bZy1Bp4/dBH5scPpWqLKusXGvSkRGUa+1F7hi4P4Cu5a6GcfNIEvQr+bBj2VlZvqhNW0FAqN3QQ=="
