@@ -101,17 +101,23 @@ const oneVecOrMat{T} = Union{oneVector{T},oneMatrix{T}}
 oneArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N} =
   oneArray{T,N,oneL0.DeviceBuffer}(undef, dims)
 
-# type and dimensionality specified, accepting dims as series of Ints
-oneArray{T,N,B}(::UndefInitializer, dims::Integer...) where {T,N,B} =
+# buffer, type and dimensionality specified
+oneArray{T,N,B}(::UndefInitializer, dims::NTuple{N,Integer}) where {T,N,B} =
   oneArray{T,N,B}(undef, convert(Tuple{Vararg{Int}}, dims))
-oneArray{T,N}(::UndefInitializer, dims::Integer...) where {T,N} =
+oneArray{T,N,B}(::UndefInitializer, dims::Vararg{Integer,N}) where {T,N,B} =
+  oneArray{T,N,B}(undef, convert(Tuple{Vararg{Int}}, dims))
+
+# type and dimensionality specified
+oneArray{T,N}(::UndefInitializer, dims::NTuple{N,Integer}) where {T,N} =
+  oneArray{T,N}(undef, convert(Tuple{Vararg{Int}}, dims))
+oneArray{T,N}(::UndefInitializer, dims::Vararg{Integer,N}) where {T,N} =
   oneArray{T,N}(undef, convert(Tuple{Vararg{Int}}, dims))
 
-# type but not dimensionality specified
-oneArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
-  oneArray{T,N}(undef, dims)
-oneArray{T}(::UndefInitializer, dims::Integer...) where {T} =
-  oneArray{T}(undef, convert(Tuple{Vararg{Int}}, dims))
+# only type specified
+oneArray{T}(::UndefInitializer, dims::NTuple{N,Integer}) where {T,N} =
+  oneArray{T,N}(undef, convert(Tuple{Vararg{Int}}, dims))
+oneArray{T}(::UndefInitializer, dims::Vararg{Integer,N}) where {T,N} =
+  oneArray{T,N}(undef, convert(Tuple{Vararg{Int}}, dims))
 
 # empty vector constructor
 oneArray{T,1,B}() where {T,B} = oneArray{T,1,B}(undef, 0)
