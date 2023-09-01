@@ -1,36 +1,54 @@
 export oneArray, oneVector, oneMatrix, oneVecOrMat
 
 
-## array storage
-
-# array storage is shared by arrays that refer to the same data, while keeping track of
-# the number of outstanding references
-
-struct ArrayStorage{B}
-  buffer::B
-
-  # the refcount also encodes the state of the array:
-  # < 0: unmanaged
-  # = 0: freed
-  # > 0: referenced
-  refcount::Threads.Atomic{Int}
-end
-
-ArrayStorage(buf::B, state::Int) where {B} =
-  ArrayStorage{B}(buf, Threads.Atomic{Int}(state))
-
-
 ## array type
 
+function hasfieldcount(@nospecialize(dt))
+    try
+        fieldcount(dt)
+    catch
+        return false
+    end
+    return true
+end
+
+function contains_eltype(T, X)
+    if T === X
+      return true
+    elseif T isa Union
+        for U in Base.uniontypes(T)
+            contains_eltype(U, X) && return true
+        end
+    elseif hasfieldcount(T)
+        for U in fieldtypes(T)
+            contains_eltype(U, X) && return true
+        end
+    end
+    return false
+end
+
+function check_eltype(T)
+  Base.allocatedinline(T) || error("oneArray only supports element types that are stored inline")
+  Base.isbitsunion(T) && error("oneArray does not yet support isbits-union arrays")
+  if oneL0.module_properties(device()).fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 !=
+      oneL0.ZE_DEVICE_MODULE_FLAG_FP16
+    contains_eltype(T, Float16) && error("Float16 is not supported on this device")
+  end
+  if oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 !=
+      oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+    contains_eltype(T, Float64) && error("Float64 is not supported on this device")
+  end
+end
+
 mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
-  storage::Union{Nothing,ArrayStorage{B}}
+  data::DataRef{B}
 
   maxsize::Int  # maximum data size; excluding any selector bytes
   offset::Int   # offset of the data in the buffer, in number of elements
   dims::Dims{N}
 
   function oneArray{T,N,B}(::UndefInitializer, dims::Dims{N}) where {T,N,B}
-    Base.allocatedinline(T) || error("oneArray only supports element types that are stored inline")
+    check_eltype(T)
     maxsize = prod(dims) * sizeof(T)
     bufsize = if Base.isbitsunion(T)
       # type tag array past the data
@@ -42,36 +60,22 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
     ctx = context()
     dev = device()
     buf = allocate(B, ctx, dev, bufsize, Base.datatype_alignment(T))
-    storage = ArrayStorage(buf, 1)
-    obj = new{T,N,B}(storage, maxsize, 0, dims)
+    data = DataRef(buf) do buf
+      release(buf)
+    end
+    obj = new{T,N,B}(data, maxsize, 0, dims)
     finalizer(unsafe_free!, obj)
   end
 
-  function oneArray{T,N}(storage::ArrayStorage{B}, dims::Dims{N};
+  function oneArray{T,N}(data::DataRef{B}, dims::Dims{N};
                          maxsize::Int=prod(dims) * sizeof(T), offset::Int=0) where {T,N,B}
-    Base.allocatedinline(T) || error("oneArray only supports element types that are stored inline")
-    return new{T,N,B}(storage, maxsize, offset, dims)
+    check_eltype(T)
+    obj = new{T,N,B}(copy(data), maxsize, offset, dims)
+    finalizer(unsafe_free!, obj)
   end
 end
 
-function unsafe_free!(xs::oneArray)
-  # this call should only have an effect once, because both the user and the GC can call it
-  if xs.storage === nothing
-    return
-  elseif xs.storage.refcount[] < 0
-    throw(ArgumentError("Cannot free an unmanaged buffer."))
-  end
-
-  refcount = Threads.atomic_add!(xs.storage.refcount, -1)
-  if refcount == 1
-    release(xs.storage.buffer)
-  end
-
-  # this array object is now dead, so replace its storage by a dummy one
-  xs.storage = nothing
-
-  return
-end
+unsafe_free!(a::oneArray) = GPUArrays.unsafe_free!(a.data)
 
 
 ## alias detection
@@ -86,6 +90,7 @@ function Base.mightalias(A::oneArray, B::oneArray)
   return first(rA) <= first(rB) < last(rA) || first(rB) <= first(rA) < last(rB)
 end
 
+
 ## convenience constructors
 
 const oneVector{T} = oneArray{T,1}
@@ -96,17 +101,23 @@ const oneVecOrMat{T} = Union{oneVector{T},oneMatrix{T}}
 oneArray{T,N}(::UndefInitializer, dims::Dims{N}) where {T,N} =
   oneArray{T,N,oneL0.DeviceBuffer}(undef, dims)
 
-# type and dimensionality specified, accepting dims as series of Ints
-oneArray{T,N,B}(::UndefInitializer, dims::Integer...) where {T,N,B} =
+# buffer, type and dimensionality specified
+oneArray{T,N,B}(::UndefInitializer, dims::NTuple{N,Integer}) where {T,N,B} =
   oneArray{T,N,B}(undef, convert(Tuple{Vararg{Int}}, dims))
-oneArray{T,N}(::UndefInitializer, dims::Integer...) where {T,N} =
+oneArray{T,N,B}(::UndefInitializer, dims::Vararg{Integer,N}) where {T,N,B} =
+  oneArray{T,N,B}(undef, convert(Tuple{Vararg{Int}}, dims))
+
+# type and dimensionality specified
+oneArray{T,N}(::UndefInitializer, dims::NTuple{N,Integer}) where {T,N} =
+  oneArray{T,N}(undef, convert(Tuple{Vararg{Int}}, dims))
+oneArray{T,N}(::UndefInitializer, dims::Vararg{Integer,N}) where {T,N} =
   oneArray{T,N}(undef, convert(Tuple{Vararg{Int}}, dims))
 
-# type but not dimensionality specified
-oneArray{T}(::UndefInitializer, dims::Dims{N}) where {T,N} =
-  oneArray{T,N}(undef, dims)
-oneArray{T}(::UndefInitializer, dims::Integer...) where {T} =
-  oneArray{T}(undef, convert(Tuple{Vararg{Int}}, dims))
+# only type specified
+oneArray{T}(::UndefInitializer, dims::NTuple{N,Integer}) where {T,N} =
+  oneArray{T,N}(undef, convert(Tuple{Vararg{Int}}, dims))
+oneArray{T}(::UndefInitializer, dims::Vararg{Integer,N}) where {T,N} =
+  oneArray{T,N}(undef, convert(Tuple{Vararg{Int}}, dims))
 
 # empty vector constructor
 oneArray{T,1,B}() where {T,B} = oneArray{T,1,B}(undef, 0)
@@ -150,13 +161,11 @@ Base.size(x::oneArray) = x.dims
 Base.sizeof(x::oneArray) = Base.elsize(x) * length(x)
 
 function context(A::oneArray)
-  A.storage === nothing && throw(UndefRefError())
-  return oneL0.context(A.storage.buffer)
+  return oneL0.context(A.data[])
 end
 
 function device(A::oneArray)
-  A.storage === nothing && throw(UndefRefError())
-  return oneL0.device(A.storage.buffer)
+  return oneL0.device(A.data[])
 end
 
 
@@ -166,22 +175,22 @@ export oneDenseArray, oneDenseVector, oneDenseMatrix, oneDenseVecOrMat,
        oneStridedArray, oneStridedVector, oneStridedMatrix, oneStridedVecOrMat,
        oneWrappedArray, oneWrappedVector, oneWrappedMatrix, oneWrappedVecOrMat
 
-oneContiguousSubArray{T,N,A<:oneArray} = Base.FastContiguousSubArray{T,N,A}
-
 # dense arrays: stored contiguously in memory
-const oneDenseReinterpretArray{T,N,A<:Union{oneArray,oneContiguousSubArray}} = Base.ReinterpretArray{T,N,S,A} where S
-const oneDenseReshapedArray{T,N,A<:Union{oneArray,oneContiguousSubArray,oneDenseReinterpretArray}} = Base.ReshapedArray{T,N,A}
-const DenseSuboneArray{T,N,A<:Union{oneArray,oneDenseReshapedArray,oneDenseReinterpretArray}} = Base.FastContiguousSubArray{T,N,A}
-const oneDenseArray{T,N} = Union{oneArray{T,N}, DenseSuboneArray{T,N}, oneDenseReshapedArray{T,N}, oneDenseReinterpretArray{T,N}}
+#
+# all common dense wrappers are currently represented as oneArray objects.
+# this simplifies common use cases, and greatly improves load time.
+const oneDenseArray{T,N} = oneArray{T,N}
 const oneDenseVector{T} = oneDenseArray{T,1}
 const oneDenseMatrix{T} = oneDenseArray{T,2}
 const oneDenseVecOrMat{T} = Union{oneDenseVector{T}, oneDenseMatrix{T}}
+# XXX: these dummy aliases (oneDenseArray=oneArray) break alias printing, as
+#      `Base.print_without_params` only handles the case of a single alias.
 
 # strided arrays
-const oneStridedSubArray{T,N,A<:Union{oneArray,oneDenseReshapedArray,oneDenseReinterpretArray},
-                         I<:Tuple{Vararg{Union{Base.RangeIndex, Base.ReshapedUnitRange,
-                                               Base.AbstractCartesianIndex}}}} = SubArray{T,N,A,I}
-const oneStridedArray{T,N} = Union{oneArray{T,N}, oneStridedSubArray{T,N}, oneDenseReshapedArray{T,N}, oneDenseReinterpretArray{T,N}}
+const oneStridedSubArray{T,N,I<:Tuple{Vararg{Union{Base.RangeIndex, Base.ReshapedUnitRange,
+                                             Base.AbstractCartesianIndex}}}} =
+  SubArray{T,N,<:oneArray,I}
+const oneStridedArray{T,N} = Union{oneArray{T,N}, oneStridedSubArray{T,N}}
 const oneStridedVector{T} = oneStridedArray{T,1}
 const oneStridedMatrix{T} = oneStridedArray{T,2}
 const oneStridedVecOrMat{T} = Union{oneStridedVector{T}, oneStridedMatrix{T}}
@@ -191,7 +200,7 @@ Base.pointer(x::oneStridedArray{T}) where {T} = Base.unsafe_convert(ZePtr{T}, x)
     Base.unsafe_convert(ZePtr{T}, x) + Base._memory_offset(x, i)
 end
 
-# wrapped arrays: can be used in kernels
+# anything that's (secretly) backed by a oneArray
 const oneWrappedArray{T,N} = Union{oneArray{T,N}, WrappedArray{T,N,oneArray,oneArray{T,N}}}
 const oneWrappedVector{T} = oneWrappedArray{T,1}
 const oneWrappedMatrix{T} = oneWrappedArray{T,2}
@@ -237,7 +246,7 @@ Base.convert(::Type{T}, x::T) where T <: oneArray = x
 Base.unsafe_convert(::Type{Ptr{T}}, x::oneArray{T}) where {T} =
   throw(ArgumentError("cannot take the host address of a $(typeof(x))"))
 Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} =
-  convert(ZePtr{T}, x.storage.buffer) + x.offset*Base.elsize(x)
+  convert(ZePtr{T}, x.data[]) + x.offset*Base.elsize(x)
 
 
 ## interop with GPU arrays
@@ -255,7 +264,7 @@ Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
 
 typetagdata(a::Array, i=1) = ccall(:jl_array_typetagdata, Ptr{UInt8}, (Any,), a) + i - 1
 typetagdata(a::oneArray, i=1) =
-  convert(ZePtr{UInt8}, a.storage.buffer) + a.maxsize + a.offset + i - 1
+  convert(ZePtr{UInt8}, a.data[]) + a.maxsize + a.offset + i - 1
 
 function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::Array{T}, soffs::Integer,
                       n::Integer) where T
@@ -305,7 +314,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
-    error("Not implemented")
+    error("oneArray does not yet support isbits-union arrays")
   end
   return dest
 end
@@ -315,7 +324,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
-    error("Not implemented")
+    error("oneArray does not yet support isbits-union arrays")
   end
 
   # copies to the host are synchronizing
@@ -329,7 +338,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
-    error("Not implemented")
+    error("oneArray does not yet support isbits-union arrays")
   end
   return dest
 end
@@ -364,37 +373,24 @@ function Base.fill!(A::oneDenseArray{T}, val) where T
 end
 
 
+## derived arrays
+
+function GPUArrays.derive(::Type{T}, N::Int, a::oneArray, dims::Dims, offset::Int) where {T}
+  offset = (a.offset * Base.elsize(a)) ÷ sizeof(T) + offset
+  oneArray{T,N}(a.data, dims; a.maxsize, offset)
+end
+
+
 ## views
 
 device(a::SubArray) = device(parent(a))
 context(a::SubArray) = context(parent(a))
 
-# we don't really want an array, so don't call `adapt(Array, ...)`,
-# but just want oneArray indices to get downloaded back to the CPU.
-# this makes sure we preserve array-like containers, like Base.Slice.
-struct BackToCPU end
-Adapt.adapt_storage(::BackToCPU, xs::oneArray) = convert(Array, xs)
-
-@inline function Base.view(A::oneArray, I::Vararg{Any,N}) where {N}
-    J = to_indices(A, I)
-    @boundscheck begin
-        # Base's boundscheck accesses the indices, so make sure they reside on the CPU.
-        # this is expensive, but it's a bounds check after all.
-        J_cpu = map(j->adapt(BackToCPU(), j), J)
-        checkbounds(A, J_cpu...)
-    end
-    J_gpu = map(j->adapt(oneArray, j), J)
-    Base.unsafe_view(Base._maybe_reshape_parent(A, Base.index_ndims(J_gpu...)), J_gpu...)
-end
-
 # pointer conversions
-## contiguous
 function Base.unsafe_convert(::Type{ZePtr{T}}, V::SubArray{T,N,P,<:Tuple{Vararg{Base.RangeIndex}}}) where {T,N,P}
     return Base.unsafe_convert(ZePtr{T}, parent(V)) +
            Base._memory_offset(V.parent, map(first, V.indices)...)
 end
-
-## reshaped
 function Base.unsafe_convert(::Type{ZePtr{T}}, V::SubArray{T,N,P,<:Tuple{Vararg{Union{Base.RangeIndex,Base.ReshapedUnitRange}}}}) where {T,N,P}
    return Base.unsafe_convert(ZePtr{T}, parent(V)) +
           (Base.first_index(V)-1)*sizeof(T)
@@ -408,24 +404,6 @@ context(a::Base.PermutedDimsArray) = context(parent(a))
 
 Base.unsafe_convert(::Type{ZePtr{T}}, A::PermutedDimsArray) where {T} =
     Base.unsafe_convert(ZePtr{T}, parent(A))
-
-
-## reshape
-
-device(a::Base.ReshapedArray) = device(parent(a))
-context(a::Base.ReshapedArray) = context(parent(a))
-
-Base.unsafe_convert(::Type{ZePtr{T}}, a::Base.ReshapedArray{T}) where {T} =
-  Base.unsafe_convert(ZePtr{T}, parent(a))
-
-
-## reinterpret
-
-device(a::Base.ReinterpretArray) = device(parent(a))
-context(a::Base.ReinterpretArray) = context(parent(a))
-
-Base.unsafe_convert(::Type{ZePtr{T}}, a::Base.ReinterpretArray{T,N,S} where N) where {T,S} =
-  ZePtr{T}(Base.unsafe_convert(ZePtr{S}, parent(a)))
 
 
 ## unsafe_wrap

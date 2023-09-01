@@ -166,7 +166,7 @@ Base.IndexStyle(::Type{<:oneDeviceArray}) = Base.IndexLinear()
 
 Base.@propagate_inbounds Base.getindex(A::oneDeviceArray{T}, i1::Integer) where {T} =
     arrayref(A, i1)
-Base.@propagate_inbounds Base.setindex!(A::oneDeviceArray{T}, x, i1::Int) where {T} =
+Base.@propagate_inbounds Base.setindex!(A::oneDeviceArray{T}, x, i1::Integer) where {T} =
     arrayset(A, convert(T,x)::T, i1)
 
 # preserve the specific integer type when indexing device arrays,
