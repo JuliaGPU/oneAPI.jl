@@ -93,6 +93,126 @@ end
     ONEMKL_SIDE_RIGHT = 1
 end
 
+function onemklSgeqrf(device_queue, m, n, a, lda, tau)
+    @ccall liboneapi_support.onemklSgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{Cfloat}, lda::Int64, tau::ZePtr{Cfloat})::Cvoid
+end
+
+function onemklDgeqrf(device_queue, m, n, a, lda, tau)
+    @ccall liboneapi_support.onemklDgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{Cdouble}, lda::Int64, tau::ZePtr{Cdouble})::Cvoid
+end
+
+function onemklCgeqrf(device_queue, m, n, a, lda, tau)
+    @ccall liboneapi_support.onemklCgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{ComplexF32}, lda::Int64, tau::ZePtr{ComplexF32})::Cvoid
+end
+
+function onemklZgeqrf(device_queue, m, n, a, lda, tau)
+    @ccall liboneapi_support.onemklZgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{ComplexF64}, lda::Int64, tau::ZePtr{ComplexF64})::Cvoid
+end
+
+function onemklSgelsBatched(device_queue, trans, m, n, nrhs, a, lda, stride_a, b,
+                            ldb, stride_b, batch_size)
+    @ccall liboneapi_support.onemklSgelsBatched(device_queue::syclQueue_t, trans::onemklTranspose,
+                                                m::Int64, n::Int64, nrhs::Int64, a::ZePtr{Cfloat},
+                                                lda::Int64, stride_a::Int64, b::ZePtr{Cfloat},
+                                                ldb::Int64, stride_b::Int64, batch_size::Int64)::Cvoid
+end
+
+function onemklDgelsBatched(device_queue, trans, m, n, nrhs, a, lda, stride_a, b,
+                            ldb, stride_b, batch_size)
+    @ccall liboneapi_support.onemklDgelsBatched(device_queue::syclQueue_t, trans::onemklTranspose,
+                                                m::Int64, n::Int64, nrhs::Int64, a::ZePtr{Cdouble},
+                                                lda::Int64, stride_a::Int64, b::ZePtr{Cdouble},
+                                                ldb::Int64, stride_b::Int64, batch_size::Int64)::Cvoid
+end
+
+function onemklCgelsBatched(device_queue, trans, m, n, nrhs, a, lda, stride_a, b,
+                            ldb, stride_b, batch_size)
+    @ccall liboneapi_support.onemklCgelsBatched(device_queue::syclQueue_t, trans::onemklTranspose,
+                                            m::Int64, n::Int64, nrhs::Int64, a::ZePtr{ComplexF32},
+                                            lda::Int64, stride_a::Int64, b::ZePtr{ComplexF32},
+                                            ldb::Int64, stride_b::Int64, batch_size::Int64)::Cvoid
+end
+
+function onemklZgelsBatched(device_queue, trans, m, n, nrhs, a, lda, stride_a, b,
+                            ldb, stride_b, batch_size)
+    @ccall liboneapi_support.onemklZgelsBatched(device_queue::syclQueue_t, trans::onemklTranspose,
+                                            m::Int64, n::Int64, nrhs::Int64, a::ZePtr{ComplexF64},
+                                            lda::Int64, stride_a::Int64, b::ZePtr{ComplexF64},
+                                            ldb::Int64, stride_b::Int64, batch_size::Int64)::Cvoid
+end
+
+function onemklSdgmmBatched(device_queue, trans, m, n, a, lda, x, incx, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklSdgmmBatched(device_queue::syclQueue_t, trans::onemklSide,
+                                m::ZePtr{Int64}, n::ZePtr{Int64}, a::ZePtr{Ptr{Cfloat}}, lda::ZePtr{Int64},
+                                x::ZePtr{Ptr{Cfloat}}, incx::ZePtr{Int64}, c::ZePtr{Ptr{Cfloat}}, ldc::ZePtr{Int64},
+                                group_count::Int64, group_size::ZePtr{Int64})::Cvoid
+end
+
+function onemklDdgmmBatched(device_queue, trans, m, n, a, lda, x, incx, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklSdgmmBatched(device_queue::syclQueue_t, trans::onemklSide,
+                                m::ZePtr{Int64}, n::ZePtr{Int64}, a::ZePtr{Ptr{Cdouble}}, lda::ZePtr{Int64},
+                                x::ZePtr{Ptr{Cdouble}}, incx::ZePtr{Int64}, c::ZePtr{Ptr{Cdouble}}, ldc::ZePtr{Int64},
+                                group_count::Int64, group_size::ZePtr{Int64})::Cvoid
+end
+
+function onemklCdgmmBatched(device_queue, trans, m, n, a, lda, x, incx, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklCdgmmBatched(device_queue::syclQueue_t, trans::onemklSide,
+                                m::ZePtr{Int64}, n::ZePtr{Int64}, a::ZePtr{Ptr{ComplexF32}}, lda::ZePtr{Int64},
+                                x::ZePtr{Ptr{ComplexF32}}, incx::ZePtr{Int64}, c::ZePtr{Ptr{ComplexF32}}, ldc::ZePtr{Int64},
+                                group_count::Int64, group_size::ZePtr{Int64})::Cvoid
+end
+
+function onemklZdgmmBatched(device_queue, trans, m, n, a, lda, x, incx, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklZdgmmBatched(device_queue::syclQueue_t, trans::onemklSide,
+                                m::ZePtr{Int64}, n::ZePtr{Int64}, a::ZePtr{Ptr{ComplexF64}}, lda::ZePtr{Int64},
+                                x::ZePtr{Ptr{ComplexF64}}, incx::ZePtr{Int64}, c::ZePtr{Ptr{ComplexF64}}, ldc::ZePtr{Int64},
+                                group_count::Int64, group_size::ZePtr{Int64})::Cvoid
+end
+
+function onemklSgetrf(device_queue, m, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklSgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{Cfloat}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklDgetrf(device_queue, m, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklDgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{Cdouble}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklCgetrf(device_queue, m, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklCgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{ComplexF32}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklZgetrf(device_queue, m, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklZgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                          a::ZePtr{ComplexF64}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklSgetri(device_queue, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklSgetri(device_queue::syclQueue_t, n::Int64,
+                                          a::ZePtr{Cfloat}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklDgetri(device_queue, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklDgetri(device_queue::syclQueue_t, n::Int64,
+                                          a::ZePtr{Cdouble}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklCgetri(device_queue, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklCgetri(device_queue::syclQueue_t, n::Int64,
+                                          a::ZePtr{ComplexF32}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
+function onemklZgetri(device_queue, n, a, lda, ipiv)
+    @ccall liboneapi_support.onemklZgetri(device_queue::syclQueue_t, n::Int64,
+                                          a::ZePtr{ComplexF64}, lda::Int64, ipiv::ZePtr{Int64})::Cvoid
+end
+
 function onemklSgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C,
                      ldc)
     @ccall liboneapi_support.onemklSgemm(device_queue::syclQueue_t, transA::onemklTranspose,

@@ -4,6 +4,7 @@
 #include <exception>
 #include <memory>
 #include <oneapi/mkl.hpp>
+#include "oneapi/mkl/lapack.hpp"
 
 // This is a workaround to flush MKL submissions into Level-zero queue, using
 // unspecified but guaranteed behavior of intel-sycl runtime. Once SYCL standard
@@ -52,6 +53,41 @@ oneapi::mkl::side convert(onemklSide val) {
         return oneapi::mkl::side::right;
     }
 }
+
+class dgmmBatchInfo {
+    public:
+        oneapi::mkl::side *m_left_right = nullptr;
+        sycl::device m_device;
+        sycl::context m_context;
+        oneapi::mkl::side m_lr;
+
+        // Constructor
+        dgmmBatchInfo(syclQueue_t device_queue,
+                      int64_t group_count,
+                      onemklSide left_right) {
+            // Get device and context info from device_queue
+            auto main_queue = device_queue->val;
+            m_device = main_queue.get_device();
+            m_context = main_queue.get_context();
+            try {
+                m_left_right = (oneapi::mkl::side *) malloc_shared(group_count * sizeof(oneapi::mkl::side),
+                        m_device, m_context);
+                m_lr = convert(left_right);
+            } catch(const std::bad_alloc& e) {
+                std::cerr << "Error: " << e.what() << std::endl;
+            }
+
+            // Initialize
+            for (int i = 0; i < group_count; i++) {
+                m_left_right[i] = m_lr;
+            }
+        }
+        
+        // Destructor
+        ~dgmmBatchInfo() {
+            free(m_left_right, m_context);
+        }
+};
 
 class gemmBatchInfo {
     public:
@@ -157,6 +193,314 @@ class trsmBatchInfo {
         }
 };
 
+extern "C" void onemklSgeqrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                            float *a, int64_t lda, float *tau) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto geqrf_scratchpad_size = oneapi::mkl::lapack::geqrf_scratchpad_size<float>(device_queue->val, m, n, lda);
+    auto scratch_pad = (float *) malloc_device(geqrf_scratchpad_size * sizeof(float), device, context);
+    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, a, lda,
+                                      tau, scratch_pad, geqrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklDgeqrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                            double *a, int64_t lda, double *tau) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto geqrf_scratchpad_size = oneapi::mkl::lapack::geqrf_scratchpad_size<double>(device_queue->val, m, n, lda);
+    auto scratch_pad = (double *) malloc_device(geqrf_scratchpad_size * sizeof(double), device, context);
+    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, a, lda,
+                                      tau, scratch_pad, geqrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklCgeqrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                            float _Complex *a, int64_t lda, float _Complex *tau) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto geqrf_scratchpad_size = oneapi::mkl::lapack::geqrf_scratchpad_size<std::complex<float>>(device_queue->val, m, n, lda);
+    auto scratch_pad = (std::complex<float> *) malloc_device(geqrf_scratchpad_size * sizeof(std::complex<float>), device, context);
+    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, reinterpret_cast<std::complex<float> *>(a), lda,
+                                      reinterpret_cast<std::complex<float> *>(tau), scratch_pad, geqrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklZgeqrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                            double _Complex *a, int64_t lda, double _Complex *tau) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto geqrf_scratchpad_size = oneapi::mkl::lapack::geqrf_scratchpad_size<std::complex<double>>(device_queue->val, m, n, lda);
+    auto scratch_pad = (std::complex<double> *) malloc_device(geqrf_scratchpad_size * sizeof(std::complex<double>), device, context);
+    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, reinterpret_cast<std::complex<double> *>(a), lda,
+                                      reinterpret_cast<std::complex<double> *>(tau), scratch_pad, geqrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklSgelsBatched(syclQueue_t device_queue, onemklTranspose trans,
+                                   int64_t m, int64_t n, int64_t nrhs, float *a,
+                                   int64_t lda, int64_t stride_a, float *b,
+                                   int64_t ldb, int64_t stride_b, int64_t batch_size) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto gels_scratchpad_size = oneapi::mkl::lapack::gels_batch_scratchpad_size<float>(device_queue->val, convert(trans), m, n,
+                                nrhs, lda, stride_a, ldb, stride_b, batch_size);
+    auto scratch_pad = (float *) malloc_device(gels_scratchpad_size * sizeof(float), device, context);
+    auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, a, lda, stride_a,
+                                                 b, ldb, stride_b, batch_size, scratch_pad, gels_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklDgelsBatched(syclQueue_t device_queue, onemklTranspose trans,
+                                   int64_t m, int64_t n, int64_t nrhs, double *a,
+                                   int64_t lda, int64_t stride_a, double *b,
+                                   int64_t ldb, int64_t stride_b, int64_t batch_size) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto gels_scratchpad_size = oneapi::mkl::lapack::gels_batch_scratchpad_size<double>(device_queue->val, convert(trans), m, n,
+                                nrhs, lda, stride_a, ldb, stride_b, batch_size);
+    auto scratch_pad = (double *) malloc_device(gels_scratchpad_size * sizeof(double), device, context);
+    auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, a, lda, stride_a,
+                                                 b, ldb, stride_b, batch_size, scratch_pad, gels_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklCgelsBatched(syclQueue_t device_queue, onemklTranspose trans,
+                                   int64_t m, int64_t n, int64_t nrhs, float _Complex *a,
+                                   int64_t lda, int64_t stride_a, float _Complex *b,
+                                   int64_t ldb, int64_t stride_b, int64_t batch_size) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto gels_scratchpad_size = oneapi::mkl::lapack::gels_batch_scratchpad_size<std::complex<float> >(device_queue->val, convert(trans), m, n,
+                                nrhs, lda, stride_a, ldb, stride_b, batch_size);
+    auto scratch_pad = (std::complex<float> *) malloc_device(gels_scratchpad_size * sizeof(std::complex<float>), device, context);
+    auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs,
+                                                  reinterpret_cast<std::complex<float> *>(a), lda, stride_a,
+                                                  reinterpret_cast<std::complex<float> *>(b), ldb, stride_b,
+                                                  batch_size, scratch_pad, gels_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklZgelsBatched(syclQueue_t device_queue, onemklTranspose trans,
+                                   int64_t m, int64_t n, int64_t nrhs, double _Complex *a,
+                                   int64_t lda, int64_t stride_a, double _Complex *b,
+                                   int64_t ldb, int64_t stride_b, int64_t batch_size) {
+    auto device = device_queue->val.get_device();
+    auto context = device_queue->val.get_context();
+    auto gels_scratchpad_size = oneapi::mkl::lapack::gels_batch_scratchpad_size<std::complex<double> >(device_queue->val, convert(trans), m, n,
+                                nrhs, lda, stride_a, ldb, stride_b, batch_size);
+    auto scratch_pad = (std::complex<double> *) malloc_device(gels_scratchpad_size * sizeof(std::complex<double>), device, context);
+    auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs,
+                                                  reinterpret_cast<std::complex<double> *>(a), lda, stride_a,
+                                                  reinterpret_cast<std::complex<double> *>(b), ldb, stride_b,
+                                                  batch_size, scratch_pad, gels_scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklSdgmmBatched(syclQueue_t device_queue, onemklSide left_right,
+                                   int64_t *m, int64_t *n, const float **a, int64_t *lda,
+                                   const float **x, int64_t *incx, float **c, int64_t *ldc,
+                                   int64_t group_count, int64_t *group_size) {
+    dgmmBatchInfo info(device_queue, group_count, left_right);
+    auto status = oneapi::mkl::blas::column_major::dgmm_batch(device_queue->val,
+                                 &info.m_left_right[0], m, n, (const float **)&a[0],
+                                 lda, (const float **)&x[0], incx, &c[0], ldc, group_count,
+                                 group_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklDdgmmBatched(syclQueue_t device_queue, onemklSide left_right,
+                                   int64_t *m, int64_t *n, const double **a, int64_t *lda,
+                                   const double **x, int64_t *incx, double **c, int64_t *ldc,
+                                   int64_t group_count, int64_t *group_size) {
+    dgmmBatchInfo info(device_queue, group_count, left_right);
+    auto status = oneapi::mkl::blas::column_major::dgmm_batch(device_queue->val,
+                                 &info.m_left_right[0], m, n, (const double **)&a[0],
+                                 lda, (const double **)&x[0], incx, &c[0], ldc, group_count,
+                                 group_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklCdgmmBatched(syclQueue_t device_queue, onemklSide left_right,
+                                   int64_t *m, int64_t *n, const float _Complex **a, int64_t *lda,
+                                   const float _Complex **x, int64_t *incx, float _Complex **c, int64_t *ldc,
+                                   int64_t group_count, int64_t *group_size) {
+    dgmmBatchInfo info(device_queue, group_count, left_right);
+    auto status = oneapi::mkl::blas::column_major::dgmm_batch(device_queue->val,
+                                 &info.m_left_right[0], m, n, reinterpret_cast<const std::complex<float> **>(&a[0]),
+                                 lda, reinterpret_cast<const std::complex<float> **>(&x[0]), incx,
+                                 reinterpret_cast<std::complex<float> **>(&c[0]), ldc, group_count,
+                                 group_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklZdgmmBatched(syclQueue_t device_queue, onemklSide left_right,
+                                   int64_t *m, int64_t *n, const double _Complex **a, int64_t *lda,
+                                   const double _Complex **x, int64_t *incx, double _Complex **c, int64_t *ldc,
+                                   int64_t group_count, int64_t *group_size) {
+    dgmmBatchInfo info(device_queue, group_count, left_right);
+    auto status = oneapi::mkl::blas::column_major::dgmm_batch(device_queue->val,
+                                 &info.m_left_right[0], m, n, reinterpret_cast<const std::complex<double> **>(&a[0]),
+                                 lda, reinterpret_cast<const std::complex<double> **>(&x[0]), incx,
+                                 reinterpret_cast<std::complex<double> **>(&c[0]), ldc, group_count,
+                                 group_size);
+    __FORCE_MKL_FLUSH__(status);
+}
+
+extern "C" void onemklSgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                             float *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<float>(device_queue->val,
+                            m, n, lda);
+
+    float *scratchpad_dev = (float *) malloc_device(scratchpad_size * sizeof(float),
+                                                device, context);
+    auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, a, lda, ipiv,
+                                            scratchpad_dev, scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+
+    free(scratchpad_dev, context);
+}
+
+extern "C" void onemklDgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                             double *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<double>(device_queue->val,
+                            m, n, lda);
+
+    double *scratchpad_dev = (double *) malloc_device(scratchpad_size * sizeof(double),
+                                                device, context);
+    auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, a, lda, ipiv,
+                                            scratchpad_dev, scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+
+    free(scratchpad_dev, context);
+}
+
+extern "C" void onemklCgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                             float _Complex *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<std::complex<float> >(device_queue->val,
+                            m, n, lda);
+
+    auto scratchpad_dev = (std::complex<float> *) malloc_device(scratchpad_size * sizeof(std::complex<float>),
+                                                device, context);
+    auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, reinterpret_cast<std::complex<float> *>(a),
+                                            lda, ipiv,
+                                            reinterpret_cast<std::complex<float> *>(scratchpad_dev),
+                                            scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+
+    free(scratchpad_dev, context);
+}
+
+extern "C" void onemklZgetrf(syclQueue_t device_queue, int64_t m, int64_t n,
+                             double _Complex *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<std::complex<double> >(device_queue->val,
+                            m, n, lda);
+
+    auto scratchpad_dev = (std::complex<double> *) malloc_device(scratchpad_size * sizeof(std::complex<double>),
+                                                device, context);
+    auto status = oneapi::mkl::lapack::getrf(device_queue->val, m, n, reinterpret_cast<std::complex<double> *>(a),
+                                            lda, ipiv,
+                                            reinterpret_cast<std::complex<double> *>(scratchpad_dev), scratchpad_size);
+    __FORCE_MKL_FLUSH__(status);
+
+    free(scratchpad_dev, context);
+}
+
+extern "C" void onemklSgetri(syclQueue_t device_queue, int64_t n, float *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t getri_scratchpad_size = oneapi::mkl::lapack::getri_scratchpad_size<float>(device_queue->val,
+                                                    n, lda);
+    int64_t getrf_scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<float>(device_queue->val,
+                                                    n, n, lda);
+    float *getrf_scratchpad_dev = (float *) malloc_device(getrf_scratchpad_size * sizeof(float),
+                                                device, context);
+    float *getri_scratchpad_dev = (float *) malloc_device(getri_scratchpad_size * sizeof(float),
+                                                device, context);
+    auto getrf_status = oneapi::mkl::lapack::getrf(device_queue->val, n, n, a, lda, ipiv, getrf_scratchpad_dev,
+                                              getrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getrf_status);
+    auto getri_status = oneapi::mkl::lapack::getri(device_queue->val, n, a, lda, ipiv, getri_scratchpad_dev,
+                                              getri_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getri_status);
+    free(getri_scratchpad_dev, context);
+}
+
+extern "C" void onemklDgetri(syclQueue_t device_queue, int64_t n, double *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t getri_scratchpad_size = oneapi::mkl::lapack::getri_scratchpad_size<float>(device_queue->val,
+                                                    n, lda);
+    int64_t getrf_scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<float>(device_queue->val,
+                                                    n, n, lda);
+    double *getrf_scratchpad_dev = (double *) malloc_device(getrf_scratchpad_size * sizeof(float),
+                                                device, context);
+    double *getri_scratchpad_dev = (double *) malloc_device(getri_scratchpad_size * sizeof(float),
+                                                device, context);
+    auto getrf_status = oneapi::mkl::lapack::getrf(device_queue->val, n, n, a, lda, ipiv, getrf_scratchpad_dev,
+                                              getrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getrf_status);
+    auto getri_status = oneapi::mkl::lapack::getri(device_queue->val, n, a, lda, ipiv, getri_scratchpad_dev,
+                                              getri_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getri_status);
+    free(getri_scratchpad_dev, context);
+}
+
+extern "C" void onemklCgetri(syclQueue_t device_queue, int64_t n, float _Complex *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t getri_scratchpad_size = oneapi::mkl::lapack::getri_scratchpad_size<std::complex<float> >(device_queue->val,
+                                                    n, lda);
+    int64_t getrf_scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<std::complex<float> >(device_queue->val,
+                                                    n, n, lda);
+    auto getrf_scratchpad_dev = (std::complex<float> *) malloc_device(getrf_scratchpad_size * sizeof(std::complex<float>),
+                                                device, context);
+    auto getri_scratchpad_dev = (std::complex<float> *) malloc_device(getri_scratchpad_size * sizeof(std::complex<float>),
+                                                device, context);
+    auto getrf_status = oneapi::mkl::lapack::getrf(device_queue->val, n, n, reinterpret_cast<std::complex<float> *>(a),
+                                            lda, ipiv, getrf_scratchpad_dev, getrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getrf_status);
+    auto getri_status = oneapi::mkl::lapack::getri(device_queue->val, n, reinterpret_cast<std::complex<float> *>(a),
+                                            lda, ipiv, getri_scratchpad_dev, getri_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getri_status);
+    free(getri_scratchpad_dev, context);
+}
+
+extern "C" void onemklZgetri(syclQueue_t device_queue, int64_t n, double _Complex *a, int64_t lda, int64_t *ipiv) {
+    auto main_queue = device_queue->val;
+    auto device = main_queue.get_device();
+    auto context = main_queue.get_context();
+    int64_t getri_scratchpad_size = oneapi::mkl::lapack::getri_scratchpad_size<std::complex<double> >(device_queue->val,
+                                                    n, lda);
+    int64_t getrf_scratchpad_size = oneapi::mkl::lapack::getrf_scratchpad_size<std::complex<double> >(device_queue->val,
+                                                    n, n, lda);
+    auto getrf_scratchpad_dev = (std::complex<double> *) malloc_device(getrf_scratchpad_size * sizeof(std::complex<double>),
+                                                device, context);
+    auto getri_scratchpad_dev = (std::complex<double> *) malloc_device(getri_scratchpad_size * sizeof(std::complex<double>),
+                                                device, context);
+    auto getrf_status = oneapi::mkl::lapack::getrf(device_queue->val, n, n, reinterpret_cast<std::complex<double> *>(a),
+                                            lda, ipiv, getrf_scratchpad_dev, getrf_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getrf_status);
+    auto getri_status = oneapi::mkl::lapack::getri(device_queue->val, n, reinterpret_cast<std::complex<double> *>(a),
+                                            lda, ipiv, getri_scratchpad_dev, getri_scratchpad_size);
+    __FORCE_MKL_FLUSH__(getri_status);
+    free(getri_scratchpad_dev, context);
+}
 
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
