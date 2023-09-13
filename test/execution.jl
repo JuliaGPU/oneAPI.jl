@@ -75,8 +75,8 @@ end
     # make sure invalid kernels can be partially reflected upon
     let
         invalid_kernel() = throw()
-        @test_throws oneAPI.KernelError @oneapi invalid_kernel()
-        @test_throws oneAPI.KernelError @grab_output @device_code_warntype @oneapi invalid_kernel()
+        @test_throws oneAPI.InvalidIRError @oneapi invalid_kernel()
+        @test_throws oneAPI.InvalidIRError @grab_output @device_code_warntype @oneapi invalid_kernel()
         out, err = @grab_output begin
             try
                 @device_code_warntype @oneapi invalid_kernel()

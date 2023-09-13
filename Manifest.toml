@@ -2,7 +2,7 @@
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "c2f50cf42770de6ef32bf0ade955b592c49b8da5"
+project_hash = "1b73c54f3283b6478f76cd52666de5916836a9a0"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -91,9 +91,9 @@ version = "0.1.5"
 
 [[deps.GPUCompiler]]
 deps = ["ExprTools", "InteractiveUtils", "LLVM", "Libdl", "Logging", "Scratch", "TimerOutputs", "UUIDs"]
-git-tree-sha1 = "8573c39f9c4e99720ab5ea44104efb3ed07a58b0"
+git-tree-sha1 = "e5e0f07db5c325860b21cadeb6e4271b0ff364c5"
 uuid = "61eb1bfa-7361-4325-ad38-22787b887f55"
-version = "0.23.0"
+version = "0.24.1"
 
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
