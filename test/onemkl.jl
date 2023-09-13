@@ -15,7 +15,7 @@ k = 13
             B = oneArray{T}(undef, m)
             oneMKL.copy!(m,A,B)
             @test Array(A) == Array(B)
-        end 
+        end
 
         @testset "axpy" begin
             alpha = rand(T)
@@ -43,7 +43,7 @@ k = 13
             alpha = rand(T,1)
             @test testf(rmul!, rand(T,m), alpha[1])
 
-            # Test scal primitive [alpha - F32, F64, x - CF32, CF64] 
+            # Test scal primitive [alpha - F32, F64, x - CF32, CF64]
             A = rand(T,m)
             gpuA = oneArray(A)
             if T === ComplexF32
@@ -56,7 +56,7 @@ k = 13
                 alphaf64 = rand(Float64, 1)
                 oneMKL.scal!(m, alphaf64[1], gpuA)
                 @test Array(A .* alphaf64[1]) ≈ Array(gpuA)
-            end	    
+            end
         end
 
         @testset "nrm2" begin
@@ -83,7 +83,7 @@ k = 13
         @testset "dot" begin
             @test testf(dot, rand(T,m), rand(T,m))
             if T == ComplexF32 || T == ComplexF64
-                @test testf(oneMKL.dotu, m, 
+                @test testf(oneMKL.dotu, m,
                             oneArray(rand(T,m)),
                             oneArray(rand(T,m)))
             end
@@ -167,11 +167,13 @@ end
             d_Ab = oneArray(Ab)
             x = rand(T, n)
             d_x = oneArray(x)
+            synchronize()
 
             @testset "gbmv!" begin
                 # Test: y = alpha * A * x + beta * y
                 y = rand(T, m)
                 d_y = oneArray(y)
+                synchronize()
                 oneMKL.gbmv!('N', m, kl, ku, alpha, d_Ab, d_x, beta, d_y)
                 BLAS.gbmv!('N', m, kl, ku, alpha, Ab, x, beta, y)
                 h_y = Array(d_y)
@@ -182,6 +184,7 @@ end
                 d_x = oneArray(x)
                 y = rand(T,m)
                 d_y = oneArray(y)
+                synchronize()
                 oneMKL.gbmv!('T', m, kl, ku, alpha, d_Ab, d_y, beta, d_x)
                 BLAS.gbmv!('T', m, kl, ku, alpha, Ab, y, beta, x)
                 h_x = Array(d_x)
@@ -192,6 +195,7 @@ end
                 d_x = oneArray(x)
                 y = rand(T,m)
                 d_y = oneArray(y)
+                synchronize()
                 oneMKL.gbmv!('C', m, kl, ku, alpha, d_Ab, d_y, beta, d_x)
                 BLAS.gbmv!('C', m, kl, ku, alpha, Ab, y, beta, x)
                 h_x = Array(d_x)
@@ -291,7 +295,7 @@ end
                 h_y = Array(d_y)
                 @test y ≈ h_y
             end
-            
+
         end
 
         @testset "ger!" begin
@@ -331,7 +335,7 @@ end
                 sA = rand(T,m,m)
                 sA = sA + transpose(sA)
                 A = triu(sA)
-                dA = oneArray(A) 
+                dA = oneArray(A)
                 x = rand(T, m)
                 dx = oneArray(x)
                 d_y = copy(dx)
@@ -346,7 +350,7 @@ end
                 sA = rand(T,m,m)
                 sA = sA + transpose(sA)
                 A = triu(sA)
-                dA = oneArray(A) 
+                dA = oneArray(A)
                 x = rand(T, m)
                 dx = oneArray(x)
                 d_y = copy(dx)
@@ -362,7 +366,7 @@ end
                 sA = rand(T,m,m)
                 sA = sA + transpose(sA)
                 A = triu(sA)
-                dA = oneArray(A) 
+                dA = oneArray(A)
                 x = rand(T, m)
                 dx = oneArray(x)
                 d_y = oneMKL.trsv('U','N','N',dA,dx)
@@ -376,7 +380,7 @@ end
                 sA = rand(T,m,m)
                 sA = sA + transpose(sA)
                 A = triu(sA)
-                dA = oneArray(A) 
+                dA = oneArray(A)
                 x = rand(T, m)
                 dx = oneArray(x)
                 d_y = oneMKL.trsv('U','C','N',dA,dx)
@@ -390,7 +394,7 @@ end
                 sA = rand(T,m,m)
                 sA = sA + transpose(sA)
                 A = triu(sA)
-                dA = oneArray(A) 
+                dA = oneArray(A)
                 x = rand(T, m)
                 dx = oneArray(x)
                 d_y = oneMKL.trsv('U','T','N',dA,dx)
@@ -418,6 +422,7 @@ end
             dx = oneArray(x)
             y = rand(T,m)
             dy = oneArray(y)
+            synchronize()
 
             # execute on host
             BLAS.hemv!('U',alpha,hA,x,beta,y)
@@ -442,6 +447,7 @@ end
             dx = oneArray(x)
             y = rand(T,m)
             dy = oneArray(y)
+            synchronize()
 
             y = BLAS.hemv('U',hA,x)
             # execute on device
@@ -518,11 +524,14 @@ end
                 sA = sA + transpose(sA)
                 dsA = oneArray(sA)
                 dx = oneArray(x)
+                synchronize()
+
                 @testset "symv!" begin
                     # generate vectors
                     y = rand(T,m)
                     # copy to device
                     dy = oneArray(y)
+                    synchronize()
                     # execute on host
                     BLAS.symv!('U',alpha,sA,x,beta,y)
                     # execute on device
@@ -531,7 +540,7 @@ end
                     hy = Array(dy)
                     @test y ≈ hy
                 end
-    
+
                 @testset "symv" begin
                     y = BLAS.symv('U',sA,x)
                     # execute on device
@@ -541,7 +550,7 @@ end
                     @test y ≈ hy
                 end
             end
-    
+
             @testset "syr!" begin
                 x = rand(T,m)
                 sA = rand(T, m, m)
@@ -781,7 +790,7 @@ end
                 h_C = triu(C)
                 @test C ≈ h_C
             end
-    
+
             @testset "herk" begin
                 B = rand(T,m,n)
                 C = rand(T,m,n)
@@ -828,7 +837,7 @@ end
                 @test C ≈ h_C
                 @test_throws DimensionMismatch oneMKL.her2k!('U','N',α,d_A,d_Bbad,β,d_C)
             end
-    
+
             @testset "her2k" begin
                 A = rand(T,m,k)
                 B = rand(T,m,k)
@@ -896,7 +905,7 @@ end
 
 @testset "Batch Primitives" begin
     @testset for T in intersect(eltypes, [Float16, Float32, Float64, ComplexF32, ComplexF64])
-        alpha = rand(T)  
+        alpha = rand(T)
         beta = rand(T)
         group_count = 10
         @testset "Gemm Batch" begin
@@ -1020,7 +1029,7 @@ end
             end
             h_C = Array(bd_C)
             @test bC ≈ h_C
-            
+
             @test_throws DimensionMismatch oneMKL.gemm_strided_batched!('N', 'N', alpha, bd_A, bd_B, beta, bd_bad)
         end
 
@@ -1037,7 +1046,7 @@ end
             bd_bad = oneArray{elty, 3}(bbad)
             # Compute oneMKL strided batch
             bd_C = oneMKL.gemm_strided_batched('N', 'N', bd_A, bd_B)
-            #Compute Host 
+            #Compute Host
             for i in 1:nbatch
                 bC[:, :, i] = bA[:, :, i] * bB[:, :, i]
             end
