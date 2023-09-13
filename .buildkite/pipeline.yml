@@ -32,9 +32,6 @@ steps:
             - with:
                 julia: "nightly"
               soft_fail: true
-            - with:
-                julia: "1.10-nightly"
-              soft_fail: true
 
   # Special tests
   - group: ":eyes: Special"
