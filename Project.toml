@@ -26,7 +26,7 @@ oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
 
 [compat]
 Adapt = "2.0, 3.0"
-CEnum = "0.4"
+CEnum = "0.4, 0.5"
 ExprTools = "0.1"
 GPUArrays = "9"
 GPUCompiler = "0.23, 0.24, 0.25"
