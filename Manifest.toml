@@ -33,9 +33,9 @@ version = "0.4.2"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "b66b8f8e3db5d7835fb8cbe2589ffd1cd456e491"
+git-tree-sha1 = "e0af648f0692ec1691b5d094b8724ba1346281cf"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.17.0"
+version = "1.18.0"
 
 [[deps.ChangesOfVariables]]
 deps = ["InverseFunctions", "LinearAlgebra", "Test"]
@@ -194,9 +194,9 @@ version = "2022.2.1"
 
 [[deps.NEO_jll]]
 deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML", "gmmlib_jll", "libigc_jll", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "9846d87fd254cdaa1879dff93999e1bc32ed2658"
+git-tree-sha1 = "908ae2461edb0392765d4fe1fcd5187c1ba939f6"
 uuid = "700fe977-ac61-5f37-bbc8-c6c4b2b6a9fd"
-version = "23.17.26241+0"
+version = "23.17.26241+2"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -367,9 +367,9 @@ version = "5.1.1+0"
 
 [[deps.libigc_jll]]
 deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
-git-tree-sha1 = "7c0b5fa2ff90d96af106fd4a67ff6923cd3f9cb9"
+git-tree-sha1 = "378568b0d0a790071752def606c6fe80f98220b0"
 uuid = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-version = "1.0.13822+0"
+version = "1.0.13822+1"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -378,15 +378,15 @@ version = "1.48.0+0"
 
 [[deps.oneAPI_Level_Zero_Headers_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "412efcf5d55c65d3352c3915cffec1e53955570f"
+git-tree-sha1 = "429b0c153eae51a6b3bc6b2d494d1d0b24e13b17"
 uuid = "f4bc562b-d309-54f8-9efb-476e56f0410d"
-version = "1.6.3+0"
+version = "1.7.0+0"
 
 [[deps.oneAPI_Level_Zero_Loader_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "oneAPI_Level_Zero_Headers_jll"]
-git-tree-sha1 = "87980483b19f0a00c8d62e8b6682acac1894c638"
+git-tree-sha1 = "b2409313ea22a7e6f0de48c498dac8de3adb034f"
 uuid = "13eca655-d68d-5b81-8367-6d99d727ab01"
-version = "1.11.0+0"
+version = "1.13.1+0"
 
 [[deps.oneAPI_Support_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "oneAPI_Level_Zero_Loader_jll"]
