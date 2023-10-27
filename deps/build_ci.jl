@@ -17,6 +17,7 @@ if isdir(joinpath(@__DIR__), "..", ".git")
 
     # find out which version of oneAPI_Support_jll we are using
     Pkg.activate(joinpath(@__DIR__, ".."))
+    Pkg.instantiate()
     deps = collect(values(Pkg.dependencies()))
     filter!(deps) do dep
         dep.name == "oneAPI_Support_jll"
