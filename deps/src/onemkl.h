@@ -30,11 +30,35 @@ typedef enum {
     ONEMKL_SIDE_RIGHT
 } onemklSide;
 
+typedef enum {
+    ONEMKL_JOB_N,
+    ONEMKL_JOB_V,
+    ONEMKL_JOB_U,
+    ONEMKL_JOB_A,
+    ONEMKL_JOB_S,
+    ONEMKL_JOB_O
+} onemklJob;
+
+typedef enum {
+    ONEMKL_JOBSVD_N,
+    ONEMKL_JOBSVD_A,
+    ONEMKL_JOBSVD_O,
+    ONEMKL_JOBSVD_S
+} onemklJobsvd;
+
+typedef enum {
+    ONEMKL_GENERATE_Q,
+    ONEMKL_GENERATE_P,
+    ONEMKL_GENERATE_N,
+    ONEMKL_GENERATE_V
+} onemklGenerate;
+
 // XXX: how to expose half in C?
 // int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
-//                onemklTranspose transB, int64_t m, int64_t n, int64_t k,
-//                half alpha, const half *A, int64_t lda, const half *B,
-//                int64_t ldb, half beta, half *C, int64_t ldc);
+//                 onemklTranspose transB, int64_t m, int64_t n, int64_t k,
+//                 half alpha, const half *A, int64_t lda, const half *B,
+//                 int64_t ldb, half beta, half *C, int64_t ldc);
+
 int onemklSgemm(syclQueue_t device_queue, onemklTranspose transA,
                 onemklTranspose transB, int64_t m, int64_t n, int64_t k,
                 float alpha, const float *A, int64_t lda, const float *B,

@@ -53,6 +53,49 @@ oneapi::mkl::side convert(onemklSide val) {
     }
 }
 
+oneapi::mkl::job convert(onemklJob val) {
+    switch (val) {
+    case ONEMKL_JOB_N:
+        return oneapi::mkl::job::N;
+    case ONEMKL_JOB_V:
+        return oneapi::mkl::job::V;
+    case ONEMKL_JOB_U:
+        return oneapi::mkl::job::U;
+    case ONEMKL_JOB_A:
+        return oneapi::mkl::job::A;
+    case ONEMKL_JOB_S:
+        return oneapi::mkl::job::S;
+    case ONEMKL_JOB_O:
+        return oneapi::mkl::job::O;
+    }
+}
+
+oneapi::mkl::jobsvd convert(onemklJobsvd val) {
+    switch (val) {
+    case ONEMKL_JOBSVD_N:
+        return oneapi::mkl::jobsvd::N;
+    case ONEMKL_JOBSVD_A:
+        return oneapi::mkl::jobsvd::A;
+    case ONEMKL_JOBSVD_O:
+        return oneapi::mkl::jobsvd::O;
+    case ONEMKL_JOBSVD_S:
+        return oneapi::mkl::jobsvd::S;
+    }
+}
+
+oneapi::mkl::generate convert(onemklGenerate val) {
+    switch (val) {
+    case ONEMKL_GENERATE_Q:
+        return oneapi::mkl::generate::Q;
+    case ONEMKL_GENERATE_P:
+        return oneapi::mkl::generate::P;
+    case ONEMKL_GENERATE_N:
+        return oneapi::mkl::generate::N;
+    case ONEMKL_GENERATE_V:
+        return oneapi::mkl::generate::V;
+    }
+}
+
 class gemmBatchInfo {
     public:
         oneapi::mkl::transpose *m_transa = nullptr;
@@ -156,7 +199,6 @@ class trsmBatchInfo {
             free(m_leftright, m_context);
         }
 };
-
 
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
@@ -912,7 +954,7 @@ extern "C" void onemklZasum(syclQueue_t device_queue, int64_t n,
 }
 
 extern "C" void onemklHaxpy(syclQueue_t device_queue, int64_t n, uint16_t alpha,
-                            const short *x, std::int64_t incx, short *y, int64_t incy) {
+                            const short *x, int64_t incx, short *y, int64_t incy) {
     auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n,
                                         sycl::bit_cast<sycl::half>(alpha),
                                         reinterpret_cast<const sycl::half *>(x),
@@ -921,21 +963,21 @@ extern "C" void onemklHaxpy(syclQueue_t device_queue, int64_t n, uint16_t alpha,
 }
 
 extern "C" void onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha,
-                            const float *x, std::int64_t incx, float *y, int64_t incy) {
+                            const float *x, int64_t incx, float *y, int64_t incy) {
     auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x,
                                                 incx, y, incy);
     __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklDaxpy(syclQueue_t device_queue, int64_t n, double alpha,
-                            const double *x, std::int64_t incx, double *y, int64_t incy) {
+                            const double *x, int64_t incx, double *y, int64_t incy) {
     auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, alpha, x,
                                                 incx, y, incy);
     __FORCE_MKL_FLUSH__(status);
 }
 
 extern "C" void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex alpha,
-                            const float _Complex *x, std::int64_t incx, float _Complex *y, int64_t incy) {
+                            const float _Complex *x, int64_t incx, float _Complex *y, int64_t incy) {
     auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, static_cast<std::complex<float> >(alpha),
                             reinterpret_cast<const std::complex<float> *>(x), incx,
                             reinterpret_cast<std::complex<float> *>(y), incy);
@@ -943,7 +985,7 @@ extern "C" void onemklCaxpy(syclQueue_t device_queue, int64_t n, float _Complex 
 }
 
 extern "C" void onemklZaxpy(syclQueue_t device_queue, int64_t n, double _Complex alpha,
-                            const double _Complex *x, std::int64_t incx, double _Complex *y, int64_t incy) {
+                            const double _Complex *x, int64_t incx, double _Complex *y, int64_t incy) {
     auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n, static_cast<std::complex<double> >(alpha),
                             reinterpret_cast<const std::complex<double> *>(x), incx,
                             reinterpret_cast<std::complex<double> *>(y), incy);
