@@ -53,6 +53,35 @@ oneapi::mkl::side convert(onemklSide val) {
     }
 }
 
+oneapi::mkl::offset convert(onemklOffset val) {
+    switch (val) {
+    case ONEMKL_OFFSET_ROW:
+        return oneapi::mkl::offset::row;
+    case ONEMKL_OFFSET_COL:
+        return oneapi::mkl::offset::column;
+    case ONEMKL_OFFSET_FIX:
+        return oneapi::mkl::offset::fix;
+    }
+}
+
+oneapi::mkl::layout convert(onemklLayout val) {
+    switch (val) {
+    case ONEMKL_LAYOUT_ROW:
+        return oneapi::mkl::layout::row_major;
+    case ONEMKL_LAYOUT_COL:
+        return oneapi::mkl::layout::col_major;
+    }
+}
+
+oneapi::mkl::index_base convert(onemklIndex val) {
+    switch (val) {
+    case ONEMKL_INDEX_ZERO:
+        return oneapi::mkl::index_base::zero;
+    case ONEMKL_INDEX_ONE:
+        return oneapi::mkl::index_base::one;
+    }
+}
+
 oneapi::mkl::job convert(onemklJob val) {
     switch (val) {
     case ONEMKL_JOB_N:
@@ -1582,6 +1611,8 @@ extern "C" void onemklZswap(syclQueue_t device_queue, int64_t n, double _Complex
                             reinterpret_cast<std::complex<double> *>(y), incy);
     __FORCE_MKL_FLUSH__(status);
 }
+
+// LAPACK
 
 // other
 
