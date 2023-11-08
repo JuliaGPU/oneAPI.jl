@@ -29,6 +29,7 @@ function generate_headers(filename::String, output::String)
     template = occursin("template", header)
     !occursin("ONEMKL_EXPORT", header) && (header = "")
     occursin("sycl::event", header) && (header = "")
+    occursin("group_sizes", header) && occursin("group_count", header) && (header = "")
     header = replace(header, "ONEMKL_EXPORT " => "")
 
     header = replace(header, "sycl::queue &queue" => "syclQueue_t device_queue")
@@ -59,6 +60,7 @@ function generate_headers(filename::String, output::String)
       header = replace(header, "  " => " ")
     end
     header = replace(header, "( " => "(")
+    header = replace(header, ", )" => ")")
 
     if header ≠ ""
       ind1 = findfirst(' ', header)
@@ -75,7 +77,14 @@ function generate_headers(filename::String, output::String)
       version = occursin("double", header) ? 'D' : version
       version = occursin("float _Complex", header) ? 'C' : version
       version = occursin("double _Complex", header) ? 'Z' : version
-      version = version == 'X' ? dict_version[routines[name_routine]] : version
+      if version == 'X'
+        if startswith(name_routine, "un") || startswith(name_routine, "he")
+          # Routines with complex versions only
+          version = dict_version[routines[name_routine] + 2]
+        else
+          version = dict_version[routines[name_routine]]
+        end
+      end
 
       header = replace(header, name_routine => "onemkl$(version)$(name_routine)")
       push!(signatures, (header, name_routine, version, template))
@@ -90,8 +99,25 @@ function generate_headers(filename::String, output::String)
   path_oneapi_headers = joinpath(@__DIR__, output)
   oneapi_headers = open(path_oneapi_headers, "w")
   for (header, name_routine, version) in signatures
-    write(oneapi_headers, header)
-    write(oneapi_headers, ";\n")
+    pos = findfirst('(', header) + 1
+    fun = split(header, " ")
+    len = 0
+    for (i, part) in enumerate(fun)
+      len += length(part)
+      if len ≤ 90
+        (i ≠ 1) && write(oneapi_headers, " ")
+        write(oneapi_headers, part)
+      else
+        write(oneapi_headers, "\n")
+        for i = 1:pos
+          write(oneapi_headers, " ")
+        end
+        write(oneapi_headers, part)
+        len = pos + length(part)
+      end
+    end
+    # write(oneapi_headers, header)
+    write(oneapi_headers, ";\n\n")
   end
   close(oneapi_headers)
   return signatures
@@ -117,10 +143,19 @@ function generate_cpp(library::String, filename::String, output::String)
     pararameters = replace(pararameters, "onemklTranspose trans" => "convert(trans)")
     pararameters = replace(pararameters, "onemklUplo uplo" => "convert(uplo)")
     pararameters = replace(pararameters, "onemklDiag diag" => "convert(diag)")
+    pararameters = replace(pararameters, "onemklSide side" => "convert(side)")
+    pararameters = replace(pararameters, "onemklGenerate vect" => "convert(vect)")
+    pararameters = replace(pararameters, "onemklGenerate vec" => "convert(vec)")
+    pararameters = replace(pararameters, "onemklJob jobz" => "convert(jobz)")
+    pararameters = replace(pararameters, "onemklJobsvd jobu" => "convert(jobu)")
+    pararameters = replace(pararameters, "onemklJobsvd jobvt" => "convert(jobvt)")
 
     # TO DO: use a regex
     pararameters = replace(pararameters, ">a," => ">(a),")
     pararameters = replace(pararameters, ">b," => ">(b),")
+    pararameters = replace(pararameters, ">c," => ">(c),")
+    pararameters = replace(pararameters, ">u," => ">(u),")
+    pararameters = replace(pararameters, ">vt," => ">(vt),")
     pararameters = replace(pararameters, ">taup," => ">(taup),")
     pararameters = replace(pararameters, ">tauq," => ">(tauq),")
     pararameters = replace(pararameters, ">tau," => ">(tau),")
@@ -135,7 +170,7 @@ function generate_cpp(library::String, filename::String, output::String)
       write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$name($pararameters);\n")
     end
     !occursin("scratchpad_size", name) && write(oneapi_cpp, "   __FORCE_MKL_FLUSH__(status);\n")
-    occursin("scratchpad_size", name) && write(oneapi_cpp, "   __FORCE_MKL_FLUSH__(scratchpad_size);\n")
+    occursin("scratchpad_size", name) && write(oneapi_cpp, "   return scratchpad_size;\n")
     write(oneapi_cpp, "}")
     write(oneapi_cpp, "\n\n")
   end
