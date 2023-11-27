@@ -29,7 +29,7 @@ function generate_headers(library::String, filename::String, output::String)
 
   # Remove comments
   for header in split(cpp_headers, '\n')
-    mapreduce(x -> !startswith(header, x), &, ["/*", "*", "//", "[[deprecated", "#undef", "#define", "ONEMKL_DECLARE_BUF_"]) && (headers *= header)
+    mapreduce(x -> !startswith(header, x) && !occursin("\"", header), &, ["/*", "*", "//", "[[deprecated", "#undef", "#define", "ONEMKL_DECLARE_BUF_"]) && (headers *= header)
   end
 
   # Analyse each header
@@ -48,6 +48,8 @@ function generate_headers(library::String, filename::String, output::String)
     occursin("gemm_bias", header) && continue  # BLAS routine
     occursin("heevx", header) && continue  # LAPACK routine
     occursin("hegvx", header) && continue  # LAPACK routine
+    occursin("(matrix_handle_t handle", header) && continue  # SPARSE routine
+    occursin("gemvdot", header) && continue  # SPARSE routine
     occursin("matmat", header) && continue  # SPARSE routine
 
     # Check if the routine is a template
@@ -226,6 +228,10 @@ function generate_headers(library::String, filename::String, output::String)
       end
     else
       if isempty(list_versions)
+        if name_routine == "set_csr_data"
+          occursin("int32_t", header) && (version = "I" * version)
+          occursin("int64_t", header) && (version = "L" * version)
+        end
         header = replace(header, name_routine => "onemkl$(version)$(name_routine)")
         header = replace(header, "void onemkl" => "int onemkl")
         if library == "sparse"
@@ -369,7 +375,7 @@ end
 
 generate_headers("lapack", lapack, "onemkl_lapack.h")
 generate_headers("blas", blas, "onemkl_blas.h")
-# generate_headers("sparse", sparse, "onemkl_sparse.h")
+generate_headers("sparse", sparse, "onemkl_sparse.h")
 
 io = open("src/onemkl.h", "w")
 headers_prologue = read("onemkl_prologue.h", String)
@@ -380,16 +386,16 @@ write(io, headers_blas)
 headers_lapack = read("onemkl_lapack.h", String)
 write(io, "// LAPACK\n")
 write(io, headers_lapack)
-# headers_sparse = read("onemkl_sparse.h", String)
-# write(io, "// SPARSE\n")
-# write(io, headers_sparse)
+headers_sparse = read("onemkl_sparse.h", String)
+write(io, "// SPARSE\n")
+write(io, headers_sparse)
 headers_epilogue = read("onemkl_epilogue.h", String)
 write(io, headers_epilogue)
 close(io)
 
 generate_cpp("lapack", lapack, "onemkl_lapack.cpp")
 generate_cpp("blas", blas, "onemkl_blas.cpp")
-# generate_cpp("sparse", sparse, "onemkl_sparse.cpp")
+generate_cpp("sparse", sparse, "onemkl_sparse.cpp")
 
 io = open("src/onemkl.cpp", "w")
 cpp_prologue = read("onemkl_prologue.cpp", String)
@@ -400,9 +406,9 @@ write(io, cpp_blas)
 cpp_lapack = read("onemkl_lapack.cpp", String)
 write(io, "// LAPACK\n")
 write(io, cpp_lapack)
-# cpp_sparse = read("onemkl_sparse.cpp", String)
-# write(io, "// SPARSE\n")
-# write(io, cpp_sparse)
+cpp_sparse = read("onemkl_sparse.cpp", String)
+write(io, "// SPARSE\n")
+write(io, cpp_sparse)
 cpp_epilogue = read("onemkl_epilogue.cpp", String)
 write(io, cpp_epilogue)
 close(io)

@@ -104,8 +104,8 @@ typedef enum {
     ONEMKL_PROPERTY_SORTED,
 } onemklProperty;
 
+// I need help :(
 typedef struct MatrixHandle_st *MatrixHandle_t;
-typedef struct MatmatDescr_st *MatmatDescr_t;
 
 int onemklHgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
                        onemklTranspose transb, int64_t *m,
