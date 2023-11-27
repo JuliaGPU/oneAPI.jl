@@ -172,6 +172,248 @@ mutable struct MatmatDescr_st end
 
 const MatmatDescr_t = Ptr{MatmatDescr_st}
 
+function onemklHgemmBatched(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
+                            beta, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklHgemmBatched(device_queue::syclQueue_t,
+                                                transa::onemklTranspose,
+                                                transb::onemklTranspose, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, k::ZePtr{Int64},
+                                                alpha::ZePtr{Float16},
+                                                a::ZePtr{Ptr{Float16}}, lda::ZePtr{Int64},
+                                                b::ZePtr{Ptr{Float16}}, ldb::ZePtr{Int64},
+                                                beta::ZePtr{Float16},
+                                                c::ZePtr{Ptr{Float16}}, ldc::ZePtr{Int64},
+                                                group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklSgemmBatched(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
+                            beta, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklSgemmBatched(device_queue::syclQueue_t,
+                                                transa::onemklTranspose,
+                                                transb::onemklTranspose, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, k::ZePtr{Int64},
+                                                alpha::ZePtr{Cfloat}, a::ZePtr{Ptr{Cfloat}},
+                                                lda::ZePtr{Int64}, b::ZePtr{Ptr{Cfloat}},
+                                                ldb::ZePtr{Int64}, beta::ZePtr{Cfloat},
+                                                c::ZePtr{Ptr{Cfloat}}, ldc::ZePtr{Int64},
+                                                group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklDgemmBatched(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
+                            beta, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklDgemmBatched(device_queue::syclQueue_t,
+                                                transa::onemklTranspose,
+                                                transb::onemklTranspose, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, k::ZePtr{Int64},
+                                                alpha::ZePtr{Cdouble},
+                                                a::ZePtr{Ptr{Cdouble}}, lda::ZePtr{Int64},
+                                                b::ZePtr{Ptr{Cdouble}}, ldb::ZePtr{Int64},
+                                                beta::ZePtr{Cdouble},
+                                                c::ZePtr{Ptr{Cdouble}}, ldc::ZePtr{Int64},
+                                                group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklCgemmBatched(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
+                            beta, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklCgemmBatched(device_queue::syclQueue_t,
+                                                transa::onemklTranspose,
+                                                transb::onemklTranspose, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, k::ZePtr{Int64},
+                                                alpha::ZePtr{ComplexF32},
+                                                a::ZePtr{Ptr{ComplexF32}},
+                                                lda::ZePtr{Int64},
+                                                b::ZePtr{Ptr{ComplexF32}},
+                                                ldb::ZePtr{Int64}, beta::ZePtr{ComplexF32},
+                                                c::ZePtr{Ptr{ComplexF32}},
+                                                ldc::ZePtr{Int64}, group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklZgemmBatched(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
+                            beta, c, ldc, group_count, group_size)
+    @ccall liboneapi_support.onemklZgemmBatched(device_queue::syclQueue_t,
+                                                transa::onemklTranspose,
+                                                transb::onemklTranspose, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, k::ZePtr{Int64},
+                                                alpha::ZePtr{ComplexF64},
+                                                a::ZePtr{Ptr{ComplexF64}},
+                                                lda::ZePtr{Int64},
+                                                b::ZePtr{Ptr{ComplexF64}},
+                                                ldb::ZePtr{Int64}, beta::ZePtr{ComplexF64},
+                                                c::ZePtr{Ptr{ComplexF64}},
+                                                ldc::ZePtr{Int64}, group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklStrsmBatched(device_queue, left_right, upper_lower, transa, unit_diag, m, n,
+                            alpha, a, lda, b, ldb, group_count, group_size)
+    @ccall liboneapi_support.onemklStrsmBatched(device_queue::syclQueue_t,
+                                                left_right::onemklSide,
+                                                upper_lower::onemklUplo,
+                                                transa::onemklTranspose,
+                                                unit_diag::onemklDiag, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, alpha::ZePtr{Cfloat},
+                                                a::ZePtr{Ptr{Cfloat}}, lda::ZePtr{Int64},
+                                                b::ZePtr{Ptr{Cfloat}}, ldb::ZePtr{Int64},
+                                                group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklDtrsmBatched(device_queue, left_right, upper_lower, transa, unit_diag, m, n,
+                            alpha, a, lda, b, ldb, group_count, group_size)
+    @ccall liboneapi_support.onemklDtrsmBatched(device_queue::syclQueue_t,
+                                                left_right::onemklSide,
+                                                upper_lower::onemklUplo,
+                                                transa::onemklTranspose,
+                                                unit_diag::onemklDiag, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, alpha::ZePtr{Cdouble},
+                                                a::ZePtr{Ptr{Cdouble}}, lda::ZePtr{Int64},
+                                                b::ZePtr{Ptr{Cdouble}}, ldb::ZePtr{Int64},
+                                                group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklCtrsmBatched(device_queue, left_right, upper_lower, transa, unit_diag, m, n,
+                            alpha, a, lda, b, ldb, group_count, group_size)
+    @ccall liboneapi_support.onemklCtrsmBatched(device_queue::syclQueue_t,
+                                                left_right::onemklSide,
+                                                upper_lower::onemklUplo,
+                                                transa::onemklTranspose,
+                                                unit_diag::onemklDiag, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, alpha::ZePtr{ComplexF32},
+                                                a::ZePtr{Ptr{ComplexF32}},
+                                                lda::ZePtr{Int64},
+                                                b::ZePtr{Ptr{ComplexF32}},
+                                                ldb::ZePtr{Int64}, group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklZtrsmBatched(device_queue, left_right, upper_lower, transa, unit_diag, m, n,
+                            alpha, a, lda, b, ldb, group_count, group_size)
+    @ccall liboneapi_support.onemklZtrsmBatched(device_queue::syclQueue_t,
+                                                left_right::onemklSide,
+                                                upper_lower::onemklUplo,
+                                                transa::onemklTranspose,
+                                                unit_diag::onemklDiag, m::ZePtr{Int64},
+                                                n::ZePtr{Int64}, alpha::ZePtr{ComplexF64},
+                                                a::ZePtr{Ptr{ComplexF64}},
+                                                lda::ZePtr{Int64},
+                                                b::ZePtr{Ptr{ComplexF64}},
+                                                ldb::ZePtr{Int64}, group_count::Int64,
+                                                group_size::ZePtr{Int64})::Cint
+end
+
+function onemklHgemmBatchStrided(device_queue, transa, transb, m, n, k, alpha, a, lda,
+                                 stridea, b, ldb, strideb, beta, c, ldc, stridec,
+                                 batch_size)
+    @ccall liboneapi_support.onemklHgemmBatchStrided(device_queue::syclQueue_t,
+                                                     transa::onemklTranspose,
+                                                     transb::onemklTranspose, m::Int64,
+                                                     n::Int64, k::Int64, alpha::Float16,
+                                                     a::ZePtr{Float16}, lda::Int64,
+                                                     stridea::Int64, b::ZePtr{Float16},
+                                                     ldb::Int64, strideb::Int64,
+                                                     beta::Float16, c::ZePtr{Float16},
+                                                     ldc::Int64, stridec::Int64,
+                                                     batch_size::Int64)::Cint
+end
+
+function onemklSgemmBatchStrided(device_queue, transa, transb, m, n, k, alpha, a, lda,
+                                 stridea, b, ldb, strideb, beta, c, ldc, stridec,
+                                 batch_size)
+    @ccall liboneapi_support.onemklSgemmBatchStrided(device_queue::syclQueue_t,
+                                                     transa::onemklTranspose,
+                                                     transb::onemklTranspose, m::Int64,
+                                                     n::Int64, k::Int64, alpha::Cfloat,
+                                                     a::ZePtr{Cfloat}, lda::Int64,
+                                                     stridea::Int64, b::ZePtr{Cfloat},
+                                                     ldb::Int64, strideb::Int64,
+                                                     beta::Cfloat, c::ZePtr{Cfloat},
+                                                     ldc::Int64, stridec::Int64,
+                                                     batch_size::Int64)::Cint
+end
+
+function onemklDgemmBatchStrided(device_queue, transa, transb, m, n, k, alpha, a, lda,
+                                 stridea, b, ldb, strideb, beta, c, ldc, stridec,
+                                 batch_size)
+    @ccall liboneapi_support.onemklDgemmBatchStrided(device_queue::syclQueue_t,
+                                                     transa::onemklTranspose,
+                                                     transb::onemklTranspose, m::Int64,
+                                                     n::Int64, k::Int64, alpha::Cdouble,
+                                                     a::ZePtr{Cdouble}, lda::Int64,
+                                                     stridea::Int64, b::ZePtr{Cdouble},
+                                                     ldb::Int64, strideb::Int64,
+                                                     beta::Cdouble, c::ZePtr{Cdouble},
+                                                     ldc::Int64, stridec::Int64,
+                                                     batch_size::Int64)::Cint
+end
+
+function onemklCgemmBatchStrided(device_queue, transa, transb, m, n, k, alpha, a, lda,
+                                 stridea, b, ldb, strideb, beta, c, ldc, stridec,
+                                 batch_size)
+    @ccall liboneapi_support.onemklCgemmBatchStrided(device_queue::syclQueue_t,
+                                                     transa::onemklTranspose,
+                                                     transb::onemklTranspose, m::Int64,
+                                                     n::Int64, k::Int64, alpha::ComplexF32,
+                                                     a::ZePtr{ComplexF32}, lda::Int64,
+                                                     stridea::Int64, b::ZePtr{ComplexF32},
+                                                     ldb::Int64, strideb::Int64,
+                                                     beta::ComplexF32, c::ZePtr{ComplexF32},
+                                                     ldc::Int64, stridec::Int64,
+                                                     batch_size::Int64)::Cint
+end
+
+function onemklZgemmBatchStrided(device_queue, transa, transb, m, n, k, alpha, a, lda,
+                                 stridea, b, ldb, strideb, beta, c, ldc, stridec,
+                                 batch_size)
+    @ccall liboneapi_support.onemklZgemmBatchStrided(device_queue::syclQueue_t,
+                                                     transa::onemklTranspose,
+                                                     transb::onemklTranspose, m::Int64,
+                                                     n::Int64, k::Int64, alpha::ComplexF64,
+                                                     a::ZePtr{ComplexF64}, lda::Int64,
+                                                     stridea::Int64, b::ZePtr{ComplexF64},
+                                                     ldb::Int64, strideb::Int64,
+                                                     beta::ComplexF64, c::ZePtr{ComplexF64},
+                                                     ldc::Int64, stridec::Int64,
+                                                     batch_size::Int64)::Cint
+end
+
+function onemklHgemm(device_queue, transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C,
+                     ldc)
+    @ccall liboneapi_support.onemklHgemm(device_queue::syclQueue_t, transA::onemklTranspose,
+                                         transB::onemklTranspose, m::Int64, n::Int64,
+                                         k::Int64, alpha::Float16, A::ZePtr{Float16},
+                                         lda::Int64, B::ZePtr{Float16}, ldb::Int64,
+                                         beta::Float16, C::ZePtr{Float16}, ldc::Int64)::Cint
+end
+
+function onemklHaxpy(device_queue, n, alpha, x, incx, y, incy)
+    @ccall liboneapi_support.onemklHaxpy(device_queue::syclQueue_t, n::Int64,
+                                         alpha::Float16, x::ZePtr{Float16}, incx::Int64,
+                                         y::ZePtr{Float16}, incy::Int64)::Cint
+end
+
+function onemklHscal(device_queue, n, alpha, x, incx)
+    @ccall liboneapi_support.onemklHscal(device_queue::syclQueue_t, n::Int64,
+                                         alpha::Float16, x::ZePtr{Float16},
+                                         incx::Int64)::Cint
+end
+
+function onemklHnrm2(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklHnrm2(device_queue::syclQueue_t, n::Int64,
+                                         x::ZePtr{Float16}, incx::Int64,
+                                         result::RefOrZeRef{Float16})::Cint
+end
+
+function onemklHdot(device_queue, n, x, incx, y, incy, result)
+    @ccall liboneapi_support.onemklHdot(device_queue::syclQueue_t, n::Int64,
+                                        x::ZePtr{Float16}, incx::Int64, y::ZePtr{Float16},
+                                        incy::Int64, result::RefOrZeRef{Float16})::Cint
+end
+
 function onemklSgemm(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c,
                      ldc)
     @ccall liboneapi_support.onemklSgemm(device_queue::syclQueue_t, transa::onemklTranspose,

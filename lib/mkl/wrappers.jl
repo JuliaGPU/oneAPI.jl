@@ -885,9 +885,9 @@ end
 
 ## swap
 for (fname, elty) in ((:onemklSswap,:Float32),
-    (:onemklDswap,:Float64),
-    (:onemklCswap,:ComplexF32),
-    (:onemklZswap,:ComplexF64))
+                      (:onemklDswap,:Float64),
+                      (:onemklCswap,:ComplexF32),
+                      (:onemklZswap,:ComplexF64))
     @eval begin
         function swap!(n::Integer,
             x::oneStridedArray{$elty},

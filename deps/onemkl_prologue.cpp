@@ -284,3 +284,303 @@ class trsmBatchInfo {
             free(m_leftright, m_context);
         }
 };
+
+extern "C" int onemklHgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t *m,
+                                  int64_t *n, int64_t *k, uint16_t *alpha,
+                                  const short **a, int64_t *lda, const short **b,
+                                  int64_t *ldb, uint16_t *beta, short **c,
+                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
+    gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        m, n, k, reinterpret_cast<sycl::half *>(alpha),
+                        reinterpret_cast<const sycl::half **>(&a[0]), lda,
+                        reinterpret_cast<const sycl::half **>(&b[0]), ldb,
+                        reinterpret_cast<sycl::half *>(beta), reinterpret_cast<sycl::half **>(&c[0]),
+                        ldc, group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklSgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t *m,
+                                  int64_t *n, int64_t *k, float *alpha,
+                                  const float **a, int64_t *lda, const float **b,
+                                  int64_t *ldb, float *beta, float **c,
+                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
+    gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        m, n, k, alpha,
+                        (const float **)&a[0], lda,
+                        (const float **)&b[0], ldb,
+                        beta, &c[0], ldc,
+                        group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklDgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t *m,
+                                  int64_t *n, int64_t *k, double *alpha,
+                                  const double **a, int64_t *lda, const double **b,
+                                  int64_t *ldb, double *beta, double **c,
+                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
+    gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        m, n, k, alpha,
+                        (const double **)&a[0], lda,
+                        (const double **)&b[0], ldb,
+                        beta, &c[0], ldc,
+                        group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklCgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t *m,
+                                  int64_t *n, int64_t *k, float _Complex *alpha,
+                                  const float _Complex **a, int64_t *lda,
+                                  const float _Complex **b,
+                                  int64_t *ldb, float _Complex *beta, float _Complex **c,
+                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
+    gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        m, n, k, reinterpret_cast<std::complex<float> *>(alpha),
+                        reinterpret_cast<const std::complex<float> **>(&a[0]),
+                        lda,
+                        reinterpret_cast<const std::complex<float> **>(&b[0]),
+                        ldb,
+                        reinterpret_cast<std::complex<float> *>(beta),
+                        reinterpret_cast<std::complex<float> **>(&c[0]), ldc,
+                        group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklZgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
+                                  onemklTranspose transb, int64_t *m,
+                                  int64_t *n, int64_t *k, double _Complex *alpha,
+                                  const double _Complex **a, int64_t *lda,
+                                  const double _Complex **b,
+                                  int64_t *ldb, double _Complex *beta,
+                                  double _Complex **c,
+                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
+    gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
+                        &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
+                        m, n, k, reinterpret_cast<std::complex<double> *>(alpha),
+                        reinterpret_cast<const std::complex<double> **>(&a[0]),
+                        lda,
+                        reinterpret_cast<const std::complex<double> **>(&b[0]),
+                        ldb,
+                        reinterpret_cast<std::complex<double> *>(beta),
+                        reinterpret_cast<std::complex<double> **>(&c[0]), ldc,
+                        group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklStrsmBatched(syclQueue_t device_queue, onemklSide left_right,
+                            onemklUplo upper_lower, onemklTranspose transa,
+                            onemklDiag unit_diag, int64_t *m, int64_t *n, float *alpha,
+                            const float **a, int64_t *lda, float **b, int64_t *ldb,
+                            int64_t group_count, int64_t *group_size) {
+    trsmBatchInfo trsmInfo(device_queue, left_right, upper_lower, transa,
+                           unit_diag, group_count);
+
+    auto status = oneapi::mkl::blas::column_major::trsm_batch(device_queue->val,
+                        &trsmInfo.m_leftright[0], &trsmInfo.m_upperlower[0],
+                        &trsmInfo.m_transa[0], &trsmInfo.m_unitdiag[0],
+                        m, n, alpha, (const float **)&a[0], lda,
+                        &b[0], ldb, group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklDtrsmBatched(syclQueue_t device_queue, onemklSide left_right,
+                            onemklUplo upper_lower, onemklTranspose transa,
+                            onemklDiag unit_diag, int64_t *m, int64_t *n,
+                            double *alpha, const double **a, int64_t *lda,
+                            double **b, int64_t *ldb, int64_t group_count,
+                            int64_t *group_size) {
+    trsmBatchInfo trsmInfo(device_queue, left_right, upper_lower, transa,
+                                unit_diag, group_count);
+
+    auto status = oneapi::mkl::blas::column_major::trsm_batch(device_queue->val,
+                        &trsmInfo.m_leftright[0], &trsmInfo.m_upperlower[0],
+                        &trsmInfo.m_transa[0], &trsmInfo.m_unitdiag[0],
+                        m, n, alpha, (const double **)&a[0], lda, &b[0],
+                        ldb, group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklCtrsmBatched(syclQueue_t device_queue, onemklSide left_right,
+                            onemklUplo upper_lower, onemklTranspose transa,
+                            onemklDiag unit_diag, int64_t *m, int64_t *n,
+                            float _Complex *alpha, const float _Complex **a,
+                            int64_t *lda, float _Complex **b, int64_t *ldb,
+                            int64_t group_count, int64_t *group_size) {
+    trsmBatchInfo trsmInfo(device_queue, left_right, upper_lower, transa,
+                                unit_diag, group_count);
+
+    auto status = oneapi::mkl::blas::column_major::trsm_batch(device_queue->val,
+                        &trsmInfo.m_leftright[0], &trsmInfo.m_upperlower[0],
+                        &trsmInfo.m_transa[0], &trsmInfo.m_unitdiag[0],
+                        m, n, reinterpret_cast<std::complex<float> *>(alpha),
+                        reinterpret_cast<const std::complex<float> **>(&a[0]),
+                        lda, reinterpret_cast<std::complex<float> **>(&b[0]),
+                        ldb, group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklZtrsmBatched(syclQueue_t device_queue, onemklSide left_right,
+                            onemklUplo upper_lower, onemklTranspose transa,
+                            onemklDiag unit_diag, int64_t *m, int64_t *n,
+                            double _Complex *alpha, const double _Complex **a,
+                            int64_t *lda, double _Complex **b, int64_t *ldb,
+                            int64_t group_count, int64_t *group_size) {
+    trsmBatchInfo trsmInfo(device_queue, left_right,
+                                upper_lower, transa, unit_diag, group_count);
+
+    auto status = oneapi::mkl::blas::column_major::trsm_batch(device_queue->val,
+                        &trsmInfo.m_leftright[0], &trsmInfo.m_upperlower[0],
+                        &trsmInfo.m_transa[0], &trsmInfo.m_unitdiag[0],
+                        m, n, reinterpret_cast<std::complex<double> *>(alpha),
+                        reinterpret_cast<const std::complex<double> **>(&a[0]),
+                        lda, reinterpret_cast<std::complex<double> **>(&b[0]),
+                        ldb, group_count, group_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklHgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
+                        onemklTranspose transb, int64_t m, int64_t n, int64_t k,
+                        uint16_t alpha, const short *a, int64_t lda, int64_t stridea,
+                        const short *b, int64_t ldb, int64_t strideb, uint16_t beta,
+                        short *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
+                                                    convert(transb), m, n, k, sycl::bit_cast<sycl::half>(alpha),
+                                                    reinterpret_cast<const sycl::half *>(a), lda, stridea,
+                                                    reinterpret_cast<const sycl::half *>(b), ldb, strideb,
+                                                    sycl::bit_cast<sycl::half>(beta),
+                                                    reinterpret_cast<sycl::half *>(c), ldc, stridec, batch_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklSgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
+                        onemklTranspose transb, int64_t m, int64_t n, int64_t k,
+                        float alpha, const float *a, int64_t lda, int64_t stridea,
+                        const float *b, int64_t ldb, int64_t strideb, float beta,
+                        float *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
+                                                    convert(transb), m, n, k, alpha, a, lda, stridea,
+                                                    b, ldb, strideb, beta, c, ldc, stridec, batch_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklDgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
+                        onemklTranspose transb, int64_t m, int64_t n, int64_t k,
+                        double alpha, const double *a, int64_t lda, int64_t stridea,
+                        const double *b, int64_t ldb, int64_t strideb, double beta,
+                        double *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
+                                                    convert(transb), m, n, k, alpha, a, lda, stridea,
+                                                    b, ldb, strideb, beta, c, ldc, stridec, batch_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklCgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
+                        onemklTranspose transb, int64_t m, int64_t n, int64_t k,
+                        float _Complex alpha, const float _Complex *a, int64_t lda, int64_t stridea,
+                        const float _Complex *b, int64_t ldb, int64_t strideb, float _Complex beta,
+                        float _Complex *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
+                                                    convert(transb), m, n, k, alpha,
+                                                    reinterpret_cast<const std::complex<float> *>(a),
+                                                    lda, stridea,
+                                                    reinterpret_cast<const std::complex<float> *>(b),
+                                                    ldb, strideb, beta,
+                                                    reinterpret_cast<std::complex<float> *>(c),
+                                                    ldc, stridec, batch_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklZgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
+                        onemklTranspose transb, int64_t m, int64_t n, int64_t k,
+                        double _Complex alpha, const double _Complex *a, int64_t lda, int64_t stridea,
+                        const double _Complex *b, int64_t ldb, int64_t strideb, double _Complex beta,
+                        double _Complex *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
+    auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
+                                                    convert(transb), m, n, k, alpha,
+                                                    reinterpret_cast<const std::complex<double> *>(a),
+                                                    lda, stridea,
+                                                    reinterpret_cast<const std::complex<double> *>(b),
+                                                    ldb, strideb, beta,
+                                                    reinterpret_cast<std::complex<double> *>(c),
+                                                    ldc, stridec, batch_size);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
+                           onemklTranspose transB, int64_t m, int64_t n,
+                           int64_t k, uint16_t alpha, const short *A, int64_t lda,
+                           const short *B, int64_t ldb, uint16_t beta, short *C,
+                           int64_t ldc) {
+    auto status = oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
+                                          convert(transB), m, n, k, sycl::bit_cast<sycl::half>(alpha),
+                                          reinterpret_cast<const sycl::half *>(A), lda,
+                                          reinterpret_cast<const sycl::half *>(B), ldb,
+                                          sycl::bit_cast<sycl::half>(beta),
+                                          reinterpret_cast<sycl::half *>(C), ldc);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklHdot(syclQueue_t device_queue, int64_t n,
+                           const short *x, int64_t incx, const short *y,
+                           int64_t incy, short *result) {
+    auto status = oneapi::mkl::blas::column_major::dot(device_queue->val, n,
+                                        reinterpret_cast<const sycl::half *>(x),
+                                        incx, reinterpret_cast<const sycl::half *>(y),
+                                        incy, reinterpret_cast<sycl::half *>(result));
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklHaxpy(syclQueue_t device_queue, int64_t n, uint16_t alpha,
+                            const short *x, std::int64_t incx, short *y, int64_t incy) {
+    auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n,
+                                        sycl::bit_cast<sycl::half>(alpha),
+                                        reinterpret_cast<const sycl::half *>(x),
+                                        incx, reinterpret_cast<sycl::half *>(y), incy);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklHscal(syclQueue_t device_queue, int64_t n, uint16_t alpha,
+                            short *x, int64_t incx) {
+    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n, sycl::bit_cast<sycl::half>(alpha),
+                                                        reinterpret_cast<sycl::half *>(x), incx);
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
+
+extern "C" int onemklHnrm2(syclQueue_t device_queue, int64_t n, const short *x,
+                            int64_t incx, short *result) {
+    auto status = oneapi::mkl::blas::column_major::nrm2(device_queue->val, n,
+                        reinterpret_cast<const sycl::half *>(x), incx,
+                        reinterpret_cast<sycl::half *>(result));
+    __FORCE_MKL_FLUSH__(status);
+    return 0;
+}
