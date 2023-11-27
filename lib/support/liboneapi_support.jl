@@ -1269,50 +1269,50 @@ end
 
 function onemklSiamax(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklSiamax(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{Cfloat}, incx::Int64,
-                                          result::Ptr{Int64})::Cint
+                                          x::ZePtr{Cfloat}, incx::Int64,
+                                          result::ZePtr{Int64})::Cint
 end
 
 function onemklDiamax(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklDiamax(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{Cdouble}, incx::Int64,
-                                          result::Ptr{Int64})::Cint
+                                          x::ZePtr{Cdouble}, incx::Int64,
+                                          result::ZePtr{Int64})::Cint
 end
 
 function onemklCiamax(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklCiamax(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{ComplexF32}, incx::Int64,
-                                          result::Ptr{Int64})::Cint
+                                          x::ZePtr{ComplexF32}, incx::Int64,
+                                          result::ZePtr{Int64})::Cint
 end
 
 function onemklZiamax(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklZiamax(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{ComplexF32}, incx::Int64,
-                                          result::Ptr{Int64})::Cint
+                                          x::ZePtr{ComplexF64}, incx::Int64,
+                                          result::ZePtr{Int64})::Cint
 end
 
 function onemklSiamin(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklSiamin(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{Cfloat}, incx::Int64,
-                                          result::Ptr{Int64})::Cint
+                                          x::ZePtr{Cfloat}, incx::Int64,
+                                          result::ZePtr{Int64})::Cint
 end
 
 function onemklDiamin(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklDiamin(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{Cdouble}, incx::Int64,
-                                          result::Ptr{Int64})::Cint
+                                          x::ZePtr{Cdouble}, incx::Int64,
+                                          result::ZePtr{Int64})::Cint
 end
 
 function onemklCiamin(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklCiamin(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{ComplexF32}, incx::Int64,
-                                          result::Ptr{Int64})::Cint
+                                          x::ZePtr{ComplexF32}, incx::Int64,
+                                          result::ZePtr{Int64})::Cint
 end
 
 function onemklZiamin(device_queue, n, x, incx, result)
     @ccall liboneapi_support.onemklZiamin(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{ComplexF32}, incx::Int64,
-                                          result::Ptr{Int64})::Cint
+                                          x::ZePtr{ComplexF64}, incx::Int64,
+                                          result::ZePtr{Int64})::Cint
 end
 
 function onemklSasum(device_queue, n, x, incx, result)
@@ -1472,8 +1472,8 @@ end
 
 function onemklCSrot(device_queue, n, x, incx, y, incy, c, s)
     @ccall liboneapi_support.onemklCSrot(device_queue::syclQueue_t, n::Int64,
-                                         x::Ptr{ComplexF32}, incx::Int64,
-                                         y::Ptr{ComplexF32}, incy::Int64, c::Cfloat,
+                                         x::ZePtr{ComplexF32}, incx::Int64,
+                                         y::ZePtr{ComplexF32}, incy::Int64, c::Cfloat,
                                          s::Cfloat)::Cint
 end
 
@@ -1486,8 +1486,8 @@ end
 
 function onemklZDrot(device_queue, n, x, incx, y, incy, c, s)
     @ccall liboneapi_support.onemklZDrot(device_queue::syclQueue_t, n::Int64,
-                                         x::Ptr{ComplexF32}, incx::Int64,
-                                         y::Ptr{ComplexF32}, incy::Int64, c::Cdouble,
+                                         x::ZePtr{ComplexF64}, incx::Int64,
+                                         y::ZePtr{ComplexF64}, incy::Int64, c::Cdouble,
                                          s::Cdouble)::Cint
 end
 
@@ -1559,13 +1559,13 @@ end
 
 function onemklCSscal(device_queue, n, alpha, x, incx)
     @ccall liboneapi_support.onemklCSscal(device_queue::syclQueue_t, n::Int64,
-                                          alpha::Cfloat, x::Ptr{ComplexF32},
+                                          alpha::Cfloat, x::ZePtr{ComplexF32},
                                           incx::Int64)::Cint
 end
 
 function onemklZDscal(device_queue, n, alpha, x, incx)
     @ccall liboneapi_support.onemklZDscal(device_queue::syclQueue_t, n::Int64,
-                                          alpha::Cdouble, x::Ptr{ComplexF32},
+                                          alpha::Cdouble, x::ZePtr{ComplexF64},
                                           incx::Int64)::Cint
 end
 

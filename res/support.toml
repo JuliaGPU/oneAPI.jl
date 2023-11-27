@@ -150,11 +150,11 @@ use_ccall_macro = true
 3 = "ZePtr{T}"
 5 = "ZePtr{T}"
 
-[api.onemklXdrot.argtypes]
+[api.onemklXDrot.argtypes]
 3 = "ZePtr{T}"
 5 = "ZePtr{T}"
 
-[api.onemklXsrot.argtypes]
+[api.onemklXSrot.argtypes]
 3 = "ZePtr{T}"
 5 = "ZePtr{T}"
 
@@ -162,10 +162,10 @@ use_ccall_macro = true
 3 = "T"
 4 = "ZePtr{T}"
 
-[api.onemklXdscal.argtypes]
+[api.onemklXDscal.argtypes]
 4 = "ZePtr{T}"
 
-[api.onemklXsscal.argtypes]
+[api.onemklXSscal.argtypes]
 4 = "ZePtr{T}"
 
 [api.onemklXger.argtypes]
@@ -252,11 +252,11 @@ use_ccall_macro = true
 3 = "ZePtr{T}"
 5 = "ZePtr{T}"
 
-[api.onemklXamax.argtypes]
+[api.onemklXiamax.argtypes]
 3 = "ZePtr{T}"
 5 = "ZePtr{Int64}"
 
-[api.onemklXamin.argtypes]
+[api.onemklXiamin.argtypes]
 3 = "ZePtr{T}"
 5 = "ZePtr{Int64}"
 
