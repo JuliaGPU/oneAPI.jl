@@ -572,8 +572,8 @@ for (fname, elty, cty, sty, supty) in ((:onemklSrot,:Float32,:Float32,:Float32,:
                                        (:onemklDrot,:Float64,:Float64,:Float64,:Number),
                                        (:onemklCrot,:ComplexF32,:Float32,:ComplexF32,:Number),
                                        (:onemklZrot,:ComplexF64,:Float64,:ComplexF64,:Number),
-                                       (:onemklCsrot,:ComplexF32,:Float32,:Float32,:Real),
-                                       (:onemklZdrot,:ComplexF64,:Float64,:Float64,:Real))
+                                       (:onemklCSrot,:ComplexF32,:Float32,:Float32,:Real),
+                                       (:onemklZDrot,:ComplexF64,:Float64,:Float64,:Real))
     @eval begin
         function rot!(n::Integer,
                       x::oneStridedArray{$elty},
@@ -722,8 +722,8 @@ function sbmv(uplo::Char, k::Integer, a::oneStridedArray{T},
     sbmv(uplo, k, one(T), a, x)
 end
 
-for (fname, elty, celty) in ((:onemklCsscal, :Float32, :ComplexF32),
-                             (:onemklZdscal, :Float64, :ComplexF64))
+for (fname, elty, celty) in ((:onemklCSscal, :Float32, :ComplexF32),
+                             (:onemklZDscal, :Float64, :ComplexF64))
     @eval begin
         function scal!(n::Integer,
                        alpha::$elty,
@@ -851,10 +851,10 @@ end
 
 ## iamax
 for (fname, elty) in
-    ((:onemklDamax,:Float64),
-     (:onemklSamax,:Float32),
-     (:onemklZamax,:ComplexF64),
-     (:onemklCamax,:ComplexF32))
+    ((:onemklDiamax,:Float64),
+     (:onemklSiamax,:Float32),
+     (:onemklZiamax,:ComplexF64),
+     (:onemklCiamax,:ComplexF32))
     @eval begin
         function iamax(x::oneStridedArray{$elty})
             n = length(x)
@@ -868,10 +868,10 @@ end
 
 ## iamin
 for (fname, elty) in
-    ((:onemklDamin,:Float64),
-     (:onemklSamin,:Float32),
-     (:onemklZamin,:ComplexF64),
-     (:onemklCamin,:ComplexF32))
+    ((:onemklDiamin,:Float64),
+     (:onemklSiamin,:Float32),
+     (:onemklZiamin,:ComplexF64),
+     (:onemklCiamin,:ComplexF32))
     @eval begin
         function iamin(x::StridedArray{$elty})
             n = length(x)

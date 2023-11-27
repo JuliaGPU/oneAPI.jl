@@ -104,8 +104,8 @@ typedef enum {
     ONEMKL_PROPERTY_SORTED,
 } onemklProperty;
 
+// I need help :(
 typedef struct MatrixHandle_st *MatrixHandle_t;
-typedef struct MatmatDescr_st *MatmatDescr_t;
 
 int onemklHgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
                        onemklTranspose transb, int64_t *m,
@@ -422,11 +422,11 @@ int onemklZhemv(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, dou
                 double _Complex *a, int64_t lda, double _Complex *x, int64_t incx, double _Complex
                 beta, double _Complex *y, int64_t incy);
 
-int onemklCSher(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, float alpha, float
-                _Complex *x, int64_t incx, float _Complex *a, int64_t lda);
+int onemklCher(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, float alpha, float
+               _Complex *x, int64_t incx, float _Complex *a, int64_t lda);
 
-int onemklZDher(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, double alpha, double
-                _Complex *x, int64_t incx, double _Complex *a, int64_t lda);
+int onemklZher(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, double alpha, double
+               _Complex *x, int64_t incx, double _Complex *a, int64_t lda);
 
 int onemklCher2(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, float _Complex alpha,
                 float _Complex *x, int64_t incx, float _Complex *y, int64_t incy, float _Complex *a,
@@ -444,11 +444,11 @@ int onemklZhpmv(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, dou
                 double _Complex *a, double _Complex *x, int64_t incx, double _Complex beta, double
                 _Complex *y, int64_t incy);
 
-int onemklCShpr(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, float alpha, float
-                _Complex *x, int64_t incx, float _Complex *a);
+int onemklChpr(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, float alpha, float
+               _Complex *x, int64_t incx, float _Complex *a);
 
-int onemklZDhpr(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, double alpha, double
-                _Complex *x, int64_t incx, double _Complex *a);
+int onemklZhpr(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, double alpha, double
+               _Complex *x, int64_t incx, double _Complex *a);
 
 int onemklChpr2(syclQueue_t device_queue, onemklUplo upper_lower, int64_t n, float _Complex alpha,
                 float _Complex *x, int64_t incx, float _Complex *y, int64_t incy, float _Complex *a);
@@ -644,10 +644,10 @@ int onemklSasum(syclQueue_t device_queue, int64_t n, float *x, int64_t incx, flo
 
 int onemklDasum(syclQueue_t device_queue, int64_t n, double *x, int64_t incx, double *result);
 
-int onemklCSasum(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx, float *result);
+int onemklCasum(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx, float *result);
 
-int onemklZDasum(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, double
-                 *result);
+int onemklZasum(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, double
+                *result);
 
 int onemklSaxpy(syclQueue_t device_queue, int64_t n, float alpha, float *x, int64_t incx, float *y,
                 int64_t incy);
@@ -696,10 +696,10 @@ int onemklSnrm2(syclQueue_t device_queue, int64_t n, float *x, int64_t incx, flo
 
 int onemklDnrm2(syclQueue_t device_queue, int64_t n, double *x, int64_t incx, double *result);
 
-int onemklCSnrm2(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx, float *result);
+int onemklCnrm2(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx, float *result);
 
-int onemklZDnrm2(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, double
-                 *result);
+int onemklZnrm2(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, double
+                *result);
 
 int onemklSrot(syclQueue_t device_queue, int64_t n, float *x, int64_t incx, float *y, int64_t incy,
                float c, float s);

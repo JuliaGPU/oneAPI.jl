@@ -254,8 +254,8 @@ function generate_headers(library::String, filename::String, output::String)
         n = length(list_parameters)
         for (i, type) in enumerate(list_types)
           version = list_versions[i]
-          version = (name_routine ∈ ("herk", "her2k", "rotg")) && (version == "CS") ? "C" : version
-          version = (name_routine ∈ ("herk", "her2k", "rotg")) && (version == "ZD") ? "Z" : version
+          version = (name_routine ∈ ("her", "herk", "her2k", "rotg", "nrm2", "asum", "hpr")) && (version == "CS") ? "C" : version
+          version = (name_routine ∈ ("her", "herk", "her2k", "rotg", "nrm2", "asum", "hpr")) && (version == "ZD") ? "Z" : version
 
           copy_header = header
           for (j, parameter) in enumerate(reverse(list_parameters))

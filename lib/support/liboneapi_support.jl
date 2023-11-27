@@ -168,10 +168,6 @@ mutable struct MatrixHandle_st end
 
 const MatrixHandle_t = Ptr{MatrixHandle_st}
 
-mutable struct MatmatDescr_st end
-
-const MatmatDescr_t = Ptr{MatmatDescr_st}
-
 function onemklHgemmBatched(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
                             beta, c, ldc, group_count, group_size)
     @ccall liboneapi_support.onemklHgemmBatched(device_queue::syclQueue_t,
@@ -868,16 +864,16 @@ function onemklZhemv(device_queue, upper_lower, n, alpha, a, lda, x, incx, beta,
                                          incy::Int64)::Cint
 end
 
-function onemklCSher(device_queue, upper_lower, n, alpha, x, incx, a, lda)
-    @ccall liboneapi_support.onemklCSher(device_queue::syclQueue_t, upper_lower::onemklUplo,
-                                         n::Int64, alpha::Cfloat, x::Ptr{ComplexF32},
-                                         incx::Int64, a::Ptr{ComplexF32}, lda::Int64)::Cint
+function onemklCher(device_queue, upper_lower, n, alpha, x, incx, a, lda)
+    @ccall liboneapi_support.onemklCher(device_queue::syclQueue_t, upper_lower::onemklUplo,
+                                        n::Int64, alpha::ComplexF32, x::ZePtr{ComplexF32},
+                                        incx::Int64, a::ZePtr{ComplexF32}, lda::Int64)::Cint
 end
 
-function onemklZDher(device_queue, upper_lower, n, alpha, x, incx, a, lda)
-    @ccall liboneapi_support.onemklZDher(device_queue::syclQueue_t, upper_lower::onemklUplo,
-                                         n::Int64, alpha::Cdouble, x::Ptr{ComplexF32},
-                                         incx::Int64, a::Ptr{ComplexF32}, lda::Int64)::Cint
+function onemklZher(device_queue, upper_lower, n, alpha, x, incx, a, lda)
+    @ccall liboneapi_support.onemklZher(device_queue::syclQueue_t, upper_lower::onemklUplo,
+                                        n::Int64, alpha::ComplexF64, x::ZePtr{ComplexF64},
+                                        incx::Int64, a::ZePtr{ComplexF64}, lda::Int64)::Cint
 end
 
 function onemklCher2(device_queue, upper_lower, n, alpha, x, incx, y, incy, a, lda)
@@ -908,16 +904,16 @@ function onemklZhpmv(device_queue, upper_lower, n, alpha, a, x, incx, beta, y, i
                                          y::Ptr{ComplexF32}, incy::Int64)::Cint
 end
 
-function onemklCShpr(device_queue, upper_lower, n, alpha, x, incx, a)
-    @ccall liboneapi_support.onemklCShpr(device_queue::syclQueue_t, upper_lower::onemklUplo,
-                                         n::Int64, alpha::Cfloat, x::Ptr{ComplexF32},
-                                         incx::Int64, a::Ptr{ComplexF32})::Cint
+function onemklChpr(device_queue, upper_lower, n, alpha, x, incx, a)
+    @ccall liboneapi_support.onemklChpr(device_queue::syclQueue_t, upper_lower::onemklUplo,
+                                        n::Int64, alpha::Cfloat, x::Ptr{ComplexF32},
+                                        incx::Int64, a::Ptr{ComplexF32})::Cint
 end
 
-function onemklZDhpr(device_queue, upper_lower, n, alpha, x, incx, a)
-    @ccall liboneapi_support.onemklZDhpr(device_queue::syclQueue_t, upper_lower::onemklUplo,
-                                         n::Int64, alpha::Cdouble, x::Ptr{ComplexF32},
-                                         incx::Int64, a::Ptr{ComplexF32})::Cint
+function onemklZhpr(device_queue, upper_lower, n, alpha, x, incx, a)
+    @ccall liboneapi_support.onemklZhpr(device_queue::syclQueue_t, upper_lower::onemklUplo,
+                                        n::Int64, alpha::Cdouble, x::Ptr{ComplexF32},
+                                        incx::Int64, a::Ptr{ComplexF32})::Cint
 end
 
 function onemklChpr2(device_queue, upper_lower, n, alpha, x, incx, y, incy, a)
@@ -1331,16 +1327,16 @@ function onemklDasum(device_queue, n, x, incx, result)
                                          result::ZePtr{Cdouble})::Cint
 end
 
-function onemklCSasum(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklCSasum(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{ComplexF32}, incx::Int64,
-                                          result::Ptr{Cfloat})::Cint
+function onemklCasum(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklCasum(device_queue::syclQueue_t, n::Int64,
+                                         x::ZePtr{ComplexF32}, incx::Int64,
+                                         result::ZePtr{Cfloat})::Cint
 end
 
-function onemklZDasum(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklZDasum(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{ComplexF32}, incx::Int64,
-                                          result::Ptr{Cdouble})::Cint
+function onemklZasum(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklZasum(device_queue::syclQueue_t, n::Int64,
+                                         x::ZePtr{ComplexF64}, incx::Int64,
+                                         result::ZePtr{Float64})::Cint
 end
 
 function onemklSaxpy(device_queue, n, alpha, x, incx, y, incy)
@@ -1450,16 +1446,16 @@ function onemklDnrm2(device_queue, n, x, incx, result)
                                          result::RefOrZeRef{Cdouble})::Cint
 end
 
-function onemklCSnrm2(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklCSnrm2(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{ComplexF32}, incx::Int64,
-                                          result::Ptr{Cfloat})::Cint
+function onemklCnrm2(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklCnrm2(device_queue::syclQueue_t, n::Int64,
+                                         x::ZePtr{ComplexF32}, incx::Int64,
+                                         result::RefOrZeRef{Cfloat})::Cint
 end
 
-function onemklZDnrm2(device_queue, n, x, incx, result)
-    @ccall liboneapi_support.onemklZDnrm2(device_queue::syclQueue_t, n::Int64,
-                                          x::Ptr{ComplexF32}, incx::Int64,
-                                          result::Ptr{Cdouble})::Cint
+function onemklZnrm2(device_queue, n, x, incx, result)
+    @ccall liboneapi_support.onemklZnrm2(device_queue::syclQueue_t, n::Int64,
+                                         x::ZePtr{ComplexF64}, incx::Int64,
+                                         result::RefOrZeRef{Cdouble})::Cint
 end
 
 function onemklSrot(device_queue, n, x, incx, y, incy, c, s)
