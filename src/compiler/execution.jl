@@ -9,7 +9,15 @@ const LAUNCH_KWARGS = [:groups, :items, :queue]
 
 macro oneapi(ex...)
     call = ex[end]
-    kwargs = ex[1:end-1]
+    kwargs = map(ex[1:end-1]) do kwarg
+        if kwarg isa Symbol
+            :($kwarg = $kwarg)
+        elseif Meta.isexpr(kwarg, :(=))
+            kwarg
+        else
+            throw(ArgumentError("Invalid keyword argument '$kwarg'"))
+        end
+    end
 
     # destructure the kernel call
     Meta.isexpr(call, :call) || throw(ArgumentError("second argument to @oneapi should be a function call"))

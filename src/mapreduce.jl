@@ -163,7 +163,7 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # perform the actual reduction
     if reduce_groups == 1
         # we can cover the dimensions to reduce using a single group
-        @oneapi items=items groups=groups partial_mapreduce_device(
+        @oneapi items groups partial_mapreduce_device(
             f, op, init, Val(items), Rreduce, Rother, R′, A)
     else
         # we need multiple steps to cover all values to reduce
@@ -172,7 +172,7 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
             # without an explicit initializer we need to copy from the output container
             partial .= R
         end
-        @oneapi items=items groups=groups partial_mapreduce_device(
+        @oneapi items groups partial_mapreduce_device(
             f, op, init, Val(items), Rreduce, Rother, partial, A)
 
         GPUArrays.mapreducedim!(identity, op, R′, partial; init=init)
