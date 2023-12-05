@@ -1,49 +1,55 @@
 module oneAPIKernels
 
-import KernelAbstractions
-import oneAPI
-import oneAPI: oneL0, @device_override
-import GPUCompiler
+using ..oneAPI
+using ..oneAPI: @device_override
 
-import UnsafeAtomicsLLVM
+import KernelAbstractions as KA
 
-struct oneAPIBackend <: KernelAbstractions.GPU
-end
+import StaticArrays
+
+import Adapt
+
+
+## Back-end Definition
+
 export oneAPIBackend
 
-KernelAbstractions.allocate(::oneAPIBackend, ::Type{T}, dims::Tuple) where T = oneAPI.oneArray{T}(undef, dims)
-KernelAbstractions.zeros(::oneAPIBackend, ::Type{T}, dims::Tuple) where T = oneAPI.zeros(T, dims)
-KernelAbstractions.ones(::oneAPIBackend, ::Type{T}, dims::Tuple) where T = oneAPI.ones(T, dims)
-
-# Import through parent
-import KernelAbstractions: StaticArrays, Adapt
-import .StaticArrays: MArray
-
-KernelAbstractions.get_backend(::oneAPI.oneArray) = oneAPIBackend()
-# TODO should be non-blocking
-KernelAbstractions.synchronize(::oneAPIBackend) = oneL0.synchronize()
-KernelAbstractions.supports_float64(::oneAPIBackend) = false # TODO is this device dependent?
-
-Adapt.adapt_storage(::oneAPIBackend, a::Array) = Adapt.adapt(oneAPI.oneArray, a)
-Adapt.adapt_storage(::oneAPIBackend, a::oneAPI.oneArray) = a
-Adapt.adapt_storage(::KernelAbstractions.CPU, a::oneAPI.oneArray) = convert(Array, a)
-
-##
-# copyto!
-##
-
-
-function KernelAbstractions.copyto!(::oneAPIBackend, A, B)
-    copyto!(A, B)
-    # TODO device to host copies in oneAPI.jl are synchronizing.
+struct oneAPIBackend <: KA.GPU
 end
 
-import KernelAbstractions: Kernel, StaticSize, DynamicSize, partition, blocks, workitems, launch_config
+KA.allocate(::oneAPIBackend, ::Type{T}, dims::Tuple) where T = oneArray{T}(undef, dims)
+KA.zeros(::oneAPIBackend, ::Type{T}, dims::Tuple) where T = oneAPI.zeros(T, dims)
+KA.ones(::oneAPIBackend, ::Type{T}, dims::Tuple) where T = oneAPI.ones(T, dims)
 
-###
-# Kernel launch
-###
-function launch_config(kernel::Kernel{oneAPIBackend}, ndrange, workgroupsize)
+KA.get_backend(::oneArray) = oneAPIBackend()
+# TODO should be non-blocking
+KA.synchronize(::oneAPIBackend) = oneL0.synchronize()
+KA.supports_float64(::oneAPIBackend) = false  # TODO: Check if this is device dependent
+
+Adapt.adapt_storage(::oneAPIBackend, a::Array) = Adapt.adapt(oneArray, a)
+Adapt.adapt_storage(::oneAPIBackend, a::oneArray) = a
+Adapt.adapt_storage(::KA.CPU, a::oneArray) = convert(Array, a)
+
+
+## Memory Operations
+
+function KA.copyto!(::oneAPIBackend, A, B)
+    copyto!(A, B)
+    # TODO: Address device to host copies in jl being synchronizing
+end
+
+
+## Kernel Launch
+
+function KA.mkcontext(kernel::KA.Kernel{oneAPIBackend}, _ndrange, iterspace)
+    KA.CompilerMetadata{KA.ndrange(kernel), KA.DynamicCheck}(_ndrange, iterspace)
+end
+function KA.mkcontext(kernel::KA.Kernel{oneAPIBackend}, I, _ndrange, iterspace,
+                      ::Dynamic) where Dynamic
+    KA.CompilerMetadata{KA.ndrange(kernel), Dynamic}(I, _ndrange, iterspace)
+end
+
+function KA.launch_config(kernel::KA.Kernel{oneAPIBackend}, ndrange, workgroupsize)
     if ndrange isa Integer
         ndrange = (ndrange,)
     end
@@ -52,16 +58,16 @@ function launch_config(kernel::Kernel{oneAPIBackend}, ndrange, workgroupsize)
     end
 
     # partition checked that the ndrange's agreed
-    if KernelAbstractions.ndrange(kernel) <: StaticSize
+    if KA.ndrange(kernel) <: KA.StaticSize
         ndrange = nothing
     end
 
-    iterspace, dynamic = if KernelAbstractions.workgroupsize(kernel) <: DynamicSize &&
+    iterspace, dynamic = if KA.workgroupsize(kernel) <: KA.DynamicSize &&
         workgroupsize === nothing
         # use ndrange as preliminary workgroupsize for autotuning
-        partition(kernel, ndrange, ndrange)
+        KA.partition(kernel, ndrange, ndrange)
     else
-        partition(kernel, ndrange, workgroupsize)
+        KA.partition(kernel, ndrange, workgroupsize)
     end
 
     return ndrange, workgroupsize, iterspace, dynamic
@@ -76,108 +82,96 @@ function threads_to_workgroupsize(threads, ndrange)
     end
 end
 
-function (obj::Kernel{oneAPIBackend})(args...; ndrange=nothing, workgroupsize=nothing)
-    ndrange, workgroupsize, iterspace, dynamic = launch_config(obj, ndrange, workgroupsize)
+function (obj::KA.Kernel{oneAPIBackend})(args...; ndrange=nothing, workgroupsize=nothing)
+    ndrange, workgroupsize, iterspace, dynamic = KA.launch_config(obj, ndrange, workgroupsize)
     # this might not be the final context, since we may tune the workgroupsize
-    ctx = mkcontext(obj, ndrange, iterspace)
-    kernel = oneAPI.@oneapi launch=false obj.f(ctx, args...)
+    ctx = KA.mkcontext(obj, ndrange, iterspace)
+    kernel = @oneapi launch=false obj.f(ctx, args...)
 
     # figure out the optimal workgroupsize automatically
-    if KernelAbstractions.workgroupsize(obj) <: DynamicSize && workgroupsize === nothing
+    if KA.workgroupsize(obj) <: KA.DynamicSize && workgroupsize === nothing
         items = oneAPI.suggest_groupsize(kernel.fun, prod(ndrange)).x
         # XXX: the z dimension of the suggested group size is often non-zero. use this?
         workgroupsize = threads_to_workgroupsize(items, ndrange)
-        iterspace, dynamic = partition(obj, ndrange, workgroupsize)
-        ctx = mkcontext(obj, ndrange, iterspace)
+        iterspace, dynamic = KA.partition(obj, ndrange, workgroupsize)
+        ctx = KA.mkcontext(obj, ndrange, iterspace)
     end
 
-    nblocks = length(blocks(iterspace))
-    threads = length(workitems(iterspace))
+    groups = length(KA.blocks(iterspace))
+    items = length(KA.workitems(iterspace))
 
-    if nblocks == 0
+    if groups == 0
         return nothing
     end
 
     # Launch kernel
-    kernel(ctx, args...; items=threads, groups=nblocks)
+    kernel(ctx, args...; items, groups)
 
     return nothing
 end
 
-import KernelAbstractions: CompilerMetadata, DynamicCheck, LinearIndices
-import KernelAbstractions: __index_Local_Linear, __index_Group_Linear, __index_Global_Linear, __index_Local_Cartesian, __index_Group_Cartesian, __index_Global_Cartesian, __validindex, __print
-import KernelAbstractions: mkcontext, expand, __iterspace, __ndrange, __dynamic_checkbounds
 
-function mkcontext(kernel::Kernel{oneAPIBackend}, _ndrange, iterspace)
-    metadata = CompilerMetadata{KernelAbstractions.ndrange(kernel), DynamicCheck}(_ndrange, iterspace)
-end
-function mkcontext(kernel::Kernel{oneAPIBackend}, I, _ndrange, iterspace, ::Dynamic) where Dynamic
-    metadata = CompilerMetadata{KernelAbstractions.ndrange(kernel), Dynamic}(I, _ndrange, iterspace)
+## Indexing Functions
+
+@device_override @inline function KA.__index_Local_Linear(ctx)
+    return get_local_id(0)
 end
 
-@device_override @inline function __index_Local_Linear(ctx)
-    return oneAPI.get_local_id(0)
+@device_override @inline function KA.__index_Group_Linear(ctx)
+    return get_group_id(0)
 end
 
-@device_override @inline function __index_Group_Linear(ctx)
-    return oneAPI.get_group_id(0)
+@device_override @inline function KA.__index_Global_Linear(ctx)
+    return get_global_id(0)
 end
 
-@device_override @inline function __index_Global_Linear(ctx)
-    I =  @inbounds expand(__iterspace(ctx), oneAPI.get_group_id(0), oneAPI.get_local_id(0))
-    # TODO: This is unfortunate, can we get the linear index cheaper
-    @inbounds LinearIndices(__ndrange(ctx))[I]
+@device_override @inline function KA.__index_Local_Cartesian(ctx)
+    @inbounds KA.workitems(KA.__iterspace(ctx))[get_local_id(0)]
 end
 
-@device_override @inline function __index_Local_Cartesian(ctx)
-    @inbounds workitems(__iterspace(ctx))[oneAPI.get_local_id(0)]
+@device_override @inline function KA.__index_Group_Cartesian(ctx)
+    @inbounds KA.blocks(KA.__iterspace(ctx))[get_group_id(0)]
 end
 
-@device_override @inline function __index_Group_Cartesian(ctx)
-    @inbounds blocks(__iterspace(ctx))[oneAPI.get_group_id(0)]
+@device_override @inline function KA.__index_Global_Cartesian(ctx)
+    return @inbounds KA.expand(KA.__iterspace(ctx), get_group_id(0), get_local_id(0))
 end
 
-@device_override @inline function __index_Global_Cartesian(ctx)
-    return @inbounds expand(__iterspace(ctx), oneAPI.get_group_id(0), oneAPI.get_local_id(0))
-end
-
-@device_override @inline function __validindex(ctx)
-    if __dynamic_checkbounds(ctx)
-        I = @inbounds expand(__iterspace(ctx), oneAPI.get_group_id(0), oneAPI.get_local_id(0))
-        return I in __ndrange(ctx)
+@device_override @inline function KA.__validindex(ctx)
+    if KA.__dynamic_checkbounds(ctx)
+        I = @inbounds KA.expand(KA.__iterspace(ctx), get_group_id(0), get_local_id(0))
+        return I in KA.__ndrange(ctx)
     else
         return true
     end
 end
 
-import KernelAbstractions: groupsize, __groupsize, __workitems_iterspace
-import KernelAbstractions: SharedMemory, Scratchpad, __synchronize, __size
 
-###
-# GPU implementation of shared memory
-###
-@device_override @inline function SharedMemory(::Type{T}, ::Val{Dims}, ::Val{Id}) where {T, Dims, Id}
+## Shared and Scratch Memory
+
+@device_override @inline function KA.SharedMemory(::Type{T}, ::Val{Dims}, ::Val{Id}) where {T, Dims, Id}
     ptr = oneAPI.emit_localmemory(T, Val(prod(Dims)))
-    oneAPI.oneDeviceArray(Dims, ptr)
+    oneDeviceArray(Dims, ptr)
 end
 
-###
-# GPU implementation of scratch memory
-# - private memory for each workitem
-###
-
-@device_override @inline function Scratchpad(ctx, ::Type{T}, ::Val{Dims}) where {T, Dims}
-    StaticArrays.MArray{__size(Dims), T}(undef)
+@device_override @inline function KA.Scratchpad(ctx, ::Type{T}, ::Val{Dims}) where {T, Dims}
+    StaticArrays.MArray{KA.__size(Dims), T}(undef)
 end
 
-@device_override @inline function __synchronize()
-    oneAPI.barrier()
+
+## Synchronization and Printing
+
+@device_override @inline function KA.__synchronize()
+    barrier()
 end
 
-@device_override @inline function __print(args...)
+@device_override @inline function KA.__print(args...)
     oneAPI._print(args...)
 end
 
-KernelAbstractions.argconvert(::Kernel{oneAPIBackend}, arg) = oneAPI.kernel_convert(arg)
+
+## Other
+
+KA.argconvert(::KA.Kernel{oneAPIBackend}, arg) = kernel_convert(arg)
 
 end
