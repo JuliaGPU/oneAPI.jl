@@ -20,10 +20,14 @@ end
 @testset "launch configuration" begin
     @oneapi dummy()
 
+    items = 1
+    @oneapi items dummy()
     @oneapi items=1 dummy()
     @oneapi items=(1,1) dummy()
     @oneapi items=(1,1,1) dummy()
 
+    groups = 1
+    @oneapi groups dummy()
     @oneapi groups=1 dummy()
     @oneapi groups=(1,1) dummy()
     @oneapi groups=(1,1,1) dummy()
