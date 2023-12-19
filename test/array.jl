@@ -58,3 +58,19 @@ end
   oneAPI.@sync copyto!(a, 2, [200], 1, 1)
   @test b == [100, 200]
 end
+
+# https://github.com/JuliaGPU/CUDA.jl/issues/2191
+@testset "preserving buffer types" begin
+  a = oneVector{Int,oneL0.SharedBuffer}([1])
+  @test oneAPI.buftype(a) == oneL0.SharedBuffer
+
+  # unified-ness should be preserved
+  b = a .+ 1
+  @test oneAPI.buftype(b) == oneL0.SharedBuffer
+
+  # when there's a conflict, we should defer to unified memory
+  c = oneVector{Int,oneL0.HostBuffer}([1])
+  d = oneVector{Int,oneL0.DeviceBuffer}([1])
+  e = c .+ d
+  @test oneAPI.buftype(e) == oneL0.SharedBuffer
+end

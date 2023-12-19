@@ -1,4 +1,5 @@
-export oneArray, oneVector, oneMatrix, oneVecOrMat
+export oneArray, oneVector, oneMatrix, oneVecOrMat,
+       is_device, is_shared, is_host
 
 
 ## array type
@@ -168,6 +169,12 @@ function device(A::oneArray)
   return oneL0.device(A.data[])
 end
 
+buftype(x::oneArray) = buftype(typeof(x))
+buftype(::Type{<:oneArray{<:Any,<:Any,B}}) where {B} = @isdefined(B) ? B : Any
+
+is_device(a::oneArray) = isa(a.data[], oneL0.DeviceBuffer)
+is_shared(a::oneArray) = isa(a.data[], oneL0.SharedBuffer)
+is_host(a::oneArray) = isa(a.data[], oneL0.HostBuffer)
 
 ## derived types
 
@@ -195,9 +202,15 @@ const oneStridedVector{T} = oneStridedArray{T,1}
 const oneStridedMatrix{T} = oneStridedArray{T,2}
 const oneStridedVecOrMat{T} = Union{oneStridedVector{T}, oneStridedMatrix{T}}
 
-Base.pointer(x::oneStridedArray{T}) where {T} = Base.unsafe_convert(ZePtr{T}, x)
-@inline function Base.pointer(x::oneStridedArray{T}, i::Integer) where T
-    Base.unsafe_convert(ZePtr{T}, x) + Base._memory_offset(x, i)
+@inline function Base.pointer(x::oneStridedArray{T}, i::Integer=1; type=oneL0.DeviceBuffer) where T
+    PT = if type == oneL0.DeviceBuffer
+      ZePtr{T}
+    elseif type == oneL0.HostBuffer
+      Ptr{T}
+    else
+      error("unknown memory type")
+    end
+    Base.unsafe_convert(PT, x) + Base._memory_offset(x, i)
 end
 
 # anything that's (secretly) backed by a oneArray
@@ -241,12 +254,20 @@ oneL0.ZeRef{T}() where {T} = oneL0.ZeRefArray(oneArray{T}(undef, 1))
 Base.convert(::Type{T}, x::T) where T <: oneArray = x
 
 
-## interop with C libraries
+## interop with libraries
 
-Base.unsafe_convert(::Type{Ptr{T}}, x::oneArray{T}) where {T} =
-  throw(ArgumentError("cannot take the host address of a $(typeof(x))"))
-Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T} =
+function Base.unsafe_convert(::Type{Ptr{T}}, x::oneArray{T}) where {T}
+  buf = x.data[]
+  if is_device(x)
+    throw(ArgumentError("cannot take the CPU address of a $(typeof(x))"))
+  end
+  convert(Ptr{T}, x.data[]) + x.offset*Base.elsize(x)
+end
+
+function Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T}
   convert(ZePtr{T}, x.data[]) + x.offset*Base.elsize(x)
+end
+
 
 
 ## interop with GPU arrays
@@ -255,9 +276,6 @@ function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{
   oneDeviceArray{T,N,AS.Global}(size(a), reinterpret(LLVMPtr{T,AS.Global}, pointer(a)),
                                 a.maxsize - a.offset*Base.elsize(a))
 end
-
-Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
-  Base.unsafe_convert(oneDeviceArray{T,N,AS.Global}, xs)
 
 
 ## memory copying
@@ -310,7 +328,7 @@ Base.copyto!(dest::oneDenseArray{T}, src::oneDenseArray{T}) where {T} =
     copyto!(dest, 1, src, 1, length(src))
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
-                             dest::oneDenseArray{T}, doffs, src::Array{T}, soffs, n) where T
+                             dest::oneDenseArray{T,<:Any,oneL0.DeviceBuffer}, doffs, src::Array{T}, soffs, n) where T
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -320,7 +338,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
 end
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
-                             dest::Array{T}, doffs, src::oneDenseArray{T}, soffs, n) where T
+                             dest::Array{T}, doffs, src::oneDenseArray{T,<:Any,oneL0.DeviceBuffer}, soffs, n) where T
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -340,6 +358,46 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
   end
+  return dest
+end
+
+# between Array and host-accessible oneArray
+
+function Base.unsafe_copyto!(ctx::ZeContext, dev,
+                             dest::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, doffs, src::Array{T}, soffs, n) where T
+  if Base.isbitsunion(T)
+    # copy selector bytes
+    error("oneArray does not yet support isbits-union arrays")
+  end
+  # XXX: maintain queue-ordered semantics? HostBuffers don't have a device...
+  GC.@preserve src dest begin
+    ptr = pointer(dest, doffs)
+    unsafe_copyto!(pointer(dest, doffs; type=oneL0.HostBuffer), pointer(src, soffs), n)
+    if Base.isbitsunion(T)
+      # copy selector bytes
+      error("oneArray does not yet support isbits-union arrays")
+    end
+  end
+
+  return dest
+end
+
+function Base.unsafe_copyto!(ctx::ZeContext, dev,
+                             dest::Array{T}, doffs, src::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, soffs, n) where T
+  if Base.isbitsunion(T)
+    # copy selector bytes
+    error("oneArray does not yet support isbits-union arrays")
+  end
+  # XXX: maintain queue-ordered semantics? HostBuffers don't have a device...
+  GC.@preserve src dest begin
+    ptr = pointer(dest, doffs)
+    unsafe_copyto!(pointer(dest, doffs), pointer(src, soffs; type=oneL0.HostBuffer), n)
+    if Base.isbitsunion(T)
+      # copy selector bytes
+      error("oneArray does not yet support isbits-union arrays")
+    end
+  end
+
   return dest
 end
 
@@ -375,7 +433,7 @@ end
 
 ## derived arrays
 
-function GPUArrays.derive(::Type{T}, N::Int, a::oneArray, dims::Dims, offset::Int) where {T}
+function GPUArrays.derive(::Type{T}, a::oneArray, dims::Dims{N}, offset::Int) where {T,N}
   offset = (a.offset * Base.elsize(a)) ÷ sizeof(T) + offset
   oneArray{T,N}(a.data, dims; a.maxsize, offset)
 end

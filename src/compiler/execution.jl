@@ -83,10 +83,15 @@ end
 
 struct KernelAdaptor end
 
-# convert oneL0 host pointers to device pointers
+# convert oneAPI host pointers to device pointers
 Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} = reinterpret(Ptr{T}, p)
 
-# Base.RefValue isn't GPU compatible, so provide a compatible alternative
+# convert oneAPI host arrays to device arrays
+Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
+  Base.unsafe_convert(oneDeviceArray{T,N,AS.Global}, xs)
+
+# Base.RefValue isn't GPU compatible, so provide a compatible alternative.
+# TODO: port improvements from CUDA.jl
 struct ZeRefValue{T} <: Ref{T}
   x::T
 end
@@ -99,6 +104,11 @@ struct oneRefType{T} <: Ref{DataType} end
 Base.getindex(r::oneRefType{T}) where T = T
 Adapt.adapt_structure(to::KernelAdaptor, r::Base.RefValue{<:Union{DataType,Type}}) =
     oneRefType{r[]}()
+
+# case where type is the function being broadcasted
+Adapt.adapt_structure(to::KernelAdaptor,
+                      bc::Broadcast.Broadcasted{Style, <:Any, Type{T}}) where {Style, T} =
+    Broadcast.Broadcasted{Style}((x...) -> T(x...), adapt(to, bc.args), bc.axes)
 
 """
     kernel_convert(x)
