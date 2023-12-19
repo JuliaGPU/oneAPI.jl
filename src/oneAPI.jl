@@ -44,15 +44,15 @@ include("device/quirks.jl")
 # essential stuff
 include("context.jl")
 
-# compiler implementation
-include("compiler/compilation.jl")
-include("compiler/execution.jl")
-include("compiler/reflection.jl")
-
 # array abstraction
 include("memory.jl")
 include("pool.jl")
 include("array.jl")
+
+# compiler implementation
+include("compiler/compilation.jl")
+include("compiler/execution.jl")
+include("compiler/reflection.jl")
 
 # array libraries
 include("../lib/mkl/oneMKL.jl")

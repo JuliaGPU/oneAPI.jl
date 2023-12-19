@@ -2,18 +2,20 @@
 
 using Base.Broadcast: BroadcastStyle, Broadcasted
 
-struct oneArrayStyle{N} <: AbstractGPUArrayStyle{N} end
-oneArrayStyle(::Val{N}) where N = oneArrayStyle{N}()
-oneArrayStyle{M}(::Val{N}) where {N,M} = oneArrayStyle{N}()
+struct oneArrayStyle{N,B} <: AbstractGPUArrayStyle{N} end
+oneArrayStyle{M,B}(::Val{N}) where {N,M,B} = oneArrayStyle{N,B}()
 
-BroadcastStyle(::Type{<:oneArray{T,N}}) where {T,N} = oneArrayStyle{N}()
+# identify the broadcast style of a (wrapped) oneArray
+BroadcastStyle(::Type{<:oneArray{T,N,B}}) where {T,N,B} = oneArrayStyle{N,B}()
+BroadcastStyle(W::Type{<:oneWrappedArray{T,N}}) where {T,N} =
+    oneArrayStyle{N, buftype(Adapt.unwrap_type(W))}()
 
-Base.similar(bc::Broadcasted{oneArrayStyle{N}}, ::Type{T}) where {N,T} =
-    similar(oneArray{T}, axes(bc))
+# when we are dealing with different buffer styles, we cannot know
+# which one is better, so use shared memory
+BroadcastStyle(::oneArrayStyle{N, B1},
+               ::oneArrayStyle{N, B2}) where {N,B1,B2} =
+    oneArrayStyle{N, oneL0.SharedBuffer}()
 
-Base.similar(bc::Broadcasted{oneArrayStyle{N}}, ::Type{T}, dims...) where {N,T} =
-    oneArray{T}(undef, dims...)
-
-# broadcasting type ctors isn't GPU compatible
-Broadcast.broadcasted(::oneArrayStyle{N}, f::Type{T}, args...) where {N, T} =
-    Broadcasted{oneArrayStyle{N}}((x...) -> T(x...), args, nothing)
+# allocation of output arrays
+Base.similar(bc::Broadcasted{oneArrayStyle{N,B}}, ::Type{T}, dims) where {T,N,B} =
+    similar(oneArray{T,length(dims),B}, dims)
