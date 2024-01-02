@@ -9,3 +9,7 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 oneAPI_Level_Zero_Headers_jll = "f4bc562b-d309-54f8-9efb-476e56f0410d"
+oneAPI_Support_Headers_jll = "24f86df5-245d-5634-a4cc-32433d9800b3"
+
+[compat]
+oneAPI_Support_Headers_jll = "=2023.0.0"
