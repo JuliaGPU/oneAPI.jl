@@ -21,7 +21,8 @@ end
 # get a pointer to local memory, with known (static) or zero length (dynamic)
 @generated function emit_localmemory(::Type{T}, ::Val{len}=Val(0)) where {T,len}
     Context() do ctx
-        eltyp = convert(LLVMType, T)
+        # XXX: as long as LLVMPtr is emitted as i8*, it doesn't make sense to type the GV
+        eltyp = convert(LLVMType, LLVM.Int8Type())
         T_ptr = convert(LLVMType, LLVMPtr{T,AS.Local})
 
         # create a function
@@ -29,7 +30,7 @@ end
 
         # create the global variable
         mod = LLVM.parent(llvm_f)
-        gv_typ = LLVM.ArrayType(eltyp, len)
+        gv_typ = LLVM.ArrayType(eltyp, len * sizeof(T))
         gv = GlobalVariable(mod, gv_typ, "local_memory", AS.Local)
         if len > 0
             linkage!(gv, LLVM.API.LLVMInternalLinkage)
