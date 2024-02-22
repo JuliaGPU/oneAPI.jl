@@ -12,4 +12,4 @@ oneAPI_Level_Zero_Headers_jll = "f4bc562b-d309-54f8-9efb-476e56f0410d"
 oneAPI_Support_Headers_jll = "24f86df5-245d-5634-a4cc-32433d9800b3"
 
 [compat]
-oneAPI_Support_Headers_jll = "=2023.0.0"
+oneAPI_Support_Headers_jll = "=2024.0.0"

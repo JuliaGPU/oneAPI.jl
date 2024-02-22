@@ -620,25 +620,29 @@ int onemklCdotu(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t 
 int onemklZdotu(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, double
                 _Complex *y, int64_t incy, double _Complex *result);
 
-int onemklSiamax(syclQueue_t device_queue, int64_t n, float *x, int64_t incx, int64_t *result);
+int onemklSiamax(syclQueue_t device_queue, int64_t n, float *x, int64_t incx, int64_t *result,
+                 onemklIndex base);
 
-int onemklDiamax(syclQueue_t device_queue, int64_t n, double *x, int64_t incx, int64_t *result);
+int onemklDiamax(syclQueue_t device_queue, int64_t n, double *x, int64_t incx, int64_t *result,
+                 onemklIndex base);
 
 int onemklCiamax(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx, int64_t
-                 *result);
+                 *result, onemklIndex base);
 
 int onemklZiamax(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, int64_t
-                 *result);
+                 *result, onemklIndex base);
 
-int onemklSiamin(syclQueue_t device_queue, int64_t n, float *x, int64_t incx, int64_t *result);
+int onemklSiamin(syclQueue_t device_queue, int64_t n, float *x, int64_t incx, int64_t *result,
+                 onemklIndex base);
 
-int onemklDiamin(syclQueue_t device_queue, int64_t n, double *x, int64_t incx, int64_t *result);
+int onemklDiamin(syclQueue_t device_queue, int64_t n, double *x, int64_t incx, int64_t *result,
+                 onemklIndex base);
 
 int onemklCiamin(syclQueue_t device_queue, int64_t n, float _Complex *x, int64_t incx, int64_t
-                 *result);
+                 *result, onemklIndex base);
 
 int onemklZiamin(syclQueue_t device_queue, int64_t n, double _Complex *x, int64_t incx, int64_t
-                 *result);
+                 *result, onemklIndex base);
 
 int onemklSasum(syclQueue_t device_queue, int64_t n, float *x, int64_t incx, float *result);
 
@@ -1191,6 +1195,30 @@ int onemklSgetrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, float *a,
 int onemklZgetrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t
                        lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t
                        batch_size, double _Complex *scratchpad, int64_t scratchpad_size);
+
+int64_t onemklSgetrfnp_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t
+                                       lda);
+
+int64_t onemklDgetrfnp_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t
+                                       lda);
+
+int64_t onemklCgetrfnp_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t
+                                       lda);
+
+int64_t onemklZgetrfnp_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t
+                                       lda);
+
+int onemklCgetrfnp(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda,
+                   float _Complex *scratchpad, int64_t scratchpad_size);
+
+int onemklDgetrfnp(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, double
+                   *scratchpad, int64_t scratchpad_size);
+
+int onemklSgetrfnp(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, float
+                   *scratchpad, int64_t scratchpad_size);
+
+int onemklZgetrfnp(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda,
+                   double _Complex *scratchpad, int64_t scratchpad_size);
 
 int64_t onemklSgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n,
                                              int64_t lda, int64_t stride_a, int64_t batch_size);
