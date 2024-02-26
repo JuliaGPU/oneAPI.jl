@@ -11,8 +11,8 @@ end
 
 function check(f)
     res = retry_reclaim(err -> err == RESULT_ERROR_OUT_OF_HOST_MEMORY ||
-                               err == RESULT_ERROR_OUT_OF_DEVICE_MEMORY) do
-        f()
+                            err == RESULT_ERROR_OUT_OF_DEVICE_MEMORY) do
+        return f()
     end
 
     if res != RESULT_SUCCESS
@@ -113,6 +113,9 @@ const ze_ipc_event_pool_handle_t = _ze_ipc_event_pool_handle_t
     ZE_RESULT_EXP_ERROR_DEVICE_IS_NOT_VERTEX = 2146435073
     ZE_RESULT_EXP_ERROR_VERTEX_IS_NOT_DEVICE = 2146435074
     ZE_RESULT_EXP_ERROR_REMOTE_DEVICE = 2146435075
+    ZE_RESULT_EXP_ERROR_OPERANDS_INCOMPATIBLE = 2146435076
+    ZE_RESULT_EXP_RTAS_BUILD_RETRY = 2146435077
+    ZE_RESULT_EXP_RTAS_BUILD_DEFERRED = 2146435078
     ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS = 1879113728
     ZE_RESULT_ERROR_NOT_AVAILABLE = 1879113729
     ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE = 1879179264
@@ -200,6 +203,11 @@ const ze_result_t = _ze_result_t
     ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES = 65548
     ZE_STRUCTURE_TYPE_DEVICE_LUID_EXT_PROPERTIES = 65549
     ZE_STRUCTURE_TYPE_DEVICE_MEMORY_EXT_PROPERTIES = 65550
+    ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT = 65551
+    ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXT_DESC = 65552
+    ZE_STRUCTURE_TYPE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_PROPERTIES = 65553
+    ZE_STRUCTURE_TYPE_EVENT_QUERY_KERNEL_TIMESTAMPS_RESULTS_EXT_PROPERTIES = 65554
+    ZE_STRUCTURE_TYPE_KERNEL_MAX_GROUP_SIZE_EXT_PROPERTIES = 65555
     ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 131073
     ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC = 131074
     ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_PROPERTIES = 131075
@@ -212,6 +220,25 @@ const ze_result_t = _ze_result_t
     ZE_STRUCTURE_TYPE_DEVICE_P2P_BANDWIDTH_EXP_PROPERTIES = 131082
     ZE_STRUCTURE_TYPE_FABRIC_VERTEX_EXP_PROPERTIES = 131083
     ZE_STRUCTURE_TYPE_FABRIC_EDGE_EXP_PROPERTIES = 131084
+    ZE_STRUCTURE_TYPE_MEMORY_SUB_ALLOCATIONS_EXP_PROPERTIES = 131085
+    ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXP_DESC = 131086
+    ZE_STRUCTURE_TYPE_RTAS_BUILDER_BUILD_OP_EXP_DESC = 131087
+    ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXP_PROPERTIES = 131088
+    ZE_STRUCTURE_TYPE_RTAS_PARALLEL_OPERATION_EXP_PROPERTIES = 131089
+    ZE_STRUCTURE_TYPE_RTAS_DEVICE_EXP_PROPERTIES = 131090
+    ZE_STRUCTURE_TYPE_RTAS_GEOMETRY_AABBS_EXP_CB_PARAMS = 131091
+    ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC = 131092
+    ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_LIST_EXP_PROPERTIES = 131093
+    ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_LIST_EXP_DESC = 131094
+    ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_ID_EXP_DESC = 131095
+    ZE_STRUCTURE_TYPE_MUTABLE_COMMANDS_EXP_DESC = 131096
+    ZE_STRUCTURE_TYPE_MUTABLE_KERNEL_ARGUMENT_EXP_DESC = 131097
+    ZE_STRUCTURE_TYPE_MUTABLE_GROUP_COUNT_EXP_DESC = 131098
+    ZE_STRUCTURE_TYPE_MUTABLE_GROUP_SIZE_EXP_DESC = 131099
+    ZE_STRUCTURE_TYPE_MUTABLE_GLOBAL_OFFSET_EXP_DESC = 131100
+    ZE_STRUCTURE_TYPE_PITCHED_ALLOC_DEVICE_EXP_PROPERTIES = 131101
+    ZE_STRUCTURE_TYPE_BINDLESS_IMAGE_EXP_DESC = 131102
+    ZE_STRUCTURE_TYPE_PITCHED_IMAGE_EXP_DESC = 131103
     ZE_STRUCTURE_TYPE_FORCE_UINT32 = 2147483647
 end
 
@@ -257,6 +284,13 @@ struct _ze_uuid_t
 end
 
 const ze_uuid_t = _ze_uuid_t
+
+struct _ze_base_cb_params_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+end
+
+const ze_base_cb_params_t = _ze_base_cb_params_t
 
 struct _ze_base_properties_t
     stype::ze_structure_type_t
@@ -1022,6 +1056,14 @@ end
 
 const ze_image_memory_properties_exp_t = _ze_image_memory_properties_exp_t
 
+struct _ze_image_view_planar_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    planeIndex::UInt32
+end
+
+const ze_image_view_planar_ext_desc_t = _ze_image_view_planar_ext_desc_t
+
 struct _ze_image_view_planar_exp_desc_t
     stype::ze_structure_type_t
     pNext::Ptr{Cvoid}
@@ -1193,7 +1235,7 @@ const ze_fabric_vertex_pci_exp_address_t = _ze_fabric_vertex_pci_exp_address_t
 @cenum _ze_fabric_vertex_exp_type_t::UInt32 begin
     ZE_FABRIC_VERTEX_EXP_TYPE_UNKNOWN = 0
     ZE_FABRIC_VERTEX_EXP_TYPE_DEVICE = 1
-    ZE_FABRIC_VERTEX_EXP_TYPE_SUBEVICE = 2
+    ZE_FABRIC_VERTEX_EXP_TYPE_SUBDEVICE = 2
     ZE_FABRIC_VERTEX_EXP_TYPE_SWITCH = 3
     ZE_FABRIC_VERTEX_EXP_TYPE_FORCE_UINT32 = 2147483647
 end
@@ -1274,6 +1316,442 @@ end
 
 const ze_device_memory_ext_properties_t = _ze_device_memory_ext_properties_t
 
+struct _ze_device_ip_version_ext_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    ipVersion::UInt32
+end
+
+const ze_device_ip_version_ext_t = _ze_device_ip_version_ext_t
+
+struct _ze_kernel_max_group_size_properties_ext_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    maxGroupSize::UInt32
+end
+
+const ze_kernel_max_group_size_properties_ext_t = _ze_kernel_max_group_size_properties_ext_t
+
+struct _ze_sub_allocation_t
+    base::Ptr{Cvoid}
+    size::Csize_t
+end
+
+const ze_sub_allocation_t = _ze_sub_allocation_t
+
+struct _ze_memory_sub_allocations_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    pCount::Ptr{UInt32}
+    pSubAllocations::Ptr{ze_sub_allocation_t}
+end
+
+const ze_memory_sub_allocations_exp_properties_t = _ze_memory_sub_allocations_exp_properties_t
+
+const ze_event_query_kernel_timestamps_ext_flags_t = UInt32
+
+struct _ze_event_query_kernel_timestamps_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_event_query_kernel_timestamps_ext_flags_t
+end
+
+const ze_event_query_kernel_timestamps_ext_properties_t = _ze_event_query_kernel_timestamps_ext_properties_t
+
+struct _ze_synchronized_timestamp_data_ext_t
+    kernelStart::UInt64
+    kernelEnd::UInt64
+end
+
+const ze_synchronized_timestamp_data_ext_t = _ze_synchronized_timestamp_data_ext_t
+
+struct _ze_synchronized_timestamp_result_ext_t
+    _global::ze_synchronized_timestamp_data_ext_t
+    context::ze_synchronized_timestamp_data_ext_t
+end
+
+const ze_synchronized_timestamp_result_ext_t = _ze_synchronized_timestamp_result_ext_t
+
+struct _ze_event_query_kernel_timestamps_results_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    pKernelTimestampsBuffer::Ptr{ze_kernel_timestamp_result_t}
+    pSynchronizedTimestampsBuffer::Ptr{ze_synchronized_timestamp_result_ext_t}
+end
+
+const ze_event_query_kernel_timestamps_results_ext_properties_t = _ze_event_query_kernel_timestamps_results_ext_properties_t
+
+@cenum _ze_rtas_builder_exp_version_t::UInt32 begin
+    ZE_RTAS_BUILDER_EXP_VERSION_1_0 = 65536
+    ZE_RTAS_BUILDER_EXP_VERSION_CURRENT = 65536
+    ZE_RTAS_BUILDER_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_exp_version_t = _ze_rtas_builder_exp_version_t
+
+struct _ze_rtas_builder_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    builderVersion::ze_rtas_builder_exp_version_t
+end
+
+const ze_rtas_builder_exp_desc_t = _ze_rtas_builder_exp_desc_t
+
+const ze_rtas_builder_exp_flags_t = UInt32
+
+struct _ze_rtas_builder_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_rtas_builder_exp_flags_t
+    rtasBufferSizeBytesExpected::Csize_t
+    rtasBufferSizeBytesMaxRequired::Csize_t
+    scratchBufferSizeBytes::Csize_t
+end
+
+const ze_rtas_builder_exp_properties_t = _ze_rtas_builder_exp_properties_t
+
+const ze_rtas_parallel_operation_exp_flags_t = UInt32
+
+struct _ze_rtas_parallel_operation_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_rtas_parallel_operation_exp_flags_t
+    maxConcurrency::UInt32
+end
+
+const ze_rtas_parallel_operation_exp_properties_t = _ze_rtas_parallel_operation_exp_properties_t
+
+const ze_rtas_device_exp_flags_t = UInt32
+
+@cenum _ze_rtas_format_exp_t::UInt32 begin
+    ZE_RTAS_FORMAT_EXP_INVALID = 0
+    ZE_RTAS_FORMAT_EXP_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_format_exp_t = _ze_rtas_format_exp_t
+
+struct _ze_rtas_device_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_rtas_device_exp_flags_t
+    rtasFormat::ze_rtas_format_exp_t
+    rtasBufferAlignment::UInt32
+end
+
+const ze_rtas_device_exp_properties_t = _ze_rtas_device_exp_properties_t
+
+struct _ze_rtas_float3_exp_t
+    x::Cfloat
+    y::Cfloat
+    z::Cfloat
+end
+
+const ze_rtas_float3_exp_t = _ze_rtas_float3_exp_t
+
+struct _ze_rtas_transform_float3x4_column_major_exp_t
+    vx_x::Cfloat
+    vx_y::Cfloat
+    vx_z::Cfloat
+    vy_x::Cfloat
+    vy_y::Cfloat
+    vy_z::Cfloat
+    vz_x::Cfloat
+    vz_y::Cfloat
+    vz_z::Cfloat
+    p_x::Cfloat
+    p_y::Cfloat
+    p_z::Cfloat
+end
+
+const ze_rtas_transform_float3x4_column_major_exp_t = _ze_rtas_transform_float3x4_column_major_exp_t
+
+struct _ze_rtas_transform_float3x4_aligned_column_major_exp_t
+    vx_x::Cfloat
+    vx_y::Cfloat
+    vx_z::Cfloat
+    pad0::Cfloat
+    vy_x::Cfloat
+    vy_y::Cfloat
+    vy_z::Cfloat
+    pad1::Cfloat
+    vz_x::Cfloat
+    vz_y::Cfloat
+    vz_z::Cfloat
+    pad2::Cfloat
+    p_x::Cfloat
+    p_y::Cfloat
+    p_z::Cfloat
+    pad3::Cfloat
+end
+
+const ze_rtas_transform_float3x4_aligned_column_major_exp_t = _ze_rtas_transform_float3x4_aligned_column_major_exp_t
+
+struct _ze_rtas_transform_float3x4_row_major_exp_t
+    vx_x::Cfloat
+    vy_x::Cfloat
+    vz_x::Cfloat
+    p_x::Cfloat
+    vx_y::Cfloat
+    vy_y::Cfloat
+    vz_y::Cfloat
+    p_y::Cfloat
+    vx_z::Cfloat
+    vy_z::Cfloat
+    vz_z::Cfloat
+    p_z::Cfloat
+end
+
+const ze_rtas_transform_float3x4_row_major_exp_t = _ze_rtas_transform_float3x4_row_major_exp_t
+
+struct _ze_rtas_aabb_exp_t
+    lower::ze_rtas_float3_exp_t
+    upper::ze_rtas_float3_exp_t
+end
+
+const ze_rtas_aabb_exp_t = _ze_rtas_aabb_exp_t
+
+struct _ze_rtas_triangle_indices_uint32_exp_t
+    v0::UInt32
+    v1::UInt32
+    v2::UInt32
+end
+
+const ze_rtas_triangle_indices_uint32_exp_t = _ze_rtas_triangle_indices_uint32_exp_t
+
+struct _ze_rtas_quad_indices_uint32_exp_t
+    v0::UInt32
+    v1::UInt32
+    v2::UInt32
+    v3::UInt32
+end
+
+const ze_rtas_quad_indices_uint32_exp_t = _ze_rtas_quad_indices_uint32_exp_t
+
+const ze_rtas_builder_packed_geometry_type_exp_t = UInt8
+
+struct _ze_rtas_builder_geometry_info_exp_t
+    geometryType::ze_rtas_builder_packed_geometry_type_exp_t
+end
+
+const ze_rtas_builder_geometry_info_exp_t = _ze_rtas_builder_geometry_info_exp_t
+
+const ze_rtas_builder_packed_geometry_exp_flags_t = UInt8
+
+const ze_rtas_builder_packed_input_data_format_exp_t = UInt8
+
+struct _ze_rtas_builder_triangles_geometry_info_exp_t
+    geometryType::ze_rtas_builder_packed_geometry_type_exp_t
+    geometryFlags::ze_rtas_builder_packed_geometry_exp_flags_t
+    geometryMask::UInt8
+    triangleFormat::ze_rtas_builder_packed_input_data_format_exp_t
+    vertexFormat::ze_rtas_builder_packed_input_data_format_exp_t
+    triangleCount::UInt32
+    vertexCount::UInt32
+    triangleStride::UInt32
+    vertexStride::UInt32
+    pTriangleBuffer::Ptr{Cvoid}
+    pVertexBuffer::Ptr{Cvoid}
+end
+
+const ze_rtas_builder_triangles_geometry_info_exp_t = _ze_rtas_builder_triangles_geometry_info_exp_t
+
+struct _ze_rtas_builder_quads_geometry_info_exp_t
+    geometryType::ze_rtas_builder_packed_geometry_type_exp_t
+    geometryFlags::ze_rtas_builder_packed_geometry_exp_flags_t
+    geometryMask::UInt8
+    quadFormat::ze_rtas_builder_packed_input_data_format_exp_t
+    vertexFormat::ze_rtas_builder_packed_input_data_format_exp_t
+    quadCount::UInt32
+    vertexCount::UInt32
+    quadStride::UInt32
+    vertexStride::UInt32
+    pQuadBuffer::Ptr{Cvoid}
+    pVertexBuffer::Ptr{Cvoid}
+end
+
+const ze_rtas_builder_quads_geometry_info_exp_t = _ze_rtas_builder_quads_geometry_info_exp_t
+
+struct _ze_rtas_geometry_aabbs_exp_cb_params_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    primID::UInt32
+    primIDCount::UInt32
+    pGeomUserPtr::Ptr{Cvoid}
+    pBuildUserPtr::Ptr{Cvoid}
+    pBoundsOut::Ptr{ze_rtas_aabb_exp_t}
+end
+
+const ze_rtas_geometry_aabbs_exp_cb_params_t = _ze_rtas_geometry_aabbs_exp_cb_params_t
+
+# typedef void ( * ze_rtas_geometry_aabbs_cb_exp_t ) ( ze_rtas_geometry_aabbs_exp_cb_params_t * params ///< [in] callback function parameters structure )
+const ze_rtas_geometry_aabbs_cb_exp_t = Ptr{Cvoid}
+
+struct _ze_rtas_builder_procedural_geometry_info_exp_t
+    geometryType::ze_rtas_builder_packed_geometry_type_exp_t
+    geometryFlags::ze_rtas_builder_packed_geometry_exp_flags_t
+    geometryMask::UInt8
+    reserved::UInt8
+    primCount::UInt32
+    pfnGetBoundsCb::ze_rtas_geometry_aabbs_cb_exp_t
+    pGeomUserPtr::Ptr{Cvoid}
+end
+
+const ze_rtas_builder_procedural_geometry_info_exp_t = _ze_rtas_builder_procedural_geometry_info_exp_t
+
+const ze_rtas_builder_packed_instance_exp_flags_t = UInt8
+
+struct _ze_rtas_builder_instance_geometry_info_exp_t
+    geometryType::ze_rtas_builder_packed_geometry_type_exp_t
+    instanceFlags::ze_rtas_builder_packed_instance_exp_flags_t
+    geometryMask::UInt8
+    transformFormat::ze_rtas_builder_packed_input_data_format_exp_t
+    instanceUserID::UInt32
+    pTransform::Ptr{Cvoid}
+    pBounds::Ptr{ze_rtas_aabb_exp_t}
+    pAccelerationStructure::Ptr{Cvoid}
+end
+
+const ze_rtas_builder_instance_geometry_info_exp_t = _ze_rtas_builder_instance_geometry_info_exp_t
+
+@cenum _ze_rtas_builder_build_quality_hint_exp_t::UInt32 begin
+    ZE_RTAS_BUILDER_BUILD_QUALITY_HINT_EXP_LOW = 0
+    ZE_RTAS_BUILDER_BUILD_QUALITY_HINT_EXP_MEDIUM = 1
+    ZE_RTAS_BUILDER_BUILD_QUALITY_HINT_EXP_HIGH = 2
+    ZE_RTAS_BUILDER_BUILD_QUALITY_HINT_EXP_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_build_quality_hint_exp_t = _ze_rtas_builder_build_quality_hint_exp_t
+
+const ze_rtas_builder_build_op_exp_flags_t = UInt32
+
+struct _ze_rtas_builder_build_op_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    rtasFormat::ze_rtas_format_exp_t
+    buildQuality::ze_rtas_builder_build_quality_hint_exp_t
+    buildFlags::ze_rtas_builder_build_op_exp_flags_t
+    ppGeometries::Ptr{Ptr{ze_rtas_builder_geometry_info_exp_t}}
+    numGeometries::UInt32
+end
+
+const ze_rtas_builder_build_op_exp_desc_t = _ze_rtas_builder_build_op_exp_desc_t
+
+const ze_event_pool_counter_based_exp_flags_t = UInt32
+
+struct _ze_event_pool_counter_based_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_event_pool_counter_based_exp_flags_t
+end
+
+const ze_event_pool_counter_based_exp_desc_t = _ze_event_pool_counter_based_exp_desc_t
+
+const ze_image_bindless_exp_flags_t = UInt32
+
+struct _ze_image_bindless_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_image_bindless_exp_flags_t
+end
+
+const ze_image_bindless_exp_desc_t = _ze_image_bindless_exp_desc_t
+
+struct _ze_image_pitched_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    ptr::Ptr{Cvoid}
+end
+
+const ze_image_pitched_exp_desc_t = _ze_image_pitched_exp_desc_t
+
+struct _ze_device_pitched_alloc_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    maxImageLinearWidth::Csize_t
+    maxImageLinearHeight::Csize_t
+end
+
+const ze_device_pitched_alloc_exp_properties_t = _ze_device_pitched_alloc_exp_properties_t
+
+const ze_mutable_command_exp_flags_t = UInt32
+
+struct _ze_mutable_command_id_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_mutable_command_exp_flags_t
+end
+
+const ze_mutable_command_id_exp_desc_t = _ze_mutable_command_id_exp_desc_t
+
+const ze_mutable_command_list_exp_flags_t = UInt32
+
+struct _ze_mutable_command_list_exp_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    mutableCommandListFlags::ze_mutable_command_list_exp_flags_t
+    mutableCommandFlags::ze_mutable_command_exp_flags_t
+end
+
+const ze_mutable_command_list_exp_properties_t = _ze_mutable_command_list_exp_properties_t
+
+struct _ze_mutable_command_list_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_mutable_command_list_exp_flags_t
+end
+
+const ze_mutable_command_list_exp_desc_t = _ze_mutable_command_list_exp_desc_t
+
+struct _ze_mutable_commands_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::UInt32
+end
+
+const ze_mutable_commands_exp_desc_t = _ze_mutable_commands_exp_desc_t
+
+struct _ze_mutable_kernel_argument_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    commandId::UInt64
+    argIndex::UInt32
+    argSize::Csize_t
+    pArgValue::Ptr{Cvoid}
+end
+
+const ze_mutable_kernel_argument_exp_desc_t = _ze_mutable_kernel_argument_exp_desc_t
+
+struct _ze_mutable_group_count_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    commandId::UInt64
+    pGroupCount::Ptr{ze_group_count_t}
+end
+
+const ze_mutable_group_count_exp_desc_t = _ze_mutable_group_count_exp_desc_t
+
+struct _ze_mutable_group_size_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    commandId::UInt64
+    groupSizeX::UInt32
+    groupSizeY::UInt32
+    groupSizeZ::UInt32
+end
+
+const ze_mutable_group_size_exp_desc_t = _ze_mutable_group_size_exp_desc_t
+
+struct _ze_mutable_global_offset_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    commandId::UInt64
+    offsetX::UInt32
+    offsetY::UInt32
+    offsetZ::UInt32
+end
+
+const ze_mutable_global_offset_exp_desc_t = _ze_mutable_global_offset_exp_desc_t
+
 const ze_init_flags_t = UInt32
 
 @cenum _ze_init_flag_t::UInt32 begin
@@ -1299,7 +1777,12 @@ end
     ZE_API_VERSION_1_2 = 65538
     ZE_API_VERSION_1_3 = 65539
     ZE_API_VERSION_1_4 = 65540
-    ZE_API_VERSION_CURRENT = 65540
+    ZE_API_VERSION_1_5 = 65541
+    ZE_API_VERSION_1_6 = 65542
+    ZE_API_VERSION_1_7 = 65543
+    ZE_API_VERSION_1_8 = 65544
+    ZE_API_VERSION_1_9 = 65545
+    ZE_API_VERSION_CURRENT = 65545
     ZE_API_VERSION_FORCE_UINT32 = 2147483647
 end
 
@@ -1340,9 +1823,19 @@ end
                                                             ppFunctionAddress::Ptr{Ptr{Cvoid}})::ze_result_t
 end
 
+@checked function zeDriverGetLastErrorDescription(hDriver, ppString)
+    @ccall libze_loader.zeDriverGetLastErrorDescription(hDriver::ze_driver_handle_t,
+                                                        ppString::Ptr{Ptr{Cchar}})::ze_result_t
+end
+
 @checked function zeDeviceGet(hDriver, pCount, phDevices)
     @ccall libze_loader.zeDeviceGet(hDriver::ze_driver_handle_t, pCount::Ptr{UInt32},
                                     phDevices::Ptr{ze_device_handle_t})::ze_result_t
+end
+
+@checked function zeDeviceGetRootDevice(hDevice, phRootDevice)
+    @ccall libze_loader.zeDeviceGetRootDevice(hDevice::ze_device_handle_t,
+                                              phRootDevice::Ptr{ze_device_handle_t})::ze_result_t
 end
 
 @checked function zeDeviceGetSubDevices(hDevice, pCount, phSubdevices)
@@ -1528,6 +2021,7 @@ end
 
 @cenum _ze_command_queue_flag_t::UInt32 begin
     ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY = 1
+    ZE_COMMAND_QUEUE_FLAG_IN_ORDER = 2
     ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -1557,10 +2051,22 @@ end
                                                   timeout::UInt64)::ze_result_t
 end
 
+@checked function zeCommandQueueGetOrdinal(hCommandQueue, pOrdinal)
+    @ccall libze_loader.zeCommandQueueGetOrdinal(hCommandQueue::ze_command_queue_handle_t,
+                                                 pOrdinal::Ptr{UInt32})::ze_result_t
+end
+
+@checked function zeCommandQueueGetIndex(hCommandQueue, pIndex)
+    @ccall libze_loader.zeCommandQueueGetIndex(hCommandQueue::ze_command_queue_handle_t,
+                                               pIndex::Ptr{UInt32})::ze_result_t
+end
+
 @cenum _ze_command_list_flag_t::UInt32 begin
     ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING = 1
     ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT = 2
     ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY = 4
+    ZE_COMMAND_LIST_FLAG_IN_ORDER = 8
+    ZE_COMMAND_LIST_FLAG_EXP_CLONEABLE = 16
     ZE_COMMAND_LIST_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -1600,6 +2106,36 @@ end
                                                                 hSignalEvent::ze_event_handle_t,
                                                                 numWaitEvents::UInt32,
                                                                 phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@checked function zeCommandListHostSynchronize(hCommandList, timeout)
+    @ccall libze_loader.zeCommandListHostSynchronize(hCommandList::ze_command_list_handle_t,
+                                                     timeout::UInt64)::ze_result_t
+end
+
+@checked function zeCommandListGetDeviceHandle(hCommandList, phDevice)
+    @ccall libze_loader.zeCommandListGetDeviceHandle(hCommandList::ze_command_list_handle_t,
+                                                     phDevice::Ptr{ze_device_handle_t})::ze_result_t
+end
+
+@checked function zeCommandListGetContextHandle(hCommandList, phContext)
+    @ccall libze_loader.zeCommandListGetContextHandle(hCommandList::ze_command_list_handle_t,
+                                                      phContext::Ptr{ze_context_handle_t})::ze_result_t
+end
+
+@checked function zeCommandListGetOrdinal(hCommandList, pOrdinal)
+    @ccall libze_loader.zeCommandListGetOrdinal(hCommandList::ze_command_list_handle_t,
+                                                pOrdinal::Ptr{UInt32})::ze_result_t
+end
+
+@checked function zeCommandListImmediateGetIndex(hCommandListImmediate, pIndex)
+    @ccall libze_loader.zeCommandListImmediateGetIndex(hCommandListImmediate::ze_command_list_handle_t,
+                                                       pIndex::Ptr{UInt32})::ze_result_t
+end
+
+@checked function zeCommandListIsImmediate(hCommandList, pIsImmediate)
+    @ccall libze_loader.zeCommandListIsImmediate(hCommandList::ze_command_list_handle_t,
+                                                 pIsImmediate::Ptr{ze_bool_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendBarrier(hCommandList, hSignalEvent, numWaitEvents,
@@ -1745,6 +2281,8 @@ end
     ZE_MEMORY_ADVICE_CLEAR_NON_ATOMIC_MOSTLY = 5
     ZE_MEMORY_ADVICE_BIAS_CACHED = 6
     ZE_MEMORY_ADVICE_BIAS_UNCACHED = 7
+    ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION = 8
+    ZE_MEMORY_ADVICE_CLEAR_SYSTEM_MEMORY_PREFERRED_LOCATION = 9
     ZE_MEMORY_ADVICE_FORCE_UINT32 = 2147483647
 end
 
@@ -1761,6 +2299,7 @@ end
     ZE_EVENT_POOL_FLAG_HOST_VISIBLE = 1
     ZE_EVENT_POOL_FLAG_IPC = 2
     ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP = 4
+    ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP = 8
     ZE_EVENT_POOL_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -1800,6 +2339,11 @@ end
 @checked function zeEventPoolGetIpcHandle(hEventPool, phIpc)
     @ccall libze_loader.zeEventPoolGetIpcHandle(hEventPool::ze_event_pool_handle_t,
                                                 phIpc::Ptr{ze_ipc_event_pool_handle_t})::ze_result_t
+end
+
+@checked function zeEventPoolPutIpcHandle(hContext, hIpc)
+    @ccall libze_loader.zeEventPoolPutIpcHandle(hContext::ze_context_handle_t,
+                                                hIpc::ze_ipc_event_pool_handle_t)::ze_result_t
 end
 
 @checked function zeEventPoolOpenIpcHandle(hContext, hIpc, phEventPool)
@@ -1862,6 +2406,31 @@ end
                                                                  hSignalEvent::ze_event_handle_t,
                                                                  numWaitEvents::UInt32,
                                                                  phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@checked function zeEventGetEventPool(hEvent, phEventPool)
+    @ccall libze_loader.zeEventGetEventPool(hEvent::ze_event_handle_t,
+                                            phEventPool::Ptr{ze_event_pool_handle_t})::ze_result_t
+end
+
+@checked function zeEventGetSignalScope(hEvent, pSignalScope)
+    @ccall libze_loader.zeEventGetSignalScope(hEvent::ze_event_handle_t,
+                                              pSignalScope::Ptr{ze_event_scope_flags_t})::ze_result_t
+end
+
+@checked function zeEventGetWaitScope(hEvent, pWaitScope)
+    @ccall libze_loader.zeEventGetWaitScope(hEvent::ze_event_handle_t,
+                                            pWaitScope::Ptr{ze_event_scope_flags_t})::ze_result_t
+end
+
+@checked function zeEventPoolGetContextHandle(hEventPool, phContext)
+    @ccall libze_loader.zeEventPoolGetContextHandle(hEventPool::ze_event_pool_handle_t,
+                                                    phContext::Ptr{ze_context_handle_t})::ze_result_t
+end
+
+@checked function zeEventPoolGetFlags(hEventPool, pFlags)
+    @ccall libze_loader.zeEventPoolGetFlags(hEventPool::ze_event_pool_handle_t,
+                                            pFlags::Ptr{ze_event_pool_flags_t})::ze_result_t
 end
 
 @cenum _ze_fence_flag_t::UInt32 begin
@@ -1995,6 +2564,23 @@ end
                                           pIpcHandle::Ptr{ze_ipc_mem_handle_t})::ze_result_t
 end
 
+@checked function zeMemGetIpcHandleFromFileDescriptorExp(hContext, handle, pIpcHandle)
+    @ccall libze_loader.zeMemGetIpcHandleFromFileDescriptorExp(hContext::ze_context_handle_t,
+                                                               handle::UInt64,
+                                                               pIpcHandle::Ptr{ze_ipc_mem_handle_t})::ze_result_t
+end
+
+@checked function zeMemGetFileDescriptorFromIpcHandleExp(hContext, ipcHandle, pHandle)
+    @ccall libze_loader.zeMemGetFileDescriptorFromIpcHandleExp(hContext::ze_context_handle_t,
+                                                               ipcHandle::ze_ipc_mem_handle_t,
+                                                               pHandle::Ptr{UInt64})::ze_result_t
+end
+
+@checked function zeMemPutIpcHandle(hContext, handle)
+    @ccall libze_loader.zeMemPutIpcHandle(hContext::ze_context_handle_t,
+                                          handle::ze_ipc_mem_handle_t)::ze_result_t
+end
+
 const ze_ipc_memory_flags_t = UInt32
 
 @cenum _ze_ipc_memory_flag_t::UInt32 begin
@@ -2016,6 +2602,35 @@ end
 @checked function zeMemCloseIpcHandle(hContext, ptr)
     @ccall libze_loader.zeMemCloseIpcHandle(hContext::ze_context_handle_t,
                                             ptr::PtrOrZePtr{Cvoid})::ze_result_t
+end
+
+const ze_memory_atomic_attr_exp_flags_t = UInt32
+
+@cenum _ze_memory_atomic_attr_exp_flag_t::UInt32 begin
+    ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_ATOMICS = 1
+    ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_HOST_ATOMICS = 2
+    ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_HOST_ATOMICS = 4
+    ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_DEVICE_ATOMICS = 8
+    ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_DEVICE_ATOMICS = 16
+    ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_SYSTEM_ATOMICS = 32
+    ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_SYSTEM_ATOMICS = 64
+    ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_memory_atomic_attr_exp_flag_t = _ze_memory_atomic_attr_exp_flag_t
+
+@checked function zeMemSetAtomicAccessAttributeExp(hContext, hDevice, ptr, size, attr)
+    @ccall libze_loader.zeMemSetAtomicAccessAttributeExp(hContext::ze_context_handle_t,
+                                                         hDevice::ze_device_handle_t,
+                                                         ptr::Ptr{Cvoid}, size::Csize_t,
+                                                         attr::ze_memory_atomic_attr_exp_flags_t)::ze_result_t
+end
+
+@checked function zeMemGetAtomicAccessAttributeExp(hContext, hDevice, ptr, size, pAttr)
+    @ccall libze_loader.zeMemGetAtomicAccessAttributeExp(hContext::ze_context_handle_t,
+                                                         hDevice::ze_device_handle_t,
+                                                         ptr::Ptr{Cvoid}, size::Csize_t,
+                                                         pAttr::Ptr{ze_memory_atomic_attr_exp_flags_t})::ze_result_t
 end
 
 @checked function zeModuleCreate(hContext, hDevice, desc, phModule, phBuildLog)
@@ -2429,6 +3044,9 @@ const ze_cache_reservation_ext_version_t = _ze_cache_reservation_ext_version_t
     ZE_CACHE_EXT_REGION_ZE_CACHE_REGION_DEFAULT = 0
     ZE_CACHE_EXT_REGION_ZE_CACHE_RESERVE_REGION = 1
     ZE_CACHE_EXT_REGION_ZE_CACHE_NON_RESERVED_REGION = 2
+    ZE_CACHE_EXT_REGION_DEFAULT = 0
+    ZE_CACHE_EXT_REGION_RESERVED = 1
+    ZE_CACHE_EXT_REGION_NON_RESERVED = 2
     ZE_CACHE_EXT_REGION_FORCE_UINT32 = 2147483647
 end
 
@@ -2474,6 +3092,22 @@ const ze_image_memory_properties_exp_version_t = _ze_image_memory_properties_exp
                                                       pMemoryProperties::Ptr{ze_image_memory_properties_exp_t})::ze_result_t
 end
 
+@cenum _ze_image_view_ext_version_t::UInt32 begin
+    ZE_IMAGE_VIEW_EXT_VERSION_1_0 = 65536
+    ZE_IMAGE_VIEW_EXT_VERSION_CURRENT = 65536
+    ZE_IMAGE_VIEW_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_image_view_ext_version_t = _ze_image_view_ext_version_t
+
+@checked function zeImageViewCreateExt(hContext, hDevice, desc, hImage, phImageView)
+    @ccall libze_loader.zeImageViewCreateExt(hContext::ze_context_handle_t,
+                                             hDevice::ze_device_handle_t,
+                                             desc::Ptr{ze_image_desc_t},
+                                             hImage::ze_image_handle_t,
+                                             phImageView::Ptr{ze_image_handle_t})::ze_result_t
+end
+
 @cenum _ze_image_view_exp_version_t::UInt32 begin
     ZE_IMAGE_VIEW_EXP_VERSION_1_0 = 65536
     ZE_IMAGE_VIEW_EXP_VERSION_CURRENT = 65536
@@ -2489,6 +3123,14 @@ const ze_image_view_exp_version_t = _ze_image_view_exp_version_t
                                              hImage::ze_image_handle_t,
                                              phImageView::Ptr{ze_image_handle_t})::ze_result_t
 end
+
+@cenum _ze_image_view_planar_ext_version_t::UInt32 begin
+    ZE_IMAGE_VIEW_PLANAR_EXT_VERSION_1_0 = 65536
+    ZE_IMAGE_VIEW_PLANAR_EXT_VERSION_CURRENT = 65536
+    ZE_IMAGE_VIEW_PLANAR_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_image_view_planar_ext_version_t = _ze_image_view_planar_ext_version_t
 
 @cenum _ze_image_view_planar_exp_version_t::UInt32 begin
     ZE_IMAGE_VIEW_PLANAR_EXP_VERSION_1_0 = 65536
@@ -2755,6 +3397,333 @@ end
 end
 
 const ze_device_memory_properties_ext_version_t = _ze_device_memory_properties_ext_version_t
+
+@cenum _ze_bfloat16_conversions_ext_version_t::UInt32 begin
+    ZE_BFLOAT16_CONVERSIONS_EXT_VERSION_1_0 = 65536
+    ZE_BFLOAT16_CONVERSIONS_EXT_VERSION_CURRENT = 65536
+    ZE_BFLOAT16_CONVERSIONS_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_bfloat16_conversions_ext_version_t = _ze_bfloat16_conversions_ext_version_t
+
+@cenum _ze_device_ip_version_version_t::UInt32 begin
+    ZE_DEVICE_IP_VERSION_VERSION_1_0 = 65536
+    ZE_DEVICE_IP_VERSION_VERSION_CURRENT = 65536
+    ZE_DEVICE_IP_VERSION_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_device_ip_version_version_t = _ze_device_ip_version_version_t
+
+@cenum _ze_kernel_max_group_size_properties_ext_version_t::UInt32 begin
+    ZE_KERNEL_MAX_GROUP_SIZE_PROPERTIES_EXT_VERSION_1_0 = 65536
+    ZE_KERNEL_MAX_GROUP_SIZE_PROPERTIES_EXT_VERSION_CURRENT = 65536
+    ZE_KERNEL_MAX_GROUP_SIZE_PROPERTIES_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_kernel_max_group_size_properties_ext_version_t = _ze_kernel_max_group_size_properties_ext_version_t
+
+const ze_kernel_max_group_size_ext_properties_t = ze_kernel_max_group_size_properties_ext_t
+
+@cenum _ze_sub_allocations_exp_version_t::UInt32 begin
+    ZE_SUB_ALLOCATIONS_EXP_VERSION_1_0 = 65536
+    ZE_SUB_ALLOCATIONS_EXP_VERSION_CURRENT = 65536
+    ZE_SUB_ALLOCATIONS_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_sub_allocations_exp_version_t = _ze_sub_allocations_exp_version_t
+
+@cenum _ze_event_query_kernel_timestamps_ext_version_t::UInt32 begin
+    ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_VERSION_1_0 = 65536
+    ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_VERSION_CURRENT = 65536
+    ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_event_query_kernel_timestamps_ext_version_t = _ze_event_query_kernel_timestamps_ext_version_t
+
+@cenum _ze_event_query_kernel_timestamps_ext_flag_t::UInt32 begin
+    ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_FLAG_KERNEL = 1
+    ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_FLAG_SYNCHRONIZED = 2
+    ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_event_query_kernel_timestamps_ext_flag_t = _ze_event_query_kernel_timestamps_ext_flag_t
+
+@checked function zeEventQueryKernelTimestampsExt(hEvent, hDevice, pCount, pResults)
+    @ccall libze_loader.zeEventQueryKernelTimestampsExt(hEvent::ze_event_handle_t,
+                                                        hDevice::ze_device_handle_t,
+                                                        pCount::Ptr{UInt32},
+                                                        pResults::Ptr{ze_event_query_kernel_timestamps_results_ext_properties_t})::ze_result_t
+end
+
+@cenum _ze_rtas_device_exp_flag_t::UInt32 begin
+    ZE_RTAS_DEVICE_EXP_FLAG_RESERVED = 1
+    ZE_RTAS_DEVICE_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_device_exp_flag_t = _ze_rtas_device_exp_flag_t
+
+@cenum _ze_rtas_builder_exp_flag_t::UInt32 begin
+    ZE_RTAS_BUILDER_EXP_FLAG_RESERVED = 1
+    ZE_RTAS_BUILDER_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_exp_flag_t = _ze_rtas_builder_exp_flag_t
+
+@cenum _ze_rtas_parallel_operation_exp_flag_t::UInt32 begin
+    ZE_RTAS_PARALLEL_OPERATION_EXP_FLAG_RESERVED = 1
+    ZE_RTAS_PARALLEL_OPERATION_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_parallel_operation_exp_flag_t = _ze_rtas_parallel_operation_exp_flag_t
+
+const ze_rtas_builder_geometry_exp_flags_t = UInt32
+
+@cenum _ze_rtas_builder_geometry_exp_flag_t::UInt32 begin
+    ZE_RTAS_BUILDER_GEOMETRY_EXP_FLAG_NON_OPAQUE = 1
+    ZE_RTAS_BUILDER_GEOMETRY_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_geometry_exp_flag_t = _ze_rtas_builder_geometry_exp_flag_t
+
+const ze_rtas_builder_instance_exp_flags_t = UInt32
+
+@cenum _ze_rtas_builder_instance_exp_flag_t::UInt32 begin
+    ZE_RTAS_BUILDER_INSTANCE_EXP_FLAG_TRIANGLE_CULL_DISABLE = 1
+    ZE_RTAS_BUILDER_INSTANCE_EXP_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE = 2
+    ZE_RTAS_BUILDER_INSTANCE_EXP_FLAG_TRIANGLE_FORCE_OPAQUE = 4
+    ZE_RTAS_BUILDER_INSTANCE_EXP_FLAG_TRIANGLE_FORCE_NON_OPAQUE = 8
+    ZE_RTAS_BUILDER_INSTANCE_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_instance_exp_flag_t = _ze_rtas_builder_instance_exp_flag_t
+
+@cenum _ze_rtas_builder_build_op_exp_flag_t::UInt32 begin
+    ZE_RTAS_BUILDER_BUILD_OP_EXP_FLAG_COMPACT = 1
+    ZE_RTAS_BUILDER_BUILD_OP_EXP_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION = 2
+    ZE_RTAS_BUILDER_BUILD_OP_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_build_op_exp_flag_t = _ze_rtas_builder_build_op_exp_flag_t
+
+@cenum _ze_rtas_builder_geometry_type_exp_t::UInt32 begin
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXP_TRIANGLES = 0
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXP_QUADS = 1
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXP_PROCEDURAL = 2
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXP_INSTANCE = 3
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXP_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_geometry_type_exp_t = _ze_rtas_builder_geometry_type_exp_t
+
+@cenum _ze_rtas_builder_input_data_format_exp_t::UInt32 begin
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXP_FLOAT3 = 0
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXP_FLOAT3X4_COLUMN_MAJOR = 1
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXP_FLOAT3X4_ALIGNED_COLUMN_MAJOR = 2
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXP_FLOAT3X4_ROW_MAJOR = 3
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXP_AABB = 4
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXP_TRIANGLE_INDICES_UINT32 = 5
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXP_QUAD_INDICES_UINT32 = 6
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXP_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_input_data_format_exp_t = _ze_rtas_builder_input_data_format_exp_t
+
+mutable struct _ze_rtas_builder_exp_handle_t end
+
+const ze_rtas_builder_exp_handle_t = Ptr{_ze_rtas_builder_exp_handle_t}
+
+mutable struct _ze_rtas_parallel_operation_exp_handle_t end
+
+const ze_rtas_parallel_operation_exp_handle_t = Ptr{_ze_rtas_parallel_operation_exp_handle_t}
+
+@checked function zeRTASBuilderCreateExp(hDriver, pDescriptor, phBuilder)
+    @ccall libze_loader.zeRTASBuilderCreateExp(hDriver::ze_driver_handle_t,
+                                               pDescriptor::Ptr{ze_rtas_builder_exp_desc_t},
+                                               phBuilder::Ptr{ze_rtas_builder_exp_handle_t})::ze_result_t
+end
+
+@checked function zeRTASBuilderGetBuildPropertiesExp(hBuilder, pBuildOpDescriptor,
+                                                     pProperties)
+    @ccall libze_loader.zeRTASBuilderGetBuildPropertiesExp(hBuilder::ze_rtas_builder_exp_handle_t,
+                                                           pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_exp_desc_t},
+                                                           pProperties::Ptr{ze_rtas_builder_exp_properties_t})::ze_result_t
+end
+
+@checked function zeDriverRTASFormatCompatibilityCheckExp(hDriver, rtasFormatA, rtasFormatB)
+    @ccall libze_loader.zeDriverRTASFormatCompatibilityCheckExp(hDriver::ze_driver_handle_t,
+                                                                rtasFormatA::ze_rtas_format_exp_t,
+                                                                rtasFormatB::ze_rtas_format_exp_t)::ze_result_t
+end
+
+@checked function zeRTASBuilderBuildExp(hBuilder, pBuildOpDescriptor, pScratchBuffer,
+                                        scratchBufferSizeBytes, pRtasBuffer,
+                                        rtasBufferSizeBytes, hParallelOperation,
+                                        pBuildUserPtr, pBounds, pRtasBufferSizeBytes)
+    @ccall libze_loader.zeRTASBuilderBuildExp(hBuilder::ze_rtas_builder_exp_handle_t,
+                                              pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_exp_desc_t},
+                                              pScratchBuffer::Ptr{Cvoid},
+                                              scratchBufferSizeBytes::Csize_t,
+                                              pRtasBuffer::Ptr{Cvoid},
+                                              rtasBufferSizeBytes::Csize_t,
+                                              hParallelOperation::ze_rtas_parallel_operation_exp_handle_t,
+                                              pBuildUserPtr::Ptr{Cvoid},
+                                              pBounds::Ptr{ze_rtas_aabb_exp_t},
+                                              pRtasBufferSizeBytes::Ptr{Csize_t})::ze_result_t
+end
+
+@checked function zeRTASBuilderDestroyExp(hBuilder)
+    @ccall libze_loader.zeRTASBuilderDestroyExp(hBuilder::ze_rtas_builder_exp_handle_t)::ze_result_t
+end
+
+@checked function zeRTASParallelOperationCreateExp(hDriver, phParallelOperation)
+    @ccall libze_loader.zeRTASParallelOperationCreateExp(hDriver::ze_driver_handle_t,
+                                                         phParallelOperation::Ptr{ze_rtas_parallel_operation_exp_handle_t})::ze_result_t
+end
+
+@checked function zeRTASParallelOperationGetPropertiesExp(hParallelOperation, pProperties)
+    @ccall libze_loader.zeRTASParallelOperationGetPropertiesExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t,
+                                                                pProperties::Ptr{ze_rtas_parallel_operation_exp_properties_t})::ze_result_t
+end
+
+@checked function zeRTASParallelOperationJoinExp(hParallelOperation)
+    @ccall libze_loader.zeRTASParallelOperationJoinExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t)::ze_result_t
+end
+
+@checked function zeRTASParallelOperationDestroyExp(hParallelOperation)
+    @ccall libze_loader.zeRTASParallelOperationDestroyExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t)::ze_result_t
+end
+
+@cenum _ze_event_pool_counter_based_exp_version_t::UInt32 begin
+    ZE_EVENT_POOL_COUNTER_BASED_EXP_VERSION_1_0 = 65536
+    ZE_EVENT_POOL_COUNTER_BASED_EXP_VERSION_CURRENT = 65536
+    ZE_EVENT_POOL_COUNTER_BASED_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_event_pool_counter_based_exp_version_t = _ze_event_pool_counter_based_exp_version_t
+
+@cenum _ze_event_pool_counter_based_exp_flag_t::UInt32 begin
+    ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE = 1
+    ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_NON_IMMEDIATE = 2
+    ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_event_pool_counter_based_exp_flag_t = _ze_event_pool_counter_based_exp_flag_t
+
+@cenum _ze_bindless_image_exp_version_t::UInt32 begin
+    ZE_BINDLESS_IMAGE_EXP_VERSION_1_0 = 65536
+    ZE_BINDLESS_IMAGE_EXP_VERSION_CURRENT = 65536
+    ZE_BINDLESS_IMAGE_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_bindless_image_exp_version_t = _ze_bindless_image_exp_version_t
+
+@cenum _ze_image_bindless_exp_flag_t::UInt32 begin
+    ZE_IMAGE_BINDLESS_EXP_FLAG_BINDLESS = 1
+    ZE_IMAGE_BINDLESS_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_image_bindless_exp_flag_t = _ze_image_bindless_exp_flag_t
+
+@checked function zeMemGetPitchFor2dImage(hContext, hDevice, imageWidth, imageHeight,
+                                          elementSizeInBytes, rowPitch)
+    @ccall libze_loader.zeMemGetPitchFor2dImage(hContext::ze_context_handle_t,
+                                                hDevice::ze_device_handle_t,
+                                                imageWidth::Csize_t, imageHeight::Csize_t,
+                                                elementSizeInBytes::Cuint,
+                                                rowPitch::Ptr{Csize_t})::ze_result_t
+end
+
+@checked function zeImageGetDeviceOffsetExp(hImage, pDeviceOffset)
+    @ccall libze_loader.zeImageGetDeviceOffsetExp(hImage::ze_image_handle_t,
+                                                  pDeviceOffset::Ptr{UInt64})::ze_result_t
+end
+
+@cenum _ze_command_list_clone_exp_version_t::UInt32 begin
+    ZE_COMMAND_LIST_CLONE_EXP_VERSION_1_0 = 65536
+    ZE_COMMAND_LIST_CLONE_EXP_VERSION_CURRENT = 65536
+    ZE_COMMAND_LIST_CLONE_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_command_list_clone_exp_version_t = _ze_command_list_clone_exp_version_t
+
+@checked function zeCommandListCreateCloneExp(hCommandList, phClonedCommandList)
+    @ccall libze_loader.zeCommandListCreateCloneExp(hCommandList::ze_command_list_handle_t,
+                                                    phClonedCommandList::Ptr{ze_command_list_handle_t})::ze_result_t
+end
+
+@cenum _ze_immediate_command_list_append_exp_version_t::UInt32 begin
+    ZE_IMMEDIATE_COMMAND_LIST_APPEND_EXP_VERSION_1_0 = 65536
+    ZE_IMMEDIATE_COMMAND_LIST_APPEND_EXP_VERSION_CURRENT = 65536
+    ZE_IMMEDIATE_COMMAND_LIST_APPEND_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_immediate_command_list_append_exp_version_t = _ze_immediate_command_list_append_exp_version_t
+
+@checked function zeCommandListImmediateAppendCommandListsExp(hCommandListImmediate,
+                                                              numCommandLists,
+                                                              phCommandLists, hSignalEvent,
+                                                              numWaitEvents, phWaitEvents)
+    @ccall libze_loader.zeCommandListImmediateAppendCommandListsExp(hCommandListImmediate::ze_command_list_handle_t,
+                                                                    numCommandLists::UInt32,
+                                                                    phCommandLists::Ptr{ze_command_list_handle_t},
+                                                                    hSignalEvent::ze_event_handle_t,
+                                                                    numWaitEvents::UInt32,
+                                                                    phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@cenum _ze_mutable_command_list_exp_version_t::UInt32 begin
+    ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_1_0 = 65536
+    ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_CURRENT = 65536
+    ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_mutable_command_list_exp_version_t = _ze_mutable_command_list_exp_version_t
+
+@cenum _ze_mutable_command_exp_flag_t::UInt32 begin
+    ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_ARGUMENTS = 1
+    ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_COUNT = 2
+    ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE = 4
+    ZE_MUTABLE_COMMAND_EXP_FLAG_GLOBAL_OFFSET = 8
+    ZE_MUTABLE_COMMAND_EXP_FLAG_SIGNAL_EVENT = 16
+    ZE_MUTABLE_COMMAND_EXP_FLAG_WAIT_EVENTS = 32
+    ZE_MUTABLE_COMMAND_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_mutable_command_exp_flag_t = _ze_mutable_command_exp_flag_t
+
+@cenum _ze_mutable_command_list_exp_flag_t::UInt32 begin
+    ZE_MUTABLE_COMMAND_LIST_EXP_FLAG_RESERVED = 1
+    ZE_MUTABLE_COMMAND_LIST_EXP_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_mutable_command_list_exp_flag_t = _ze_mutable_command_list_exp_flag_t
+
+@checked function zeCommandListGetNextCommandIdExp(hCommandList, desc, pCommandId)
+    @ccall libze_loader.zeCommandListGetNextCommandIdExp(hCommandList::ze_command_list_handle_t,
+                                                         desc::Ptr{ze_mutable_command_id_exp_desc_t},
+                                                         pCommandId::Ptr{UInt64})::ze_result_t
+end
+
+@checked function zeCommandListUpdateMutableCommandsExp(hCommandList, desc)
+    @ccall libze_loader.zeCommandListUpdateMutableCommandsExp(hCommandList::ze_command_list_handle_t,
+                                                              desc::Ptr{ze_mutable_commands_exp_desc_t})::ze_result_t
+end
+
+@checked function zeCommandListUpdateMutableCommandSignalEventExp(hCommandList, commandId,
+                                                                  hSignalEvent)
+    @ccall libze_loader.zeCommandListUpdateMutableCommandSignalEventExp(hCommandList::ze_command_list_handle_t,
+                                                                        commandId::UInt64,
+                                                                        hSignalEvent::ze_event_handle_t)::ze_result_t
+end
+
+@checked function zeCommandListUpdateMutableCommandWaitEventsExp(hCommandList, commandId,
+                                                                 numWaitEvents,
+                                                                 phWaitEvents)
+    @ccall libze_loader.zeCommandListUpdateMutableCommandWaitEventsExp(hCommandList::ze_command_list_handle_t,
+                                                                       commandId::UInt64,
+                                                                       numWaitEvents::UInt32,
+                                                                       phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
 
 struct _ze_init_params_t
     pflags::Ptr{ze_init_flags_t}
@@ -3565,6 +4534,130 @@ end
 
 const ze_image_callbacks_t = _ze_image_callbacks_t
 
+struct _ze_mem_alloc_shared_params_t
+    phContext::Ptr{ze_context_handle_t}
+    pdevice_desc::Ptr{Ptr{ze_device_mem_alloc_desc_t}}
+    phost_desc::Ptr{Ptr{ze_host_mem_alloc_desc_t}}
+    psize::Ptr{Csize_t}
+    palignment::Ptr{Csize_t}
+    phDevice::Ptr{ze_device_handle_t}
+    ppptr::Ptr{Ptr{Ptr{Cvoid}}}
+end
+
+const ze_mem_alloc_shared_params_t = _ze_mem_alloc_shared_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemAllocSharedCb_t ) ( ze_mem_alloc_shared_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemAllocSharedCb_t = Ptr{Cvoid}
+
+struct _ze_mem_alloc_device_params_t
+    phContext::Ptr{ze_context_handle_t}
+    pdevice_desc::Ptr{Ptr{ze_device_mem_alloc_desc_t}}
+    psize::Ptr{Csize_t}
+    palignment::Ptr{Csize_t}
+    phDevice::Ptr{ze_device_handle_t}
+    ppptr::Ptr{Ptr{Ptr{Cvoid}}}
+end
+
+const ze_mem_alloc_device_params_t = _ze_mem_alloc_device_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemAllocDeviceCb_t ) ( ze_mem_alloc_device_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemAllocDeviceCb_t = Ptr{Cvoid}
+
+struct _ze_mem_alloc_host_params_t
+    phContext::Ptr{ze_context_handle_t}
+    phost_desc::Ptr{Ptr{ze_host_mem_alloc_desc_t}}
+    psize::Ptr{Csize_t}
+    palignment::Ptr{Csize_t}
+    ppptr::Ptr{Ptr{Ptr{Cvoid}}}
+end
+
+const ze_mem_alloc_host_params_t = _ze_mem_alloc_host_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemAllocHostCb_t ) ( ze_mem_alloc_host_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemAllocHostCb_t = Ptr{Cvoid}
+
+struct _ze_mem_free_params_t
+    phContext::Ptr{ze_context_handle_t}
+    pptr::Ptr{Ptr{Cvoid}}
+end
+
+const ze_mem_free_params_t = _ze_mem_free_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemFreeCb_t ) ( ze_mem_free_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemFreeCb_t = Ptr{Cvoid}
+
+struct _ze_mem_get_alloc_properties_params_t
+    phContext::Ptr{ze_context_handle_t}
+    pptr::Ptr{Ptr{Cvoid}}
+    ppMemAllocProperties::Ptr{Ptr{ze_memory_allocation_properties_t}}
+    pphDevice::Ptr{Ptr{ze_device_handle_t}}
+end
+
+const ze_mem_get_alloc_properties_params_t = _ze_mem_get_alloc_properties_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemGetAllocPropertiesCb_t ) ( ze_mem_get_alloc_properties_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemGetAllocPropertiesCb_t = Ptr{Cvoid}
+
+struct _ze_mem_get_address_range_params_t
+    phContext::Ptr{ze_context_handle_t}
+    pptr::Ptr{Ptr{Cvoid}}
+    ppBase::Ptr{Ptr{Ptr{Cvoid}}}
+    ppSize::Ptr{Ptr{Csize_t}}
+end
+
+const ze_mem_get_address_range_params_t = _ze_mem_get_address_range_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemGetAddressRangeCb_t ) ( ze_mem_get_address_range_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemGetAddressRangeCb_t = Ptr{Cvoid}
+
+struct _ze_mem_get_ipc_handle_params_t
+    phContext::Ptr{ze_context_handle_t}
+    pptr::Ptr{Ptr{Cvoid}}
+    ppIpcHandle::Ptr{Ptr{ze_ipc_mem_handle_t}}
+end
+
+const ze_mem_get_ipc_handle_params_t = _ze_mem_get_ipc_handle_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemGetIpcHandleCb_t ) ( ze_mem_get_ipc_handle_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemGetIpcHandleCb_t = Ptr{Cvoid}
+
+struct _ze_mem_open_ipc_handle_params_t
+    phContext::Ptr{ze_context_handle_t}
+    phDevice::Ptr{ze_device_handle_t}
+    phandle::Ptr{ze_ipc_mem_handle_t}
+    pflags::Ptr{ze_ipc_memory_flags_t}
+    ppptr::Ptr{Ptr{Ptr{Cvoid}}}
+end
+
+const ze_mem_open_ipc_handle_params_t = _ze_mem_open_ipc_handle_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemOpenIpcHandleCb_t ) ( ze_mem_open_ipc_handle_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemOpenIpcHandleCb_t = Ptr{Cvoid}
+
+struct _ze_mem_close_ipc_handle_params_t
+    phContext::Ptr{ze_context_handle_t}
+    pptr::Ptr{Ptr{Cvoid}}
+end
+
+const ze_mem_close_ipc_handle_params_t = _ze_mem_close_ipc_handle_params_t
+
+# typedef void ( ZE_APICALL * ze_pfnMemCloseIpcHandleCb_t ) ( ze_mem_close_ipc_handle_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
+const ze_pfnMemCloseIpcHandleCb_t = Ptr{Cvoid}
+
+struct _ze_mem_callbacks_t
+    pfnAllocSharedCb::ze_pfnMemAllocSharedCb_t
+    pfnAllocDeviceCb::ze_pfnMemAllocDeviceCb_t
+    pfnAllocHostCb::ze_pfnMemAllocHostCb_t
+    pfnFreeCb::ze_pfnMemFreeCb_t
+    pfnGetAllocPropertiesCb::ze_pfnMemGetAllocPropertiesCb_t
+    pfnGetAddressRangeCb::ze_pfnMemGetAddressRangeCb_t
+    pfnGetIpcHandleCb::ze_pfnMemGetIpcHandleCb_t
+    pfnOpenIpcHandleCb::ze_pfnMemOpenIpcHandleCb_t
+    pfnCloseIpcHandleCb::ze_pfnMemCloseIpcHandleCb_t
+end
+
+const ze_mem_callbacks_t = _ze_mem_callbacks_t
+
 struct _ze_fence_create_params_t
     phCommandQueue::Ptr{ze_command_queue_handle_t}
     pdesc::Ptr{Ptr{ze_fence_desc_t}}
@@ -4097,130 +5190,6 @@ end
 
 const ze_physical_mem_callbacks_t = _ze_physical_mem_callbacks_t
 
-struct _ze_mem_alloc_shared_params_t
-    phContext::Ptr{ze_context_handle_t}
-    pdevice_desc::Ptr{Ptr{ze_device_mem_alloc_desc_t}}
-    phost_desc::Ptr{Ptr{ze_host_mem_alloc_desc_t}}
-    psize::Ptr{Csize_t}
-    palignment::Ptr{Csize_t}
-    phDevice::Ptr{ze_device_handle_t}
-    ppptr::Ptr{Ptr{Ptr{Cvoid}}}
-end
-
-const ze_mem_alloc_shared_params_t = _ze_mem_alloc_shared_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemAllocSharedCb_t ) ( ze_mem_alloc_shared_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemAllocSharedCb_t = Ptr{Cvoid}
-
-struct _ze_mem_alloc_device_params_t
-    phContext::Ptr{ze_context_handle_t}
-    pdevice_desc::Ptr{Ptr{ze_device_mem_alloc_desc_t}}
-    psize::Ptr{Csize_t}
-    palignment::Ptr{Csize_t}
-    phDevice::Ptr{ze_device_handle_t}
-    ppptr::Ptr{Ptr{Ptr{Cvoid}}}
-end
-
-const ze_mem_alloc_device_params_t = _ze_mem_alloc_device_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemAllocDeviceCb_t ) ( ze_mem_alloc_device_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemAllocDeviceCb_t = Ptr{Cvoid}
-
-struct _ze_mem_alloc_host_params_t
-    phContext::Ptr{ze_context_handle_t}
-    phost_desc::Ptr{Ptr{ze_host_mem_alloc_desc_t}}
-    psize::Ptr{Csize_t}
-    palignment::Ptr{Csize_t}
-    ppptr::Ptr{Ptr{Ptr{Cvoid}}}
-end
-
-const ze_mem_alloc_host_params_t = _ze_mem_alloc_host_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemAllocHostCb_t ) ( ze_mem_alloc_host_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemAllocHostCb_t = Ptr{Cvoid}
-
-struct _ze_mem_free_params_t
-    phContext::Ptr{ze_context_handle_t}
-    pptr::Ptr{Ptr{Cvoid}}
-end
-
-const ze_mem_free_params_t = _ze_mem_free_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemFreeCb_t ) ( ze_mem_free_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemFreeCb_t = Ptr{Cvoid}
-
-struct _ze_mem_get_alloc_properties_params_t
-    phContext::Ptr{ze_context_handle_t}
-    pptr::Ptr{Ptr{Cvoid}}
-    ppMemAllocProperties::Ptr{Ptr{ze_memory_allocation_properties_t}}
-    pphDevice::Ptr{Ptr{ze_device_handle_t}}
-end
-
-const ze_mem_get_alloc_properties_params_t = _ze_mem_get_alloc_properties_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemGetAllocPropertiesCb_t ) ( ze_mem_get_alloc_properties_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemGetAllocPropertiesCb_t = Ptr{Cvoid}
-
-struct _ze_mem_get_address_range_params_t
-    phContext::Ptr{ze_context_handle_t}
-    pptr::Ptr{Ptr{Cvoid}}
-    ppBase::Ptr{Ptr{Ptr{Cvoid}}}
-    ppSize::Ptr{Ptr{Csize_t}}
-end
-
-const ze_mem_get_address_range_params_t = _ze_mem_get_address_range_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemGetAddressRangeCb_t ) ( ze_mem_get_address_range_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemGetAddressRangeCb_t = Ptr{Cvoid}
-
-struct _ze_mem_get_ipc_handle_params_t
-    phContext::Ptr{ze_context_handle_t}
-    pptr::Ptr{Ptr{Cvoid}}
-    ppIpcHandle::Ptr{Ptr{ze_ipc_mem_handle_t}}
-end
-
-const ze_mem_get_ipc_handle_params_t = _ze_mem_get_ipc_handle_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemGetIpcHandleCb_t ) ( ze_mem_get_ipc_handle_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemGetIpcHandleCb_t = Ptr{Cvoid}
-
-struct _ze_mem_open_ipc_handle_params_t
-    phContext::Ptr{ze_context_handle_t}
-    phDevice::Ptr{ze_device_handle_t}
-    phandle::Ptr{ze_ipc_mem_handle_t}
-    pflags::Ptr{ze_ipc_memory_flags_t}
-    ppptr::Ptr{Ptr{Ptr{Cvoid}}}
-end
-
-const ze_mem_open_ipc_handle_params_t = _ze_mem_open_ipc_handle_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemOpenIpcHandleCb_t ) ( ze_mem_open_ipc_handle_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemOpenIpcHandleCb_t = Ptr{Cvoid}
-
-struct _ze_mem_close_ipc_handle_params_t
-    phContext::Ptr{ze_context_handle_t}
-    pptr::Ptr{Ptr{Cvoid}}
-end
-
-const ze_mem_close_ipc_handle_params_t = _ze_mem_close_ipc_handle_params_t
-
-# typedef void ( ZE_APICALL * ze_pfnMemCloseIpcHandleCb_t ) ( ze_mem_close_ipc_handle_params_t * params , ze_result_t result , void * pTracerUserData , void * * ppTracerInstanceUserData )
-const ze_pfnMemCloseIpcHandleCb_t = Ptr{Cvoid}
-
-struct _ze_mem_callbacks_t
-    pfnAllocSharedCb::ze_pfnMemAllocSharedCb_t
-    pfnAllocDeviceCb::ze_pfnMemAllocDeviceCb_t
-    pfnAllocHostCb::ze_pfnMemAllocHostCb_t
-    pfnFreeCb::ze_pfnMemFreeCb_t
-    pfnGetAllocPropertiesCb::ze_pfnMemGetAllocPropertiesCb_t
-    pfnGetAddressRangeCb::ze_pfnMemGetAddressRangeCb_t
-    pfnGetIpcHandleCb::ze_pfnMemGetIpcHandleCb_t
-    pfnOpenIpcHandleCb::ze_pfnMemOpenIpcHandleCb_t
-    pfnCloseIpcHandleCb::ze_pfnMemCloseIpcHandleCb_t
-end
-
-const ze_mem_callbacks_t = _ze_mem_callbacks_t
-
 struct _ze_virtual_mem_reserve_params_t
     phContext::Ptr{ze_context_handle_t}
     ppStart::Ptr{Ptr{Cvoid}}
@@ -4380,7 +5349,11 @@ const ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME = "ZE_experimental_event_query_timestam
 
 const ZE_IMAGE_MEMORY_PROPERTIES_EXP_NAME = "ZE_experimental_image_memory_properties"
 
+const ZE_IMAGE_VIEW_EXT_NAME = "ZE_extension_image_view"
+
 const ZE_IMAGE_VIEW_EXP_NAME = "ZE_experimental_image_view"
+
+const ZE_IMAGE_VIEW_PLANAR_EXT_NAME = "ZE_extension_image_view_planar"
 
 const ZE_IMAGE_VIEW_PLANAR_EXP_NAME = "ZE_experimental_image_view_planar"
 
@@ -4419,3 +5392,25 @@ const ZE_FABRIC_EXP_NAME = "ZE_experimental_fabric"
 const ZE_MAX_FABRIC_EDGE_MODEL_EXP_SIZE = 256
 
 const ZE_DEVICE_MEMORY_PROPERTIES_EXT_NAME = "ZE_extension_device_memory_properties"
+
+const ZE_BFLOAT16_CONVERSIONS_EXT_NAME = "ZE_extension_bfloat16_conversions"
+
+const ZE_DEVICE_IP_VERSION_EXT_NAME = "ZE_extension_device_ip_version"
+
+const ZE_KERNEL_MAX_GROUP_SIZE_PROPERTIES_EXT_NAME = "ZE_extension_kernel_max_group_size_properties"
+
+const ZE_SUB_ALLOCATIONS_EXP_NAME = "ZE_experimental_sub_allocations"
+
+const ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_NAME = "ZE_extension_event_query_kernel_timestamps"
+
+const ZE_RTAS_BUILDER_EXP_NAME = "ZE_experimental_rtas_builder"
+
+const ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME = "ZE_experimental_event_pool_counter_based"
+
+const ZE_BINDLESS_IMAGE_EXP_NAME = "ZE_experimental_bindless_image"
+
+const ZE_COMMAND_LIST_CLONE_EXP_NAME = "ZE_experimental_command_list_clone"
+
+const ZE_IMMEDIATE_COMMAND_LIST_APPEND_EXP_NAME = "ZE_experimental_immediate_command_list_append"
+
+const ZE_MUTABLE_COMMAND_LIST_EXP_NAME = "ZE_experimental_mutable_command_list"
