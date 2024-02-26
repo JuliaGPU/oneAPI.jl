@@ -18,7 +18,16 @@ model](https://software.intel.com/en-us/oneapi). The package is verified to work
 (currently) only implementation of this interface [that is part of the Intel Compute
 Runtime](https://github.com/intel/compute-runtime), only available on Linux.
 
-This package is still under significant development, so expect bugs and missing features.
+
+## Status
+
+The current version of oneAPI.jl supports most of the oneAPI Level Zero interface, has
+good kernel programming capabilties, and as a demonstration of that it fully implements
+the GPUArrays.jl array interfaces. This results in a full-featured GPU array type.
+
+However, the package has not been extensively tested, and performance issues might be
+present. The integration with vendor libraries like oneMKL or oneDNN is still in
+development, and as result certain array operations may be unavailable or slow.
 
 
 ## Quick start
@@ -207,26 +216,61 @@ julia> a .+ 1
  1.87436  1.23285
 ```
 
+### `Float64` support
 
-## Status
+Not all oneAPI GPUs support Float64 datatypes. You can test if your GPU does using
+the following code:
 
-The current version of oneAPI.jl supports most of oneAPI Level Zero interface, has good
-kernel programming capabilties, and as a demonstration of that it fully implements the
-GPUArrays.jl array interfaces. This results in a full-featured GPU array type.
+```julia
+julia> using oneAPI
+julia> oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+false
+```
 
-However, the package has not been extensively tested, and performance issues might be
-present. The integration with vendor libraries like oneMKL or oneDNN is still in
-development, and as result certain operations (like matrix multiplication) may be
-unavailable or slow.
+If your GPU doesn't, executing code that relies on Float64 values will result in an error:
+
+```julia
+julia> oneArray([1.]) .+ 1
+┌ Error: Module compilation failed:
+│
+│ error: Double type is not supported on this platform.
+```
 
 
-## Using a local toolchain
 
-For debugging issues with the underlying toolchain (NEO, IGC, etc), you may want the
-package to use your local installation of these components instead of downloading the
-prebuilt Julia binaries from Yggdrasil. This can be done using Preferences.jl, overriding
-the paths to resources provided by the various JLLs that oneAPI.jl uses. A helpful script
-to automate this is provided in the `res` folder of this repository:
+## Development
+
+To work on oneAPI.jl, you just need to `dev` the package. In addition, you may need to
+**build the binary support library** that's used to interface with oneMKL and other C++
+vendor libraries. This library is normally provided by the oneAPI_Support_jll.jl package,
+however, we only guarantee to update this package when releasing oneAPI.jl. You can build
+this library yourself by simply executing `deps/build_local.jl`.
+
+To facilitate development, there are other things you may want to configure:
+
+### Enabling the oneAPI validation layer
+
+The oneAPI Level Zero libraries feature a so-called validation layer, which
+validates the arguments to API calls. This can be useful to spot potential
+isssues, and can be enabled by setting the following environment variables:
+
+- `ZE_ENABLE_VALIDATION_LAYER=1`
+- `ZE_ENABLE_PARAMETER_VALIDATION=1`
+- `EnableDebugBreak=0` (this is needed to work around intel/compute-runtime#639)
+
+### Using a debug toolchain
+
+If you're experiencing an issue with the underlying toolchain (NEO, IGC, etc), you may
+want to use a debug build of these components, which also perform additional
+validation. This can be done simply by calling `oneAPI.set_debug!(true)` and restarting
+your Julia session. This sets a preference used by the respective JLL packages.
+
+### Using a local toolchain
+
+To further debug the toolchain, you may need a custom build and point oneAPI.jl towards it.
+This can also be done using preferences, overriding the paths to resources provided by the
+various JLLs that oneAPI.jl uses. A helpful script to automate this is provided in the
+`res` folder of this repository:
 
 ```
 $ julia res/local.jl
@@ -255,24 +299,3 @@ The discovered paths will be written to a global file with preferences, typicall
 `$HOME/.julia/environments/vX.Y/LocalPreferences.toml` (where `vX.Y` refers to the Julia
 version you are using). You can modify this file, or remove it when you want to revert to
 default set of binaries.
-
-
-## `Float64` support
-
-Not all oneAPI GPUs support Float64 datatypes. You can test if your GPU does using
-the following code:
-
-```julia
-julia> using oneAPI
-julia> oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
-false
-```
-
-If your GPU doesn't, executing code that relies on Float64 values will result in an error:
-
-```julia
-julia> oneArray([1.]) .+ 1
-┌ Error: Module compilation failed:
-│
-│ error: Double type is not supported on this platform.
-```
