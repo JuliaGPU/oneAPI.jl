@@ -51,7 +51,7 @@ extern "C" int syclQueueCreate(syclQueue_t *obj, syclContext_t context,
                                syclDevice_t device,
                                ze_command_queue_handle_t queue,
                                int keep_ownership) {
-    auto sycl_queue = sycl::ext::oneapi::level_zero::make_queue(context->val, device->val, (pi_native_handle) queue, keep_ownership);
+    auto sycl_queue = sycl::ext::oneapi::level_zero::make_queue(context->val, device->val, (pi_native_handle) queue, false, keep_ownership, {});
     *obj = new syclQueue_st({sycl_queue});
     return 0;
 }
