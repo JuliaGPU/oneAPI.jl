@@ -1267,52 +1267,52 @@ function onemklZdotu(device_queue, n, x, incx, y, incy, result)
                                          result::RefOrZeRef{ComplexF64})::Cint
 end
 
-function onemklSiamax(device_queue, n, x, incx, result)
+function onemklSiamax(device_queue, n, x, incx, result, base)
     @ccall liboneapi_support.onemklSiamax(device_queue::syclQueue_t, n::Int64,
                                           x::ZePtr{Cfloat}, incx::Int64,
-                                          result::ZePtr{Int64})::Cint
+                                          result::ZePtr{Int64}, base::onemklIndex)::Cint
 end
 
-function onemklDiamax(device_queue, n, x, incx, result)
+function onemklDiamax(device_queue, n, x, incx, result, base)
     @ccall liboneapi_support.onemklDiamax(device_queue::syclQueue_t, n::Int64,
                                           x::ZePtr{Cdouble}, incx::Int64,
-                                          result::ZePtr{Int64})::Cint
+                                          result::ZePtr{Int64}, base::onemklIndex)::Cint
 end
 
-function onemklCiamax(device_queue, n, x, incx, result)
+function onemklCiamax(device_queue, n, x, incx, result, base)
     @ccall liboneapi_support.onemklCiamax(device_queue::syclQueue_t, n::Int64,
                                           x::ZePtr{ComplexF32}, incx::Int64,
-                                          result::ZePtr{Int64})::Cint
+                                          result::ZePtr{Int64}, base::onemklIndex)::Cint
 end
 
-function onemklZiamax(device_queue, n, x, incx, result)
+function onemklZiamax(device_queue, n, x, incx, result, base)
     @ccall liboneapi_support.onemklZiamax(device_queue::syclQueue_t, n::Int64,
                                           x::ZePtr{ComplexF64}, incx::Int64,
-                                          result::ZePtr{Int64})::Cint
+                                          result::ZePtr{Int64}, base::onemklIndex)::Cint
 end
 
-function onemklSiamin(device_queue, n, x, incx, result)
+function onemklSiamin(device_queue, n, x, incx, result, base)
     @ccall liboneapi_support.onemklSiamin(device_queue::syclQueue_t, n::Int64,
                                           x::ZePtr{Cfloat}, incx::Int64,
-                                          result::ZePtr{Int64})::Cint
+                                          result::ZePtr{Int64}, base::onemklIndex)::Cint
 end
 
-function onemklDiamin(device_queue, n, x, incx, result)
+function onemklDiamin(device_queue, n, x, incx, result, base)
     @ccall liboneapi_support.onemklDiamin(device_queue::syclQueue_t, n::Int64,
                                           x::ZePtr{Cdouble}, incx::Int64,
-                                          result::ZePtr{Int64})::Cint
+                                          result::ZePtr{Int64}, base::onemklIndex)::Cint
 end
 
-function onemklCiamin(device_queue, n, x, incx, result)
+function onemklCiamin(device_queue, n, x, incx, result, base)
     @ccall liboneapi_support.onemklCiamin(device_queue::syclQueue_t, n::Int64,
                                           x::ZePtr{ComplexF32}, incx::Int64,
-                                          result::ZePtr{Int64})::Cint
+                                          result::ZePtr{Int64}, base::onemklIndex)::Cint
 end
 
-function onemklZiamin(device_queue, n, x, incx, result)
+function onemklZiamin(device_queue, n, x, incx, result, base)
     @ccall liboneapi_support.onemklZiamin(device_queue::syclQueue_t, n::Int64,
                                           x::ZePtr{ComplexF64}, incx::Int64,
-                                          result::ZePtr{Int64})::Cint
+                                          result::ZePtr{Int64}, base::onemklIndex)::Cint
 end
 
 function onemklSasum(device_queue, n, x, incx, result)
@@ -2630,6 +2630,58 @@ function onemklZgetrf_batch(device_queue, m, n, a, lda, stride_a, ipiv, stride_i
                                                 stride_ipiv::Int64, batch_size::Int64,
                                                 scratchpad::Ptr{ComplexF32},
                                                 scratchpad_size::Int64)::Cint
+end
+
+function onemklSgetrfnp_scratchpad_size(device_queue, m, n, lda)
+    @ccall liboneapi_support.onemklSgetrfnp_scratchpad_size(device_queue::syclQueue_t,
+                                                            m::Int64, n::Int64,
+                                                            lda::Int64)::Int64
+end
+
+function onemklDgetrfnp_scratchpad_size(device_queue, m, n, lda)
+    @ccall liboneapi_support.onemklDgetrfnp_scratchpad_size(device_queue::syclQueue_t,
+                                                            m::Int64, n::Int64,
+                                                            lda::Int64)::Int64
+end
+
+function onemklCgetrfnp_scratchpad_size(device_queue, m, n, lda)
+    @ccall liboneapi_support.onemklCgetrfnp_scratchpad_size(device_queue::syclQueue_t,
+                                                            m::Int64, n::Int64,
+                                                            lda::Int64)::Int64
+end
+
+function onemklZgetrfnp_scratchpad_size(device_queue, m, n, lda)
+    @ccall liboneapi_support.onemklZgetrfnp_scratchpad_size(device_queue::syclQueue_t,
+                                                            m::Int64, n::Int64,
+                                                            lda::Int64)::Int64
+end
+
+function onemklCgetrfnp(device_queue, m, n, a, lda, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklCgetrfnp(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                            a::Ptr{ComplexF32}, lda::Int64,
+                                            scratchpad::Ptr{ComplexF32},
+                                            scratchpad_size::Int64)::Cint
+end
+
+function onemklDgetrfnp(device_queue, m, n, a, lda, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklDgetrfnp(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                            a::Ptr{Cdouble}, lda::Int64,
+                                            scratchpad::Ptr{Cdouble},
+                                            scratchpad_size::Int64)::Cint
+end
+
+function onemklSgetrfnp(device_queue, m, n, a, lda, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklSgetrfnp(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                            a::Ptr{Cfloat}, lda::Int64,
+                                            scratchpad::Ptr{Cfloat},
+                                            scratchpad_size::Int64)::Cint
+end
+
+function onemklZgetrfnp(device_queue, m, n, a, lda, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklZgetrfnp(device_queue::syclQueue_t, m::Int64, n::Int64,
+                                            a::Ptr{ComplexF32}, lda::Int64,
+                                            scratchpad::Ptr{ComplexF32},
+                                            scratchpad_size::Int64)::Cint
 end
 
 function onemklSgetrfnp_batch_scratchpad_size(device_queue, m, n, lda, stride_a, batch_size)

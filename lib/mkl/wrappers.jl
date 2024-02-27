@@ -44,6 +44,16 @@ function Base.convert(::Type{onemklDiag}, diag::Char)
     end
 end
 
+function Base.convert(::Type{onemklIndex}, index::Char)
+    if index == 'O'
+        return ONEMKL_INDEX_ONE
+    elseif index == 'Z'
+        return ONEMKL_INDEX_ZERO
+    else
+        throw(ArgumentError("Unknown index $index"))
+    end
+end
+
 # create a batch of pointers in device memory from a batch of device arrays
 @inline function unsafe_batch(batch::Vector{<:oneArray{T}}) where {T}
     ptrs = pointer.(batch)
@@ -860,8 +870,8 @@ for (fname, elty) in
             n = length(x)
             queue = global_queue(context(x), device(x))
             result = oneArray{Int64}([0]);
-            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
-            return Array(result)[1]+1
+            $fname(sycl_queue(queue), n, x, stride(x, 1), result, 'O')
+            return Array(result)[1]
         end
     end
 end
@@ -877,8 +887,8 @@ for (fname, elty) in
             n = length(x)
             result = oneArray{Int64}([0]);
             queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue),n, x, stride(x, 1), result)
-            return Array(result)[1]+1
+            $fname(sycl_queue(queue),n, x, stride(x, 1), result, 'O')
+            return Array(result)[1]
         end
     end
 end
