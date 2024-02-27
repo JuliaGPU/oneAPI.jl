@@ -45,8 +45,9 @@ end
 endline = Sys.iswindows() ? "\r\n" : "\n"
 
 @testset "formatted output" begin
-    _, out = @grab_output @on_device oneAPI.@printf("")
-    @test out == ""
+    # BROKEN: cintel/compute-runtime#635
+    #_, out = @grab_output @on_device oneAPI.@printf("")
+    #@test out == ""
 
     _, out = @grab_output @on_device oneAPI.@printf("Testing...\n")
     @test out == "Testing...$endline"

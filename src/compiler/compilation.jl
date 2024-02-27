@@ -19,10 +19,11 @@ GPUCompiler.isintrinsic(job::oneAPICompilerJob, fn::String) =
            job, fn) ||
     in(fn, opencl_builtins)
 
-function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module)
-    invoke(GPUCompiler.finish_module!,
-           Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod)},
-           job, mod)
+function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module,
+                                    entry::LLVM.Function)
+    entry = invoke(GPUCompiler.finish_module!,
+                   Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod), typeof(entry)},
+                   job, mod, entry)
 
     # OpenCL 2.0
     push!(metadata(mod)["opencl.ocl.version"],
@@ -33,6 +34,8 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module)
     push!(metadata(mod)["opencl.spirv.version"],
           MDNode([ConstantInt(Int32(1)),
                   ConstantInt(Int32(5))]))
+
+    return entry
 end
 
 
