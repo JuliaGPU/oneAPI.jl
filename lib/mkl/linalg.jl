@@ -92,7 +92,7 @@ end
 #
 # BLAS 2
 #
-if vERSION < v"1.12.0-"
+if VERSION < v"1.12.0-"
 function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul)
     mA, nA = tA == 'N' ? size(A) : reverse(size(A))
 
