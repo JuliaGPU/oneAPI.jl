@@ -92,7 +92,7 @@ end
 #
 # BLAS 2
 #
-
+if vERSION < v"1.12.0-"
 function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul)
     mA, nA = tA == 'N' ? size(A) : reverse(size(A))
 
@@ -126,6 +126,42 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
         end
     end
     LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, MulAddMul(alpha, beta))
+end
+else
+function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, a::Number, b::Number)
+    mA, nA = tA == 'N' ? size(A) : reverse(size(A))
+
+    if nA != length(B)
+        throw(DimensionMismatch("second dimension of A, $nA, does not match length of B, $(length(B))"))
+    end
+
+    if mA != length(Y)
+        throw(DimensionMismatch("first dimension of A, $mA, does not match length of Y, $(length(Y))"))
+    end
+
+    if mA == 0
+        return Y
+    end
+
+    if nA == 0
+        return rmul!(Y, 0)
+    end
+
+    T = eltype(Y)
+    alpha, beta = promote(a, b, zero(T))
+    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
+        if T <: onemklFloat && eltype(A) == eltype(B) == T
+            if tA in ('N', 'T', 'C')
+                return gemv!(tA, alpha, A, B, beta, Y)
+            elseif tA in ('S', 's')
+                return symv!(tA == 'S' ? 'U' : 'L', alpha, A, x, beta, y)
+            elseif tA in ('H', 'h')
+                return hemv!(tA == 'H' ? 'U' : 'L', alpha, A, x, beta, y)
+            end
+        end
+    end
+    LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, alpha, beta)
+end
 end
 
 if VERSION < v"1.10.0-DEV.1365"
@@ -198,9 +234,14 @@ end # VERSION
 # BLAS 3
 #
 
-function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, _add::MulAddMul=MulAddMul())
+if VERSION < v"1.12.0-"
+LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, _add::MulAddMul=MulAddMul()) =
+    LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, _add.alpha, _add.beta)
+end
+
+function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, a::Number, b::Number)
     T = eltype(C)
-    alpha, beta = promote(_add.alpha, _add.beta, zero(T))
+    alpha, beta = promote(a, b, zero(T))
     mA, nA = size(A, tA == 'N' ? 1 : 2), size(A, tA == 'N' ? 2 : 1)
     mB, nB = size(B, tB == 'N' ? 1 : 2), size(B, tB == 'N' ? 2 : 1)
 
