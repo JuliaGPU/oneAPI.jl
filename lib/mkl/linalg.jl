@@ -126,7 +126,7 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
             end
         end
     end
-    LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, alpha, beta)
+    LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, MulAddMul(alpha, beta))
 end
 
 if VERSION < v"1.10.0-DEV.1365"
