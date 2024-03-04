@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(oneAPISupport)
 
-add_library(oneapi_support SHARED src/sycl.h src/sycl.hpp src/sycl.cpp src/onemkl.cpp)
+add_library(oneapi_support SHARED src/sycl.h src/sycl.hpp src/sycl.cpp src/onemkl.h src/onemkl.cpp)
 
 target_link_libraries(oneapi_support
   mkl_sycl
