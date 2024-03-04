@@ -1,6 +1,5 @@
 #include "onemkl.h"
 #include "sycl.hpp"
-#include <cstdint>
 #include <iostream>
 #include <exception>
 #include <memory>
