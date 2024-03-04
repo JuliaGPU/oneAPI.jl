@@ -164,9 +164,29 @@ end
     ONEMKL_PROPERTY_SORTED = 1
 end
 
-mutable struct MatrixHandle_st end
+@cenum onemklMatrixView::UInt32 begin
+    ONEMKL_MATRIX_VIEW_GENERAL = 0
+end
 
-const MatrixHandle_t = Ptr{MatrixHandle_st}
+@cenum onemklMatmatRequest::UInt32 begin
+    ONEMKL_MATMAT_REQUEST_GET_WORK_ESTIMATION_BUF_SIZE = 0
+    ONEMKL_MATMAT_REQUEST_WORK_ESTIMATION = 1
+    ONEMKL_MATMAT_REQUEST_GET_COMPUTE_STRUCTURE_BUF_SIZE = 2
+    ONEMKL_MATMAT_REQUEST_COMPUTE_STRUCTURE = 3
+    ONEMKL_MATMAT_REQUEST_FINALIZE_STRUCTURE = 4
+    ONEMKL_MATMAT_REQUEST_GET_COMPUTE_BUF_SIZE = 5
+    ONEMKL_MATMAT_REQUEST_COMPUTE = 6
+    ONEMKL_MATMAT_REQUEST_GET_NNZ = 7
+    ONEMKL_MATMAT_REQUEST_FINALIZE = 8
+end
+
+mutable struct matrix_handle end
+
+const matrix_handle_t = Ptr{matrix_handle}
+
+mutable struct matmat_descr end
+
+const matmat_descr_t = Ptr{matmat_descr}
 
 function onemklHgemmBatched(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
                             beta, c, ldc, group_count, group_size)
@@ -2462,6 +2482,38 @@ function onemklZgeqrf(device_queue, m, n, a, lda, tau, scratchpad, scratchpad_si
                                           scratchpad_size::Int64)::Cint
 end
 
+function onemklSgesvd_scratchpad_size(device_queue, jobu, jobvt, m, n, lda, ldu, ldvt)
+    @ccall liboneapi_support.onemklSgesvd_scratchpad_size(device_queue::syclQueue_t,
+                                                          jobu::onemklJobsvd,
+                                                          jobvt::onemklJobsvd, m::Int64,
+                                                          n::Int64, lda::Int64, ldu::Int64,
+                                                          ldvt::Int64)::Int64
+end
+
+function onemklDgesvd_scratchpad_size(device_queue, jobu, jobvt, m, n, lda, ldu, ldvt)
+    @ccall liboneapi_support.onemklDgesvd_scratchpad_size(device_queue::syclQueue_t,
+                                                          jobu::onemklJobsvd,
+                                                          jobvt::onemklJobsvd, m::Int64,
+                                                          n::Int64, lda::Int64, ldu::Int64,
+                                                          ldvt::Int64)::Int64
+end
+
+function onemklCgesvd_scratchpad_size(device_queue, jobu, jobvt, m, n, lda, ldu, ldvt)
+    @ccall liboneapi_support.onemklCgesvd_scratchpad_size(device_queue::syclQueue_t,
+                                                          jobu::onemklJobsvd,
+                                                          jobvt::onemklJobsvd, m::Int64,
+                                                          n::Int64, lda::Int64, ldu::Int64,
+                                                          ldvt::Int64)::Int64
+end
+
+function onemklZgesvd_scratchpad_size(device_queue, jobu, jobvt, m, n, lda, ldu, ldvt)
+    @ccall liboneapi_support.onemklZgesvd_scratchpad_size(device_queue::syclQueue_t,
+                                                          jobu::onemklJobsvd,
+                                                          jobvt::onemklJobsvd, m::Int64,
+                                                          n::Int64, lda::Int64, ldu::Int64,
+                                                          ldvt::Int64)::Int64
+end
+
 function onemklCgesvd(device_queue, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt,
                       scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCgesvd(device_queue::syclQueue_t, jobu::onemklJobsvd,
@@ -4438,6 +4490,301 @@ function onemklZgels_batch_scratchpad_size(device_queue, trans, m, n, nrhs, lda,
                                                                stride_a::Int64, ldb::Int64,
                                                                stride_b::Int64,
                                                                batch_size::Int64)::Int64
+end
+
+function onemklXsparse_init_matrix_handle(handle)
+    @ccall liboneapi_support.onemklXsparse_init_matrix_handle(handle::Ptr{matrix_handle_t})::Cvoid
+end
+
+function onemklSsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
+                                    row_ptr, col_ind, val)
+    @ccall liboneapi_support.onemklSsparse_set_csr_data(device_queue::syclQueue_t,
+                                                        handle::matrix_handle_t,
+                                                        num_rows::Int32, num_cols::Int32,
+                                                        index::onemklIndex,
+                                                        row_ptr::ZePtr{Int32},
+                                                        col_ind::ZePtr{Int32},
+                                                        val::ZePtr{Cfloat})::Cint
+end
+
+function onemklSsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
+                                       row_ptr, col_ind, val)
+    @ccall liboneapi_support.onemklSsparse_set_csr_data_64(device_queue::syclQueue_t,
+                                                           handle::matrix_handle_t,
+                                                           num_rows::Int64, num_cols::Int64,
+                                                           index::onemklIndex,
+                                                           row_ptr::ZePtr{Int64},
+                                                           col_ind::ZePtr{Int64},
+                                                           val::ZePtr{Cfloat})::Cint
+end
+
+function onemklDsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
+                                    row_ptr, col_ind, val)
+    @ccall liboneapi_support.onemklDsparse_set_csr_data(device_queue::syclQueue_t,
+                                                        handle::matrix_handle_t,
+                                                        num_rows::Int32, num_cols::Int32,
+                                                        index::onemklIndex,
+                                                        row_ptr::ZePtr{Int32},
+                                                        col_ind::ZePtr{Int32},
+                                                        val::ZePtr{Cdouble})::Cint
+end
+
+function onemklDsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
+                                       row_ptr, col_ind, val)
+    @ccall liboneapi_support.onemklDsparse_set_csr_data_64(device_queue::syclQueue_t,
+                                                           handle::matrix_handle_t,
+                                                           num_rows::Int64, num_cols::Int64,
+                                                           index::onemklIndex,
+                                                           row_ptr::ZePtr{Int64},
+                                                           col_ind::ZePtr{Int64},
+                                                           val::ZePtr{Cdouble})::Cint
+end
+
+function onemklCsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
+                                    row_ptr, col_ind, val)
+    @ccall liboneapi_support.onemklCsparse_set_csr_data(device_queue::syclQueue_t,
+                                                        handle::matrix_handle_t,
+                                                        num_rows::Int32, num_cols::Int32,
+                                                        index::onemklIndex,
+                                                        row_ptr::ZePtr{Int32},
+                                                        col_ind::ZePtr{Int32},
+                                                        val::ZePtr{ComplexF32})::Cint
+end
+
+function onemklCsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
+                                       row_ptr, col_ind, val)
+    @ccall liboneapi_support.onemklCsparse_set_csr_data_64(device_queue::syclQueue_t,
+                                                           handle::matrix_handle_t,
+                                                           num_rows::Int64, num_cols::Int64,
+                                                           index::onemklIndex,
+                                                           row_ptr::ZePtr{Int64},
+                                                           col_ind::ZePtr{Int64},
+                                                           val::ZePtr{ComplexF32})::Cint
+end
+
+function onemklZsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
+                                    row_ptr, col_ind, val)
+    @ccall liboneapi_support.onemklZsparse_set_csr_data(device_queue::syclQueue_t,
+                                                        handle::matrix_handle_t,
+                                                        num_rows::Int32, num_cols::Int32,
+                                                        index::onemklIndex,
+                                                        row_ptr::ZePtr{Int32},
+                                                        col_ind::ZePtr{Int32},
+                                                        val::ZePtr{ComplexF64})::Cint
+end
+
+function onemklZsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
+                                       row_ptr, col_ind, val)
+    @ccall liboneapi_support.onemklZsparse_set_csr_data_64(device_queue::syclQueue_t,
+                                                           handle::matrix_handle_t,
+                                                           num_rows::Int64, num_cols::Int64,
+                                                           index::onemklIndex,
+                                                           row_ptr::ZePtr{Int64},
+                                                           col_ind::ZePtr{Int64},
+                                                           val::ZePtr{ComplexF64})::Cint
+end
+
+function onemklSsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
+    @ccall liboneapi_support.onemklSsparse_gemv(device_queue::syclQueue_t,
+                                                transpose_flag::onemklTranspose,
+                                                alpha::Float32, handle::matrix_handle_t,
+                                                x::ZePtr{Float32}, beta::Float32,
+                                                y::ZePtr{Float32})::Cint
+end
+
+function onemklDsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
+    @ccall liboneapi_support.onemklDsparse_gemv(device_queue::syclQueue_t,
+                                                transpose_flag::onemklTranspose,
+                                                alpha::Float64, handle::matrix_handle_t,
+                                                x::ZePtr{Float64}, beta::Float64,
+                                                y::ZePtr{Float64})::Cint
+end
+
+function onemklCsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
+    @ccall liboneapi_support.onemklCsparse_gemv(device_queue::syclQueue_t,
+                                                transpose_flag::onemklTranspose,
+                                                alpha::ComplexF32, handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF32}, beta::ComplexF32,
+                                                y::ZePtr{ComplexF32})::Cint
+end
+
+function onemklZsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
+    @ccall liboneapi_support.onemklZsparse_gemv(device_queue::syclQueue_t,
+                                                transpose_flag::onemklTranspose,
+                                                alpha::ComplexF64, handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF64}, beta::ComplexF64,
+                                                y::ZePtr{ComplexF64})::Cint
+end
+
+function onemklSsparse_symv(device_queue, uplo_flag, alpha, handle, x, beta, y)
+    @ccall liboneapi_support.onemklSsparse_symv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo, alpha::Float32,
+                                                handle::matrix_handle_t, x::ZePtr{Float32},
+                                                beta::Float32, y::ZePtr{Float32})::Cint
+end
+
+function onemklDsparse_symv(device_queue, uplo_flag, alpha, handle, x, beta, y)
+    @ccall liboneapi_support.onemklDsparse_symv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo, alpha::Float64,
+                                                handle::matrix_handle_t, x::ZePtr{Float64},
+                                                beta::Float64, y::ZePtr{Float64})::Cint
+end
+
+function onemklCsparse_symv(device_queue, uplo_flag, alpha, handle, x, beta, y)
+    @ccall liboneapi_support.onemklCsparse_symv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo, alpha::ComplexF32,
+                                                handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF32}, beta::ComplexF32,
+                                                y::ZePtr{ComplexF32})::Cint
+end
+
+function onemklZsparse_symv(device_queue, uplo_flag, alpha, handle, x, beta, y)
+    @ccall liboneapi_support.onemklZsparse_symv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo, alpha::ComplexF64,
+                                                handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF64}, beta::ComplexF64,
+                                                y::ZePtr{ComplexF64})::Cint
+end
+
+function onemklSsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
+                            handle, x, beta, y)
+    @ccall liboneapi_support.onemklSsparse_trmv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo,
+                                                transpose_flag::onemklTranspose,
+                                                diag_val::onemklDiag, alpha::Float32,
+                                                handle::matrix_handle_t, x::ZePtr{Float32},
+                                                beta::Float32, y::ZePtr{Float32})::Cint
+end
+
+function onemklDsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
+                            handle, x, beta, y)
+    @ccall liboneapi_support.onemklDsparse_trmv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo,
+                                                transpose_flag::onemklTranspose,
+                                                diag_val::onemklDiag, alpha::Float64,
+                                                handle::matrix_handle_t, x::ZePtr{Float64},
+                                                beta::Float64, y::ZePtr{Float64})::Cint
+end
+
+function onemklCsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
+                            handle, x, beta, y)
+    @ccall liboneapi_support.onemklCsparse_trmv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo,
+                                                transpose_flag::onemklTranspose,
+                                                diag_val::onemklDiag, alpha::ComplexF32,
+                                                handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF32}, beta::ComplexF32,
+                                                y::ZePtr{ComplexF32})::Cint
+end
+
+function onemklZsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
+                            handle, x, beta, y)
+    @ccall liboneapi_support.onemklZsparse_trmv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo,
+                                                transpose_flag::onemklTranspose,
+                                                diag_val::onemklDiag, alpha::ComplexF64,
+                                                handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF64}, beta::ComplexF64,
+                                                y::ZePtr{ComplexF64})::Cint
+end
+
+function onemklSsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, handle, x, y)
+    @ccall liboneapi_support.onemklSsparse_trsv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo,
+                                                transpose_flag::onemklTranspose,
+                                                diag_val::onemklDiag,
+                                                handle::matrix_handle_t, x::ZePtr{Cfloat},
+                                                y::ZePtr{Cfloat})::Cint
+end
+
+function onemklDsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, handle, x, y)
+    @ccall liboneapi_support.onemklDsparse_trsv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo,
+                                                transpose_flag::onemklTranspose,
+                                                diag_val::onemklDiag,
+                                                handle::matrix_handle_t, x::ZePtr{Cdouble},
+                                                y::ZePtr{Cdouble})::Cint
+end
+
+function onemklCsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, handle, x, y)
+    @ccall liboneapi_support.onemklCsparse_trsv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo,
+                                                transpose_flag::onemklTranspose,
+                                                diag_val::onemklDiag,
+                                                handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF32},
+                                                y::ZePtr{ComplexF32})::Cint
+end
+
+function onemklZsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, handle, x, y)
+    @ccall liboneapi_support.onemklZsparse_trsv(device_queue::syclQueue_t,
+                                                uplo_flag::onemklUplo,
+                                                transpose_flag::onemklTranspose,
+                                                diag_val::onemklDiag,
+                                                handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF64},
+                                                y::ZePtr{ComplexF64})::Cint
+end
+
+function onemklSsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, handle, b,
+                            columns, ldb, beta, c, ldc)
+    @ccall liboneapi_support.onemklSsparse_gemm(device_queue::syclQueue_t,
+                                                dense_matrix_layout::onemklLayout,
+                                                opA::onemklTranspose, opB::onemklTranspose,
+                                                alpha::Float32, handle::matrix_handle_t,
+                                                b::ZePtr{Float32}, columns::Int64,
+                                                ldb::Int64, beta::Float32,
+                                                c::ZePtr{Float32}, ldc::Int64)::Cint
+end
+
+function onemklDsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, handle, b,
+                            columns, ldb, beta, c, ldc)
+    @ccall liboneapi_support.onemklDsparse_gemm(device_queue::syclQueue_t,
+                                                dense_matrix_layout::onemklLayout,
+                                                opA::onemklTranspose, opB::onemklTranspose,
+                                                alpha::Float64, handle::matrix_handle_t,
+                                                b::ZePtr{Float64}, columns::Int64,
+                                                ldb::Int64, beta::Float64,
+                                                c::ZePtr{Float64}, ldc::Int64)::Cint
+end
+
+function onemklCsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, handle, b,
+                            columns, ldb, beta, c, ldc)
+    @ccall liboneapi_support.onemklCsparse_gemm(device_queue::syclQueue_t,
+                                                dense_matrix_layout::onemklLayout,
+                                                opA::onemklTranspose, opB::onemklTranspose,
+                                                alpha::ComplexF32, handle::matrix_handle_t,
+                                                b::ZePtr{ComplexF32}, columns::Int64,
+                                                ldb::Int64, beta::ComplexF32,
+                                                c::ZePtr{ComplexF32}, ldc::Int64)::Cint
+end
+
+function onemklZsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, handle, b,
+                            columns, ldb, beta, c, ldc)
+    @ccall liboneapi_support.onemklZsparse_gemm(device_queue::syclQueue_t,
+                                                dense_matrix_layout::onemklLayout,
+                                                opA::onemklTranspose, opB::onemklTranspose,
+                                                alpha::ComplexF64, handle::matrix_handle_t,
+                                                b::ZePtr{ComplexF64}, columns::Int64,
+                                                ldb::Int64, beta::ComplexF64,
+                                                c::ZePtr{ComplexF64}, ldc::Int64)::Cint
+end
+
+function onemklXsparse_init_matmat_descr(desc)
+    @ccall liboneapi_support.onemklXsparse_init_matmat_descr(desc::Ptr{matmat_descr_t})::Cvoid
+end
+
+function onemklXsparse_release_matmat_descr(desc)
+    @ccall liboneapi_support.onemklXsparse_release_matmat_descr(desc::Ptr{matmat_descr_t})::Cvoid
+end
+
+function onemklXsparse_set_matmat_data(descr, viewA, opA, viewB, opB, viewC)
+    @ccall liboneapi_support.onemklXsparse_set_matmat_data(descr::matmat_descr_t,
+                                                           viewA::onemklMatrixView,
+                                                           opA::onemklTranspose,
+                                                           viewB::onemklMatrixView,
+                                                           opB::onemklTranspose,
+                                                           viewC::onemklMatrixView)::Cvoid
 end
 
 function onemklDestroy()

@@ -179,6 +179,36 @@ oneapi::mkl::sparse::property convert(onemklProperty val) {
     }
 }
 
+oneapi::mkl::sparse::matrix_view_descr convert(onemklMatrixView val) {
+    switch (val) {
+    case ONEMKL_MATRIX_VIEW_GENERAL:
+        return oneapi::mkl::sparse::matrix_view_descr::general;
+    }
+}
+
+oneapi::mkl::sparse::matmat_request convert(onemklMatmatRequest val) {
+    switch (val) {
+    case ONEMKL_MATMAT_REQUEST_GET_WORK_ESTIMATION_BUF_SIZE:
+        return oneapi::mkl::sparse::matmat_request::get_work_estimation_buf_size;
+    case ONEMKL_MATMAT_REQUEST_WORK_ESTIMATION:
+        return oneapi::mkl::sparse::matmat_request::work_estimation;
+    case ONEMKL_MATMAT_REQUEST_GET_COMPUTE_STRUCTURE_BUF_SIZE:
+        return oneapi::mkl::sparse::matmat_request::get_compute_structure_buf_size;
+    case ONEMKL_MATMAT_REQUEST_COMPUTE_STRUCTURE:
+        return oneapi::mkl::sparse::matmat_request::compute_structure;
+    case ONEMKL_MATMAT_REQUEST_FINALIZE_STRUCTURE:
+        return oneapi::mkl::sparse::matmat_request::finalize_structure;
+    case ONEMKL_MATMAT_REQUEST_GET_COMPUTE_BUF_SIZE:
+        return oneapi::mkl::sparse::matmat_request::get_compute_buf_size;
+    case ONEMKL_MATMAT_REQUEST_COMPUTE:
+        return oneapi::mkl::sparse::matmat_request::compute;
+    case ONEMKL_MATMAT_REQUEST_GET_NNZ:
+        return oneapi::mkl::sparse::matmat_request::get_nnz;
+    case ONEMKL_MATMAT_REQUEST_FINALIZE:
+        return oneapi::mkl::sparse::matmat_request::finalize;
+    }
+}
+
 // gemm
 // https://spec.oneapi.io/versions/1.0-rev-1/elements/oneMKL/source/domains/blas/gemm.html
 class gemmBatchInfo {

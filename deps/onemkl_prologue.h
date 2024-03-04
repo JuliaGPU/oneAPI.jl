@@ -104,8 +104,27 @@ typedef enum {
     ONEMKL_PROPERTY_SORTED,
 } onemklProperty;
 
-// I need help :(
-typedef struct MatrixHandle_st *MatrixHandle_t;
+typedef enum {
+    ONEMKL_MATRIX_VIEW_GENERAL,
+} onemklMatrixView;
+
+typedef enum {
+    ONEMKL_MATMAT_REQUEST_GET_WORK_ESTIMATION_BUF_SIZE,
+    ONEMKL_MATMAT_REQUEST_WORK_ESTIMATION,
+    ONEMKL_MATMAT_REQUEST_GET_COMPUTE_STRUCTURE_BUF_SIZE,
+    ONEMKL_MATMAT_REQUEST_COMPUTE_STRUCTURE,
+    ONEMKL_MATMAT_REQUEST_FINALIZE_STRUCTURE,
+    ONEMKL_MATMAT_REQUEST_GET_COMPUTE_BUF_SIZE,
+    ONEMKL_MATMAT_REQUEST_COMPUTE,
+    ONEMKL_MATMAT_REQUEST_GET_NNZ,
+    ONEMKL_MATMAT_REQUEST_FINALIZE,
+} onemklMatmatRequest;
+
+struct matrix_handle;
+typedef struct matrix_handle *matrix_handle_t;
+
+struct matmat_descr;
+typedef struct matmat_descr *matmat_descr_t;
 
 int onemklHgemmBatched(syclQueue_t device_queue, onemklTranspose transa,
                        onemklTranspose transb, int64_t *m,
