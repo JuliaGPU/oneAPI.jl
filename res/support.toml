@@ -274,22 +274,102 @@ use_ccall_macro = true
 7 = "ZePtr{Int64}"
 8 = "ZePtr{T}"
 
-[api.onemklXsparse_gemv.argtypes]
-5 = "ZePtr{T}"
-7 = "ZePtr{T}"
+[api.onemklSsparse_gemv.argtypes]
+3 = "Float32"
+5 = "ZePtr{Float32}"
+6 = "Float32"
+7 = "ZePtr{Float32}"
 
-[api.onemklXsparse_symv.argtypes]
-5 = "ZePtr{T}"
-7 = "ZePtr{T}"
+[api.onemklDsparse_gemv.argtypes]
+3 = "Float64"
+5 = "ZePtr{Float64}"
+6 = "Float64"
+7 = "ZePtr{Float64}"
 
-[api.onemklXsparse_trmv.argtypes]
-7 = "ZePtr{T}"
-9 = "ZePtr{T}"
+[api.onemklCsparse_gemv.argtypes]
+3 = "ComplexF32"
+5 = "ZePtr{ComplexF32}"
+6 = "ComplexF32"
+7 = "ZePtr{ComplexF32}"
+
+[api.onemklZsparse_gemv.argtypes]
+3 = "ComplexF64"
+5 = "ZePtr{ComplexF64}"
+6 = "ComplexF64"
+7 = "ZePtr{ComplexF64}"
+
+[api.onemklSsparse_symv.argtypes]
+3 = "Float32"
+5 = "ZePtr{Float32}"
+6 = "Float32"
+7 = "ZePtr{Float32}"
+
+[api.onemklDsparse_symv.argtypes]
+3 = "Float64"
+5 = "ZePtr{Float64}"
+6 = "Float64"
+7 = "ZePtr{Float64}"
+
+[api.onemklCsparse_symv.argtypes]
+3 = "ComplexF32"
+5 = "ZePtr{ComplexF32}"
+6 = "ComplexF32"
+7 = "ZePtr{ComplexF32}"
+
+[api.onemklZsparse_symv.argtypes]
+3 = "ComplexF64"
+5 = "ZePtr{ComplexF64}"
+6 = "ComplexF64"
+7 = "ZePtr{ComplexF64}"
+
+[api.onemklSsparse_trmv.argtypes]
+5 = "Float32"
+7 = "ZePtr{Float32}"
+8 = "Float32"
+9 = "ZePtr{Float32}"
+
+[api.onemklDsparse_trmv.argtypes]
+5 = "Float64"
+7 = "ZePtr{Float64}"
+8 = "Float64"
+9 = "ZePtr{Float64}"
+
+[api.onemklCsparse_trmv.argtypes]
+5 = "ComplexF32"
+7 = "ZePtr{ComplexF32}"
+8 = "ComplexF32"
+9 = "ZePtr{ComplexF32}"
+
+[api.onemklZsparse_trmv.argtypes]
+5 = "ComplexF64"
+7 = "ZePtr{ComplexF64}"
+8 = "ComplexF64"
+9 = "ZePtr{ComplexF64}"
 
 [api.onemklXsparse_trsv.argtypes]
 6 = "ZePtr{T}"
 7 = "ZePtr{T}"
 
-[api.onemklXsparse_gemm.argtypes]
-7 = "ZePtr{T}"
-11 = "ZePtr{T}"
+[api.onemklSsparse_gemm.argtypes]
+5 = "Float32"
+7 = "ZePtr{Float32}"
+10 = "Float32"
+11 = "ZePtr{Float32}"
+
+[api.onemklDsparse_gemm.argtypes]
+5 = "Float64"
+7 = "ZePtr{Float64}"
+10 = "Float64"
+11 = "ZePtr{Float64}"
+
+[api.onemklCsparse_gemm.argtypes]
+5 = "ComplexF32"
+7 = "ZePtr{ComplexF32}"
+10 = "ComplexF32"
+11 = "ZePtr{ComplexF32}"
+
+[api.onemklZsparse_gemm.argtypes]
+5 = "ComplexF64"
+7 = "ZePtr{ComplexF64}"
+10 = "ComplexF64"
+11 = "ZePtr{ComplexF64}"

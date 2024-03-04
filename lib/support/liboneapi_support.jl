@@ -4587,17 +4587,17 @@ end
 function onemklSsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
     @ccall liboneapi_support.onemklSsparse_gemv(device_queue::syclQueue_t,
                                                 transpose_flag::onemklTranspose,
-                                                alpha::Cfloat, handle::matrix_handle_t,
-                                                x::ZePtr{Cfloat}, beta::Cfloat,
-                                                y::ZePtr{Cfloat})::Cint
+                                                alpha::Float32, handle::matrix_handle_t,
+                                                x::ZePtr{Float32}, beta::Float32,
+                                                y::ZePtr{Float32})::Cint
 end
 
 function onemklDsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
     @ccall liboneapi_support.onemklDsparse_gemv(device_queue::syclQueue_t,
                                                 transpose_flag::onemklTranspose,
-                                                alpha::Cdouble, handle::matrix_handle_t,
-                                                x::ZePtr{Cdouble}, beta::Cdouble,
-                                                y::ZePtr{Cdouble})::Cint
+                                                alpha::Float64, handle::matrix_handle_t,
+                                                x::ZePtr{Float64}, beta::Float64,
+                                                y::ZePtr{Float64})::Cint
 end
 
 function onemklCsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
@@ -4611,23 +4611,23 @@ end
 function onemklZsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
     @ccall liboneapi_support.onemklZsparse_gemv(device_queue::syclQueue_t,
                                                 transpose_flag::onemklTranspose,
-                                                alpha::ComplexF32, handle::matrix_handle_t,
-                                                x::ZePtr{ComplexF64}, beta::ComplexF32,
+                                                alpha::ComplexF64, handle::matrix_handle_t,
+                                                x::ZePtr{ComplexF64}, beta::ComplexF64,
                                                 y::ZePtr{ComplexF64})::Cint
 end
 
 function onemklSsparse_symv(device_queue, uplo_flag, alpha, handle, x, beta, y)
     @ccall liboneapi_support.onemklSsparse_symv(device_queue::syclQueue_t,
-                                                uplo_flag::onemklUplo, alpha::Cfloat,
-                                                handle::matrix_handle_t, x::ZePtr{Cfloat},
-                                                beta::Cfloat, y::ZePtr{Cfloat})::Cint
+                                                uplo_flag::onemklUplo, alpha::Float32,
+                                                handle::matrix_handle_t, x::ZePtr{Float32},
+                                                beta::Float32, y::ZePtr{Float32})::Cint
 end
 
 function onemklDsparse_symv(device_queue, uplo_flag, alpha, handle, x, beta, y)
     @ccall liboneapi_support.onemklDsparse_symv(device_queue::syclQueue_t,
-                                                uplo_flag::onemklUplo, alpha::Cdouble,
-                                                handle::matrix_handle_t, x::ZePtr{Cdouble},
-                                                beta::Cdouble, y::ZePtr{Cdouble})::Cint
+                                                uplo_flag::onemklUplo, alpha::Float64,
+                                                handle::matrix_handle_t, x::ZePtr{Float64},
+                                                beta::Float64, y::ZePtr{Float64})::Cint
 end
 
 function onemklCsparse_symv(device_queue, uplo_flag, alpha, handle, x, beta, y)
@@ -4640,9 +4640,9 @@ end
 
 function onemklZsparse_symv(device_queue, uplo_flag, alpha, handle, x, beta, y)
     @ccall liboneapi_support.onemklZsparse_symv(device_queue::syclQueue_t,
-                                                uplo_flag::onemklUplo, alpha::ComplexF32,
+                                                uplo_flag::onemklUplo, alpha::ComplexF64,
                                                 handle::matrix_handle_t,
-                                                x::ZePtr{ComplexF64}, beta::ComplexF32,
+                                                x::ZePtr{ComplexF64}, beta::ComplexF64,
                                                 y::ZePtr{ComplexF64})::Cint
 end
 
@@ -4651,9 +4651,9 @@ function onemklSsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, a
     @ccall liboneapi_support.onemklSsparse_trmv(device_queue::syclQueue_t,
                                                 uplo_flag::onemklUplo,
                                                 transpose_flag::onemklTranspose,
-                                                diag_val::onemklDiag, alpha::Cfloat,
-                                                handle::matrix_handle_t, x::ZePtr{Cfloat},
-                                                beta::Cfloat, y::ZePtr{Cfloat})::Cint
+                                                diag_val::onemklDiag, alpha::Float32,
+                                                handle::matrix_handle_t, x::ZePtr{Float32},
+                                                beta::Float32, y::ZePtr{Float32})::Cint
 end
 
 function onemklDsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
@@ -4661,9 +4661,9 @@ function onemklDsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, a
     @ccall liboneapi_support.onemklDsparse_trmv(device_queue::syclQueue_t,
                                                 uplo_flag::onemklUplo,
                                                 transpose_flag::onemklTranspose,
-                                                diag_val::onemklDiag, alpha::Cdouble,
-                                                handle::matrix_handle_t, x::ZePtr{Cdouble},
-                                                beta::Cdouble, y::ZePtr{Cdouble})::Cint
+                                                diag_val::onemklDiag, alpha::Float64,
+                                                handle::matrix_handle_t, x::ZePtr{Float64},
+                                                beta::Float64, y::ZePtr{Float64})::Cint
 end
 
 function onemklCsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
@@ -4682,9 +4682,9 @@ function onemklZsparse_trmv(device_queue, uplo_flag, transpose_flag, diag_val, a
     @ccall liboneapi_support.onemklZsparse_trmv(device_queue::syclQueue_t,
                                                 uplo_flag::onemklUplo,
                                                 transpose_flag::onemklTranspose,
-                                                diag_val::onemklDiag, alpha::ComplexF32,
+                                                diag_val::onemklDiag, alpha::ComplexF64,
                                                 handle::matrix_handle_t,
-                                                x::ZePtr{ComplexF64}, beta::ComplexF32,
+                                                x::ZePtr{ComplexF64}, beta::ComplexF64,
                                                 y::ZePtr{ComplexF64})::Cint
 end
 
@@ -4731,10 +4731,10 @@ function onemklSsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, 
     @ccall liboneapi_support.onemklSsparse_gemm(device_queue::syclQueue_t,
                                                 dense_matrix_layout::onemklLayout,
                                                 opA::onemklTranspose, opB::onemklTranspose,
-                                                alpha::Cfloat, handle::matrix_handle_t,
-                                                b::ZePtr{Cfloat}, columns::Int64,
-                                                ldb::Int64, beta::Cfloat, c::ZePtr{Cfloat},
-                                                ldc::Int64)::Cint
+                                                alpha::Float32, handle::matrix_handle_t,
+                                                b::ZePtr{Float32}, columns::Int64,
+                                                ldb::Int64, beta::Float32,
+                                                c::ZePtr{Float32}, ldc::Int64)::Cint
 end
 
 function onemklDsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, handle, b,
@@ -4742,10 +4742,10 @@ function onemklDsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, 
     @ccall liboneapi_support.onemklDsparse_gemm(device_queue::syclQueue_t,
                                                 dense_matrix_layout::onemklLayout,
                                                 opA::onemklTranspose, opB::onemklTranspose,
-                                                alpha::Cdouble, handle::matrix_handle_t,
-                                                b::ZePtr{Cdouble}, columns::Int64,
-                                                ldb::Int64, beta::Cdouble,
-                                                c::ZePtr{Cdouble}, ldc::Int64)::Cint
+                                                alpha::Float64, handle::matrix_handle_t,
+                                                b::ZePtr{Float64}, columns::Int64,
+                                                ldb::Int64, beta::Float64,
+                                                c::ZePtr{Float64}, ldc::Int64)::Cint
 end
 
 function onemklCsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, handle, b,
@@ -4764,9 +4764,9 @@ function onemklZsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, 
     @ccall liboneapi_support.onemklZsparse_gemm(device_queue::syclQueue_t,
                                                 dense_matrix_layout::onemklLayout,
                                                 opA::onemklTranspose, opB::onemklTranspose,
-                                                alpha::ComplexF32, handle::matrix_handle_t,
+                                                alpha::ComplexF64, handle::matrix_handle_t,
                                                 b::ZePtr{ComplexF64}, columns::Int64,
-                                                ldb::Int64, beta::ComplexF32,
+                                                ldb::Int64, beta::ComplexF64,
                                                 c::ZePtr{ComplexF64}, ldc::Int64)::Cint
 end
 
