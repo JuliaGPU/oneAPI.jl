@@ -263,3 +263,33 @@ use_ccall_macro = true
 [api.onemklXswap.argtypes]
 3 = "ZePtr{T}"
 5 = "ZePtr{T}"
+
+[api.onemklXsparse_set_csr_data.argtypes]
+6 = "ZePtr{Int32}"
+7 = "ZePtr{Int32}"
+8 = "ZePtr{T}"
+
+[api.onemklXsparse_set_csr_data_64.argtypes]
+6 = "ZePtr{Int64}"
+7 = "ZePtr{Int64}"
+8 = "ZePtr{T}"
+
+[api.onemklXsparse_gemv.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+
+[api.onemklXsparse_symv.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+
+[api.onemklXsparse_trmv.argtypes]
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+
+[api.onemklXsparse_trsv.argtypes]
+6 = "ZePtr{T}"
+7 = "ZePtr{T}"
+
+[api.onemklXsparse_gemm.argtypes]
+7 = "ZePtr{T}"
+11 = "ZePtr{T}"
