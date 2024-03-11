@@ -1,7 +1,7 @@
 # Integer Functions
 
 # TODO: vector types
-const generic_integer_types = [Cchar, Cuchar, Cshort, Cushort, Cint, Cuint, Clong, Culong]
+const generic_integer_types = [Int8, UInt8, Int16, UInt16, Int32, UInt32, Int64, UInt64]
 
 
 # generically typed
