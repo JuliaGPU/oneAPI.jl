@@ -23,7 +23,12 @@ function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
 
-    if !oneAPI_Support_jll.is_available()
+    if Sys.iswindows()
+        @error """oneAPI.jl on Windows does not support the support wrapper library.
+                  This means that vendor libraries like oneMKL are not supported.
+                  For a better supported environment, consider using WSL instead."""
+        return
+    elseif !oneAPI_Support_jll.is_available()
         @error """oneAPI support wrapper not available for your platform."""
         return
     end
