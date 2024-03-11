@@ -17,14 +17,12 @@ using Core: LLVMPtr
 
 using SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll
 
-export oneL0, SYCL
+export oneL0
 
 # core library
 include("../lib/utils/APIUtils.jl")
 include("../lib/level-zero/oneL0.jl")
-include("../lib/support/Support.jl")
-include("../lib/sycl/SYCL.jl")
-using .oneL0, .SYCL
+using .oneL0
 functional() = oneL0.functional[]
 
 # device functionality (needs to be loaded first, because of generated functions)
@@ -54,9 +52,17 @@ include("compiler/compilation.jl")
 include("compiler/execution.jl")
 include("compiler/reflection.jl")
 
+if Sys.islinux()
+# library interop
+include("../lib/support/Support.jl")
+include("../lib/sycl/SYCL.jl")
+using .SYCL
+export SYCL
+
 # array libraries
 include("../lib/mkl/oneMKL.jl")
 export oneMKL
+end
 
 # integrations and specialized functionality
 include("broadcast.jl")
@@ -73,13 +79,15 @@ function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
 
-    if !Sys.islinux()
-        @error("oneAPI.jl is only supported on Linux")
-        return
+    if Sys.iswindows()
+        @warn """oneAPI.jl support for native Windows is experimental and incomplete.
+                 For the time being, it is recommended to use WSL or Linux instead."""
     end
 
-    # ensure that the OpenCL runtime dispatcher finds the ICD files from our artifacts
-    ENV["OCL_ICD_VENDORS"] = oneL0.NEO_jll.libigdrcl
+    if Sys.islinux()
+        # ensure that the OpenCL runtime dispatcher finds the ICD files from our artifacts
+        ENV["OCL_ICD_VENDORS"] = oneL0.NEO_jll.libigdrcl
+    end
 end
 
 function set_debug!(debug::Bool)
