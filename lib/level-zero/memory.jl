@@ -96,22 +96,12 @@ end
 
 function host_alloc(ctx::ZeContext, bytesize::Integer, alignment::Integer=1;
                     flags=0)
-    relaxed_allocation_ref = Ref(ze_relaxed_allocation_limits_exp_desc_t(;
-        flags = ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE,
-    ))
-    GC.@preserve relaxed_allocation_ref begin
-        desc_ref = if bytesize > properties(dev).maxMemAllocSize
-            pNext = Base.unsafe_convert(Ptr{Cvoid}, relaxed_allocation_ref)
-            Ref(ze_host_mem_alloc_desc_t(; flags, pNext))
-        else
-            Ref(ze_host_mem_alloc_desc_t(; flags))
-        end
+    desc_ref = Ref(ze_host_mem_alloc_desc_t(; flags))
 
-        ptr_ref = Ref{Ptr{Cvoid}}()
-        zeMemAllocHost(ctx, desc_ref, bytesize, alignment, ptr_ref)
+    ptr_ref = Ref{Ptr{Cvoid}}()
+    zeMemAllocHost(ctx, desc_ref, bytesize, alignment, ptr_ref)
 
-        return HostBuffer(ptr_ref[], bytesize, ctx)
-    end
+    return HostBuffer(ptr_ref[], bytesize, ctx)
 end
 
 Base.pointer(buf::HostBuffer) = buf.ptr
