@@ -44,14 +44,24 @@ struct DeviceBuffer <: AbstractBuffer
     device::ZeDevice
 end
 
-function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer, alignment::Integer=1;
-                      flags=0, ordinal::Integer=0)
-    desc_ref = Ref(ze_device_mem_alloc_desc_t(; flags, ordinal))
+function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer,
+                      alignment::Integer=1; flags=0, ordinal::Integer=0)
+    relaxed_allocation_ref = Ref(ze_relaxed_allocation_limits_exp_desc_t(;
+        flags = ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE,
+    ))
+    GC.@preserve relaxed_allocation_ref begin
+        desc_ref = if bytesize > properties(dev).maxMemAllocSize
+            pNext = Base.unsafe_convert(Ptr{Cvoid}, relaxed_allocation_ref)
+            Ref(ze_device_mem_alloc_desc_t(; flags, ordinal, pNext))
+        else
+            Ref(ze_device_mem_alloc_desc_t(; flags, ordinal))
+        end
 
-    ptr_ref = Ref{Ptr{Cvoid}}()
-    zeMemAllocDevice(ctx, desc_ref, bytesize, alignment, dev, ptr_ref)
+        ptr_ref = Ref{Ptr{Cvoid}}()
+        zeMemAllocDevice(ctx, desc_ref, bytesize, alignment, dev, ptr_ref)
 
-    return DeviceBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx, dev)
+        return DeviceBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx, dev)
+    end
 end
 
 Base.pointer(buf::DeviceBuffer) = buf.ptr
@@ -84,13 +94,24 @@ struct HostBuffer <: AbstractBuffer
     context::ZeContext
 end
 
-function host_alloc(ctx::ZeContext, bytesize::Integer, alignment::Integer=1; flags=0)
-    desc_ref = Ref(ze_host_mem_alloc_desc_t(; flags))
+function host_alloc(ctx::ZeContext, bytesize::Integer, alignment::Integer=1;
+                    flags=0)
+    relaxed_allocation_ref = Ref(ze_relaxed_allocation_limits_exp_desc_t(;
+        flags = ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE,
+    ))
+    GC.@preserve relaxed_allocation_ref begin
+        desc_ref = if bytesize > properties(dev).maxMemAllocSize
+            pNext = Base.unsafe_convert(Ptr{Cvoid}, relaxed_allocation_ref)
+            Ref(ze_host_mem_alloc_desc_t(; flags, pNext))
+        else
+            Ref(ze_host_mem_alloc_desc_t(; flags))
+        end
 
-    ptr_ref = Ref{Ptr{Cvoid}}()
-    zeMemAllocHost(ctx, desc_ref, bytesize, alignment, ptr_ref)
+        ptr_ref = Ref{Ptr{Cvoid}}()
+        zeMemAllocHost(ctx, desc_ref, bytesize, alignment, ptr_ref)
 
-    return HostBuffer(ptr_ref[], bytesize, ctx)
+        return HostBuffer(ptr_ref[], bytesize, ctx)
+    end
 end
 
 Base.pointer(buf::HostBuffer) = buf.ptr
@@ -122,17 +143,27 @@ struct SharedBuffer <: AbstractBuffer
     device::Union{Nothing,ZeDevice}
 end
 
-function shared_alloc(ctx::ZeContext, dev::Union{Nothing,ZeDevice}, bytesize::Integer,
-                      alignment::Integer=1; host_flags=0,
+function shared_alloc(ctx::ZeContext, dev::Union{Nothing,ZeDevice},
+                      bytesize::Integer, alignment::Integer=1; host_flags=0,
                       device_flags=0, ordinal::Integer=0)
-    device_desc_ref = Ref(ze_device_mem_alloc_desc_t(; flags=device_flags, ordinal))
-    host_desc_ref = Ref(ze_host_mem_alloc_desc_t(; flags=host_flags))
+    relaxed_allocation_ref = Ref(ze_relaxed_allocation_limits_exp_desc_t(;
+        flags = ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE,
+    ))
+    GC.@preserve relaxed_allocation_ref begin
+        device_desc_ref = if dev !== nothing && bytesize > properties(dev).maxMemAllocSize
+            pNext = Base.unsafe_convert(Ptr{Cvoid}, relaxed_allocation_ref)
+            Ref(ze_device_mem_alloc_desc_t(; flags=device_flags, ordinal, pNext))
+        else
+            Ref(ze_device_mem_alloc_desc_t(; flags=device_flags, ordinal))
+        end
+        host_desc_ref = Ref(ze_host_mem_alloc_desc_t(; flags=host_flags))
 
-    ptr_ref = Ref{Ptr{Cvoid}}()
-    zeMemAllocShared(ctx, device_desc_ref, host_desc_ref, bytesize, alignment,
-                     something(dev, C_NULL), ptr_ref)
+        ptr_ref = Ref{Ptr{Cvoid}}()
+        zeMemAllocShared(ctx, device_desc_ref, host_desc_ref, bytesize, alignment,
+                        something(dev, C_NULL), ptr_ref)
 
-    return SharedBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx, dev)
+        return SharedBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx, dev)
+    end
 end
 
 Base.pointer(buf::SharedBuffer) = buf.ptr

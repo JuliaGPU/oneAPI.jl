@@ -24,6 +24,7 @@ include("libze.jl")
 #
 # TODO: is it really required to (1) zero-initialize memory and (2) set the stype field?
 #       none of these are documented...
+# TODO: add support for conveniently linking extension objects in pNext
 for (structure_type_enum, _) in CEnum.name_value_pairs(ze_structure_type_t)
     structure_type_name = string(structure_type_enum)
     @assert startswith(structure_type_name, "ZE_STRUCTURE_TYPE")
