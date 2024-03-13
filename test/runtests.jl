@@ -43,7 +43,9 @@ do_quickfail, _ = extract_flag!(ARGS, "--quickfail")
 include("setup.jl")     # make sure everything is precompiled
 @info "System information:\n" * sprint(io->oneAPI.versioninfo(io))
 
+if Sys.islinux()
 @info "Using oneAPI support library at " * oneAPI.Support.liboneapi_support
+end
 
 @info "Running $jobs tests in parallel. If this is too many, specify the `--jobs` argument to the tests, or set the JULIA_CPU_THREADS environment variable."
 

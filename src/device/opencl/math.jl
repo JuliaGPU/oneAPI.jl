@@ -1,9 +1,9 @@
 # Math Functions
 
 # TODO: vector types
-const generic_types = [Cfloat,Cdouble]
-const generic_types_float = [Cfloat]
-const generic_types_double = [Cdouble]
+const generic_types = [Float32,Float64]
+const generic_types_float = [Float32]
+const generic_types_double = [Float64]
 
 
 # generically typed
@@ -112,10 +112,10 @@ end
 
 for gentypef in generic_types_float
 
-if gentypef !== Cfloat
+if gentypef !== Float32
 @eval begin
-@device_override Base.max(x::$gentypef, y::Cfloat) = @builtin_ccall("fmax", $gentypef, ($gentypef, Cfloat), x, y)
-@device_override Base.min(x::$gentypef, y::Cfloat) = @builtin_ccall("fmin", $gentypef, ($gentypef, Cfloat), x, y)
+@device_override Base.max(x::$gentypef, y::Float32) = @builtin_ccall("fmax", $gentypef, ($gentypef, Float32), x, y)
+@device_override Base.min(x::$gentypef, y::Float32) = @builtin_ccall("fmin", $gentypef, ($gentypef, Float32), x, y)
 end
 end
 
@@ -126,10 +126,10 @@ end
 
 for gentyped in generic_types_double
 
-if gentyped !== Cdouble
+if gentyped !== Float64
 @eval begin
-@device_override Base.min(x::$gentyped, y::Cdouble) = @builtin_ccall("fmin", $gentyped, ($gentyped, Cdouble), x, y)
-@device_override Base.max(x::$gentyped, y::Cdouble) = @builtin_ccall("fmax", $gentyped, ($gentyped, Cdouble), x, y)
+@device_override Base.min(x::$gentyped, y::Float64) = @builtin_ccall("fmin", $gentyped, ($gentyped, Float64), x, y)
+@device_override Base.max(x::$gentyped, y::Float64) = @builtin_ccall("fmax", $gentyped, ($gentyped, Float64), x, y)
 end
 end
 
@@ -138,47 +138,47 @@ end
 
 # specifically typed
 
-# frexp(x::Cfloat{n}, Cint{n} *exp) = @builtin_ccall("frexp", Cfloat{n}, (Cfloat{n}, Cint{n} *), x, exp)
-# frexp(x::Cfloat, Cint *exp) = @builtin_ccall("frexp", Cfloat, (Cfloat, Cint *), x, exp)
-# frexp(x::Cdouble{n}, Cint{n} *exp) = @builtin_ccall("frexp", Cdouble{n}, (Cdouble{n}, Cint{n} *), x, exp)
-# frexp(x::Cdouble, Cint *exp) = @builtin_ccall("frexp", Cdouble, (Cdouble, Cint *), x, exp)
+# frexp(x::Float32{n}, Int32{n} *exp) = @builtin_ccall("frexp", Float32{n}, (Float32{n}, Int32{n} *), x, exp)
+# frexp(x::Float32, Int32 *exp) = @builtin_ccall("frexp", Float32, (Float32, Int32 *), x, exp)
+# frexp(x::Float64{n}, Int32{n} *exp) = @builtin_ccall("frexp", Float64{n}, (Float64{n}, Int32{n} *), x, exp)
+# frexp(x::Float64, Int32 *exp) = @builtin_ccall("frexp", Float64, (Float64, Int32 *), x, exp)
 
-# ilogb(x::Cfloat{n}) = @builtin_ccall("ilogb", Cint{n}, (Cfloat{n},), x)
-@device_function ilogb(x::Cfloat) = @builtin_ccall("ilogb", Cint, (Cfloat,), x)
-# ilogb(x::Cdouble{n}) = @builtin_ccall("ilogb", Cint{n}, (Cdouble{n},), x)
-@device_function ilogb(x::Cdouble) = @builtin_ccall("ilogb", Cint, (Cdouble,), x)
+# ilogb(x::Float32{n}) = @builtin_ccall("ilogb", Int32{n}, (Float32{n},), x)
+@device_function ilogb(x::Float32) = @builtin_ccall("ilogb", Int32, (Float32,), x)
+# ilogb(x::Float64{n}) = @builtin_ccall("ilogb", Int32{n}, (Float64{n},), x)
+@device_function ilogb(x::Float64) = @builtin_ccall("ilogb", Int32, (Float64,), x)
 
-# ldexp(x::Cfloat{n}, k::Cint{n}) = @builtin_ccall("ldexp", Cfloat{n}, (Cfloat{n}, Cint{n}), x, k)
-# ldexp(x::Cfloat{n}, k::Cint) = @builtin_ccall("ldexp", Cfloat{n}, (Cfloat{n}, Cint), x, k)
-@device_override Base.ldexp(x::Cfloat, k::Cint) = @builtin_ccall("ldexp", Cfloat, (Cfloat, Cint), x, k)
-# ldexp(x::Cdouble{n}, k::Cint{n}) = @builtin_ccall("ldexp", Cdouble{n}, (Cdouble{n}, Cint{n}), x, k)
-# ldexp(x::Cdouble{n}, k::Cint) = @builtin_ccall("ldexp", Cdouble{n}, (Cdouble{n}, Cint), x, k)
-@device_override Base.ldexp(x::Cdouble, k::Cint) = @builtin_ccall("ldexp", Cdouble, (Cdouble, Cint), x, k)
+# ldexp(x::Float32{n}, k::Int32{n}) = @builtin_ccall("ldexp", Float32{n}, (Float32{n}, Int32{n}), x, k)
+# ldexp(x::Float32{n}, k::Int32) = @builtin_ccall("ldexp", Float32{n}, (Float32{n}, Int32), x, k)
+@device_override Base.ldexp(x::Float32, k::Int32) = @builtin_ccall("ldexp", Float32, (Float32, Int32), x, k)
+# ldexp(x::Float64{n}, k::Int32{n}) = @builtin_ccall("ldexp", Float64{n}, (Float64{n}, Int32{n}), x, k)
+# ldexp(x::Float64{n}, k::Int32) = @builtin_ccall("ldexp", Float64{n}, (Float64{n}, Int32), x, k)
+@device_override Base.ldexp(x::Float64, k::Int32) = @builtin_ccall("ldexp", Float64, (Float64, Int32), x, k)
 
-# lgamma_r(x::Cfloat{n}, Cint{n} *signp) = @builtin_ccall("lgamma_r", Cfloat{n}, (Cfloat{n}, Cint{n} *), x, signp)
-# lgamma_r(x::Cfloat, Cint *signp) = @builtin_ccall("lgamma_r", Cfloat, (Cfloat, Cint *), x, signp)
-# lgamma_r(x::Cdouble{n}, Cint{n} *signp) = @builtin_ccall("lgamma_r", Cdouble{n}, (Cdouble{n}, Cint{n} *), x, signp)
-# Cdouble lgamma_r(x::Cdouble, Cint *signp) = @builtin_ccall("lgamma_r", Cdouble, (Cdouble, Cint *), x, signp)
+# lgamma_r(x::Float32{n}, Int32{n} *signp) = @builtin_ccall("lgamma_r", Float32{n}, (Float32{n}, Int32{n} *), x, signp)
+# lgamma_r(x::Float32, Int32 *signp) = @builtin_ccall("lgamma_r", Float32, (Float32, Int32 *), x, signp)
+# lgamma_r(x::Float64{n}, Int32{n} *signp) = @builtin_ccall("lgamma_r", Float64{n}, (Float64{n}, Int32{n} *), x, signp)
+# Float64 lgamma_r(x::Float64, Int32 *signp) = @builtin_ccall("lgamma_r", Float64, (Float64, Int32 *), x, signp)
 
-# nan(nancode::uintn) = @builtin_ccall("nan", Cfloat{n}, (uintn,), nancode)
-@device_function nan(nancode::Cuint) = @builtin_ccall("nan", Cfloat, (Cuint,), nancode)
-# nan(nancode::Culong{n}) = @builtin_ccall("nan", Cdouble{n}, (Culong{n},), nancode)
-@device_function nan(nancode::Culong) = @builtin_ccall("nan", Cdouble, (Culong,), nancode)
+# nan(nancode::uintn) = @builtin_ccall("nan", Float32{n}, (uintn,), nancode)
+@device_function nan(nancode::UInt32) = @builtin_ccall("nan", Float32, (UInt32,), nancode)
+# nan(nancode::UInt64{n}) = @builtin_ccall("nan", Float64{n}, (UInt64{n},), nancode)
+@device_function nan(nancode::UInt64) = @builtin_ccall("nan", Float64, (UInt64,), nancode)
 
-# pown(x::Cfloat{n}, y::Cint{n}) = @builtin_ccall("pown", Cfloat{n}, (Cfloat{n}, Cint{n}), x, y)
-@device_override Base.:(^)(x::Cfloat, y::Cint) = @builtin_ccall("pown", Cfloat, (Cfloat, Cint), x, y)
-# pown(x::Cdouble{n}, y::Cint{n}) = @builtin_ccall("pown", Cdouble{n}, (Cdouble{n}, Cint{n}), x, y)
-@device_override Base.:(^)(x::Cdouble, y::Cint) = @builtin_ccall("pown", Cdouble, (Cdouble, Cint), x, y)
+# pown(x::Float32{n}, y::Int32{n}) = @builtin_ccall("pown", Float32{n}, (Float32{n}, Int32{n}), x, y)
+@device_override Base.:(^)(x::Float32, y::Int32) = @builtin_ccall("pown", Float32, (Float32, Int32), x, y)
+# pown(x::Float64{n}, y::Int32{n}) = @builtin_ccall("pown", Float64{n}, (Float64{n}, Int32{n}), x, y)
+@device_override Base.:(^)(x::Float64, y::Int32) = @builtin_ccall("pown", Float64, (Float64, Int32), x, y)
 
-# remquo(x::Cfloat{n}, y::Cfloat{n}, Cint{n} *quo) = @builtin_ccall("remquo", Cfloat{n}, (Cfloat{n}, Cfloat{n}, Cint{n} *), x, y, quo)
-# remquo(x::Cfloat, y::Cfloat, Cint *quo) = @builtin_ccall("remquo", Cfloat, (Cfloat, Cfloat, Cint *), x::Cfloat, y, quo)
-# remquo(x::Cdouble{n}, y::Cdouble{n}, Cint{n} *quo) = @builtin_ccall("remquo", Cdouble{n}, (Cdouble{n}, Cdouble{n}, Cint{n} *), x, y, quo)
-# remquo(x::Cdouble, y::Cdouble, Cint *quo) = @builtin_ccall("remquo", Cdouble, (Cdouble, Cdouble, Cint *), x, y, quo)
+# remquo(x::Float32{n}, y::Float32{n}, Int32{n} *quo) = @builtin_ccall("remquo", Float32{n}, (Float32{n}, Float32{n}, Int32{n} *), x, y, quo)
+# remquo(x::Float32, y::Float32, Int32 *quo) = @builtin_ccall("remquo", Float32, (Float32, Float32, Int32 *), x::Float32, y, quo)
+# remquo(x::Float64{n}, y::Float64{n}, Int32{n} *quo) = @builtin_ccall("remquo", Float64{n}, (Float64{n}, Float64{n}, Int32{n} *), x, y, quo)
+# remquo(x::Float64, y::Float64, Int32 *quo) = @builtin_ccall("remquo", Float64, (Float64, Float64, Int32 *), x, y, quo)
 
-# rootn(x::Cfloat{n}, y::Cint{n}) = @builtin_ccall("rootn", Cfloat{n}, (Cfloat{n}, Cint{n}), x, y)
-@device_function rootn(x::Cfloat, y::Cint) = @builtin_ccall("rootn", Cfloat, (Cfloat, Cint), x, y)
-# rootn(x::Cdouble{n}, y::Cint{n}) = @builtin_ccall("rootn", Cdouble{n}, (Cdouble{n}, Cint{n}), x, y)
-# rootn(x::Cdouble, y::Cint) = @builtin_ccall("rootn", Cdouble{n}, (Cdouble, Cint), x, y)
+# rootn(x::Float32{n}, y::Int32{n}) = @builtin_ccall("rootn", Float32{n}, (Float32{n}, Int32{n}), x, y)
+@device_function rootn(x::Float32, y::Int32) = @builtin_ccall("rootn", Float32, (Float32, Int32), x, y)
+# rootn(x::Float64{n}, y::Int32{n}) = @builtin_ccall("rootn", Float64{n}, (Float64{n}, Int32{n}), x, y)
+# rootn(x::Float64, y::Int32) = @builtin_ccall("rootn", Float64{n}, (Float64, Int32), x, y)
 
 
 # TODO: half and native

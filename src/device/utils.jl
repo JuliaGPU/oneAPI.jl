@@ -19,6 +19,10 @@ macro builtin_ccall(name, ret, argtypes, args...)
             "l"
         elseif T == Culong
             "m"
+        elseif T == Clonglong
+            "x"
+        elseif T == Culonglong
+            "y"
         elseif T == Cshort
             "s"
         elseif T == Cushort

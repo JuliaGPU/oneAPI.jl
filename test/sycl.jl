@@ -1,3 +1,7 @@
+if Sys.iswindows()
+@warn "Skipping unsupported SYCL tests"
+else
+
 using oneAPI.oneL0, oneAPI.SYCL
 
 @test sycl_platform() isa syclPlatform
@@ -16,3 +20,5 @@ ze_queue = ZeCommandQueue(ze_ctx, ze_dev)
 ze_event_pool = ZeEventPool(ze_ctx, 1, ze_dev)
 ze_event = ze_event_pool[1]
 sycl_event = oneAPI.SYCL.syclEvent(sycl_ctx, ze_event)
+
+end

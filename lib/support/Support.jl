@@ -22,7 +22,7 @@ end
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
-
+    
     if !oneAPI_Support_jll.is_available()
         @error """oneAPI support wrapper not available for your platform."""
         return

@@ -1,4 +1,7 @@
-using oneAPI
+if Sys.iswindows()
+@warn "Skipping unsupported oneKML tests"
+else
+
 using oneAPI.oneMKL: band, bandex
 
 using LinearAlgebra
@@ -1069,4 +1072,6 @@ end
             @test_throws DimensionMismatch oneMKL.gemm_strided_batched('N', 'N', alpha, bd_A, bd_bad)
         end
     end
+end
+
 end

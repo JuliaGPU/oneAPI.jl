@@ -6,8 +6,14 @@ using CEnum
 
 using Printf
 
-using NEO_jll
-using oneAPI_Level_Zero_Loader_jll
+using Libdl
+
+if Sys.iswindows()
+    const libze_loader = "ze_loader"
+else
+    using NEO_jll
+    using oneAPI_Level_Zero_Loader_jll
+end
 
 include("utils.jl")
 include("pointer.jl")
@@ -85,16 +91,23 @@ function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
 
-    if !oneAPI_Level_Zero_Loader_jll.is_available()
-        @error """No oneAPI Level Zero loader found for your platform. Currently, only Linux x86 is supported.
-                  If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
-        return
-    end
+    if Sys.iswindows()
+        if Libdl.dlopen(libze_loader; throw_error=false) === nothing
+            @error "The oneAPI Level Zero loader was not found. Please ensure the Intel GPU drivers are installed."
+            return
+        end
+    else
+        if !oneAPI_Level_Zero_Loader_jll.is_available()
+            @error """No oneAPI Level Zero loader found for your platform. Currently, only Linux x86 is supported.
+                      If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
+            return
+        end
 
-    if !NEO_jll.is_available()
-        @error """No oneAPI driver found for your platform. Currently, only Linux x86_64 is supported.
-                  If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
-        return
+        if !NEO_jll.is_available()
+            @error """No oneAPI driver found for your platform. Currently, only Linux x86_64 is supported.
+                      If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
+            return
+        end
     end
 
     try
