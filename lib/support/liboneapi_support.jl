@@ -4504,7 +4504,7 @@ function onemklSsparse_set_csr_data(device_queue, handle, num_rows, num_cols, in
                                                         index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
                                                         col_ind::ZePtr{Int32},
-                                                        val::ZePtr{Cfloat})::Cint
+                                                        val::ZePtr{Cfloat})::Cvoid
 end
 
 function onemklSsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
@@ -4515,7 +4515,7 @@ function onemklSsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols,
                                                            index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
                                                            col_ind::ZePtr{Int64},
-                                                           val::ZePtr{Cfloat})::Cint
+                                                           val::ZePtr{Cfloat})::Cvoid
 end
 
 function onemklDsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
@@ -4526,7 +4526,7 @@ function onemklDsparse_set_csr_data(device_queue, handle, num_rows, num_cols, in
                                                         index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
                                                         col_ind::ZePtr{Int32},
-                                                        val::ZePtr{Cdouble})::Cint
+                                                        val::ZePtr{Cdouble})::Cvoid
 end
 
 function onemklDsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
@@ -4537,7 +4537,7 @@ function onemklDsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols,
                                                            index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
                                                            col_ind::ZePtr{Int64},
-                                                           val::ZePtr{Cdouble})::Cint
+                                                           val::ZePtr{Cdouble})::Cvoid
 end
 
 function onemklCsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
@@ -4548,7 +4548,7 @@ function onemklCsparse_set_csr_data(device_queue, handle, num_rows, num_cols, in
                                                         index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
                                                         col_ind::ZePtr{Int32},
-                                                        val::ZePtr{ComplexF32})::Cint
+                                                        val::ZePtr{ComplexF32})::Cvoid
 end
 
 function onemklCsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
@@ -4559,7 +4559,7 @@ function onemklCsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols,
                                                            index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
                                                            col_ind::ZePtr{Int64},
-                                                           val::ZePtr{ComplexF32})::Cint
+                                                           val::ZePtr{ComplexF32})::Cvoid
 end
 
 function onemklZsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
@@ -4570,7 +4570,7 @@ function onemklZsparse_set_csr_data(device_queue, handle, num_rows, num_cols, in
                                                         index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
                                                         col_ind::ZePtr{Int32},
-                                                        val::ZePtr{ComplexF64})::Cint
+                                                        val::ZePtr{ComplexF64})::Cvoid
 end
 
 function onemklZsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
@@ -4581,7 +4581,7 @@ function onemklZsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols,
                                                            index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
                                                            col_ind::ZePtr{Int64},
-                                                           val::ZePtr{ComplexF64})::Cint
+                                                           val::ZePtr{ComplexF64})::Cvoid
 end
 
 function onemklSsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)

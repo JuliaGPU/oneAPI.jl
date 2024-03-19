@@ -232,7 +232,7 @@ function generate_headers(library::String, filename::String, output::String)
           occursin("int64_t", header) && (suffix = "_64")
         end
         header = replace(header, "$(name_routine)(" => "onemkl$(version)$(name_routine)$(suffix)(")
-        if name_routine ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data")
+        if name_routine ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "set_csr_data")
           header = replace(header, "void onemkl" => "int onemkl")
         end
         if library == "sparse"
@@ -369,7 +369,7 @@ function generate_cpp(library::String, filename::String, output::String)
       !occursin("scratchpad_size", name) && write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name<$type>($parameters);\n")
       occursin("scratchpad_size", name)  && write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n")
     else
-      if name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data")
+      if name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "set_csr_data")
         write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name($parameters);\n")
       else
         write(oneapi_cpp, "   oneapi::mkl::$library::$variant$name($parameters);\n")
@@ -378,8 +378,8 @@ function generate_cpp(library::String, filename::String, output::String)
     if occursin("scratchpad_size", name)
       write(oneapi_cpp, "   return scratchpad_size;\n")
     else
-      (name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data")) && write(oneapi_cpp, "   __FORCE_MKL_FLUSH__(status);\n")
-      (name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data")) && write(oneapi_cpp, "   return 0;\n")
+      (name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "set_csr_data")) && write(oneapi_cpp, "   __FORCE_MKL_FLUSH__(status);\n")
+      (name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "set_csr_data")) && write(oneapi_cpp, "   return 0;\n")
     end
     write(oneapi_cpp, "}")
     write(oneapi_cpp, "\n\n")
