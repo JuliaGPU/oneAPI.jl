@@ -12,6 +12,9 @@ using ..SYCL: syclQueue_t
 using GPUArrays
 
 using LinearAlgebra
+using LinearAlgebra: checksquare
+using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo
+
 using SparseArrays
 
 # Exclude Float16 for now, since many oneMKL functions - copy, scal, do not take Float16
@@ -21,6 +24,7 @@ const onemklHalf = Union{Float16,ComplexF16}
 
 include("utils.jl")
 include("wrappers_blas.jl")
+include("wrappers_lapack.jl")
 include("wrappers_sparse.jl")
 include("linalg.jl")
 

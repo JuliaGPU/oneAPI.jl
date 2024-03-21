@@ -1133,17 +1133,17 @@ int64_t onemklCgeqrf_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_
 
 int64_t onemklZgeqrf_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda);
 
-int onemklCgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, float
-                 _Complex *tau, float _Complex *scratchpad, int64_t scratchpad_size);
+void onemklCgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda,
+                  float _Complex *tau, float _Complex *scratchpad, int64_t scratchpad_size);
 
-int onemklDgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, double *tau,
-                 double *scratchpad, int64_t scratchpad_size);
+void onemklDgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, double *tau,
+                  double *scratchpad, int64_t scratchpad_size);
 
-int onemklSgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, float *tau,
-                 float *scratchpad, int64_t scratchpad_size);
+void onemklSgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, float *tau,
+                  float *scratchpad, int64_t scratchpad_size);
 
-int onemklZgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda,
-                 double _Complex *tau, double _Complex *scratchpad, int64_t scratchpad_size);
+void onemklZgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda,
+                  double _Complex *tau, double _Complex *scratchpad, int64_t scratchpad_size);
 
 int64_t onemklSgesvd_scratchpad_size(syclQueue_t device_queue, onemklJobsvd jobu, onemklJobsvd
                                      jobvt, int64_t m, int64_t n, int64_t lda, int64_t ldu, int64_t

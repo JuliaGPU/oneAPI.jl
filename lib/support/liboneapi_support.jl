@@ -2202,29 +2202,29 @@ end
 
 function onemklSpotrf(device_queue, uplo, n, a, lda, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklSpotrf(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{Cfloat}, lda::Int64,
-                                          scratchpad::Ptr{Cfloat},
+                                          n::Int64, a::ZePtr{Cfloat}, lda::Int64,
+                                          scratchpad::ZePtr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklDpotrf(device_queue, uplo, n, a, lda, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklDpotrf(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{Cdouble}, lda::Int64,
-                                          scratchpad::Ptr{Cdouble},
+                                          n::Int64, a::ZePtr{Cdouble}, lda::Int64,
+                                          scratchpad::ZePtr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklCpotrf(device_queue, uplo, n, a, lda, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCpotrf(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          scratchpad::Ptr{ComplexF32},
+                                          n::Int64, a::ZePtr{ComplexF32}, lda::Int64,
+                                          scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZpotrf(device_queue, uplo, n, a, lda, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklZpotrf(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          scratchpad::Ptr{ComplexF32},
+                                          n::Int64, a::ZePtr{ComplexF64}, lda::Int64,
+                                          scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2255,36 +2255,36 @@ end
 function onemklSpotrs(device_queue, uplo, n, nrhs, a, lda, b, ldb, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklSpotrs(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, nrhs::Int64, a::Ptr{Cfloat}, lda::Int64,
-                                          b::Ptr{Cfloat}, ldb::Int64,
-                                          scratchpad::Ptr{Cfloat},
+                                          n::Int64, nrhs::Int64, a::ZePtr{Cfloat},
+                                          lda::Int64, b::ZePtr{Cfloat}, ldb::Int64,
+                                          scratchpad::ZePtr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklDpotrs(device_queue, uplo, n, nrhs, a, lda, b, ldb, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklDpotrs(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, nrhs::Int64, a::Ptr{Cdouble},
-                                          lda::Int64, b::Ptr{Cdouble}, ldb::Int64,
-                                          scratchpad::Ptr{Cdouble},
+                                          n::Int64, nrhs::Int64, a::ZePtr{Cdouble},
+                                          lda::Int64, b::ZePtr{Cdouble}, ldb::Int64,
+                                          scratchpad::ZePtr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklCpotrs(device_queue, uplo, n, nrhs, a, lda, b, ldb, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklCpotrs(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, nrhs::Int64, a::Ptr{ComplexF32},
-                                          lda::Int64, b::Ptr{ComplexF32}, ldb::Int64,
-                                          scratchpad::Ptr{ComplexF32},
+                                          n::Int64, nrhs::Int64, a::ZePtr{ComplexF32},
+                                          lda::Int64, b::ZePtr{ComplexF32}, ldb::Int64,
+                                          scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZpotrs(device_queue, uplo, n, nrhs, a, lda, b, ldb, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklZpotrs(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, nrhs::Int64, a::Ptr{ComplexF32},
-                                          lda::Int64, b::Ptr{ComplexF32}, ldb::Int64,
-                                          scratchpad::Ptr{ComplexF32},
+                                          n::Int64, nrhs::Int64, a::ZePtr{ComplexF64},
+                                          lda::Int64, b::ZePtr{ComplexF64}, ldb::Int64,
+                                          scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2318,29 +2318,29 @@ end
 
 function onemklSpotri(device_queue, uplo, n, a, lda, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklSpotri(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{Cfloat}, lda::Int64,
-                                          scratchpad::Ptr{Cfloat},
+                                          n::Int64, a::ZePtr{Cfloat}, lda::Int64,
+                                          scratchpad::ZePtr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklDpotri(device_queue, uplo, n, a, lda, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklDpotri(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{Cdouble}, lda::Int64,
-                                          scratchpad::Ptr{Cdouble},
+                                          n::Int64, a::ZePtr{Cdouble}, lda::Int64,
+                                          scratchpad::ZePtr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklCpotri(device_queue, uplo, n, a, lda, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCpotri(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          scratchpad::Ptr{ComplexF32},
+                                          n::Int64, a::ZePtr{ComplexF32}, lda::Int64,
+                                          scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZpotri(device_queue, uplo, n, a, lda, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklZpotri(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          scratchpad::Ptr{ComplexF32},
+                                          n::Int64, a::ZePtr{ComplexF64}, lda::Int64,
+                                          scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2395,38 +2395,38 @@ end
 function onemklCgebrd(device_queue, m, n, a, lda, d, e, tauq, taup, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklCgebrd(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64, d::Ptr{Cfloat},
-                                          e::Ptr{Cfloat}, tauq::Ptr{ComplexF32},
-                                          taup::Ptr{ComplexF32},
-                                          scratchpad::Ptr{ComplexF32},
+                                          a::ZePtr{ComplexF32}, lda::Int64,
+                                          d::ZePtr{Float32}, e::ZePtr{ComplexF32},
+                                          tauq::ZePtr{ComplexF32}, taup::ZePtr{ComplexF32},
+                                          scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklDgebrd(device_queue, m, n, a, lda, d, e, tauq, taup, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklDgebrd(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{Cdouble}, lda::Int64, d::Ptr{Cdouble},
-                                          e::Ptr{Cdouble}, tauq::Ptr{Cdouble},
-                                          taup::Ptr{Cdouble}, scratchpad::Ptr{Cdouble},
+                                          a::ZePtr{Float64}, lda::Int64, d::ZePtr{Float64},
+                                          e::ZePtr{Float64}, tauq::ZePtr{Float64},
+                                          taup::ZePtr{Float64}, scratchpad::ZePtr{Float64},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklSgebrd(device_queue, m, n, a, lda, d, e, tauq, taup, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklSgebrd(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{Cfloat}, lda::Int64, d::Ptr{Cfloat},
-                                          e::Ptr{Cfloat}, tauq::Ptr{Cfloat},
-                                          taup::Ptr{Cfloat}, scratchpad::Ptr{Cfloat},
+                                          a::ZePtr{Float32}, lda::Int64, d::ZePtr{Float32},
+                                          e::ZePtr{Float32}, tauq::ZePtr{Float32},
+                                          taup::ZePtr{Float32}, scratchpad::ZePtr{Float32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZgebrd(device_queue, m, n, a, lda, d, e, tauq, taup, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklZgebrd(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64, d::Ptr{Cdouble},
-                                          e::Ptr{Cdouble}, tauq::Ptr{ComplexF32},
-                                          taup::Ptr{ComplexF32},
-                                          scratchpad::Ptr{ComplexF32},
+                                          a::ZePtr{ComplexF64}, lda::Int64,
+                                          d::ZePtr{Float64}, e::ZePtr{ComplexF64},
+                                          tauq::ZePtr{ComplexF64}, taup::ZePtr{ComplexF64},
+                                          scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2456,30 +2456,32 @@ end
 
 function onemklCgeqrf(device_queue, m, n, a, lda, tau, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64,
-                                          tau::Ptr{ComplexF32}, scratchpad::Ptr{ComplexF32},
-                                          scratchpad_size::Int64)::Cint
+                                          a::ZePtr{ComplexF32}, lda::Int64,
+                                          tau::ZePtr{ComplexF32},
+                                          scratchpad::ZePtr{ComplexF32},
+                                          scratchpad_size::Int64)::Cvoid
 end
 
 function onemklDgeqrf(device_queue, m, n, a, lda, tau, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklDgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{Cdouble}, lda::Int64, tau::Ptr{Cdouble},
-                                          scratchpad::Ptr{Cdouble},
-                                          scratchpad_size::Int64)::Cint
+                                          a::ZePtr{Cdouble}, lda::Int64,
+                                          tau::ZePtr{Cdouble}, scratchpad::ZePtr{Cdouble},
+                                          scratchpad_size::Int64)::Cvoid
 end
 
 function onemklSgeqrf(device_queue, m, n, a, lda, tau, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklSgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{Cfloat}, lda::Int64, tau::Ptr{Cfloat},
-                                          scratchpad::Ptr{Cfloat},
-                                          scratchpad_size::Int64)::Cint
+                                          a::ZePtr{Cfloat}, lda::Int64, tau::ZePtr{Cfloat},
+                                          scratchpad::ZePtr{Cfloat},
+                                          scratchpad_size::Int64)::Cvoid
 end
 
 function onemklZgeqrf(device_queue, m, n, a, lda, tau, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklZgeqrf(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64,
-                                          tau::Ptr{ComplexF32}, scratchpad::Ptr{ComplexF32},
-                                          scratchpad_size::Int64)::Cint
+                                          a::ZePtr{ComplexF64}, lda::Int64,
+                                          tau::ZePtr{ComplexF64},
+                                          scratchpad::ZePtr{ComplexF64},
+                                          scratchpad_size::Int64)::Cvoid
 end
 
 function onemklSgesvd_scratchpad_size(device_queue, jobu, jobvt, m, n, lda, ldu, ldvt)
@@ -2518,10 +2520,10 @@ function onemklCgesvd(device_queue, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ld
                       scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCgesvd(device_queue::syclQueue_t, jobu::onemklJobsvd,
                                           jobvt::onemklJobsvd, m::Int64, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64, s::Ptr{Cfloat},
-                                          u::Ptr{ComplexF32}, ldu::Int64,
-                                          vt::Ptr{ComplexF32}, ldvt::Int64,
-                                          scratchpad::Ptr{ComplexF32},
+                                          a::ZePtr{ComplexF32}, lda::Int64,
+                                          s::ZePtr{ComplexF32}, u::ZePtr{Float32},
+                                          ldu::Int64, vt::ZePtr{ComplexF32}, ldvt::Int64,
+                                          scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2529,10 +2531,10 @@ function onemklZgesvd(device_queue, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ld
                       scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklZgesvd(device_queue::syclQueue_t, jobu::onemklJobsvd,
                                           jobvt::onemklJobsvd, m::Int64, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64, s::Ptr{Cdouble},
-                                          u::Ptr{ComplexF32}, ldu::Int64,
-                                          vt::Ptr{ComplexF32}, ldvt::Int64,
-                                          scratchpad::Ptr{ComplexF32},
+                                          a::ZePtr{ComplexF64}, lda::Int64,
+                                          s::ZePtr{Float64}, u::ZePtr{ComplexF64},
+                                          ldu::Int64, vt::ZePtr{ComplexF64}, ldvt::Int64,
+                                          scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2540,9 +2542,9 @@ function onemklDgesvd(device_queue, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ld
                       scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklDgesvd(device_queue::syclQueue_t, jobu::onemklJobsvd,
                                           jobvt::onemklJobsvd, m::Int64, n::Int64,
-                                          a::Ptr{Cdouble}, lda::Int64, s::Ptr{Cdouble},
-                                          u::Ptr{Cdouble}, ldu::Int64, vt::Ptr{Cdouble},
-                                          ldvt::Int64, scratchpad::Ptr{Cdouble},
+                                          a::ZePtr{Float64}, lda::Int64, s::ZePtr{Float64},
+                                          u::ZePtr{Float64}, ldu::Int64, vt::ZePtr{Float64},
+                                          ldvt::Int64, scratchpad::ZePtr{Float64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2550,9 +2552,9 @@ function onemklSgesvd(device_queue, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ld
                       scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklSgesvd(device_queue::syclQueue_t, jobu::onemklJobsvd,
                                           jobvt::onemklJobsvd, m::Int64, n::Int64,
-                                          a::Ptr{Cfloat}, lda::Int64, s::Ptr{Cfloat},
-                                          u::Ptr{Cfloat}, ldu::Int64, vt::Ptr{Cfloat},
-                                          ldvt::Int64, scratchpad::Ptr{Cfloat},
+                                          a::ZePtr{Float32}, lda::Int64, s::ZePtr{Float32},
+                                          u::ZePtr{Float32}, ldu::Int64, vt::ZePtr{Float32},
+                                          ldvt::Int64, scratchpad::ZePtr{Float32},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2582,29 +2584,29 @@ end
 
 function onemklCgetrf(device_queue, m, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64, ipiv::Ptr{Int64},
-                                          scratchpad::Ptr{ComplexF32},
+                                          a::ZePtr{ComplexF32}, lda::Int64,
+                                          ipiv::ZePtr{Int64}, scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklDgetrf(device_queue, m, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklDgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{Cdouble}, lda::Int64, ipiv::Ptr{Int64},
-                                          scratchpad::Ptr{Cdouble},
+                                          a::ZePtr{Cdouble}, lda::Int64, ipiv::ZePtr{Int64},
+                                          scratchpad::ZePtr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklSgetrf(device_queue, m, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklSgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{Cfloat}, lda::Int64, ipiv::Ptr{Int64},
-                                          scratchpad::Ptr{Cfloat},
+                                          a::ZePtr{Cfloat}, lda::Int64, ipiv::ZePtr{Int64},
+                                          scratchpad::ZePtr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZgetrf(device_queue, m, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklZgetrf(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64, ipiv::Ptr{Int64},
-                                          scratchpad::Ptr{ComplexF32},
+                                          a::ZePtr{ComplexF64}, lda::Int64,
+                                          ipiv::ZePtr{Int64}, scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2826,29 +2828,29 @@ end
 
 function onemklCgetri(device_queue, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCgetri(device_queue::syclQueue_t, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64, ipiv::Ptr{Int64},
-                                          scratchpad::Ptr{ComplexF32},
+                                          a::ZePtr{ComplexF32}, lda::Int64,
+                                          ipiv::ZePtr{Int64}, scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklDgetri(device_queue, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklDgetri(device_queue::syclQueue_t, n::Int64,
-                                          a::Ptr{Cdouble}, lda::Int64, ipiv::Ptr{Int64},
-                                          scratchpad::Ptr{Cdouble},
+                                          a::ZePtr{Cdouble}, lda::Int64, ipiv::ZePtr{Int64},
+                                          scratchpad::ZePtr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklSgetri(device_queue, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklSgetri(device_queue::syclQueue_t, n::Int64,
-                                          a::Ptr{Cfloat}, lda::Int64, ipiv::Ptr{Int64},
-                                          scratchpad::Ptr{Cfloat},
+                                          a::ZePtr{Cfloat}, lda::Int64, ipiv::ZePtr{Int64},
+                                          scratchpad::ZePtr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZgetri(device_queue, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklZgetri(device_queue::syclQueue_t, n::Int64,
-                                          a::Ptr{ComplexF32}, lda::Int64, ipiv::Ptr{Int64},
-                                          scratchpad::Ptr{ComplexF32},
+                                          a::ZePtr{ComplexF64}, lda::Int64,
+                                          ipiv::ZePtr{Int64}, scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -2883,17 +2885,18 @@ end
 function onemklCgetrs(device_queue, trans, n, nrhs, a, lda, ipiv, b, ldb, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklCgetrs(device_queue::syclQueue_t, trans::onemklTranspose,
-                                          n::Int64, nrhs::Int64, a::Ptr{ComplexF32},
-                                          lda::Int64, ipiv::Ptr{Int64}, b::Ptr{ComplexF32},
-                                          ldb::Int64, scratchpad::Ptr{ComplexF32},
+                                          n::Int64, nrhs::Int64, a::ZePtr{ComplexF32},
+                                          lda::Int64, ipiv::ZePtr{Int64},
+                                          b::ZePtr{ComplexF32}, ldb::Int64,
+                                          scratchpad::Ptr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklDgetrs(device_queue, trans, n, nrhs, a, lda, ipiv, b, ldb, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklDgetrs(device_queue::syclQueue_t, trans::onemklTranspose,
-                                          n::Int64, nrhs::Int64, a::Ptr{Cdouble},
-                                          lda::Int64, ipiv::Ptr{Int64}, b::Ptr{Cdouble},
+                                          n::Int64, nrhs::Int64, a::ZePtr{Cdouble},
+                                          lda::Int64, ipiv::ZePtr{Int64}, b::ZePtr{Cdouble},
                                           ldb::Int64, scratchpad::Ptr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
@@ -2901,18 +2904,19 @@ end
 function onemklSgetrs(device_queue, trans, n, nrhs, a, lda, ipiv, b, ldb, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklSgetrs(device_queue::syclQueue_t, trans::onemklTranspose,
-                                          n::Int64, nrhs::Int64, a::Ptr{Cfloat}, lda::Int64,
-                                          ipiv::Ptr{Int64}, b::Ptr{Cfloat}, ldb::Int64,
-                                          scratchpad::Ptr{Cfloat},
+                                          n::Int64, nrhs::Int64, a::ZePtr{Cfloat},
+                                          lda::Int64, ipiv::ZePtr{Int64}, b::ZePtr{Cfloat},
+                                          ldb::Int64, scratchpad::Ptr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZgetrs(device_queue, trans, n, nrhs, a, lda, ipiv, b, ldb, scratchpad,
                       scratchpad_size)
     @ccall liboneapi_support.onemklZgetrs(device_queue::syclQueue_t, trans::onemklTranspose,
-                                          n::Int64, nrhs::Int64, a::Ptr{ComplexF32},
-                                          lda::Int64, ipiv::Ptr{Int64}, b::Ptr{ComplexF32},
-                                          ldb::Int64, scratchpad::Ptr{ComplexF32},
+                                          n::Int64, nrhs::Int64, a::ZePtr{ComplexF64},
+                                          lda::Int64, ipiv::ZePtr{Int64},
+                                          b::ZePtr{ComplexF64}, ldb::Int64,
+                                          scratchpad::Ptr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -3300,15 +3304,15 @@ end
 
 function onemklDorgqr(device_queue, m, n, k, a, lda, tau, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklDorgqr(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          k::Int64, a::Ptr{Cdouble}, lda::Int64,
-                                          tau::Ptr{Cdouble}, scratchpad::Ptr{Cdouble},
+                                          k::Int64, a::ZePtr{Cdouble}, lda::Int64,
+                                          tau::ZePtr{Cdouble}, scratchpad::ZePtr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklSorgqr(device_queue, m, n, k, a, lda, tau, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklSorgqr(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          k::Int64, a::Ptr{Cfloat}, lda::Int64,
-                                          tau::Ptr{Cfloat}, scratchpad::Ptr{Cfloat},
+                                          k::Int64, a::ZePtr{Cfloat}, lda::Int64,
+                                          tau::ZePtr{Cfloat}, scratchpad::ZePtr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -3332,9 +3336,9 @@ function onemklDormqr(device_queue, side, trans, m, n, k, a, lda, tau, c, ldc, s
                       scratchpad_size)
     @ccall liboneapi_support.onemklDormqr(device_queue::syclQueue_t, side::onemklSide,
                                           trans::onemklTranspose, m::Int64, n::Int64,
-                                          k::Int64, a::Ptr{Cdouble}, lda::Int64,
-                                          tau::Ptr{Cdouble}, c::Ptr{Cdouble}, ldc::Int64,
-                                          scratchpad::Ptr{Cdouble},
+                                          k::Int64, a::ZePtr{Cdouble}, lda::Int64,
+                                          tau::ZePtr{Cdouble}, c::ZePtr{Cdouble},
+                                          ldc::Int64, scratchpad::ZePtr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -3342,9 +3346,9 @@ function onemklSormqr(device_queue, side, trans, m, n, k, a, lda, tau, c, ldc, s
                       scratchpad_size)
     @ccall liboneapi_support.onemklSormqr(device_queue::syclQueue_t, side::onemklSide,
                                           trans::onemklTranspose, m::Int64, n::Int64,
-                                          k::Int64, a::Ptr{Cfloat}, lda::Int64,
-                                          tau::Ptr{Cfloat}, c::Ptr{Cfloat}, ldc::Int64,
-                                          scratchpad::Ptr{Cfloat},
+                                          k::Int64, a::ZePtr{Cfloat}, lda::Int64,
+                                          tau::ZePtr{Cfloat}, c::ZePtr{Cfloat}, ldc::Int64,
+                                          scratchpad::ZePtr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -3741,15 +3745,17 @@ end
 
 function onemklCungqr(device_queue, m, n, k, a, lda, tau, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCungqr(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          k::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          tau::Ptr{ComplexF32}, scratchpad::Ptr{ComplexF32},
+                                          k::Int64, a::ZePtr{ComplexF32}, lda::Int64,
+                                          tau::ZePtr{ComplexF32},
+                                          scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZungqr(device_queue, m, n, k, a, lda, tau, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklZungqr(device_queue::syclQueue_t, m::Int64, n::Int64,
-                                          k::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          tau::Ptr{ComplexF32}, scratchpad::Ptr{ComplexF32},
+                                          k::Int64, a::ZePtr{ComplexF64}, lda::Int64,
+                                          tau::ZePtr{ComplexF64},
+                                          scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -3773,9 +3779,9 @@ function onemklCunmqr(device_queue, side, trans, m, n, k, a, lda, tau, c, ldc, s
                       scratchpad_size)
     @ccall liboneapi_support.onemklCunmqr(device_queue::syclQueue_t, side::onemklSide,
                                           trans::onemklTranspose, m::Int64, n::Int64,
-                                          k::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          tau::Ptr{ComplexF32}, c::Ptr{ComplexF32},
-                                          ldc::Int64, scratchpad::Ptr{ComplexF32},
+                                          k::Int64, a::ZePtr{ComplexF32}, lda::Int64,
+                                          tau::ZePtr{ComplexF32}, c::ZePtr{ComplexF32},
+                                          ldc::Int64, scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -3783,9 +3789,9 @@ function onemklZunmqr(device_queue, side, trans, m, n, k, a, lda, tau, c, ldc, s
                       scratchpad_size)
     @ccall liboneapi_support.onemklZunmqr(device_queue::syclQueue_t, side::onemklSide,
                                           trans::onemklTranspose, m::Int64, n::Int64,
-                                          k::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          tau::Ptr{ComplexF32}, c::Ptr{ComplexF32},
-                                          ldc::Int64, scratchpad::Ptr{ComplexF32},
+                                          k::Int64, a::ZePtr{ComplexF64}, lda::Int64,
+                                          tau::ZePtr{ComplexF64}, c::ZePtr{ComplexF64},
+                                          ldc::Int64, scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
@@ -3915,29 +3921,29 @@ end
 
 function onemklSsytrf(device_queue, uplo, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklSsytrf(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{Cfloat}, lda::Int64,
-                                          ipiv::Ptr{Int64}, scratchpad::Ptr{Cfloat},
+                                          n::Int64, a::ZePtr{Cfloat}, lda::Int64,
+                                          ipiv::ZePtr{Int64}, scratchpad::ZePtr{Cfloat},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklDsytrf(device_queue, uplo, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklDsytrf(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{Cdouble}, lda::Int64,
-                                          ipiv::Ptr{Int64}, scratchpad::Ptr{Cdouble},
+                                          n::Int64, a::ZePtr{Cdouble}, lda::Int64,
+                                          ipiv::ZePtr{Int64}, scratchpad::ZePtr{Cdouble},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklCsytrf(device_queue, uplo, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklCsytrf(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          ipiv::Ptr{Int64}, scratchpad::Ptr{ComplexF32},
+                                          n::Int64, a::ZePtr{ComplexF32}, lda::Int64,
+                                          ipiv::ZePtr{Int64}, scratchpad::ZePtr{ComplexF32},
                                           scratchpad_size::Int64)::Cint
 end
 
 function onemklZsytrf(device_queue, uplo, n, a, lda, ipiv, scratchpad, scratchpad_size)
     @ccall liboneapi_support.onemklZsytrf(device_queue::syclQueue_t, uplo::onemklUplo,
-                                          n::Int64, a::Ptr{ComplexF32}, lda::Int64,
-                                          ipiv::Ptr{Int64}, scratchpad::Ptr{ComplexF32},
+                                          n::Int64, a::ZePtr{ComplexF64}, lda::Int64,
+                                          ipiv::ZePtr{Int64}, scratchpad::ZePtr{ComplexF64},
                                           scratchpad_size::Int64)::Cint
 end
 
