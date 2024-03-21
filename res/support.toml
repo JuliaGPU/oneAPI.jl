@@ -373,3 +373,123 @@ use_ccall_macro = true
 7 = "ZePtr{ComplexF64}"
 10 = "ComplexF64"
 11 = "ZePtr{ComplexF64}"
+
+[api.onemklXpotrf.argtypes]
+4 = "ZePtr{T}"
+6 = "ZePtr{T}"
+
+[api.onemklXpotrs.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+
+[api.onemklXpotri.argtypes]
+4 = "ZePtr{T}"
+6 = "ZePtr{T}"
+
+[api.onemklXsytrf.argtypes]
+4 = "ZePtr{T}"
+6 = "ZePtr{Int64}"
+7 = "ZePtr{T}"
+
+[api.onemklXgetrf.argtypes]
+4 = "ZePtr{T}"
+6 = "ZePtr{Int64}"
+7 = "ZePtr{T}"
+
+[api.onemklXgetrs.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{Int64}"
+8 = "ZePtr{T}"
+
+[api.onemklXgetri.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{Int64}"
+6 = "ZePtr{T}"
+
+[api.onemklXgeqrf.argtypes]
+4 = "ZePtr{T}"
+6 = "ZePtr{T}"
+7 = "ZePtr{T}"
+
+[api.onemklXormqr.argtypes]
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+10 = "ZePtr{T}"
+12 = "ZePtr{T}"
+
+[api.onemklXunmqr.argtypes]
+7 = "ZePtr{T}"
+9 = "ZePtr{T}"
+10 = "ZePtr{T}"
+12 = "ZePtr{T}"
+
+[api.onemklXorgqr.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+8 = "ZePtr{T}"
+
+[api.onemklXungqr.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+8 = "ZePtr{T}"
+
+[api.onemklSgebrd.argtypes]
+4 = "ZePtr{Float32}"
+6 = "ZePtr{Float32}"
+7 = "ZePtr{Float32}"
+8 = "ZePtr{Float32}"
+9 = "ZePtr{Float32}"
+10 = "ZePtr{Float32}"
+
+[api.onemklDgebrd.argtypes]
+4 = "ZePtr{Float64}"
+6 = "ZePtr{Float64}"
+7 = "ZePtr{Float64}"
+8 = "ZePtr{Float64}"
+9 = "ZePtr{Float64}"
+10 = "ZePtr{Float64}"
+
+[api.onemklCgebrd.argtypes]
+4 = "ZePtr{ComplexF32}"
+6 = "ZePtr{Float32}"
+7 = "ZePtr{ComplexF32}"
+8 = "ZePtr{ComplexF32}"
+9 = "ZePtr{ComplexF32}"
+10 = "ZePtr{ComplexF32}"
+
+[api.onemklZgebrd.argtypes]
+4 = "ZePtr{ComplexF64}"
+6 = "ZePtr{Float64}"
+7 = "ZePtr{ComplexF64}"
+8 = "ZePtr{ComplexF64}"
+9 = "ZePtr{ComplexF64}"
+10 = "ZePtr{ComplexF64}"
+
+[api.onemklSgesvd.argtypes]
+6 = "ZePtr{Float32}"
+8 = "ZePtr{Float32}"
+9 = "ZePtr{Float32}"
+11 = "ZePtr{Float32}"
+13 = "ZePtr{Float32}"
+
+[api.onemklDgesvd.argtypes]
+6 = "ZePtr{Float64}"
+8 = "ZePtr{Float64}"
+9 = "ZePtr{Float64}"
+11 = "ZePtr{Float64}"
+13 = "ZePtr{Float64}"
+
+[api.onemklCgesvd.argtypes]
+6 = "ZePtr{ComplexF32}"
+8 = "ZePtr{ComplexF32}"
+9 = "ZePtr{Float32}"
+11 = "ZePtr{ComplexF32}"
+13 = "ZePtr{ComplexF32}"
+
+[api.onemklZgesvd.argtypes]
+6 = "ZePtr{ComplexF64}"
+8 = "ZePtr{Float64}"
+9 = "ZePtr{ComplexF64}"
+11 = "ZePtr{ComplexF64}"
+13 = "ZePtr{ComplexF64}"

@@ -1192,5 +1192,37 @@ end
     end
 end
 
-end # oneMKL tests
+@testset "LAPACK" begin
+    @testset "$T" for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
+        @testset "geqrf" begin
+            A = rand(T, n, m)
+            d_A = oneArray(A)
+            d_A, tau = oneMKL.geqrf!(d_A)
+            tau_c = zeros(T, m)
+            LinearAlgebra.LAPACK.geqrf!(A, tau_c)
+            @test tau_c ≈ Array(tau)
+        end
 
+        @testset "geqrf! -- omgqr!" begin
+            A = rand(T, n, m)
+            dA = oneArray(A)
+            dA, τ = oneMKL.geqrf!(dA)
+            oneMKL.orgqr!(dA, τ)
+            @test dA' * dA ≈ I
+        end
+
+        @testset "getrf -- getri" begin
+            A = rand(T, m, m)
+            d_A = oneArray(A)
+            d_A, d_ipiv = oneMKL.getrf!(d_A)
+            h_A, ipiv = LinearAlgebra.LAPACK.getrf!(A)
+            @test h_A ≈ Array(d_A)
+
+            d_A = oneMKL.getri!(d_A, d_ipiv)
+            h_A = LinearAlgebra.LAPACK.getri!(h_A, ipiv)
+            @test h_A ≈ Array(d_A)
+        end
+    end
+end
+
+end # oneMKL tests
