@@ -3467,50 +3467,42 @@ extern "C" int onemklXsparse_init_matrix_handle(matrix_handle_t *handle) {
 }
 
 extern "C" int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float *val) {
-   auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val, {});
-   __FORCE_MKL_FLUSH__(status);
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
 }
 
 extern "C" int onemklSsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t handle, int64_t num_rows, int64_t num_cols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float *val) {
-   auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val, {});
-   __FORCE_MKL_FLUSH__(status);
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
 }
 
 extern "C" int onemklDsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double *val) {
-   auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val, {});
-   __FORCE_MKL_FLUSH__(status);
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
 }
 
 extern "C" int onemklDsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t handle, int64_t num_rows, int64_t num_cols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double *val) {
-   auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val, {});
-   __FORCE_MKL_FLUSH__(status);
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
 }
 
 extern "C" int onemklCsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float _Complex *val) {
-   auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(val), {});
-   __FORCE_MKL_FLUSH__(status);
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(val));
    return 0;
 }
 
 extern "C" int onemklCsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t handle, int64_t num_rows, int64_t num_cols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float _Complex *val) {
-   auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(val), {});
-   __FORCE_MKL_FLUSH__(status);
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(val));
    return 0;
 }
 
 extern "C" int onemklZsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double _Complex *val) {
-   auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(val), {});
-   __FORCE_MKL_FLUSH__(status);
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(val));
    return 0;
 }
 
 extern "C" int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t handle, int64_t num_rows, int64_t num_cols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double _Complex *val) {
-   auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(val), {});
-   __FORCE_MKL_FLUSH__(status);
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(val));
    return 0;
 }
 
