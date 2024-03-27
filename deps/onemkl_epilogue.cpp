@@ -12,6 +12,7 @@ int clean_gpu_caches();
 }
 }
 
-extern "C" void onemklDestroy() {
+extern "C" int onemklDestroy() {
     oneapi::mkl::gpu::clean_gpu_caches();
+    return 0;
 }
