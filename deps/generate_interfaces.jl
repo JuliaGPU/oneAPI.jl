@@ -44,6 +44,7 @@ function generate_headers(library::String, filename::String, output::String)
     occursin("gemm_bias", header) && continue  # BLAS routine
     occursin("heevx", header) && continue  # LAPACK routine
     occursin("hegvx", header) && continue  # LAPACK routine
+    occursin("getri_batch", header) && occursin("ldainv", header) && continue  # LAPACK routine
     occursin("(matrix_handle_t handle", header) && continue  # SPARSE routine
     occursin("update_diagonal_values", header) && continue  # SPARSE routine
     occursin("get_matmat_data", header) && continue  # SPARSE routine

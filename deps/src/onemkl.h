@@ -1906,6 +1906,22 @@ int onemklZungqr_batch(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k
                        int64_t lda, int64_t stride_a, double _Complex *tau, int64_t stride_tau,
                        int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size);
 
+int onemklSgetri_batch(syclQueue_t device_queue, int64_t n, float *a, int64_t lda, int64_t stride_a,
+                       int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float *scratchpad,
+                       int64_t scratchpad_size);
+
+int onemklDgetri_batch(syclQueue_t device_queue, int64_t n, double *a, int64_t lda, int64_t
+                       stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double
+                       *scratchpad, int64_t scratchpad_size);
+
+int onemklCgetri_batch(syclQueue_t device_queue, int64_t n, float _Complex *a, int64_t lda, int64_t
+                       stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float
+                       _Complex *scratchpad, int64_t scratchpad_size);
+
+int onemklZgetri_batch(syclQueue_t device_queue, int64_t n, double _Complex *a, int64_t lda, int64_t
+                       stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double
+                       _Complex *scratchpad, int64_t scratchpad_size);
+
 int onemklSgels_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n,
                       int64_t nrhs, float *a, int64_t lda, int64_t stridea, float *b, int64_t ldb,
                       int64_t strideb, int64_t batchsize, float *scratchpad, int64_t
@@ -1985,6 +2001,22 @@ int64_t onemklCungqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, 
 int64_t onemklZungqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n,
                                            int64_t k, int64_t lda, int64_t stride_a, int64_t
                                            stride_tau, int64_t batch_size);
+
+int64_t onemklSgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda,
+                                           int64_t stride_a, int64_t stride_ipiv, int64_t
+                                           batch_size);
+
+int64_t onemklDgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda,
+                                           int64_t stride_a, int64_t stride_ipiv, int64_t
+                                           batch_size);
+
+int64_t onemklCgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda,
+                                           int64_t stride_a, int64_t stride_ipiv, int64_t
+                                           batch_size);
+
+int64_t onemklZgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda,
+                                           int64_t stride_a, int64_t stride_ipiv, int64_t
+                                           batch_size);
 
 int64_t onemklSgels_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans,
                                           int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t

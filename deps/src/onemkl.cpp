@@ -3336,6 +3336,30 @@ extern "C" int onemklZungqr_batch(syclQueue_t device_queue, int64_t m, int64_t n
    return 0;
 }
 
+extern "C" int onemklSgetri_batch(syclQueue_t device_queue, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, a, lda, stride_a, ipiv, stride_ipiv, batch_size, scratchpad, scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklDgetri_batch(syclQueue_t device_queue, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, a, lda, stride_a, ipiv, stride_ipiv, batch_size, scratchpad, scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklCgetri_batch(syclQueue_t device_queue, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, ipiv, stride_ipiv, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklZgetri_batch(syclQueue_t device_queue, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, ipiv, stride_ipiv, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
 extern "C" int onemklSgels_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t stridea, float *b, int64_t ldb, int64_t strideb, int64_t batchsize, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, a, lda, stridea, b, ldb, strideb, batchsize, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
@@ -3437,6 +3461,26 @@ extern "C" int64_t onemklCungqr_batch_scratchpad_size(syclQueue_t device_queue, 
 
 extern "C" int64_t onemklZungqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::ungqr_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, k, lda, stride_a, stride_tau, batch_size);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklSgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<float>(device_queue->val, n, lda, stride_a, stride_ipiv, batch_size);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklDgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<double>(device_queue->val, n, lda, stride_a, stride_ipiv, batch_size);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklCgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<std::complex<float>>(device_queue->val, n, lda, stride_a, stride_ipiv, batch_size);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklZgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<std::complex<double>>(device_queue->val, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
