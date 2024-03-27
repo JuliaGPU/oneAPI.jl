@@ -1,4 +1,4 @@
-void onemklDestroy(void);
+int onemklDestroy(void);
 #ifdef __cplusplus
 }
 #endif

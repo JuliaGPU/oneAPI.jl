@@ -222,7 +222,6 @@ function generate_headers(library::String, filename::String, output::String)
         copy_header = replace(copy_header, "typename fp_type::value_type" => version_types_header[blas_version])
         copy_header = replace(copy_header, "fp_type" => version_types_header[blas_version])
         copy_header = replace(copy_header, name_routine => "onemkl$(blas_version)$(name_routine)")
-        copy_header = replace(copy_header, "void onemkl" => "int onemkl")
         push!(signatures, (copy_header, name_routine, blas_version, template))
       end
     else
@@ -232,9 +231,7 @@ function generate_headers(library::String, filename::String, output::String)
           occursin("int64_t", header) && (suffix = "_64")
         end
         header = replace(header, "$(name_routine)(" => "onemkl$(version)$(name_routine)$(suffix)(")
-        if name_routine ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "set_csr_data")
-          header = replace(header, "void onemkl" => "int onemkl")
-        end
+        header = replace(header, "void onemkl" => "int onemkl")
         if library == "sparse"
           if occursin("std::complex", header)
             (version == 'C') && (header = replace(header, "std::complex " => "float _Complex "))
@@ -366,11 +363,11 @@ function generate_cpp(library::String, filename::String, output::String)
     write(oneapi_cpp, "extern \"C\" $header {\n")
     if template
       type = version_types[version]
-      !occursin("scratchpad_size", name) && write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name<$type>($parameters);\n")
+      !occursin("scratchpad_size", name) && write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n")
       occursin("scratchpad_size", name)  && write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n")
     else
-      if name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "set_csr_data")
-        write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name($parameters);\n")
+      if name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data")
+        write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
       else
         write(oneapi_cpp, "   oneapi::mkl::$library::$variant$name($parameters);\n")
       end
@@ -378,8 +375,8 @@ function generate_cpp(library::String, filename::String, output::String)
     if occursin("scratchpad_size", name)
       write(oneapi_cpp, "   return scratchpad_size;\n")
     else
-      (name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "set_csr_data")) && write(oneapi_cpp, "   __FORCE_MKL_FLUSH__(status);\n")
-      (name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "set_csr_data")) && write(oneapi_cpp, "   return 0;\n")
+      (name ∉ ("init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data")) && write(oneapi_cpp, "   __FORCE_MKL_FLUSH__(status);\n")
+      write(oneapi_cpp, "   return 0;\n")
     end
     write(oneapi_cpp, "}")
     write(oneapi_cpp, "\n\n")
