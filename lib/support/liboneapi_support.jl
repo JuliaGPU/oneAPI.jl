@@ -4493,7 +4493,7 @@ function onemklZgels_batch_scratchpad_size(device_queue, trans, m, n, nrhs, lda,
 end
 
 function onemklXsparse_init_matrix_handle(handle)
-    @ccall liboneapi_support.onemklXsparse_init_matrix_handle(handle::Ptr{matrix_handle_t})::Cvoid
+    @ccall liboneapi_support.onemklXsparse_init_matrix_handle(handle::Ptr{matrix_handle_t})::Cint
 end
 
 function onemklSsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
@@ -4504,7 +4504,7 @@ function onemklSsparse_set_csr_data(device_queue, handle, num_rows, num_cols, in
                                                         index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
                                                         col_ind::ZePtr{Int32},
-                                                        val::ZePtr{Cfloat})::Cvoid
+                                                        val::ZePtr{Cfloat})::Cint
 end
 
 function onemklSsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
@@ -4515,7 +4515,7 @@ function onemklSsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols,
                                                            index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
                                                            col_ind::ZePtr{Int64},
-                                                           val::ZePtr{Cfloat})::Cvoid
+                                                           val::ZePtr{Cfloat})::Cint
 end
 
 function onemklDsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
@@ -4526,7 +4526,7 @@ function onemklDsparse_set_csr_data(device_queue, handle, num_rows, num_cols, in
                                                         index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
                                                         col_ind::ZePtr{Int32},
-                                                        val::ZePtr{Cdouble})::Cvoid
+                                                        val::ZePtr{Cdouble})::Cint
 end
 
 function onemklDsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
@@ -4537,7 +4537,7 @@ function onemklDsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols,
                                                            index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
                                                            col_ind::ZePtr{Int64},
-                                                           val::ZePtr{Cdouble})::Cvoid
+                                                           val::ZePtr{Cdouble})::Cint
 end
 
 function onemklCsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
@@ -4548,7 +4548,7 @@ function onemklCsparse_set_csr_data(device_queue, handle, num_rows, num_cols, in
                                                         index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
                                                         col_ind::ZePtr{Int32},
-                                                        val::ZePtr{ComplexF32})::Cvoid
+                                                        val::ZePtr{ComplexF32})::Cint
 end
 
 function onemklCsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
@@ -4559,7 +4559,7 @@ function onemklCsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols,
                                                            index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
                                                            col_ind::ZePtr{Int64},
-                                                           val::ZePtr{ComplexF32})::Cvoid
+                                                           val::ZePtr{ComplexF32})::Cint
 end
 
 function onemklZsparse_set_csr_data(device_queue, handle, num_rows, num_cols, index,
@@ -4570,7 +4570,7 @@ function onemklZsparse_set_csr_data(device_queue, handle, num_rows, num_cols, in
                                                         index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
                                                         col_ind::ZePtr{Int32},
-                                                        val::ZePtr{ComplexF64})::Cvoid
+                                                        val::ZePtr{ComplexF64})::Cint
 end
 
 function onemklZsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols, index,
@@ -4581,7 +4581,7 @@ function onemklZsparse_set_csr_data_64(device_queue, handle, num_rows, num_cols,
                                                            index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
                                                            col_ind::ZePtr{Int64},
-                                                           val::ZePtr{ComplexF64})::Cvoid
+                                                           val::ZePtr{ComplexF64})::Cint
 end
 
 function onemklSsparse_gemv(device_queue, transpose_flag, alpha, handle, x, beta, y)
@@ -4771,11 +4771,11 @@ function onemklZsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, 
 end
 
 function onemklXsparse_init_matmat_descr(desc)
-    @ccall liboneapi_support.onemklXsparse_init_matmat_descr(desc::Ptr{matmat_descr_t})::Cvoid
+    @ccall liboneapi_support.onemklXsparse_init_matmat_descr(desc::Ptr{matmat_descr_t})::Cint
 end
 
 function onemklXsparse_release_matmat_descr(desc)
-    @ccall liboneapi_support.onemklXsparse_release_matmat_descr(desc::Ptr{matmat_descr_t})::Cvoid
+    @ccall liboneapi_support.onemklXsparse_release_matmat_descr(desc::Ptr{matmat_descr_t})::Cint
 end
 
 function onemklXsparse_set_matmat_data(descr, viewA, opA, viewB, opB, viewC)
@@ -4784,9 +4784,9 @@ function onemklXsparse_set_matmat_data(descr, viewA, opA, viewB, opB, viewC)
                                                            opA::onemklTranspose,
                                                            viewB::onemklMatrixView,
                                                            opB::onemklTranspose,
-                                                           viewC::onemklMatrixView)::Cvoid
+                                                           viewC::onemklMatrixView)::Cint
 end
 
 function onemklDestroy()
-    @ccall liboneapi_support.onemklDestroy()::Cvoid
+    @ccall liboneapi_support.onemklDestroy()::Cint
 end
