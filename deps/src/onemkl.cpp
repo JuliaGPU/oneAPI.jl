@@ -2074,6 +2074,46 @@ extern "C" int64_t onemklZpotri_scratchpad_size(syclQueue_t device_queue, onemkl
    return scratchpad_size;
 }
 
+extern "C" int64_t onemklStrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, int64_t lda) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::trtri_scratchpad_size<float>(device_queue->val, convert(uplo), convert(diag), n, lda);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklDtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, int64_t lda) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::trtri_scratchpad_size<double>(device_queue->val, convert(uplo), convert(diag), n, lda);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklCtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, int64_t lda) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::trtri_scratchpad_size<std::complex<float>>(device_queue->val, convert(uplo), convert(diag), n, lda);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklZtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, int64_t lda) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::trtri_scratchpad_size<std::complex<double>>(device_queue->val, convert(uplo), convert(diag), n, lda);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklSgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t lda, int64_t ldb) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::gesv_scratchpad_size<float>(device_queue->val, n, nrhs, lda, ldb);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklDgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t lda, int64_t ldb) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::gesv_scratchpad_size<double>(device_queue->val, n, nrhs, lda, ldb);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklCgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t lda, int64_t ldb) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::gesv_scratchpad_size<std::complex<float>>(device_queue->val, n, nrhs, lda, ldb);
+   return scratchpad_size;
+}
+
+extern "C" int64_t onemklZgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t lda, int64_t ldb) {
+   int64_t scratchpad_size = oneapi::mkl::lapack::gesv_scratchpad_size<std::complex<double>>(device_queue->val, n, nrhs, lda, ldb);
+   return scratchpad_size;
+}
+
 extern "C" int64_t onemklSgebrd_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda) {
    int64_t scratchpad_size = oneapi::mkl::lapack::gebrd_scratchpad_size<float>(device_queue->val, m, n, lda);
    return scratchpad_size;
@@ -3510,6 +3550,12 @@ extern "C" int onemklXsparse_init_matrix_handle(matrix_handle_t *handle) {
    return 0;
 }
 
+extern "C" int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, matrix_handle_t *handle) {
+   auto status = oneapi::mkl::sparse::release_matrix_handle(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t*) handle, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
 extern "C" int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float *val) {
    oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
@@ -3550,6 +3596,30 @@ extern "C" int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_ha
    return 0;
 }
 
+extern "C" int onemklXsparse_omatcopy(syclQueue_t device_queue, onemklTranspose transpose_flag, matrix_handle_t from_handle, matrix_handle_t to_handle) {
+   auto status = oneapi::mkl::sparse::omatcopy(device_queue->val, convert(transpose_flag), (oneapi::mkl::sparse::matrix_handle_t) from_handle, (oneapi::mkl::sparse::matrix_handle_t) to_handle, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklXsparse_optimize_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, matrix_handle_t handle) {
+   auto status = oneapi::mkl::sparse::optimize_gemv(device_queue->val, convert(transpose_flag), (oneapi::mkl::sparse::matrix_handle_t) handle, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklXsparse_optimize_trmv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, matrix_handle_t handle) {
+   auto status = oneapi::mkl::sparse::optimize_trmv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) handle, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklXsparse_optimize_trsv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, matrix_handle_t handle) {
+   auto status = oneapi::mkl::sparse::optimize_trsv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) handle, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
 extern "C" int onemklSsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, float alpha, matrix_handle_t handle, float *x, float beta, float *y) {
    auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(transpose_flag), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, {});
    __FORCE_MKL_FLUSH__(status);
@@ -3570,6 +3640,30 @@ extern "C" int onemklCsparse_gemv(syclQueue_t device_queue, onemklTranspose tran
 
 extern "C" int onemklZsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, double _Complex alpha, matrix_handle_t handle, double _Complex *x, double _Complex beta, double _Complex *y) {
    auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(transpose_flag), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklSsparse_gemvdot(syclQueue_t device_queue, onemklTranspose transpose_flag, float alpha, matrix_handle_t handle, float *x, float beta, float *y, float *d) {
+   auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(transpose_flag), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, d, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklDsparse_gemvdot(syclQueue_t device_queue, onemklTranspose transpose_flag, double alpha, matrix_handle_t handle, double *x, double beta, double *y, double *d) {
+   auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(transpose_flag), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, d, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklCsparse_gemvdot(syclQueue_t device_queue, onemklTranspose transpose_flag, float _Complex alpha, matrix_handle_t handle, float _Complex *x, float _Complex beta, float _Complex *y, float _Complex *d) {
+   auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(transpose_flag), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<float>*>(x), static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(y), reinterpret_cast<std::complex<float>*>(d), {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklZsparse_gemvdot(syclQueue_t device_queue, onemklTranspose transpose_flag, double _Complex alpha, matrix_handle_t handle, double _Complex *x, double _Complex beta, double _Complex *y, double _Complex *d) {
+   auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(transpose_flag), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), reinterpret_cast<std::complex<double>*>(d), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
@@ -3685,6 +3779,12 @@ extern "C" int onemklXsparse_set_matmat_data(matmat_descr_t descr, onemklMatrixV
    return 0;
 }
 
+extern "C" int onemklXsparse_sort_matrix(syclQueue_t device_queue, matrix_handle_t hMatrix) {
+   auto status = oneapi::mkl::sparse::sort_matrix(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) hMatrix, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
 // other
 
 // oneMKL keeps a cache of SYCL queues and tries to destroy them when unloading the library.
@@ -3697,6 +3797,60 @@ namespace gpu {
 int clean_gpu_caches();
 }
 }
+}
+
+extern "C" int onemklStrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, float *a, int64_t lda, float *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::trtri(device_queue->val, convert(uplo), convert(diag), n, a, lda, scratchpad, scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklDtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, double *a, int64_t lda, double *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::trtri(device_queue->val, convert(uplo), convert(diag), n, a, lda, scratchpad, scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklCtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, float _Complex *a, int64_t lda, float _Complex *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::trtri(device_queue->val, convert(uplo), convert(diag), n, reinterpret_cast<std::complex<float>*>(a), lda, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklZtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, double _Complex *a, int64_t lda, double _Complex *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::trtri(device_queue->val, convert(uplo), convert(diag), n, reinterpret_cast<std::complex<double>*>(a), lda, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklSgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t *ipiv, float *b, int64_t ldb, float *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::gesv(device_queue->val, n, nrhs, a, lda, ipiv, b, ldb, scratchpad, scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklDgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t *ipiv, double *b, int64_t ldb, double *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::gesv(device_queue->val, n, nrhs, a, lda, ipiv, b, ldb, scratchpad, scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklCgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t *ipiv, float _Complex *b, int64_t ldb, float _Complex *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::gesv(device_queue->val, n, nrhs, reinterpret_cast<std::complex<float>*>(a), lda, ipiv, reinterpret_cast<std::complex<float>*>(b), ldb, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklZgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t *ipiv, double _Complex *b, int64_t ldb, double _Complex *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::gesv(device_queue->val, n, nrhs, reinterpret_cast<std::complex<double>*>(a), lda, ipiv, reinterpret_cast<std::complex<double>*>(b), ldb, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklXsparse_matmat(syclQueue_t device_queue, matrix_handle_t A, matrix_handle_t B, matrix_handle_t C, onemklMatmatRequest req, matmat_descr_t descr, int64_t *sizeTempBuffer, void *tempBuffer) {
+   auto status = oneapi::mkl::sparse::matmat(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) A, (oneapi::mkl::sparse::matrix_handle_t) B, (oneapi::mkl::sparse::matrix_handle_t) C, convert(req), (oneapi::mkl::sparse::matmat_descr_t) descr, sizeTempBuffer, tempBuffer, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
 }
 
 extern "C" int onemklDestroy() {
