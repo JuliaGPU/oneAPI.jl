@@ -1102,6 +1102,30 @@ int64_t onemklCpotri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, 
 int64_t onemklZpotri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n,
                                      int64_t lda);
 
+int64_t onemklStrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag,
+                                     int64_t n, int64_t lda);
+
+int64_t onemklDtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag,
+                                     int64_t n, int64_t lda);
+
+int64_t onemklCtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag,
+                                     int64_t n, int64_t lda);
+
+int64_t onemklZtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag,
+                                     int64_t n, int64_t lda);
+
+int64_t onemklSgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t
+                                    lda, int64_t ldb);
+
+int64_t onemklDgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t
+                                    lda, int64_t ldb);
+
+int64_t onemklCgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t
+                                    lda, int64_t ldb);
+
+int64_t onemklZgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t
+                                    lda, int64_t ldb);
+
 int64_t onemklSgebrd_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda);
 
 int64_t onemklDgebrd_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda);
@@ -2041,6 +2065,8 @@ int64_t onemklZgels_batch_scratchpad_size(syclQueue_t device_queue, onemklTransp
 // SPARSE
 int onemklXsparse_init_matrix_handle(matrix_handle_t *handle);
 
+int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, matrix_handle_t *handle);
+
 int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t
                                num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr,
                                int32_t *col_ind, float *val);
@@ -2073,6 +2099,18 @@ int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t hand
                                   num_rows, int64_t num_cols, onemklIndex index, int64_t
                                   *row_ptr, int64_t *col_ind, double _Complex *val);
 
+int onemklXsparse_omatcopy(syclQueue_t device_queue, onemklTranspose transpose_flag,
+                           matrix_handle_t from_handle, matrix_handle_t to_handle);
+
+int onemklXsparse_optimize_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag,
+                                matrix_handle_t handle);
+
+int onemklXsparse_optimize_trmv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose
+                                transpose_flag, onemklDiag diag_val, matrix_handle_t handle);
+
+int onemklXsparse_optimize_trsv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose
+                                transpose_flag, onemklDiag diag_val, matrix_handle_t handle);
+
 int onemklSsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, float alpha,
                        matrix_handle_t handle, float *x, float beta, float *y);
 
@@ -2086,6 +2124,21 @@ int onemklCsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag,
 int onemklZsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, double _Complex
                        alpha, matrix_handle_t handle, double _Complex *x, double _Complex beta,
                        double _Complex *y);
+
+int onemklSsparse_gemvdot(syclQueue_t device_queue, onemklTranspose transpose_flag, float alpha,
+                          matrix_handle_t handle, float *x, float beta, float *y, float *d);
+
+int onemklDsparse_gemvdot(syclQueue_t device_queue, onemklTranspose transpose_flag, double
+                          alpha, matrix_handle_t handle, double *x, double beta, double *y, double
+                          *d);
+
+int onemklCsparse_gemvdot(syclQueue_t device_queue, onemklTranspose transpose_flag, float
+                          _Complex alpha, matrix_handle_t handle, float _Complex *x, float
+                          _Complex beta, float _Complex *y, float _Complex *d);
+
+int onemklZsparse_gemvdot(syclQueue_t device_queue, onemklTranspose transpose_flag, double
+                          _Complex alpha, matrix_handle_t handle, double _Complex *x, double
+                          _Complex beta, double _Complex *y, double _Complex *d);
 
 int onemklSsparse_symv(syclQueue_t device_queue, onemklUplo uplo_flag, float alpha,
                        matrix_handle_t handle, float *x, float beta, float *y);
@@ -2162,6 +2215,38 @@ int onemklXsparse_release_matmat_descr(matmat_descr_t *desc);
 int onemklXsparse_set_matmat_data(matmat_descr_t descr, onemklMatrixView viewA, onemklTranspose
                                   opA, onemklMatrixView viewB, onemklTranspose opB,
                                   onemklMatrixView viewC);
+
+int onemklXsparse_sort_matrix(syclQueue_t device_queue, matrix_handle_t hMatrix);
+
+int onemklStrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, float *a,
+                 int64_t lda, float *scratchpad, int64_t scratchpad_size);
+
+int onemklDtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, double *a,
+                 int64_t lda, double *scratchpad, int64_t scratchpad_size);
+
+int onemklCtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n,
+                 float _Complex *a, int64_t lda, float _Complex *scratchpad, int64_t scratchpad_size);
+
+int onemklZtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n,
+                 double _Complex *a, int64_t lda, double _Complex *scratchpad, int64_t scratchpad_size);
+
+int onemklSgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t
+                *ipiv, float *b, int64_t ldb, float *scratchpad, int64_t scratchpad_size);
+
+int onemklDgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t
+                *ipiv, double *b, int64_t ldb, double *scratchpad, int64_t scratchpad_size);
+
+int onemklCgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda,
+                int64_t *ipiv, float _Complex *b, int64_t ldb, float _Complex *scratchpad, int64_t
+                scratchpad_size);
+
+int onemklZgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda,
+                int64_t *ipiv, double _Complex *b, int64_t ldb, double _Complex *scratchpad, int64_t
+                scratchpad_size);
+
+int onemklXsparse_matmat(syclQueue_t device_queue, matrix_handle_t A, matrix_handle_t B,
+                         matrix_handle_t C, onemklMatmatRequest req, matmat_descr_t
+                         descr, int64_t *sizeTempBuffer, void *tempBuffer);
 
 int onemklDestroy(void);
 #ifdef __cplusplus
