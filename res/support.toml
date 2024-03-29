@@ -256,7 +256,15 @@ use_ccall_macro = true
 3 = "ZePtr{T}"
 5 = "ZePtr{Int64}"
 
+[api.onemklXiamax_64.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{Int64}"
+
 [api.onemklXiamin.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{Int64}"
+
+[api.onemklXiamin_64.argtypes]
 3 = "ZePtr{T}"
 5 = "ZePtr{Int64}"
 

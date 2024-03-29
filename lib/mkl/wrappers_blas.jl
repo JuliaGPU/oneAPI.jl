@@ -799,10 +799,10 @@ end
 
 ## iamax
 for (fname, elty) in
-    ((:onemklDiamax,:Float64),
-     (:onemklSiamax,:Float32),
-     (:onemklZiamax,:ComplexF64),
-     (:onemklCiamax,:ComplexF32))
+    ((:onemklDiamax_64,:Float64),
+     (:onemklSiamax_64,:Float32),
+     (:onemklZiamax_64,:ComplexF64),
+     (:onemklCiamax_64,:ComplexF32))
     @eval begin
         function iamax(x::oneStridedArray{$elty})
             n = length(x)
@@ -816,10 +816,10 @@ end
 
 ## iamin
 for (fname, elty) in
-    ((:onemklDiamin,:Float64),
-     (:onemklSiamin,:Float32),
-     (:onemklZiamin,:ComplexF64),
-     (:onemklCiamin,:ComplexF32))
+    ((:onemklDiamin_64,:Float64),
+     (:onemklSiamin_64,:Float32),
+     (:onemklZiamin_64,:ComplexF64),
+     (:onemklCiamin_64,:ComplexF32))
     @eval begin
         function iamin(x::StridedArray{$elty})
             n = length(x)

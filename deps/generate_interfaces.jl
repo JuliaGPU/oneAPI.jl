@@ -1,8 +1,12 @@
 using oneAPI_Support_Headers_jll
 
-blas = joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "blas", "buffer_decls.hpp")
-lapack = joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "lapack.hpp")
-sparse = joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas.hpp")
+include("generate_helpers.jl")
+
+blas = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "blas", "buffer_decls.hpp")]
+lapack = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "lapack", "lapack.hpp")]
+sparse = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_structures.hpp"),
+          joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_auxiliary.hpp"),
+          joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_operations.hpp")]
 
 dict_version = Dict{Int, Char}(1 => 'S', 2 => 'D', 3 => 'C', 4 => 'Z')
 
@@ -16,16 +20,22 @@ version_types_header = Dict{Char, String}('S' => "float",
                                           'C' => "float _Complex",
                                           'Z' => "double _Complex")
 
-function generate_headers(library::String, filename::String, output::String)
+function generate_headers(library::String, filename::Vector{String}, output::String)
   routines = Dict{String,Int}()
   signatures = []
   signatures2 = []
-  cpp_headers = read(filename, String)
+  cpp_headers = ""
+  for file in filename
+    cpp_headers = cpp_headers * read(file, String)
+  end
+  cpp_headers = replace(cpp_headers, "std::int32_t" => "int32_t")
+  cpp_headers = replace(cpp_headers, "std::int64_t" => "int64_t")
+  cpp_headers = replace(cpp_headers, "; \\" => ";")
   headers = ""
 
   # Remove comments
   for header in split(cpp_headers, '\n')
-    mapreduce(x -> !startswith(header, x) && !occursin("\"", header), &, ["/*", "*", "//", "[[deprecated", "#undef", "#define", "ONEMKL_DECLARE_BUF_"]) && (headers *= header)
+    mapreduce(x -> !startswith(strip(header), x) && !occursin("\"", header), &, ["/*", "*", "//", "[[deprecated", "#undef", "#define", "#endif", "#ifndef", "ONEMKL_DECLARE_", "ONEMKL_INLINE_DECLARE"]) && (headers *= header)
   end
 
   # Analyse each header
@@ -45,7 +55,7 @@ function generate_headers(library::String, filename::String, output::String)
     occursin("heevx", header) && continue  # LAPACK routine
     occursin("hegvx", header) && continue  # LAPACK routine
     occursin("getri_batch", header) && occursin("ldainv", header) && continue  # LAPACK routine
-    occursin("(matrix_handle_t handle", header) && continue  # SPARSE routine
+    occursin("(matrix_handle_t SpMat", header) && continue  # SPARSE routine
     occursin("update_diagonal_values", header) && continue  # SPARSE routine
     occursin("get_matmat_data", header) && continue  # SPARSE routine
     occursin("matmat(", header) && continue  # SPARSE routine
@@ -65,10 +75,8 @@ function generate_headers(library::String, filename::String, output::String)
     # Replace the types
     header = replace(header, "void onemkl" => "int onemkl")
     header = replace(header, "sycl::queue &queue" => "syclQueue_t device_queue")
-    header = replace(header, "std::int32_t" => "int32_t")
-    header = replace(header, "std::int64_t" => "int64_t")
 
-    if library == "blas"
+    if library ∈ ("blas", "sparse")
       header = replace(header, "compute_mode mode = MKL_BLAS_COMPUTE_MODE" => "")
       header = replace(header, "index_base base=index_base::zero" => "onemklIndex base")
 
@@ -84,10 +92,14 @@ function generate_headers(library::String, filename::String, output::String)
       header = replace(header, "sycl::buffer<Tb, 1> &" => "Tb *")
       header = replace(header, "sycl::buffer<Tc, 1> &" => "Tc *")
       header = replace(header, "sycl::buffer<Td, 1> &" => "Td *")
+      header = replace(header, "sycl::buffer<Ti, 1> &" => "Ti *")
+      header = replace(header, "sycl::buffer<Tf, 1> &" => "Tf *")
       header = replace(header, "sycl::buffer<Treal, 1> &" => "Treal *")
       header = replace(header, "sycl::buffer<Tres, 1> &" => "Tres *")
       header = replace(header, "sycl::buffer<T,1> &" => "T *")
       header = replace(header, "sycl::buffer<T, 1> &" => "T *")
+      header = replace(header, "sycl::buffer<FpType, 1> &" => "FpType *")
+      header = replace(header, "sycl::buffer<IntType, 1> &" => "IntType *")
     end
 
     header = replace(header, "sycl::buffer<float> &" => "float *")
@@ -142,6 +154,7 @@ function generate_headers(library::String, filename::String, output::String)
     end
     header = replace(header, "( " => "(")
     header = replace(header, ", )" => ")")
+    header = replace(header, " void" => "void")
     occursin("voidgemm", header) && continue  # Bug with SPARSE routine
 
     ind1 = findfirst(' ', header)
@@ -150,60 +163,9 @@ function generate_headers(library::String, filename::String, output::String)
     !haskey(routines, name_routine) && (routines[name_routine] = 0)
     routines[name_routine] += 1
 
-    # They use template for BLAS routines
-    list_parameters = ()
-    list_types = []
-    list_versions = String[]
-    if library == "blas"
-      occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))(T)", cpp_headers) && (list_parameters = ("T"))
-      occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))(T, Ts)", cpp_headers) && (list_parameters = ("T", "Ts"))
-      occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))(Ta, Tb, Tc, Ts)", cpp_headers) && (list_parameters = ("Ta", "Tb", "Tc", "Ts"))
-      occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))(T, Tres)", cpp_headers) && (list_parameters = ("T", "Tres"))
-      occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))(T, Treal)", cpp_headers) && (list_parameters = ("T", "Treal"))
-      occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))(T, Tc, Ts)", cpp_headers) && (list_parameters = ("T", "Tc", "Ts"))
-      occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))(T, Tc)", cpp_headers) && (list_parameters = ("T", "Tc"))
-      (list_parameters == ()) && @warn("Unable to determine the parametric parameters of $(name_routine).")
-      for (type, version) in [(("float",), "S"),
-                              (("double",), "D"),
-                              (("std::complex<float>",), "C"),
-                              (("std::complex<double>",), "Z")]
-        if occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))($(type[1]))", cpp_headers)
-          push!(list_types, type)
-          push!(list_versions, version)
-        end
-      end
-      for (type, version) in [(("float","float"), "S"),
-                              (("double","double"), "D"),
-                              (("std::complex<float>","float"), "CS"),
-                              (("std::complex<double>","double"), "ZD"),
-                              (("std::complex<float>","std::complex<float>"), "C"),
-                              (("std::complex<double>","std::complex<double>"), "Z")]
-        if occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))($(type[1]), $(type[2]))", cpp_headers)
-          push!(list_types, type)
-          push!(list_versions, version)
-        end
-      end
-      for (type, version) in [(("float","float","float"), "S"),
-                              (("double","double","double"), "D"),
-                              (("std::complex<float>","float","float"), "CS"),
-                              (("std::complex<float>","float", "std::complex<float>"), "C"),
-                              (("std::complex<double>","double","double"), "ZD"),
-                              (("std::complex<double>","double","std::complex<double>"), "Z")]
-        if occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))($(type[1]), $(type[2]), $(type[3]))", cpp_headers)
-          push!(list_types, type)
-          push!(list_versions, version)
-        end
-      end
-      for (type, version) in [(("float","float","float","float"), "S"),
-                              (("double","double","double","double"), "D"),
-                              (("std::complex<float>","std::complex<float>","std::complex<float>","std::complex<float>"), "C"),
-                              (("std::complex<double>","std::complex<double>","std::complex<double>","std::complex<double>"), "Z")]
-        if occursin("ONEMKL_DECLARE_BUF_$(uppercase(name_routine))($(type[1]), $(type[2]), $(type[3]), $(type[4]))", cpp_headers)
-          push!(list_types, type)
-          push!(list_versions, version)
-        end
-      end
-    end
+    # They use template for BLAS and SPARSE routines
+    list_parameters, list_types, list_versions, list_suffix = analyzer_template(library, cpp_headers, name_routine)
+
     version = 'X'
     version = occursin("double", header) ? 'D' : version
     version = occursin("float", header) ? 'S' : version
@@ -228,7 +190,7 @@ function generate_headers(library::String, filename::String, output::String)
     else
       if isempty(list_versions)
         suffix = ""
-        if name_routine == "set_csr_data"
+        if name_routine ∈ ("set_csr_data", "set_coo_data")
           occursin("int64_t", header) && (suffix = "_64")
         end
         header = replace(header, "$(name_routine)(" => "onemkl$(version)$(name_routine)$(suffix)(")
@@ -252,10 +214,10 @@ function generate_headers(library::String, filename::String, output::String)
         end
         push!(signatures, (header, name_routine, version, template))
       else
-
         n = length(list_parameters)
         for (i, type) in enumerate(list_types)
           version = list_versions[i]
+          suffix = list_suffix[i]
           version = (name_routine ∈ ("her", "herk", "her2k", "rotg", "nrm2", "asum", "hpr")) && (version == "CS") ? "C" : version
           version = (name_routine ∈ ("her", "herk", "her2k", "rotg", "nrm2", "asum", "hpr")) && (version == "ZD") ? "Z" : version
 
@@ -270,7 +232,7 @@ function generate_headers(library::String, filename::String, output::String)
           copy_header = replace(copy_header, "side " => "onemklSide ")
           copy_header = replace(copy_header, "std::complex<float>" => "float _Complex")
           copy_header = replace(copy_header, "std::complex<double>" => "double _Complex")
-          copy_header = replace(copy_header, name_routine => "onemkl$(version)$(name_routine)")
+          copy_header = replace(copy_header, name_routine => "onemkl$(version)$(name_routine)$(suffix)")
           copy_header = replace(copy_header, "void onemkl" => "int onemkl")
           push!(signatures, (copy_header, name_routine, version, template))
         end
@@ -322,7 +284,7 @@ function generate_headers(library::String, filename::String, output::String)
   return signatures2
 end
 
-function generate_cpp(library::String, filename::String, output::String)
+function generate_cpp(library::String, filename::Vector{String}, output::String)
   signatures = generate_headers(library, filename, output)
   path_oneapi_cpp = joinpath(@__DIR__, output)
   oneapi_cpp = open(path_oneapi_cpp, "w")
