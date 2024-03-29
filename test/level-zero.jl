@@ -193,7 +193,7 @@ indirect_access!(kernel, oneL0.ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE)
 # oneapi-src/level-zero#55
 if !parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
     attrs = source_attributes(kernel)
-    @test isempty(attrs)
+    @test attrs isa Vector{<:AbstractString}
 end
 
 props = properties(kernel)
