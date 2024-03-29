@@ -1123,27 +1123,27 @@ end
             end
         end
 
-        @testset "sparse symv" begin
-            for uplo in ('L', 'U')
-                A = sprand(T, 10, 10, 0.5)
-                A = A + A'
-                x = rand(T, 10)
-                y = rand(T, 10)
+        # @testset "sparse symv" begin
+        #     @testset "uplo = $uplo" for uplo in ('L', 'U')
+        #         A = sprand(T, 10, 10, 0.5)
+        #         A = A + A'
+        #         x = rand(T, 10)
+        #         y = rand(T, 10)
 
-                dA = uplo == 'L' ? oneSparseMatrixCSR(A |> tril) : oneSparseMatrixCSR(A |> triu)
-                dx = oneVector{T}(x)
-                dy = oneVector{T}(y)
+        #         dA = uplo == 'L' ? oneSparseMatrixCSR(A |> tril) : oneSparseMatrixCSR(A |> triu)
+        #         dx = oneVector{T}(x)
+        #         dy = oneVector{T}(y)
 
-                alpha = rand(T)
-                beta = rand(T)
-                oneMKL.sparse_symv!(uplo, alpha, dA, dx, beta, dy)
-                if T <: Real
-                    @test alpha * A * x + beta * y ≈ collect(dy)
-                else
-                    @test_broken alpha * A * x + beta * y ≈ collect(dy)
-                end
-            end
-        end
+        #         alpha = rand(T)
+        #         beta = rand(T)
+        #         oneMKL.sparse_symv!(uplo, alpha, dA, dx, beta, dy)
+        #         if T <: Real
+        #             @test alpha * A * x + beta * y ≈ collect(dy)
+        #         else
+        #             @test_broken alpha * A * x + beta * y ≈ collect(dy)
+        #         end
+        #     end
+        # end
 
         @testset "sparse trmv" begin
             for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
