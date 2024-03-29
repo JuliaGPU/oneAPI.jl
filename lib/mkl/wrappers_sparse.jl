@@ -125,12 +125,13 @@ for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
         function sparse_trsv!(uplo::Char,
                               trans::Char,
                               diag::Char,
+                              alpha::Number,
                               A::oneSparseMatrixCSR{$elty},
                               x::oneStridedVector{$elty},
                               y::oneStridedVector{$elty})
 
             queue = global_queue(context(y), device(y))
-            $fname(sycl_queue(queue), uplo, trans, diag, A.handle, x, y)
+            $fname(sycl_queue(queue), uplo, trans, diag, alpha, A.handle, x, y)
             y
         end
     end

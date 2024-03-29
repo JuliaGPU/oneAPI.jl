@@ -1173,6 +1173,7 @@ end
                 for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                               ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
                     (transa == 'N') || continue
+                    alpha = rand(T)
                     A = rand(T, 10, 10) |> sparse
                     x = rand(T, 10)
                     y = rand(T, 10)
@@ -1183,8 +1184,8 @@ end
                     dx = oneVector{T}(x)
                     dy = oneVector{T}(y)
 
-                    oneMKL.sparse_trsv!(uplo, transa, diag, dA, dx, dy)
-                    y = wrapper(opa(A)) \ x
+                    oneMKL.sparse_trsv!(uplo, transa, diag, alpha, dA, dx, dy)
+                    y = wrapper(opa(A)) \ (alpha * x)
                     @test y ≈ collect(dy)
                 end
             end
@@ -1193,4 +1194,3 @@ end
 end
 
 end # oneMKL tests
-
