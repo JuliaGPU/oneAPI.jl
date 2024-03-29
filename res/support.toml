@@ -355,8 +355,8 @@ use_ccall_macro = true
 9 = "ZePtr{ComplexF64}"
 
 [api.onemklXsparse_trsv.argtypes]
-6 = "ZePtr{T}"
 7 = "ZePtr{T}"
+8 = "ZePtr{T}"
 
 [api.onemklSsparse_gemm.argtypes]
 5 = "Float32"

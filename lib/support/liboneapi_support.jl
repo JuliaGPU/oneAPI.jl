@@ -4940,8 +4940,8 @@ function onemklSsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, a
                                                 uplo_flag::onemklUplo,
                                                 transpose_flag::onemklTranspose,
                                                 diag_val::onemklDiag, alpha::Cfloat,
-                                                handle::ZePtr{Cfloat}, x::ZePtr{Cfloat},
-                                                y::Ptr{Cfloat})::Cint
+                                                handle::matrix_handle_t, x::ZePtr{Cfloat},
+                                                y::ZePtr{Cfloat})::Cint
 end
 
 function onemklDsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
@@ -4950,8 +4950,8 @@ function onemklDsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, a
                                                 uplo_flag::onemklUplo,
                                                 transpose_flag::onemklTranspose,
                                                 diag_val::onemklDiag, alpha::Cdouble,
-                                                handle::ZePtr{Cdouble}, x::ZePtr{Cdouble},
-                                                y::Ptr{Cdouble})::Cint
+                                                handle::matrix_handle_t, x::ZePtr{Cdouble},
+                                                y::ZePtr{Cdouble})::Cint
 end
 
 function onemklCsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
@@ -4960,9 +4960,9 @@ function onemklCsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, a
                                                 uplo_flag::onemklUplo,
                                                 transpose_flag::onemklTranspose,
                                                 diag_val::onemklDiag, alpha::ComplexF32,
-                                                handle::ZePtr{ComplexF32},
+                                                handle::matrix_handle_t,
                                                 x::ZePtr{ComplexF32},
-                                                y::Ptr{ComplexF32})::Cint
+                                                y::ZePtr{ComplexF32})::Cint
 end
 
 function onemklZsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, alpha,
@@ -4971,9 +4971,9 @@ function onemklZsparse_trsv(device_queue, uplo_flag, transpose_flag, diag_val, a
                                                 uplo_flag::onemklUplo,
                                                 transpose_flag::onemklTranspose,
                                                 diag_val::onemklDiag, alpha::ComplexF32,
-                                                handle::ZePtr{ComplexF64},
+                                                handle::matrix_handle_t,
                                                 x::ZePtr{ComplexF64},
-                                                y::Ptr{ComplexF32})::Cint
+                                                y::ZePtr{ComplexF64})::Cint
 end
 
 function onemklSsparse_gemm(device_queue, dense_matrix_layout, opA, opB, alpha, handle, b,
