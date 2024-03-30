@@ -22,6 +22,24 @@ oneapi::mkl::transpose convert(onemklTranspose val) {
     }
 }
 
+oneapi::mkl::transpose* convert(const onemklTranspose* vals, int64_t size) {
+    oneapi::mkl::transpose* result = new oneapi::mkl::transpose[size];
+    for (int64_t i = 0; i < size; ++i) {
+        switch (vals[i]) {
+            case ONEMKL_TRANSPOSE_NONTRANS:
+                result[i] = oneapi::mkl::transpose::nontrans;
+                break;
+            case ONEMKL_TRANSPOSE_TRANS:
+                result[i] = oneapi::mkl::transpose::trans;
+                break;
+            case ONEMLK_TRANSPOSE_CONJTRANS:
+                result[i] = oneapi::mkl::transpose::conjtrans;
+                break;
+        }
+    }
+    return result;
+}
+
 oneapi::mkl::uplo convert(onemklUplo val) {
     switch(val) {
         case ONEMKL_UPLO_UPPER:
@@ -29,6 +47,21 @@ oneapi::mkl::uplo convert(onemklUplo val) {
         case ONEMKL_UPLO_LOWER:
             return oneapi::mkl::uplo::lower;
     }
+}
+
+oneapi::mkl::uplo* convert(const onemklUplo* vals, int64_t size) {
+    oneapi::mkl::uplo* result = new oneapi::mkl::uplo[size];
+    for (int64_t i = 0; i < size; ++i) {
+        switch (vals[i]) {
+            case ONEMKL_UPLO_UPPER:
+                result[i] = oneapi::mkl::uplo::upper;
+                break;
+            case ONEMKL_UPLO_LOWER:
+                result[i] = oneapi::mkl::uplo::lower;
+                break;
+        }
+    }
+    return result;
 }
 
 oneapi::mkl::diag convert(onemklDiag val) {
@@ -40,6 +73,21 @@ oneapi::mkl::diag convert(onemklDiag val) {
     }
 }
 
+oneapi::mkl::diag* convert(const onemklDiag* vals, int64_t size) {
+    oneapi::mkl::diag* result = new oneapi::mkl::diag[size];
+    for (int64_t i = 0; i < size; ++i) {
+        switch (vals[i]) {
+            case ONEMKL_DIAG_NONUNIT:
+                result[i] = oneapi::mkl::diag::nonunit;
+                break;
+            case ONEMKL_DIAG_UNIT:
+                result[i] = oneapi::mkl::diag::unit;
+                break;
+        }
+    }
+    return result;
+}
+
 oneapi::mkl::side convert(onemklSide val) {
     switch (val) {
     case ONEMKL_SIDE_LEFT:
@@ -47,6 +95,21 @@ oneapi::mkl::side convert(onemklSide val) {
     case ONEMKL_SIDE_RIGHT:
         return oneapi::mkl::side::right;
     }
+}
+
+oneapi::mkl::side* convert(const onemklSide* vals, int64_t size) {
+    oneapi::mkl::side* result = new oneapi::mkl::side[size];
+    for (int64_t i = 0; i < size; ++i) {
+        switch (vals[i]) {
+            case ONEMKL_SIDE_LEFT:
+                result[i] = oneapi::mkl::side::left;
+                break;
+            case ONEMKL_SIDE_RIGHT:
+                result[i] = oneapi::mkl::side::right;
+                break;
+        }
+    }
+    return result;
 }
 
 oneapi::mkl::offset convert(onemklOffset val) {

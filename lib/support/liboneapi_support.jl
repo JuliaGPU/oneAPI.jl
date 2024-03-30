@@ -4433,6 +4433,94 @@ function onemklZunmtr_scratchpad_size(device_queue, side, uplo, trans, m, n, lda
                                                           ldc::Int64)::Int64
 end
 
+function onemklSpotrf_batch(device_queue, uplo, n, a, lda, group_count, group_sizes,
+                            scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklSpotrf_batch(device_queue::syclQueue_t,
+                                                uplo::Ptr{onemklUplo}, n::Ptr{Int64},
+                                                a::Ptr{Ptr{Cfloat}}, lda::Ptr{Int64},
+                                                group_count::Int64, group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{Cfloat},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklDpotrf_batch(device_queue, uplo, n, a, lda, group_count, group_sizes,
+                            scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklDpotrf_batch(device_queue::syclQueue_t,
+                                                uplo::Ptr{onemklUplo}, n::Ptr{Int64},
+                                                a::Ptr{Ptr{Cdouble}}, lda::Ptr{Int64},
+                                                group_count::Int64, group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{Cdouble},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklCpotrf_batch(device_queue, uplo, n, a, lda, group_count, group_sizes,
+                            scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklCpotrf_batch(device_queue::syclQueue_t,
+                                                uplo::Ptr{onemklUplo}, n::Ptr{Int64},
+                                                a::Ptr{Ptr{ComplexF32}}, lda::Ptr{Int64},
+                                                group_count::Int64, group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{ComplexF32},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklZpotrf_batch(device_queue, uplo, n, a, lda, group_count, group_sizes,
+                            scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklZpotrf_batch(device_queue::syclQueue_t,
+                                                uplo::Ptr{onemklUplo}, n::Ptr{Int64},
+                                                a::Ptr{Ptr{ComplexF32}}, lda::Ptr{Int64},
+                                                group_count::Int64, group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{ComplexF32},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklSpotrs_batch(device_queue, uplo, n, nrhs, a, lda, b, ldb, group_count,
+                            group_sizes, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklSpotrs_batch(device_queue::syclQueue_t,
+                                                uplo::Ptr{onemklUplo}, n::Ptr{Int64},
+                                                nrhs::Ptr{Int64}, a::Ptr{Ptr{Cfloat}},
+                                                lda::Ptr{Int64}, b::Ptr{Ptr{Cfloat}},
+                                                ldb::Ptr{Int64}, group_count::Int64,
+                                                group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{Cfloat},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklDpotrs_batch(device_queue, uplo, n, nrhs, a, lda, b, ldb, group_count,
+                            group_sizes, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklDpotrs_batch(device_queue::syclQueue_t,
+                                                uplo::Ptr{onemklUplo}, n::Ptr{Int64},
+                                                nrhs::Ptr{Int64}, a::Ptr{Ptr{Cdouble}},
+                                                lda::Ptr{Int64}, b::Ptr{Ptr{Cdouble}},
+                                                ldb::Ptr{Int64}, group_count::Int64,
+                                                group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{Cdouble},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklCpotrs_batch(device_queue, uplo, n, nrhs, a, lda, b, ldb, group_count,
+                            group_sizes, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklCpotrs_batch(device_queue::syclQueue_t,
+                                                uplo::Ptr{onemklUplo}, n::Ptr{Int64},
+                                                nrhs::Ptr{Int64}, a::Ptr{Ptr{ComplexF32}},
+                                                lda::Ptr{Int64}, b::Ptr{Ptr{ComplexF32}},
+                                                ldb::Ptr{Int64}, group_count::Int64,
+                                                group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{ComplexF32},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklZpotrs_batch(device_queue, uplo, n, nrhs, a, lda, b, ldb, group_count,
+                            group_sizes, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklZpotrs_batch(device_queue::syclQueue_t,
+                                                uplo::Ptr{onemklUplo}, n::Ptr{Int64},
+                                                nrhs::Ptr{Int64}, a::Ptr{Ptr{ComplexF32}},
+                                                lda::Ptr{Int64}, b::Ptr{Ptr{ComplexF32}},
+                                                ldb::Ptr{Int64}, group_count::Int64,
+                                                group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{ComplexF32},
+                                                scratchpad_size::Int64)::Cint
+end
+
 function onemklSgeinv_batch(device_queue, n, a, lda, group_count, group_sizes, scratchpad,
                             scratchpad_size)
     @ccall liboneapi_support.onemklSgeinv_batch(device_queue::syclQueue_t, n::Ptr{Int64},
@@ -4464,6 +4552,54 @@ function onemklZgeinv_batch(device_queue, n, a, lda, group_count, group_sizes, s
                             scratchpad_size)
     @ccall liboneapi_support.onemklZgeinv_batch(device_queue::syclQueue_t, n::Ptr{Int64},
                                                 a::Ptr{Ptr{ComplexF32}}, lda::Ptr{Int64},
+                                                group_count::Int64, group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{ComplexF32},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklSgetrs_batch(device_queue, trans, n, nrhs, a, lda, ipiv, b, ldb, group_count,
+                            group_sizes, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklSgetrs_batch(device_queue::syclQueue_t,
+                                                trans::Ptr{onemklTranspose}, n::Ptr{Int64},
+                                                nrhs::Ptr{Int64}, a::Ptr{Ptr{Cfloat}},
+                                                lda::Ptr{Int64}, ipiv::Ptr{Ptr{Int64}},
+                                                b::Ptr{Ptr{Cfloat}}, ldb::Ptr{Int64},
+                                                group_count::Int64, group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{Cfloat},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklDgetrs_batch(device_queue, trans, n, nrhs, a, lda, ipiv, b, ldb, group_count,
+                            group_sizes, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklDgetrs_batch(device_queue::syclQueue_t,
+                                                trans::Ptr{onemklTranspose}, n::Ptr{Int64},
+                                                nrhs::Ptr{Int64}, a::Ptr{Ptr{Cdouble}},
+                                                lda::Ptr{Int64}, ipiv::Ptr{Ptr{Int64}},
+                                                b::Ptr{Ptr{Cdouble}}, ldb::Ptr{Int64},
+                                                group_count::Int64, group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{Cdouble},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklCgetrs_batch(device_queue, trans, n, nrhs, a, lda, ipiv, b, ldb, group_count,
+                            group_sizes, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklCgetrs_batch(device_queue::syclQueue_t,
+                                                trans::Ptr{onemklTranspose}, n::Ptr{Int64},
+                                                nrhs::Ptr{Int64}, a::Ptr{Ptr{ComplexF32}},
+                                                lda::Ptr{Int64}, ipiv::Ptr{Ptr{Int64}},
+                                                b::Ptr{Ptr{ComplexF32}}, ldb::Ptr{Int64},
+                                                group_count::Int64, group_sizes::Ptr{Int64},
+                                                scratchpad::Ptr{ComplexF32},
+                                                scratchpad_size::Int64)::Cint
+end
+
+function onemklZgetrs_batch(device_queue, trans, n, nrhs, a, lda, ipiv, b, ldb, group_count,
+                            group_sizes, scratchpad, scratchpad_size)
+    @ccall liboneapi_support.onemklZgetrs_batch(device_queue::syclQueue_t,
+                                                trans::Ptr{onemklTranspose}, n::Ptr{Int64},
+                                                nrhs::Ptr{Int64}, a::Ptr{Ptr{ComplexF32}},
+                                                lda::Ptr{Int64}, ipiv::Ptr{Ptr{Int64}},
+                                                b::Ptr{Ptr{ComplexF32}}, ldb::Ptr{Int64},
                                                 group_count::Int64, group_sizes::Ptr{Int64},
                                                 scratchpad::Ptr{ComplexF32},
                                                 scratchpad_size::Int64)::Cint
@@ -4593,6 +4729,94 @@ function onemklZungqr_batch(device_queue, m, n, k, a, lda, tau, group_count, gro
                                                 scratchpad_size::Int64)::Cint
 end
 
+function onemklSpotrf_batch_scratchpad_size(device_queue, uplo, n, lda, group_count,
+                                            group_sizes)
+    @ccall liboneapi_support.onemklSpotrf_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                uplo::Ptr{onemklUplo},
+                                                                n::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklDpotrf_batch_scratchpad_size(device_queue, uplo, n, lda, group_count,
+                                            group_sizes)
+    @ccall liboneapi_support.onemklDpotrf_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                uplo::Ptr{onemklUplo},
+                                                                n::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklCpotrf_batch_scratchpad_size(device_queue, uplo, n, lda, group_count,
+                                            group_sizes)
+    @ccall liboneapi_support.onemklCpotrf_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                uplo::Ptr{onemklUplo},
+                                                                n::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklZpotrf_batch_scratchpad_size(device_queue, uplo, n, lda, group_count,
+                                            group_sizes)
+    @ccall liboneapi_support.onemklZpotrf_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                uplo::Ptr{onemklUplo},
+                                                                n::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklSpotrs_batch_scratchpad_size(device_queue, uplo, n, nrhs, lda, ldb,
+                                            group_count, group_sizes)
+    @ccall liboneapi_support.onemklSpotrs_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                uplo::Ptr{onemklUplo},
+                                                                n::Ptr{Int64},
+                                                                nrhs::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                ldb::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklDpotrs_batch_scratchpad_size(device_queue, uplo, n, nrhs, lda, ldb,
+                                            group_count, group_sizes)
+    @ccall liboneapi_support.onemklDpotrs_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                uplo::Ptr{onemklUplo},
+                                                                n::Ptr{Int64},
+                                                                nrhs::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                ldb::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklCpotrs_batch_scratchpad_size(device_queue, uplo, n, nrhs, lda, ldb,
+                                            group_count, group_sizes)
+    @ccall liboneapi_support.onemklCpotrs_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                uplo::Ptr{onemklUplo},
+                                                                n::Ptr{Int64},
+                                                                nrhs::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                ldb::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklZpotrs_batch_scratchpad_size(device_queue, uplo, n, nrhs, lda, ldb,
+                                            group_count, group_sizes)
+    @ccall liboneapi_support.onemklZpotrs_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                uplo::Ptr{onemklUplo},
+                                                                n::Ptr{Int64},
+                                                                nrhs::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                ldb::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
 function onemklSgeinv_batch_scratchpad_size(device_queue, n, lda, group_count, group_sizes)
     @ccall liboneapi_support.onemklSgeinv_batch_scratchpad_size(device_queue::syclQueue_t,
                                                                 n::Ptr{Int64},
@@ -4621,6 +4845,54 @@ function onemklZgeinv_batch_scratchpad_size(device_queue, n, lda, group_count, g
     @ccall liboneapi_support.onemklZgeinv_batch_scratchpad_size(device_queue::syclQueue_t,
                                                                 n::Ptr{Int64},
                                                                 lda::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklSgetrs_batch_scratchpad_size(device_queue, trans, n, nrhs, lda, ldb,
+                                            group_count, group_sizes)
+    @ccall liboneapi_support.onemklSgetrs_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                trans::Ptr{onemklTranspose},
+                                                                n::Ptr{Int64},
+                                                                nrhs::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                ldb::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklDgetrs_batch_scratchpad_size(device_queue, trans, n, nrhs, lda, ldb,
+                                            group_count, group_sizes)
+    @ccall liboneapi_support.onemklDgetrs_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                trans::Ptr{onemklTranspose},
+                                                                n::Ptr{Int64},
+                                                                nrhs::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                ldb::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklCgetrs_batch_scratchpad_size(device_queue, trans, n, nrhs, lda, ldb,
+                                            group_count, group_sizes)
+    @ccall liboneapi_support.onemklCgetrs_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                trans::Ptr{onemklTranspose},
+                                                                n::Ptr{Int64},
+                                                                nrhs::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                ldb::Ptr{Int64},
+                                                                group_count::Int64,
+                                                                group_sizes::Ptr{Int64})::Int64
+end
+
+function onemklZgetrs_batch_scratchpad_size(device_queue, trans, n, nrhs, lda, ldb,
+                                            group_count, group_sizes)
+    @ccall liboneapi_support.onemklZgetrs_batch_scratchpad_size(device_queue::syclQueue_t,
+                                                                trans::Ptr{onemklTranspose},
+                                                                n::Ptr{Int64},
+                                                                nrhs::Ptr{Int64},
+                                                                lda::Ptr{Int64},
+                                                                ldb::Ptr{Int64},
                                                                 group_count::Int64,
                                                                 group_sizes::Ptr{Int64})::Int64
 end
