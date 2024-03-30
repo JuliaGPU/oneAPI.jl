@@ -1974,6 +1974,40 @@ int64_t onemklZunmtr_scratchpad_size(syclQueue_t device_queue, onemklSide side, 
                                      onemklTranspose trans, int64_t m, int64_t n, int64_t lda,
                                      int64_t ldc);
 
+int onemklSpotrf_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, float **a, int64_t
+                       *lda, int64_t group_count, int64_t *group_sizes, float *scratchpad,
+                       int64_t scratchpad_size);
+
+int onemklDpotrf_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, double **a, int64_t
+                       *lda, int64_t group_count, int64_t *group_sizes, double *scratchpad,
+                       int64_t scratchpad_size);
+
+int onemklCpotrf_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, float _Complex **a,
+                       int64_t *lda, int64_t group_count, int64_t *group_sizes, float _Complex
+                       *scratchpad, int64_t scratchpad_size);
+
+int onemklZpotrf_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, double _Complex **a,
+                       int64_t *lda, int64_t group_count, int64_t *group_sizes, double _Complex
+                       *scratchpad, int64_t scratchpad_size);
+
+int onemklSpotrs_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, float
+                       **a, int64_t *lda, float **b, int64_t *ldb, int64_t group_count, int64_t
+                       *group_sizes, float *scratchpad, int64_t scratchpad_size);
+
+int onemklDpotrs_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs,
+                       double **a, int64_t *lda, double **b, int64_t *ldb, int64_t group_count,
+                       int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size);
+
+int onemklCpotrs_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, float
+                       _Complex **a, int64_t *lda, float _Complex **b, int64_t *ldb, int64_t
+                       group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t
+                       scratchpad_size);
+
+int onemklZpotrs_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs,
+                       double _Complex **a, int64_t *lda, double _Complex **b, int64_t *ldb, int64_t
+                       group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t
+                       scratchpad_size);
+
 int onemklSgeinv_batch(syclQueue_t device_queue, int64_t *n, float **a, int64_t *lda, int64_t
                        group_count, int64_t *group_sizes, float *scratchpad, int64_t
                        scratchpad_size);
@@ -1989,6 +2023,26 @@ int onemklCgeinv_batch(syclQueue_t device_queue, int64_t *n, float _Complex **a,
 int onemklZgeinv_batch(syclQueue_t device_queue, int64_t *n, double _Complex **a, int64_t *lda,
                        int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad,
                        int64_t scratchpad_size);
+
+int onemklSgetrs_batch(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t
+                       *nrhs, float **a, int64_t *lda, int64_t **ipiv, float **b, int64_t *ldb,
+                       int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t
+                       scratchpad_size);
+
+int onemklDgetrs_batch(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t
+                       *nrhs, double **a, int64_t *lda, int64_t **ipiv, double **b, int64_t *ldb,
+                       int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t
+                       scratchpad_size);
+
+int onemklCgetrs_batch(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t
+                       *nrhs, float _Complex **a, int64_t *lda, int64_t **ipiv, float _Complex **b,
+                       int64_t *ldb, int64_t group_count, int64_t *group_sizes, float _Complex
+                       *scratchpad, int64_t scratchpad_size);
+
+int onemklZgetrs_batch(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t
+                       *nrhs, double _Complex **a, int64_t *lda, int64_t **ipiv, double _Complex
+                       **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, double
+                       _Complex *scratchpad, int64_t scratchpad_size);
 
 int onemklSgetri_batch(syclQueue_t device_queue, int64_t *n, float **a, int64_t *lda, int64_t
                        **ipiv, int64_t group_count, int64_t *group_sizes, float *scratchpad,
@@ -2038,6 +2092,38 @@ int onemklZungqr_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t
                        **a, int64_t *lda, double _Complex **tau, int64_t group_count, int64_t
                        *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size);
 
+int64_t onemklSpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t
+                                           *n, int64_t *lda, int64_t group_count, int64_t
+                                           *group_sizes);
+
+int64_t onemklDpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t
+                                           *n, int64_t *lda, int64_t group_count, int64_t
+                                           *group_sizes);
+
+int64_t onemklCpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t
+                                           *n, int64_t *lda, int64_t group_count, int64_t
+                                           *group_sizes);
+
+int64_t onemklZpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t
+                                           *n, int64_t *lda, int64_t group_count, int64_t
+                                           *group_sizes);
+
+int64_t onemklSpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t
+                                           *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t
+                                           group_count, int64_t *group_sizes);
+
+int64_t onemklDpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t
+                                           *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t
+                                           group_count, int64_t *group_sizes);
+
+int64_t onemklCpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t
+                                           *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t
+                                           group_count, int64_t *group_sizes);
+
+int64_t onemklZpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t
+                                           *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t
+                                           group_count, int64_t *group_sizes);
+
 int64_t onemklSgeinv_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda,
                                            int64_t group_count, int64_t *group_sizes);
 
@@ -2048,6 +2134,22 @@ int64_t onemklCgeinv_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n,
                                            int64_t group_count, int64_t *group_sizes);
 
 int64_t onemklZgeinv_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda,
+                                           int64_t group_count, int64_t *group_sizes);
+
+int64_t onemklSgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose *trans,
+                                           int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb,
+                                           int64_t group_count, int64_t *group_sizes);
+
+int64_t onemklDgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose *trans,
+                                           int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb,
+                                           int64_t group_count, int64_t *group_sizes);
+
+int64_t onemklCgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose *trans,
+                                           int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb,
+                                           int64_t group_count, int64_t *group_sizes);
+
+int64_t onemklZgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose *trans,
+                                           int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb,
                                            int64_t group_count, int64_t *group_sizes);
 
 int64_t onemklSgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda,
