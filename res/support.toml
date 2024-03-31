@@ -523,8 +523,8 @@ use_ccall_macro = true
 
 [api.onemklCgesvd.argtypes]
 6 = "ZePtr{ComplexF32}"
-8 = "ZePtr{ComplexF32}"
-9 = "ZePtr{Float32}"
+8 = "ZePtr{Float32}"
+9 = "ZePtr{ComplexF32}"
 11 = "ZePtr{ComplexF32}"
 13 = "ZePtr{ComplexF32}"
 
