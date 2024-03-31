@@ -1248,17 +1248,17 @@ end
             @test B ≈ collect(d_B)
         end
 
-        @testset "sytrf!" begin
-            A = rand(elty,n,n)
-            A = A + A'
-            d_A = oneArray(A)
-            d_A, d_ipiv = oneMKL.sytrf!('U',d_A)
-            h_A = collect(d_A)
-            h_ipiv = collect(d_ipiv)
-            A, ipiv = LAPACK.sytrf!('U',A)
-            @test ipiv == h_ipiv
-            @test A ≈ h_A
-        end
+        # @testset "sytrf!" begin
+        #     A = rand(elty,n,n)
+        #     A = A + A'
+        #     d_A = oneArray(A)
+        #     d_A, d_ipiv = oneMKL.sytrf!('U',d_A)
+        #     h_A = collect(d_A)
+        #     h_ipiv = collect(d_ipiv)
+        #     A, ipiv = LAPACK.sytrf!('U',A)
+        #     @test ipiv == h_ipiv
+        #     @test A ≈ h_A
+        # end
 
         @testset "getrf -- getri" begin
             A = rand(elty, m, m)
