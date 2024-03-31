@@ -1188,5 +1188,115 @@ end
     end
 end
 
-end # oneMKL tests
+@testset "LAPACK" begin
+    m = 15
+    n = 10
+    p = 5
+    @testset "$elty" for elty in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
+        @testset "geqrf!" begin
+            A = rand(elty, m, n)
+            d_A = oneArray(A)
+            d_A, tau = oneMKL.geqrf!(d_A)
+            tau_c = zeros(elty, n)
+            LinearAlgebra.LAPACK.geqrf!(A, tau_c)
+            @test tau_c ≈ Array(tau)
+        end
 
+
+        @testset "geqrf! -- orgqr!" begin
+            A = rand(elty, m, n)
+            dA = oneArray(A)
+            dA, τ = oneMKL.geqrf!(dA)
+            oneMKL.orgqr!(dA, τ)
+            @test dA' * dA ≈ I
+        end
+
+        @testset "ormqr!" begin
+            @testset "side = $side" for side in ['L', 'R']
+                @testset "trans = $trans" for (trans, op) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                    (trans == 'T') && (elty <: Complex) && continue
+                    A = rand(elty, m, n)
+                    dA = oneArray(A)
+                    dA, dτ = oneMKL.geqrf!(dA)
+
+                    hI = Matrix{elty}(I, m, m)
+                    dI = oneArray(hI)
+                    dH = oneMKL.ormqr!(side, 'N', dA, dτ, dI)
+                    @test dH' * dH ≈ I
+
+                    C = side == 'L' ? rand(elty, m, n) : rand(elty, n, m)
+                    dC = oneArray(C)
+                    dD = side == 'L' ? op(dH) * dC : dC * op(dH)
+
+                    oneMKL.ormqr!(side, trans, dA, dτ, dC)
+                    @test dC ≈ dD
+                end
+            end
+        end
+
+        @testset "potrf! -- potrs!" begin
+            A    = rand(elty,n,n)
+            A    = A*A' + I
+            B    = rand(elty,n,p)
+            d_A  = oneArray(A)
+            d_B  = oneArray(B)
+
+            oneMKL.potrf!('L',d_A)
+            oneMKL.potrs!('U',d_A,d_B)
+            LAPACK.potrf!('L',A)
+            LAPACK.potrs!('U',A,B)
+            @test B ≈ collect(d_B)
+        end
+
+        @testset "sytrf!" begin
+            A = rand(elty,n,n)
+            A = A + A'
+            d_A = oneArray(A)
+            d_A, d_ipiv = oneMKL.sytrf!('U',d_A)
+            h_A = collect(d_A)
+            h_ipiv = collect(d_ipiv)
+            A, ipiv = LAPACK.sytrf!('U',A)
+            @test ipiv == h_ipiv
+            @test A ≈ h_A
+        end
+
+        @testset "getrf -- getri" begin
+            A = rand(elty, m, m)
+            d_A = oneArray(A)
+            d_A, d_ipiv = oneMKL.getrf!(d_A)
+            h_A, ipiv = LinearAlgebra.LAPACK.getrf!(A)
+            @test h_A ≈ Array(d_A)
+
+            d_A = oneMKL.getri!(d_A, d_ipiv)
+            h_A = LinearAlgebra.LAPACK.getri!(h_A, ipiv)
+            @test h_A ≈ Array(d_A)
+        end
+
+        @testset "getrf_batched! -- getri_batched!" begin
+            bA = [rand(elty, m, m) for i in 1:p]
+            d_bA = oneMatrix{elty}[]
+            for i in 1:p
+                push!(d_bA, oneMatrix(bA[i]))
+            end
+
+            d_ipiv, d_bA = oneMKL.getrf_batched!(d_bA)
+            h_bA = [collect(d_bA[i]) for i in 1:p]
+
+            ipiv = Vector{Int64}[]
+            for i = 1:p
+                _, ipiv_i, info = LinearAlgebra.LAPACK.getrf!(bA[i])
+                push!(ipiv, ipiv_i)
+                @test bA[i] ≈ h_bA[i]
+            end
+
+            d_ipiv, d_bA = oneMKL.getri_batched!(d_bA, d_ipiv)
+            h_bA = [collect(d_bA[i]) for i in 1:p]
+            for i = 1:p
+                LinearAlgebra.LAPACK.getri!(bA[i], ipiv[i])
+                @test bA[i] ≈ h_bA[i]
+            end
+        end
+    end
+end
+
+end # oneMKL tests
