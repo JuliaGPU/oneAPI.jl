@@ -1169,7 +1169,8 @@ end
                 for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                               ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
                     (transa == 'N') || continue
-                    A = rand(T, 10, 10) |> sparse
+                    A = rand(T, 10, 10) + I
+                    A = sparse(A)
                     x = rand(T, 10)
                     y = rand(T, 10)
 
