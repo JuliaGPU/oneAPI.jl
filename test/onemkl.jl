@@ -1190,10 +1190,11 @@ end
 end
 
 @testset "LAPACK" begin
-    m = 15
-    n = 10
-    p = 5
     @testset "$elty" for elty in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
+        m = 15
+        n = 10
+        p = 5
+
         @testset "geqrf!" begin
             A = rand(elty, m, n)
             d_A = oneArray(A)
@@ -1202,7 +1203,6 @@ end
             LinearAlgebra.LAPACK.geqrf!(A, tau_c)
             @test tau_c ≈ Array(tau)
         end
-
 
         @testset "geqrf! -- orgqr!" begin
             A = rand(elty, m, n)
@@ -1236,11 +1236,11 @@ end
         end
 
         @testset "potrf! -- potrs!" begin
-            A    = rand(elty,n,n)
-            A    = A*A' + I
-            B    = rand(elty,n,p)
-            d_A  = oneArray(A)
-            d_B  = oneArray(B)
+            A = rand(elty,n,n)
+            A = A*A' + I
+            B = rand(elty,n,p)
+            d_A = oneArray(A)
+            d_B = oneArray(B)
 
             oneMKL.potrf!('L',d_A)
             oneMKL.potrs!('U',d_A,d_B)
@@ -1261,15 +1261,15 @@ end
         #     @test A ≈ h_A
         # end
 
-        @testset "getrf -- getri" begin
+        @testset "getrf! -- getri!" begin
             A = rand(elty, m, m)
             d_A = oneArray(A)
             d_A, d_ipiv = oneMKL.getrf!(d_A)
-            h_A, ipiv = LinearAlgebra.LAPACK.getrf!(A)
+            h_A, ipiv = LAPACK.getrf!(A)
             @test h_A ≈ Array(d_A)
 
             d_A = oneMKL.getri!(d_A, d_ipiv)
-            h_A = LinearAlgebra.LAPACK.getri!(h_A, ipiv)
+            h_A = LAPACK.getri!(h_A, ipiv)
             @test h_A ≈ Array(d_A)
         end
 
@@ -1285,7 +1285,7 @@ end
 
             ipiv = Vector{Int64}[]
             for i = 1:p
-                _, ipiv_i, info = LinearAlgebra.LAPACK.getrf!(bA[i])
+                _, ipiv_i, info = LAPACK.getrf!(bA[i])
                 push!(ipiv, ipiv_i)
                 @test bA[i] ≈ h_bA[i]
             end
@@ -1293,9 +1293,64 @@ end
             d_ipiv, d_bA = oneMKL.getri_batched!(d_bA, d_ipiv)
             h_bA = [collect(d_bA[i]) for i in 1:p]
             for i = 1:p
-                LinearAlgebra.LAPACK.getri!(bA[i], ipiv[i])
+                LAPACK.getri!(bA[i], ipiv[i])
                 @test bA[i] ≈ h_bA[i]
             end
+        end
+
+        @testset "gebrd!" begin
+            A = rand(elty,m,n)
+            d_A = oneArray(A)
+            d_A, d_D, d_E, d_tauq, d_taup = oneMKL.gebrd!(d_A)
+            h_A = collect(d_A)
+            h_D = collect(d_D)
+            h_E = collect(d_E)
+            h_tauq = collect(d_tauq)
+            h_taup = collect(d_taup)
+            A,d,e,q,p = LAPACK.gebrd!(A)
+            @test A ≈ h_A
+            @test d ≈ h_D
+            @test e[min(m,n)-1] ≈ h_E[min(m,n)-1]
+            @test q ≈ h_tauq
+            @test p ≈ h_taup
+        end
+
+        @testset "gesvd!" begin
+            A = rand(elty,m,n)
+            d_A = oneMatrix(A)
+            U, Σ, Vt = oneMKL.gesvd!('A', 'A', d_A)
+            @test A ≈ collect(U[:,1:n] * Diagonal(Σ) * Vt)
+        end
+
+        @testset "syevd! -- heevd!" begin
+            @testset "uplo = $uplo" for uplo in ('L', 'U')
+                A = rand(elty,n,n)
+                B = A + A'
+                A = uplo == 'L' ? tril(B) : triu(B)
+                d_A = oneMatrix(A)
+                W, V = elty <: Real ? oneMKL.syevd!('V', uplo, d_A) : oneMKL.heevd!('V', uplo, d_A)
+                @test B ≈ collect(V * Diagonal(W) * V')
+
+                d_A = oneMatrix(A)
+                d_W = elty <: Real ? oneMKL.syevd!('N', uplo, d_A) : oneMKL.heevd!('N', uplo, d_A)
+            end
+        end
+
+        @testset "sygvd! -- hegvd!" begin
+            A = rand(elty,m,m)
+            B = rand(elty,m,m)
+            A = A*A' + I
+            B = B*B' + I
+            d_A = oneArray(A)
+            d_B = oneArray(B)
+            d_W, d_VA, d_VB = elty <: Real ? oneMKL.sygvd!(1, 'V','U', d_A, d_B) : oneMKL.hegvd!(1, 'V','U', d_A, d_B)
+            h_W = collect(d_W)
+            h_VA = collect(d_VA)
+            h_VB = collect(d_VB)
+            Eig = eigen(Hermitian(A), Hermitian(B))
+            @test Eig.values ≈ h_W
+            @test A * h_VA ≈ B * h_VA * Diagonal(h_W) rtol=1e-4
+            @test h_VA' * B * h_VA ≈ I
         end
     end
 end
