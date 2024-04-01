@@ -64,6 +64,50 @@ function Base.convert(::Type{onemklLayout}, index::Char)
     end
 end
 
+function Base.convert(::Type{onemklJobsvd}, job::Char)
+    if job == 'N'
+        return ONEMKL_JOBSVD_N
+    elseif job == 'A'
+        return ONEMKL_JOBSVD_A
+    elseif job == 'O'
+        return ONEMKL_JOBSVD_O
+    elseif job == 'S'
+        return ONEMKL_JOBSVD_S
+    else
+        throw(ArgumentError("Unknown job $job."))
+    end
+end
+
+function Base.convert(::Type{onemklJob}, job::Char)
+    if job == 'N'
+        return ONEMKL_JOB_N
+    elseif job == 'V'
+        return ONEMKL_JOB_V
+    elseif job == 'U'
+        return ONEMKL_JOB_U
+    elseif job == 'A'
+        return ONEMKL_JOB_A
+    elseif job == 'S'
+        return ONEMKL_JOB_S
+    elseif job == 'O'
+        return ONEMKL_JOB_O
+    else
+        throw(ArgumentError("Unknown job $job."))
+    end
+end
+
+function Base.convert(::Type{onemklRangev}, range::Char)
+    if range == 'A'
+        return ONEMKL_RANGEV_A
+    elseif range == 'V'
+        return ONEMKL_RANGEV_V
+    elseif range == 'I'
+        return ONEMKL_RANGEV_I
+    else
+        throw(ArgumentError("Unknown eigenvalue solver range $range."))
+    end
+end
+
 # create a batch of pointers in device memory from a batch of device arrays
 @inline function unsafe_batch(batch::Vector{<:oneArray{T}}) where {T}
     ptrs = pointer.(batch)

@@ -559,3 +559,36 @@ use_ccall_macro = true
 4 = "ZePtr{Ptr{T}}"
 6 = "ZePtr{Ptr{T}}"
 9 = "ZePtr{T}"
+
+[api.onemklXsyevd.argtypes]
+5 = "ZePtr{T}"
+7 = "ZePtr{T}"
+8 = "ZePtr{T}"
+
+[api.onemklCheevd.argtypes]
+5 = "ZePtr{ComplexF32}"
+7 = "ZePtr{Float32}"
+8 = "ZePtr{ComplexF32}"
+
+[api.onemklZheevd.argtypes]
+5 = "ZePtr{ComplexF64}"
+7 = "ZePtr{Float64}"
+8 = "ZePtr{ComplexF64}"
+
+[api.onemklXsygvd.argtypes]
+6 = "ZePtr{T}"
+8 = "ZePtr{T}"
+10 = "ZePtr{T}"
+11 = "ZePtr{T}"
+
+[api.onemklChegvd.argtypes]
+6 = "ZePtr{ComplexF32}"
+8 = "ZePtr{ComplexF32}"
+10 = "ZePtr{Float32}"
+11 = "ZePtr{ComplexF32}"
+
+[api.onemklZhegvd.argtypes]
+6 = "ZePtr{ComplexF64}"
+8 = "ZePtr{ComplexF64}"
+10 = "ZePtr{Float64}"
+11 = "ZePtr{ComplexF64}"

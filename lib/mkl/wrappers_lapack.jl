@@ -268,7 +268,7 @@ for (bname, fname, elty) in ((:onemklSorgqr_scratchpad_size, :onemklSorgqr, :Flo
     end
 end
 
-#gebrd
+# gebrd
 for (bname, fname, elty, relty) in ((:onemklSgebrd_scratchpad_size, :onemklSgebrd, :Float32, :Float32),
                                     (:onemklDgebrd_scratchpad_size, :onemklDgebrd, :Float64, :Float64),
                                     (:onemklCgebrd_scratchpad_size, :onemklCgebrd, :ComplexF32, :Float32),
@@ -280,7 +280,7 @@ for (bname, fname, elty, relty) in ((:onemklSgebrd_scratchpad_size, :onemklSgebr
 
             k = min(m, n)
             D = oneVector{$relty}(undef, k)
-            E = oneVector{$elty}(undef, k)
+            E = oneVector{$relty}(undef, k-1)
             tauq = oneVector{$elty}(undef, k)
             taup = oneVector{$elty}(undef, k)
 
@@ -290,6 +290,114 @@ for (bname, fname, elty, relty) in ((:onemklSgebrd_scratchpad_size, :onemklSgebr
             $fname(sycl_queue(queue), m, n, A, lda, D, E, tauq, taup, scratchpad, scratchpad_size)
 
             A, D, E, tauq, taup
+        end
+    end
+end
+
+# gesvd
+for (bname, fname, elty, relty) in ((:onemklSgesvd_scratchpad_size, :onemklSgesvd, :Float32, :Float32),
+                                    (:onemklDgesvd_scratchpad_size, :onemklDgesvd, :Float64, :Float64),
+                                    (:onemklCgesvd_scratchpad_size, :onemklCgesvd, :ComplexF32, :Float32),
+                                    (:onemklZgesvd_scratchpad_size, :onemklZgesvd, :ComplexF64, :Float64))
+    @eval begin
+        function gesvd!(jobu::Char,
+                        jobvt::Char,
+                        A::oneStridedMatrix{$elty})
+            m, n = size(A)
+            lda = max(1, stride(A, 2))
+
+            U = if jobu === 'A'
+                oneMatrix{$elty}(undef, m, m)
+            elseif jobu == 'S' || jobu === 'O'
+                oneMatrix{$elty}(undef, m, min(m, n))
+            elseif jobu === 'N'
+                oneMatrix{$elty}(undef, 0, 0) # Equivalence of CU_NULL?
+            else
+                error("jobu must be one of 'A', 'S', 'O', or 'N'")
+            end
+            ldu = U == oneMatrix{$elty}(undef, 0, 0) ? 1 : max(1, stride(U, 2))
+            S = oneVector{$relty}(undef, min(m, n))
+
+            Vt = if jobvt === 'A'
+                oneMatrix{$elty}(undef, n, n)
+            elseif jobvt === 'S' || jobvt === 'O'
+                oneMatrix{$elty}(undef, min(m, n), n)
+            elseif jobvt === 'N'
+                oneMatrix{$elty}(undef, 0, 0)
+            else
+                error("jobvt must be one of 'A', 'S', 'O', or 'N'")
+            end
+            ldvt = Vt == oneArray{$elty}(undef, 0, 0) ? 1 : max(1, stride(Vt, 2))
+
+            queue = global_queue(context(A), device(A))
+            scratchpad_size = $bname(sycl_queue(queue), jobu, jobvt, m, n, lda, ldu, ldvt)
+            scratchpad = oneVector{$elty}(undef, scratchpad_size)
+            $fname(sycl_queue(queue), jobu, jobvt, m, n, A, lda, S, U, ldu, Vt, ldvt, scratchpad, scratchpad_size)
+
+            return U, S, Vt
+        end
+    end
+end
+
+# syevd and heevd
+for (jname, bname, fname, elty, relty) in ((:syevd!, :onemklSsyevd_scratchpad_size, :onemklSsyevd, :Float32, :Float32),
+                                           (:syevd!, :onemklDsyevd_scratchpad_size, :onemklDsyevd, :Float64, :Float64),
+                                           (:heevd!, :onemklCheevd_scratchpad_size, :onemklCheevd, :ComplexF32, :Float32),
+                                           (:heevd!, :onemklZheevd_scratchpad_size, :onemklZheevd, :ComplexF64, :Float64))
+    @eval begin
+        function $jname(jobz::Char,
+                        uplo::Char,
+                        A::oneStridedMatrix{$elty})
+            chkuplo(uplo)
+            n = checksquare(A)
+            lda = max(1, stride(A, 2))
+            W = oneVector{$relty}(undef, n)
+
+            queue = global_queue(context(A), device(A))
+            scratchpad_size = $bname(sycl_queue(queue), jobz, uplo, n, lda)
+            scratchpad = oneVector{$elty}(undef, scratchpad_size)
+            $fname(sycl_queue(queue), jobz, uplo, n, A, lda, W, scratchpad, scratchpad_size)
+
+            if jobz == 'N'
+                return W
+            elseif jobz == 'V'
+                return W, A
+            end
+        end
+    end
+end
+
+# sygvd and hegvd
+for (jname, bname, fname, elty, relty) in ((:sygvd!, :onemklSsygvd_scratchpad_size, :onemklSsygvd, :Float32, :Float32),
+                                           (:sygvd!, :onemklDsygvd_scratchpad_size, :onemklDsygvd, :Float64, :Float64),
+                                           (:hegvd!, :onemklChegvd_scratchpad_size, :onemklChegvd, :ComplexF32, :Float32),
+                                           (:hegvd!, :onemklZhegvd_scratchpad_size, :onemklZhegvd, :ComplexF64, :Float64))
+    @eval begin
+        function $jname(itype::Int,
+                        jobz::Char,
+                        uplo::Char,
+                        A::oneStridedMatrix{$elty},
+                        B::oneStridedMatrix{$elty})
+            chkuplo(uplo)
+            nA, nB = checksquare(A, B)
+            if nB != nA
+                throw(DimensionMismatch("Dimensions of A ($nA, $nA) and B ($nB, $nB) must match!"))
+            end
+            n = nA
+            lda = max(1, stride(A, 2))
+            ldb = max(1, stride(B, 2))
+            W = oneVector{$relty}(undef, n)
+
+            queue = global_queue(context(A), device(A))
+            scratchpad_size = $bname(sycl_queue(queue), itype, jobz, uplo, n, lda, ldb)
+            scratchpad = oneVector{$elty}(undef, scratchpad_size)
+            $fname(sycl_queue(queue), itype, jobz, uplo, n, A, lda, B, ldb, W, scratchpad, scratchpad_size)
+
+            if jobz == 'N'
+                return W
+            elseif jobz == 'V'
+                return W, A, B
+            end
         end
     end
 end
@@ -364,5 +472,35 @@ for elty in (:Float32, :Float64, :ComplexF32, :ComplexF64)
         LinearAlgebra.LAPACK.getrs!(trans::Char, A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64}, B::oneStridedVecOrMat{$elty}) = oneMKL.getrs!(trans, A, ipiv, B)
         LinearAlgebra.LAPACK.ormqr!(side::Char, trans::Char, A::oneStridedMatrix{$elty}, tau::oneStridedVector{$elty}, C::oneStridedVecOrMat{$elty}) = oneMKL.ormqr!(side, trans, A, tau, C)
         LinearAlgebra.LAPACK.orgqr!(A::oneStridedMatrix{$elty}, tau::oneStridedVector{$elty}) = oneMKL.orgqr!(A, tau)
+        LinearAlgebra.LAPACK.gebrd!(A::oneStridedMatrix{$elty}) = oneMKL.gebrd!(A)
+        LinearAlgebra.LAPACK.gesvd!(jobu::Char, jobvt::Char, A::oneStridedMatrix{$elty}) = oneMKL.gesvd!(jobu, jobvt, A)
+    end
+end
+
+for elty in (:Float32, :Float64)
+    @eval begin
+        LinearAlgebra.LAPACK.syev!(jobz::Char, uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL.syevd!(jobz, uplo, A)
+        LinearAlgebra.LAPACK.sygvd!(itype::Int, jobz::Char, uplo::Char, A::oneStridedMatrix{$elty}, B::oneStridedMatrix{$elty}) = oneMKL.sygvd!(itype, jobz, uplo, A, B)
+    end
+end
+
+for elty in (:ComplexF32, :ComplexF64)
+    @eval begin
+        LinearAlgebra.LAPACK.syev!(jobz::Char, uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL.heevd!(jobz, uplo, A)
+        LinearAlgebra.LAPACK.sygvd!(itype::Int, jobz::Char, uplo::Char, A::oneStridedMatrix{$elty}, B::oneStridedMatrix{$elty}) = oneMKL.hegvd!(itype, jobz, uplo, A, B)
+    end
+end
+
+if VERSION >= v"1.10"
+    for elty in (:Float32, :Float64)
+        @eval begin
+            LinearAlgebra.LAPACK.syevd!(jobz::Char, uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL.syevd!(jobz, uplo, A)
+        end
+    end
+
+    for elty in (:ComplexF32, :ComplexF64)
+        @eval begin
+            LinearAlgebra.LAPACK.syevd!(jobz::Char, uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL.heevd!(jobz, uplo, A)
+        end
     end
 end
