@@ -1,12 +1,3 @@
-export oneSparseMatrixCSR
-
-mutable struct oneSparseMatrixCSR{T}
-    handle::matrix_handle_t
-    type::Type{T}
-    m::Int
-    n::Int
-end
-
 for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int32),
                              (:onemklSsparse_set_csr_data_64, :Float32   , :Int64),
                              (:onemklDsparse_set_csr_data   , :Float64   , :Int32),
@@ -21,12 +12,20 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             onemklXsparse_init_matrix_handle(handle_ptr)
             m, n = size(A)
             At = SparseMatrixCSC(A |> transpose)
-            row_ptr = oneVector{$intty}(At.colptr)
-            col_ind = oneVector{$intty}(At.rowval)
-            val = oneVector{$elty}(At.nzval)
-            queue = global_queue(context(val), device(val))
-            $fname(sycl_queue(queue), handle_ptr[], m, n, 'O', row_ptr, col_ind, val)
-            return oneSparseMatrixCSR{$elty}(handle_ptr[], $elty, m, n)
+            rowPtr = oneVector{$intty}(At.colptr)
+            colVal = oneVector{$intty}(At.rowval)
+            nzVal = oneVector{$elty}(At.nzval)
+            nnzA = length(At.nzval)
+            queue = global_queue(context(nzVal), device(nzVal))
+            $fname(sycl_queue(queue), handle_ptr[], m, n, 'O', rowPtr, colVal, nzVal)
+            return oneSparseMatrixCSR{$elty, $intty}(handle_ptr[], rowPtr, colVal, nzVal, (m,n), nnzA)
+        end
+
+        function SparseMatrixCSC(A::oneSparseMatrixCSR{$elty, $intty})
+            handle_ptr = Ref{matrix_handle_t}()
+            At = SparseMatrixCSC(reverse(A.dims)..., Array(A.rowPtr), Array(A.colVal), Array(A.nzVal))
+            A_csc = SparseMatrixCSC(At |> transpose)
+            return A_csc
         end
     end
 end
