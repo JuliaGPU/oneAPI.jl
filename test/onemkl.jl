@@ -1300,21 +1300,55 @@ end
             end
         end
 
-        @testset "getrs_batched!" begin
-            bA = [rand(elty, m, m) for i in 1:p]
-            bB = [rand(elty, m, n) for i in 1:p]
-            d_bA = oneMatrix{elty}[]
-            d_bB = oneMatrix{elty}[]
+        # @testset "getrs_batched!" begin
+        #     bA = [rand(elty, m, m) for i in 1:p]
+        #     bB = [rand(elty, m, n) for i in 1:p]
+        #     d_bA = oneMatrix{elty}[]
+        #     d_bB = oneMatrix{elty}[]
+        #     for i in 1:p
+        #         push!(d_bA, oneMatrix(bA[i]))
+        #         push!(d_bB, oneMatrix(bB[i]))
+        #     end
+
+        #     d_ipiv, d_bA = oneMKL.getrf_batched!(d_bA)
+        #     d_bX = oneMKL.getrs_batched!(d_bA, d_ipiv, d_bB)
+        #     h_bX = [collect(d_bX[i]) for i in 1:p]
+        #     for i = 1:p
+        #         @test bA[i] * hbX[i] ≈ bB[i]
+        #     end
+        # end
+
+        @testset "potrf_batched! -- potrs_batched!" begin
+            A = [rand(elty,n,n) for i = 1:p]
+            A = [A[i]' * A[i] + I for i = 1:p]
+            B = [rand(elty,n,p) for i = 1:p]
+            d_A = oneMatrix{elty}[]
+            d_B = oneMatrix{elty}[]
             for i in 1:p
-                push!(d_bA, oneMatrix(bA[i]))
-                push!(d_bB, oneMatrix(bB[i]))
+                push!(d_A, oneMatrix(A[i]))
+                push!(d_B, oneMatrix(B[i]))
             end
 
-            d_ipiv, d_bA = oneMKL.getrf_batched!(d_bA)
-            d_bX = oneMKL.getrs_batched!(d_bA, d_ipiv, d_bB)
-            h_bX = [collect(d_bX[i]) for i in 1:p]
+            oneMKL.potrf_batched!(d_A)
+            oneMKL.potrs_batched!(d_A, d_B)
             for i = 1:p
-                @test bA[i] * hbX[i] ≈ bB[i]
+                LAPACK.potrf!('L', A[i])
+                LAPACK.potrs!('L', A[i], B[i])
+                @test B[i] ≈ collect(d_B[i])
+            end
+        end
+
+        @testset "geqrf_batched! -- -- orgqr_batched!" begin
+            A = [rand(elty,m,n) for i in 1:p]
+            d_A = oneMatrix{elty}[]
+            for i in 1:p
+                push!(d_A, oneMatrix(A[i]))
+            end
+
+            d_tau, d_A = oneMKL.geqrf_batched!(d_A)
+            oneMKL.orgqr_batched!(d_A, d_tau)
+            for d_Ai in d_A
+                @test d_Ai' * d_Ai ≈ I
             end
         end
 

@@ -70,7 +70,7 @@ for (bname, fname, elty) in ((:onemklSpotri_scratchpad_size, :onemklSpotri, :Flo
     end
 end
 
-#sytrf
+# sytrf
 for (bname, fname, elty) in ((:onemklSsytrf_scratchpad_size, :onemklSsytrf, :Float32),
                              (:onemklDsytrf_scratchpad_size, :onemklDsytrf, :Float64),
                              (:onemklCsytrf_scratchpad_size, :onemklCsytrf, :ComplexF32),
@@ -402,6 +402,62 @@ for (jname, bname, fname, elty, relty) in ((:sygvd!, :onemklSsygvd_scratchpad_si
     end
 end
 
+# potrf_batch
+for (bname, fname, elty) in ((:onemklSpotrf_batch_scratchpad_size, :onemklSpotrf_batch, :Float32),
+                             (:onemklDpotrf_batch_scratchpad_size, :onemklDpotrf_batch, :Float64),
+                             (:onemklCpotrf_batch_scratchpad_size, :onemklCpotrf_batch, :ComplexF32),
+                             (:onemklZpotrf_batch_scratchpad_size, :onemklZpotrf_batch, :ComplexF64))
+    @eval begin
+        function potrf_batched!(A::Vector{<:oneMatrix{$elty}})
+            group_count = length(A)
+            group_sizes = ones(Int64, group_count)
+            uplo = [ONEMKL_UPLO_LOWER for i=1:group_count]
+            n = [checksquare(A[i]) for i=1:group_count]
+            lda = [max(1, stride(A[i], 2)) for i=1:group_count]
+            Aptrs = unsafe_batch(A)
+
+            queue = global_queue(context(A[1]), device(A[1]))
+            scratchpad_size = $bname(sycl_queue(queue), uplo, n, lda, group_count, group_sizes)
+            scratchpad = oneVector{$elty}(undef, scratchpad_size)
+            $fname(sycl_queue(queue), uplo, n, Aptrs, lda, group_count, group_sizes, scratchpad, scratchpad_size)
+
+            unsafe_free!(Aptrs)
+
+            return A
+        end
+    end
+end
+
+# potrs_batch
+for (bname, fname, elty) in ((:onemklSpotrs_batch_scratchpad_size, :onemklSpotrs_batch, :Float32),
+                             (:onemklDpotrs_batch_scratchpad_size, :onemklDpotrs_batch, :Float64),
+                             (:onemklCpotrs_batch_scratchpad_size, :onemklCpotrs_batch, :ComplexF32),
+                             (:onemklZpotrs_batch_scratchpad_size, :onemklZpotrs_batch, :ComplexF64))
+    @eval begin
+        function potrs_batched!(A::Vector{<:oneMatrix{$elty}}, B::Vector{<:oneMatrix{$elty}})
+            group_count = length(A)
+            group_sizes = ones(Int64, group_count)
+            uplo = [ONEMKL_UPLO_LOWER for i=1:group_count]
+            n = [checksquare(A[i]) for i=1:group_count]
+            nrhs = [size(B[i], 2) for i=1:group_count]
+            lda = [max(1, stride(A[i], 2)) for i=1:group_count]
+            ldb = [max(1, stride(B[i], 2)) for i=1:group_count]
+            Aptrs = unsafe_batch(A)
+            Bptrs = unsafe_batch(B)
+
+            queue = global_queue(context(A[1]), device(A[1]))
+            scratchpad_size = $bname(sycl_queue(queue), uplo, n, nrhs, lda, ldb, group_count, group_sizes)
+            scratchpad = oneVector{$elty}(undef, scratchpad_size)
+            $fname(sycl_queue(queue), uplo, n, nrhs, Aptrs, lda, Bptrs, ldb, group_count, group_sizes, scratchpad, scratchpad_size)
+
+            unsafe_free!(Aptrs)
+            unsafe_free!(Bptrs)
+
+            return A
+        end
+    end
+end
+
 # getrf_batch
 for (bname, fname, elty) in ((:onemklSgetrf_batch_scratchpad_size, :onemklSgetrf_batch, :Float32),
                              (:onemklDgetrf_batch_scratchpad_size, :onemklDgetrf_batch, :Float64),
@@ -486,6 +542,64 @@ for (bname, fname, elty) in ((:onemklSgetri_batch_scratchpad_size, :onemklSgetri
             unsafe_free!(ipivptrs)
 
             return ipiv, A
+        end
+    end
+end
+
+# geqrf_batch
+for (bname, fname, elty) in ((:onemklSgeqrf_batch_scratchpad_size, :onemklSgeqrf_batch, :Float32),
+                             (:onemklDgeqrf_batch_scratchpad_size, :onemklDgeqrf_batch, :Float64),
+                             (:onemklCgeqrf_batch_scratchpad_size, :onemklCgeqrf_batch, :ComplexF32),
+                             (:onemklZgeqrf_batch_scratchpad_size, :onemklZgeqrf_batch, :ComplexF64))
+    @eval begin
+        function geqrf_batched!(A::Vector{<:oneMatrix{$elty}})
+            group_count = length(A)
+            group_sizes = ones(Int64, group_count)
+            m = [size(A[i], 1) for i=1:group_count]
+            n = [size(A[i], 2) for i=1:group_count]
+            lda = [max(1, stride(A[i], 2)) for i=1:group_count]
+            tau = [oneVector{$elty}(undef, min(m[i], n[i])) for i=1:group_count]
+            Aptrs = unsafe_batch(A)
+            tauptrs = unsafe_batch(tau)
+
+            queue = global_queue(context(A[1]), device(A[1]))
+            scratchpad_size = $bname(sycl_queue(queue), m, n, lda, group_count, group_sizes)
+            scratchpad = oneVector{$elty}(undef, scratchpad_size)
+            $fname(sycl_queue(queue), m, n, Aptrs, lda, tauptrs, group_count, group_sizes, scratchpad, scratchpad_size)
+
+            unsafe_free!(Aptrs)
+            unsafe_free!(tauptrs)
+
+            return tau, A
+        end
+    end
+end
+
+# orgqr_batch and ungqr_batch
+for (bname, fname, elty) in ((:onemklSorgqr_batch_scratchpad_size, :onemklSorgqr_batch, :Float32),
+                             (:onemklDorgqr_batch_scratchpad_size, :onemklDorgqr_batch, :Float64),
+                             (:onemklCungqr_batch_scratchpad_size, :onemklCungqr_batch, :ComplexF32),
+                             (:onemklZungqr_batch_scratchpad_size, :onemklZungqr_batch, :ComplexF64))
+    @eval begin
+        function orgqr_batched!(A::Vector{<:oneMatrix{$elty}}, tau::Vector{<:oneVector{$elty}})
+            group_count = length(A)
+            group_sizes = ones(Int64, group_count)
+            m = [size(A[i], 1) for i=1:group_count]
+            n = [size(A[i], 2) for i=1:group_count]
+            k = [min(m[i], n[i]) for i=1:group_count]
+            lda = [max(1, stride(A[i], 2)) for i=1:group_count]
+            Aptrs = unsafe_batch(A)
+            tauptrs = unsafe_batch(tau)
+
+            queue = global_queue(context(A[1]), device(A[1]))
+            scratchpad_size = $bname(sycl_queue(queue), m, n, k, lda, group_count, group_sizes)
+            scratchpad = oneVector{$elty}(undef, scratchpad_size)
+            $fname(sycl_queue(queue), m, n, k, Aptrs, lda, tauptrs, group_count, group_sizes, scratchpad, scratchpad_size)
+
+            unsafe_free!(Aptrs)
+            unsafe_free!(tauptrs)
+
+            return A
         end
     end
 end
