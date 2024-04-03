@@ -1300,6 +1300,24 @@ end
             end
         end
 
+        @testset "getrs_batched!" begin
+            bA = [rand(elty, m, m) for i in 1:p]
+            bB = [rand(elty, m, n) for i in 1:p]
+            d_bA = oneMatrix{elty}[]
+            d_bB = oneMatrix{elty}[]
+            for i in 1:p
+                push!(d_bA, oneMatrix(bA[i]))
+                push!(d_bB, oneMatrix(bB[i]))
+            end
+
+            d_ipiv, d_bA = oneMKL.getrf_batched!(d_bA)
+            d_bX = oneMKL.getrs_batched!(d_bA, d_ipiv, d_bB)
+            h_bX = [collect(d_bX[i]) for i in 1:p]
+            for i = 1:p
+                @test bA[i] * hbX[i] ≈ bB[i]
+            end
+        end
+
         @testset "gebrd!" begin
             A = rand(elty,m,n)
             d_A = oneArray(A)

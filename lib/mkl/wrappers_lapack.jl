@@ -431,6 +431,38 @@ for (bname, fname, elty) in ((:onemklSgetrf_batch_scratchpad_size, :onemklSgetrf
     end
 end
 
+# getrs_batch
+for (bname, fname, elty) in ((:onemklSgetrs_batch_scratchpad_size, :onemklSgetrs_batch, :Float32),
+                             (:onemklDgetrs_batch_scratchpad_size, :onemklDgetrs_batch, :Float64),
+                             (:onemklCgetrs_batch_scratchpad_size, :onemklCgetrs_batch, :ComplexF32),
+                             (:onemklZgetrs_batch_scratchpad_size, :onemklZgetrs_batch, :ComplexF64))
+    @eval begin
+        function getrs_batched!(A::Vector{<:oneMatrix{$elty}}, ipiv::Vector{<:oneVector{Int64}}, B::Vector{<:oneMatrix{$elty}})
+            group_count = length(A)
+            group_sizes = ones(Int64, group_count)
+            trans = [ONEMKL_TRANSPOSE_NONTRANS for i=1:group_count]
+            n = [checksquare(A[i]) for i=1:group_count]
+            nrhs = [size(B[i], 2) for i=1:group_count]
+            lda = [max(1, stride(A[i], 2)) for i=1:group_count]
+            ldb = [max(1, stride(B[i], 2)) for i=1:group_count]
+            Aptrs = unsafe_batch(A)
+            Bptrs = unsafe_batch(B)
+            ipivptrs = unsafe_batch(ipiv)
+
+            queue = global_queue(context(A[1]), device(A[1]))
+            scratchpad_size = $bname(sycl_queue(queue), trans, n, nrhs, lda, ldb, group_count, group_sizes)
+            scratchpad = oneVector{$elty}(undef, scratchpad_size)
+            $fname(sycl_queue(queue), trans, n, nrhs, Aptrs, lda, ipivptrs, Bptrs, ldb, group_count, group_sizes, scratchpad, scratchpad_size)
+
+            unsafe_free!(Aptrs)
+            unsafe_free!(Bptrs)
+            unsafe_free!(ipivptrs)
+
+            return B
+        end
+    end
+end
+
 # getri_batch
 for (bname, fname, elty) in ((:onemklSgetri_batch_scratchpad_size, :onemklSgetri_batch, :Float32),
                              (:onemklDgetri_batch_scratchpad_size, :onemklDgetri_batch, :Float64),
