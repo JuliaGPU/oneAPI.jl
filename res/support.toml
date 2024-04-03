@@ -550,6 +550,12 @@ use_ccall_macro = true
 6 = "ZePtr{Ptr{Int64}}"
 9 = "ZePtr{T}"
 
+[api.onemklXgetrs_batch.argtypes]
+5 = "ZePtr{Ptr{T}}"
+7 = "ZePtr{Ptr{Int64}}"
+8 = "ZePtr{Ptr{T}}"
+12 = "ZePtr{T}"
+
 [api.onemklXgetri_batch.argtypes]
 3 = "ZePtr{Ptr{T}}"
 5 = "ZePtr{Ptr{Int64}}"
