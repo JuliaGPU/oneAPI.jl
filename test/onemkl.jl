@@ -1083,6 +1083,8 @@ end
                 A = sprand(T, 20, 10, 0.5)
                 A = SparseMatrixCSC{T, S}(A)
                 B = oneSparseMatrixCSR(A)
+                A2 = SparseMatrixCSC(B)
+                @test A == A2
             end
         end
 

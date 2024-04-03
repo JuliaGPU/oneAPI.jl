@@ -22,11 +22,13 @@ const onemklFloat = Union{Float64,Float32,ComplexF64,ComplexF32}
 const onemklComplex = Union{ComplexF32,ComplexF64}
 const onemklHalf = Union{Float16,ComplexF16}
 
+include("array.jl")
 include("utils.jl")
 include("wrappers_blas.jl")
 include("wrappers_lapack.jl")
 include("wrappers_sparse.jl")
 include("linalg.jl")
+include("interfaces.jl")
 
 function band(A::StridedArray, kl, ku)
     m, n = size(A)
