@@ -4146,7 +4146,6 @@ extern "C" int onemklZsparse_update_diagonal_values(syclQueue_t device_queue, ma
 
 extern "C" int onemklXsparse_optimize_gemv(syclQueue_t device_queue, onemklTranspose opA, matrix_handle_t A) {
    auto status = oneapi::mkl::sparse::optimize_gemv(device_queue->val, convert(opA), (oneapi::mkl::sparse::matrix_handle_t) A, {});
-   __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 

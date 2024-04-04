@@ -1100,6 +1100,7 @@ end
 
                 alpha = rand(T)
                 beta = rand(T)
+                oneMKL.sparse_optimize_gemv!(transa, dA)
                 oneMKL.sparse_gemv!(transa, alpha, dA, dx, beta, dy)
                 # @test alpha * opa(A) * x + beta * y ≈ collect(dy)
             end
@@ -1160,6 +1161,8 @@ end
 
                     alpha = rand(T)
                     beta = rand(T)
+
+                    oneMKL.sparse_optimize_trmv!(uplo, transa, diag, dA)
                     oneMKL.sparse_trmv!(uplo, transa, diag, alpha, dA, dx, beta, dy)
                     @test alpha * wrapper(opa(A)) * x + beta * y ≈ collect(dy)
                 end
@@ -1182,6 +1185,7 @@ end
                     dx = oneVector{T}(x)
                     dy = oneVector{T}(y)
 
+                    oneMKL.sparse_optimize_trsv!(uplo, transa, diag, dA)
                     oneMKL.sparse_trsv!(uplo, transa, diag, dA, dx, dy)
                     y = wrapper(opa(A)) \ x
                     @test y ≈ collect(dy)

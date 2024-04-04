@@ -57,6 +57,12 @@ for (fname, elty) in ((:onemklSsparse_gemv, :Float32),
     end
 end
 
+function sparse_optimize_gemv!(trans::Char, A::oneSparseMatrixCSR)
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    onemklXsparse_optimize_gemv(sycl_queue(queue), trans, A.handle)
+    return A
+end
+
 for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
                       (:onemklDsparse_gemm, :Float64),
                       (:onemklCsparse_gemm, :ComplexF32),
@@ -124,6 +130,12 @@ for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
     end
 end
 
+function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSR)
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, trans, diag, A.handle)
+    return A
+end
+
 for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
                       (:onemklDsparse_trsv, :Float64),
                       (:onemklCsparse_trsv, :ComplexF32),
@@ -141,4 +153,10 @@ for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
             y
         end
     end
+end
+
+function sparse_optimize_trsv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSR)
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, trans, diag, A.handle)
+    return A
 end
