@@ -5728,6 +5728,14 @@ function onemklXsparse_optimize_trmv(device_queue, uplo_val, opA, diag_val, A)
                                                          A::matrix_handle_t)::Cint
 end
 
+function onemklXsparse_optimize_trsv(device_queue, uplo_val, opA, diag_val, A)
+    @ccall liboneapi_support.onemklXsparse_optimize_trsv(device_queue::syclQueue_t,
+                                                         uplo_val::onemklUplo,
+                                                         opA::onemklTranspose,
+                                                         diag_val::onemklDiag,
+                                                         A::matrix_handle_t)::Cint
+end
+
 function onemklSsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
     @ccall liboneapi_support.onemklSsparse_gemv(device_queue::syclQueue_t,
                                                 opA::onemklTranspose, alpha::Float32,
