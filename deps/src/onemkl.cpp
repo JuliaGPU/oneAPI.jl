@@ -4055,7 +4055,6 @@ extern "C" int onemklXsparse_init_matrix_handle(matrix_handle_t *p_spMat) {
 
 extern "C" int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, matrix_handle_t *p_spMat) {
    auto status = oneapi::mkl::sparse::release_matrix_handle(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t*) p_spMat, {});
-   __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
@@ -4153,6 +4152,12 @@ extern "C" int onemklXsparse_optimize_gemv(syclQueue_t device_queue, onemklTrans
 
 extern "C" int onemklXsparse_optimize_trmv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A) {
    auto status = oneapi::mkl::sparse::optimize_trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, {});
+   __FORCE_MKL_FLUSH__(status);
+   return 0;
+}
+
+extern "C" int onemklXsparse_optimize_trsv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A) {
+   auto status = oneapi::mkl::sparse::optimize_trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }

@@ -2473,6 +2473,9 @@ int onemklXsparse_optimize_gemv(syclQueue_t device_queue, onemklTranspose opA, m
 int onemklXsparse_optimize_trmv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose
                                 opA, onemklDiag diag_val, matrix_handle_t A);
 
+int onemklXsparse_optimize_trsv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose
+                                opA, onemklDiag diag_val, matrix_handle_t A);
+
 int onemklSsparse_gemv(syclQueue_t device_queue, onemklTranspose opA, float alpha,
                        matrix_handle_t A, float *x, float beta, float *y);
 
