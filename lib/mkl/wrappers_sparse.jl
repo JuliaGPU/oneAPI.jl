@@ -1,3 +1,9 @@
+function sparse_release_matrix_handle(A::oneSparseMatrixCSR)
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    handle_ptr = Ref{matrix_handle_t}(A.handle)
+    onemklXsparse_release_matrix_handle(sycl_queue(queue), handle_ptr)
+end
+
 for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int32),
                              (:onemklSsparse_set_csr_data_64, :Float32   , :Int64),
                              (:onemklDsparse_set_csr_data   , :Float64   , :Int32),
@@ -18,7 +24,9 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             nnzA = length(At.nzval)
             queue = global_queue(context(nzVal), device(nzVal))
             $fname(sycl_queue(queue), handle_ptr[], m, n, 'O', rowPtr, colVal, nzVal)
-            return oneSparseMatrixCSR{$elty, $intty}(handle_ptr[], rowPtr, colVal, nzVal, (m,n), nnzA)
+            dA = oneSparseMatrixCSR{$elty, $intty}(handle_ptr[], rowPtr, colVal, nzVal, (m,n), nnzA)
+            finalizer(sparse_release_matrix_handle, dA)
+            return dA
         end
 
         function SparseMatrixCSC(A::oneSparseMatrixCSR{$elty, $intty})
