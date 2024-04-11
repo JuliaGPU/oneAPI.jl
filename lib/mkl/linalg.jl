@@ -220,7 +220,7 @@ function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStr
     end
 
     if all(in(('N', 'T', 'C')), (tA, tB))
-        if T <: onemklFloat && eltype(A) == eltype(B) == T
+        if T <: Union{onemklFloat, onemklComplex, onemklHalf} && eltype(A) == eltype(B) == T
             return gemm!(tA, tB, alpha, A, B, beta, C)
         end
     end
