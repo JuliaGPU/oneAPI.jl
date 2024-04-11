@@ -17,10 +17,10 @@ using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdia
 
 using SparseArrays
 
-# Exclude Float16 for now, since many oneMKL functions - copy, scal, do not take Float16
+# Exclude Float16 for now, since many oneMKL functions do not take Float16
 const onemklFloat = Union{Float64,Float32,ComplexF64,ComplexF32}
 const onemklComplex = Union{ComplexF32,ComplexF64}
-const onemklHalf = Union{Float16,ComplexF16}
+const onemklHalf = Float16
 
 include("array.jl")
 include("utils.jl")

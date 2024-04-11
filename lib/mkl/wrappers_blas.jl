@@ -537,7 +537,7 @@ for (fname, elty, cty, sty, supty) in ((:onemklSrot,:Float32,:Float32,:Float32,:
     end
 end
 
-function axpy!(n::Integer, 
+function axpy!(n::Integer,
             alpha::Number,
             x::oneStridedArray{ComplexF16},
             y::oneStridedArray{ComplexF16})
@@ -1260,7 +1260,7 @@ function dgmm(mode::Char, A::oneStridedMatrix{T}, X::oneStridedVector{T}) where 
     dgmm!( mode, A, X, similar(A, (m,n) ) )
 end
 
-for (fname, elty) in 
+for (fname, elty) in
         ((:onemklSgemmBatchStrided, Float32),
          (:onemklDgemmBatchStrided, Float64),
          (:onemklCgemmBatchStrided, ComplexF32),
