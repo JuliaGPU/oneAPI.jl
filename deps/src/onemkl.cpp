@@ -554,14 +554,15 @@ extern "C" int onemklZtrsmBatched(syclQueue_t device_queue, onemklSide left_righ
 
 extern "C" int onemklHgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
                         onemklTranspose transb, int64_t m, int64_t n, int64_t k,
-                        uint16_t alpha, const short *a, int64_t lda, int64_t stridea,
-                        const short *b, int64_t ldb, int64_t strideb, uint16_t beta,
+                        uint16_t *alpha, const short *a, int64_t lda, int64_t stridea,
+                        const short *b, int64_t ldb, int64_t strideb, uint16_t *beta,
                         short *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
-                                                    convert(transb), m, n, k, sycl::bit_cast<sycl::half>(alpha),
+                                                    convert(transb), m, n, k,
+                                                    *reinterpret_cast<const sycl::half *>(alpha),
                                                     reinterpret_cast<const sycl::half *>(a), lda, stridea,
                                                     reinterpret_cast<const sycl::half *>(b), ldb, strideb,
-                                                    sycl::bit_cast<sycl::half>(beta),
+                                                    *reinterpret_cast<const sycl::half *>(beta),
                                                     reinterpret_cast<sycl::half *>(c), ldc, stridec, batch_size, {});
     __FORCE_MKL_FLUSH__(status);
     return 0;
@@ -569,39 +570,39 @@ extern "C" int onemklHgemmBatchStrided(syclQueue_t device_queue, onemklTranspose
 
 extern "C" int onemklSgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
                         onemklTranspose transb, int64_t m, int64_t n, int64_t k,
-                        float alpha, const float *a, int64_t lda, int64_t stridea,
-                        const float *b, int64_t ldb, int64_t strideb, float beta,
+                        float *alpha, const float *a, int64_t lda, int64_t stridea,
+                        const float *b, int64_t ldb, int64_t strideb, float *beta,
                         float *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
-                                                    convert(transb), m, n, k, alpha, a, lda, stridea,
-                                                    b, ldb, strideb, beta, c, ldc, stridec, batch_size, {});
+                                                    convert(transb), m, n, k, *alpha, a, lda, stridea,
+                                                    b, ldb, strideb, *beta, c, ldc, stridec, batch_size, {});
     __FORCE_MKL_FLUSH__(status);
     return 0;
 }
 
 extern "C" int onemklDgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
                         onemklTranspose transb, int64_t m, int64_t n, int64_t k,
-                        double alpha, const double *a, int64_t lda, int64_t stridea,
-                        const double *b, int64_t ldb, int64_t strideb, double beta,
+                        double *alpha, const double *a, int64_t lda, int64_t stridea,
+                        const double *b, int64_t ldb, int64_t strideb, double *beta,
                         double *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
-                                                    convert(transb), m, n, k, alpha, a, lda, stridea,
-                                                    b, ldb, strideb, beta, c, ldc, stridec, batch_size, {});
+                                                    convert(transb), m, n, k, *alpha, a, lda, stridea,
+                                                    b, ldb, strideb, *beta, c, ldc, stridec, batch_size, {});
     __FORCE_MKL_FLUSH__(status);
     return 0;
 }
 
 extern "C" int onemklCgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
                         onemklTranspose transb, int64_t m, int64_t n, int64_t k,
-                        float _Complex alpha, const float _Complex *a, int64_t lda, int64_t stridea,
-                        const float _Complex *b, int64_t ldb, int64_t strideb, float _Complex beta,
+                        float _Complex *alpha, const float _Complex *a, int64_t lda, int64_t stridea,
+                        const float _Complex *b, int64_t ldb, int64_t strideb, float _Complex *beta,
                         float _Complex *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
-                                                    convert(transb), m, n, k, alpha,
+                                                    convert(transb), m, n, k, *alpha,
                                                     reinterpret_cast<const std::complex<float> *>(a),
                                                     lda, stridea,
                                                     reinterpret_cast<const std::complex<float> *>(b),
-                                                    ldb, strideb, beta,
+                                                    ldb, strideb, *beta,
                                                     reinterpret_cast<std::complex<float> *>(c),
                                                     ldc, stridec, batch_size, {});
     __FORCE_MKL_FLUSH__(status);
@@ -610,15 +611,15 @@ extern "C" int onemklCgemmBatchStrided(syclQueue_t device_queue, onemklTranspose
 
 extern "C" int onemklZgemmBatchStrided(syclQueue_t device_queue, onemklTranspose transa,
                         onemklTranspose transb, int64_t m, int64_t n, int64_t k,
-                        double _Complex alpha, const double _Complex *a, int64_t lda, int64_t stridea,
-                        const double _Complex *b, int64_t ldb, int64_t strideb, double _Complex beta,
+                        double _Complex *alpha, const double _Complex *a, int64_t lda, int64_t stridea,
+                        const double _Complex *b, int64_t ldb, int64_t strideb, double _Complex *beta,
                         double _Complex *c, int64_t ldc, int64_t stridec, int64_t batch_size) {
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val, convert(transa),
-                                                    convert(transb), m, n, k, alpha,
+                                                    convert(transb), m, n, k, *alpha,
                                                     reinterpret_cast<const std::complex<double> *>(a),
                                                     lda, stridea,
                                                     reinterpret_cast<const std::complex<double> *>(b),
-                                                    ldb, strideb, beta,
+                                                    ldb, strideb, *beta,
                                                     reinterpret_cast<std::complex<double> *>(c),
                                                     ldc, stridec, batch_size, {});
     __FORCE_MKL_FLUSH__(status);
@@ -627,14 +628,15 @@ extern "C" int onemklZgemmBatchStrided(syclQueue_t device_queue, onemklTranspose
 
 extern "C" int onemklHgemm(syclQueue_t device_queue, onemklTranspose transA,
                            onemklTranspose transB, int64_t m, int64_t n,
-                           int64_t k, uint16_t alpha, const short *A, int64_t lda,
-                           const short *B, int64_t ldb, uint16_t beta, short *C,
+                           int64_t k, uint16_t *alpha, const short *A, int64_t lda,
+                           const short *B, int64_t ldb, uint16_t *beta, short *C,
                            int64_t ldc) {
     auto status = oneapi::mkl::blas::column_major::gemm(device_queue->val, convert(transA),
-                                          convert(transB), m, n, k, sycl::bit_cast<sycl::half>(alpha),
+                                          convert(transB), m, n, k,
+                                          *reinterpret_cast<const sycl::half *>(alpha),
                                           reinterpret_cast<const sycl::half *>(A), lda,
                                           reinterpret_cast<const sycl::half *>(B), ldb,
-                                          sycl::bit_cast<sycl::half>(beta),
+                                          *reinterpret_cast<const sycl::half *>(beta),
                                           reinterpret_cast<sycl::half *>(C), ldc, {});
     __FORCE_MKL_FLUSH__(status);
     return 0;
@@ -651,19 +653,20 @@ extern "C" int onemklHdot(syclQueue_t device_queue, int64_t n,
     return 0;
 }
 
-extern "C" int onemklHaxpy(syclQueue_t device_queue, int64_t n, uint16_t alpha,
+extern "C" int onemklHaxpy(syclQueue_t device_queue, int64_t n, uint16_t *alpha,
                             const short *x, std::int64_t incx, short *y, int64_t incy) {
     auto status = oneapi::mkl::blas::column_major::axpy(device_queue->val, n,
-                                        sycl::bit_cast<sycl::half>(alpha),
+                                        *reinterpret_cast<const sycl::half *>(alpha),
                                         reinterpret_cast<const sycl::half *>(x),
                                         incx, reinterpret_cast<sycl::half *>(y), incy, {});
     __FORCE_MKL_FLUSH__(status);
     return 0;
 }
 
-extern "C" int onemklHscal(syclQueue_t device_queue, int64_t n, uint16_t alpha,
+extern "C" int onemklHscal(syclQueue_t device_queue, int64_t n, uint16_t *alpha,
                             short *x, int64_t incx) {
-    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n, sycl::bit_cast<sycl::half>(alpha),
+    auto status = oneapi::mkl::blas::column_major::scal(device_queue->val, n,
+                                                        *reinterpret_cast<const sycl::half *>(alpha),
                                                         reinterpret_cast<sycl::half *>(x), incx, {});
     __FORCE_MKL_FLUSH__(status);
     return 0;
@@ -2137,94 +2140,6 @@ extern "C" int64_t onemklZpotri_scratchpad_size(syclQueue_t device_queue, onemkl
    return scratchpad_size;
 }
 
-extern "C" int onemklStrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, float *a, int64_t lda, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::trtri(device_queue->val, convert(uplo), convert(diag), n, a, lda, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, double *a, int64_t lda, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::trtri(device_queue->val, convert(uplo), convert(diag), n, a, lda, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, float _Complex *a, int64_t lda, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::trtri(device_queue->val, convert(uplo), convert(diag), n, reinterpret_cast<std::complex<float>*>(a), lda, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZtrtri(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, double _Complex *a, int64_t lda, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::trtri(device_queue->val, convert(uplo), convert(diag), n, reinterpret_cast<std::complex<double>*>(a), lda, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int64_t onemklStrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, int64_t lda) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::trtri_scratchpad_size<float>(device_queue->val, convert(uplo), convert(diag), n, lda);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, int64_t lda) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::trtri_scratchpad_size<double>(device_queue->val, convert(uplo), convert(diag), n, lda);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, int64_t lda) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::trtri_scratchpad_size<std::complex<float>>(device_queue->val, convert(uplo), convert(diag), n, lda);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZtrtri_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, onemklDiag diag, int64_t n, int64_t lda) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::trtri_scratchpad_size<std::complex<double>>(device_queue->val, convert(uplo), convert(diag), n, lda);
-   return scratchpad_size;
-}
-
-extern "C" int onemklSgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t *ipiv, float *b, int64_t ldb, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::gesv(device_queue->val, n, nrhs, a, lda, ipiv, b, ldb, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t *ipiv, double *b, int64_t ldb, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::gesv(device_queue->val, n, nrhs, a, lda, ipiv, b, ldb, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t *ipiv, float _Complex *b, int64_t ldb, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::gesv(device_queue->val, n, nrhs, reinterpret_cast<std::complex<float>*>(a), lda, ipiv, reinterpret_cast<std::complex<float>*>(b), ldb, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZgesv(syclQueue_t device_queue, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t *ipiv, double _Complex *b, int64_t ldb, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::gesv(device_queue->val, n, nrhs, reinterpret_cast<std::complex<double>*>(a), lda, ipiv, reinterpret_cast<std::complex<double>*>(b), ldb, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int64_t onemklSgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t lda, int64_t ldb) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::gesv_scratchpad_size<float>(device_queue->val, n, nrhs, lda, ldb);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t lda, int64_t ldb) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::gesv_scratchpad_size<double>(device_queue->val, n, nrhs, lda, ldb);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t lda, int64_t ldb) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::gesv_scratchpad_size<std::complex<float>>(device_queue->val, n, nrhs, lda, ldb);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZgesv_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t nrhs, int64_t lda, int64_t ldb) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::gesv_scratchpad_size<std::complex<double>>(device_queue->val, n, nrhs, lda, ldb);
-   return scratchpad_size;
-}
-
 extern "C" int64_t onemklSgebrd_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda) {
    int64_t scratchpad_size = oneapi::mkl::lapack::gebrd_scratchpad_size<float>(device_queue->val, m, n, lda);
    return scratchpad_size;
@@ -2291,21 +2206,25 @@ extern "C" int64_t onemklZgeqrf_scratchpad_size(syclQueue_t device_queue, int64_
 
 extern "C" int onemklCgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, float _Complex *tau, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, reinterpret_cast<std::complex<float>*>(a), lda, reinterpret_cast<std::complex<float>*>(tau), reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
 extern "C" int onemklDgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, double *tau, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, a, lda, tau, scratchpad, scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
 extern "C" int onemklSgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, float *tau, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, a, lda, tau, scratchpad, scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
 extern "C" int onemklZgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, double _Complex *tau, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::geqrf(device_queue->val, m, n, reinterpret_cast<std::complex<double>*>(a), lda, reinterpret_cast<std::complex<double>*>(tau), reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
+   __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
@@ -2397,89 +2316,45 @@ extern "C" int onemklZgetrf(syclQueue_t device_queue, int64_t m, int64_t n, doub
    return 0;
 }
 
-extern "C" int64_t onemklSgetrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t* m, int64_t* n, int64_t* lda, int64_t group_count, int64_t* group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrf_batch_scratchpad_size<float>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDgetrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t* m, int64_t* n, int64_t* lda, int64_t group_count, int64_t* group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrf_batch_scratchpad_size<double>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCgetrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t* m, int64_t* n, int64_t* lda, int64_t group_count, int64_t* group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrf_batch_scratchpad_size<std::complex<float>>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZgetrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t* m, int64_t* n, int64_t* lda, int64_t group_count, int64_t* group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrf_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int onemklCgetrf_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, float _Complex **a, int64_t *lda, int64_t **ipiv, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<float>**>(a), lda, ipiv, group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDgetrf_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, double **a, int64_t *lda, int64_t **ipiv, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrf_batch(device_queue->val, m, n, a, lda, ipiv, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSgetrf_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, float **a, int64_t *lda, int64_t **ipiv, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrf_batch(device_queue->val, m, n, a, lda, ipiv, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZgetrf_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, double _Complex **a, int64_t *lda, int64_t **ipiv, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<double>**>(a), lda, ipiv, group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int64_t onemklSgetrf_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+extern "C" int64_t onemklSgetrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_batch_scratchpad_size<float>(device_queue->val, m, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDgetrf_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+extern "C" int64_t onemklDgetrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_batch_scratchpad_size<double>(device_queue->val, m, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCgetrf_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+extern "C" int64_t onemklCgetrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_batch_scratchpad_size<std::complex<float>>(device_queue->val, m, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZgetrf_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+extern "C" int64_t onemklZgetrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrf_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int onemklCgetrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCgetrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, ipiv, stride_ipiv, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDgetrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDgetrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrf_batch(device_queue->val, m, n, a, lda, stride_a, ipiv, stride_ipiv, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSgetrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSgetrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrf_batch(device_queue->val, m, n, a, lda, stride_a, ipiv, stride_ipiv, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZgetrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZgetrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, ipiv, stride_ipiv, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
@@ -2529,89 +2404,45 @@ extern "C" int onemklZgetrfnp(syclQueue_t device_queue, int64_t m, int64_t n, do
    return 0;
 }
 
-extern "C" int64_t onemklSgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t* m, int64_t* n, int64_t* lda, int64_t group_count, int64_t* group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrfnp_batch_scratchpad_size<float>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t* m, int64_t* n, int64_t* lda, int64_t group_count, int64_t* group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrfnp_batch_scratchpad_size<double>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t* m, int64_t* n, int64_t* lda, int64_t group_count, int64_t* group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrfnp_batch_scratchpad_size<std::complex<float>>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t* m, int64_t* n, int64_t* lda, int64_t group_count, int64_t* group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrfnp_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int onemklCgetrfnp_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, float _Complex **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrfnp_batch(device_queue->val, m, n, reinterpret_cast<std::complex<float>**>(a), lda, group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDgetrfnp_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, double **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrfnp_batch(device_queue->val, m, n, a, lda, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSgetrfnp_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, float **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrfnp_batch(device_queue->val, m, n, a, lda, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZgetrfnp_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, double _Complex **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrfnp_batch(device_queue->val, m, n, reinterpret_cast<std::complex<double>**>(a), lda, group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int64_t onemklSgetrfnp_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
+extern "C" int64_t onemklSgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrfnp_batch_scratchpad_size<float>(device_queue->val, m, n, lda, stride_a, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDgetrfnp_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
+extern "C" int64_t onemklDgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrfnp_batch_scratchpad_size<double>(device_queue->val, m, n, lda, stride_a, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCgetrfnp_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
+extern "C" int64_t onemklCgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrfnp_batch_scratchpad_size<std::complex<float>>(device_queue->val, m, n, lda, stride_a, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZgetrfnp_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
+extern "C" int64_t onemklZgetrfnp_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrfnp_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, lda, stride_a, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int onemklCgetrfnp_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCgetrfnp_batch(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrfnp_batch(device_queue->val, m, n, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDgetrfnp_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDgetrfnp_batch(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrfnp_batch(device_queue->val, m, n, a, lda, stride_a, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSgetrfnp_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSgetrfnp_batch(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrfnp_batch(device_queue->val, m, n, a, lda, stride_a, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZgetrfnp_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZgetrfnp_batch(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrfnp_batch(device_queue->val, m, n, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
@@ -2705,89 +2536,89 @@ extern "C" int onemklZgetrs(syclQueue_t device_queue, onemklTranspose trans, int
    return 0;
 }
 
-extern "C" int64_t onemklSgetrs_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklSgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrs_batch_scratchpad_size<float>(device_queue->val, convert(trans), n, nrhs, lda, stride_a, stride_ipiv, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDgetrs_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklDgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrs_batch_scratchpad_size<double>(device_queue->val, convert(trans), n, nrhs, lda, stride_a, stride_ipiv, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCgetrs_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklCgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrs_batch_scratchpad_size<std::complex<float>>(device_queue->val, convert(trans), n, nrhs, lda, stride_a, stride_ipiv, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZgetrs_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklZgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrs_batch_scratchpad_size<std::complex<double>>(device_queue->val, convert(trans), n, nrhs, lda, stride_a, stride_ipiv, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int onemklCgetrs_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, float _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCgetrs_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, float _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrs_batch(device_queue->val, convert(trans), n, nrhs, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, ipiv, stride_ipiv, reinterpret_cast<std::complex<float>*>(b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDgetrs_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, double *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDgetrs_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, double *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrs_batch(device_queue->val, convert(trans), n, nrhs, a, lda, stride_a, ipiv, stride_ipiv, b, ldb, stride_b, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSgetrs_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, float *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSgetrs_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, float *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrs_batch(device_queue->val, convert(trans), n, nrhs, a, lda, stride_a, ipiv, stride_ipiv, b, ldb, stride_b, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZgetrs_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, double _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZgetrs_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, double _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrs_batch(device_queue->val, convert(trans), n, nrhs, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, ipiv, stride_ipiv, reinterpret_cast<std::complex<double>*>(b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int64_t onemklSgetrsnp_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklSgetrsnp_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrsnp_batch_scratchpad_size<float>(device_queue->val, convert(trans), n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDgetrsnp_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklDgetrsnp_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrsnp_batch_scratchpad_size<double>(device_queue->val, convert(trans), n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCgetrsnp_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklCgetrsnp_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrsnp_batch_scratchpad_size<std::complex<float>>(device_queue->val, convert(trans), n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZgetrsnp_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklZgetrsnp_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getrsnp_batch_scratchpad_size<std::complex<double>>(device_queue->val, convert(trans), n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int onemklCgetrsnp_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCgetrsnp_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrsnp_batch(device_queue->val, convert(trans), n, nrhs, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, reinterpret_cast<std::complex<float>*>(b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDgetrsnp_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t stride_a, double *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDgetrsnp_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t stride_a, double *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrsnp_batch(device_queue->val, convert(trans), n, nrhs, a, lda, stride_a, b, ldb, stride_b, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSgetrsnp_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t stride_a, float *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSgetrsnp_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t stride_a, float *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrsnp_batch(device_queue->val, convert(trans), n, nrhs, a, lda, stride_a, b, ldb, stride_b, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZgetrsnp_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZgetrsnp_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getrsnp_batch(device_queue->val, convert(trans), n, nrhs, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, reinterpret_cast<std::complex<double>*>(b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
@@ -3475,844 +3306,448 @@ extern "C" int64_t onemklZunmtr_scratchpad_size(syclQueue_t device_queue, onemkl
    return scratchpad_size;
 }
 
-extern "C" int onemklSpotrf_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, float **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::potrf_batch(device_queue->val, convert(uplo, group_count), n, a, lda, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDpotrf_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, double **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::potrf_batch(device_queue->val, convert(uplo, group_count), n, a, lda, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCpotrf_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, float _Complex **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::potrf_batch(device_queue->val, convert(uplo, group_count), n, reinterpret_cast<std::complex<float>**>(a), lda, group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZpotrf_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, double _Complex **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::potrf_batch(device_queue->val, convert(uplo, group_count), n, reinterpret_cast<std::complex<double>**>(a), lda, group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSpotrs_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, float **a, int64_t *lda, float **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo, group_count), n, nrhs, a, lda, b, ldb, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDpotrs_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, double **a, int64_t *lda, double **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo, group_count), n, nrhs, a, lda, b, ldb, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCpotrs_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, float _Complex **a, int64_t *lda, float _Complex **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo, group_count), n, nrhs, reinterpret_cast<std::complex<float>**>(a), lda, reinterpret_cast<std::complex<float>**>(b), ldb, group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZpotrs_batch(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, double _Complex **a, int64_t *lda, double _Complex **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo, group_count), n, nrhs, reinterpret_cast<std::complex<double>**>(a), lda, reinterpret_cast<std::complex<double>**>(b), ldb, group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSgeinv_batch(syclQueue_t device_queue, int64_t *n, float **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::geinv_batch(device_queue->val, n, a, lda, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDgeinv_batch(syclQueue_t device_queue, int64_t *n, double **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::geinv_batch(device_queue->val, n, a, lda, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCgeinv_batch(syclQueue_t device_queue, int64_t *n, float _Complex **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::geinv_batch(device_queue->val, n, reinterpret_cast<std::complex<float>**>(a), lda, group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZgeinv_batch(syclQueue_t device_queue, int64_t *n, double _Complex **a, int64_t *lda, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::geinv_batch(device_queue->val, n, reinterpret_cast<std::complex<double>**>(a), lda, group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSgetrs_batch(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t *nrhs, float **a, int64_t *lda, int64_t **ipiv, float **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrs_batch(device_queue->val, convert(trans, group_count), n, nrhs, a, lda, ipiv, b, ldb, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDgetrs_batch(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t *nrhs, double **a, int64_t *lda, int64_t **ipiv, double **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrs_batch(device_queue->val, convert(trans, group_count), n, nrhs, a, lda, ipiv, b, ldb, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCgetrs_batch(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t *nrhs, float _Complex **a, int64_t *lda, int64_t **ipiv, float _Complex **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrs_batch(device_queue->val, convert(trans, group_count), n, nrhs, reinterpret_cast<std::complex<float>**>(a), lda, ipiv, reinterpret_cast<std::complex<float>**>(b), ldb, group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZgetrs_batch(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t *nrhs, double _Complex **a, int64_t *lda, int64_t **ipiv, double _Complex **b, int64_t *ldb, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getrs_batch(device_queue->val, convert(trans, group_count), n, nrhs, reinterpret_cast<std::complex<double>**>(a), lda, ipiv, reinterpret_cast<std::complex<double>**>(b), ldb, group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSgetri_batch(syclQueue_t device_queue, int64_t *n, float **a, int64_t *lda, int64_t **ipiv, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, a, lda, ipiv, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDgetri_batch(syclQueue_t device_queue, int64_t *n, double **a, int64_t *lda, int64_t **ipiv, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, a, lda, ipiv, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCgetri_batch(syclQueue_t device_queue, int64_t *n, float _Complex **a, int64_t *lda, int64_t **ipiv, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, reinterpret_cast<std::complex<float>**>(a), lda, ipiv, group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZgetri_batch(syclQueue_t device_queue, int64_t *n, double _Complex **a, int64_t *lda, int64_t **ipiv, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, reinterpret_cast<std::complex<double>**>(a), lda, ipiv, group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSgeqrf_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, float **a, int64_t *lda, float **tau, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, a, lda, tau, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDgeqrf_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, double **a, int64_t *lda, double **tau, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, a, lda, tau, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCgeqrf_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, float _Complex **a, int64_t *lda, float _Complex **tau, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<float>**>(a), lda, reinterpret_cast<std::complex<float>**>(tau), group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZgeqrf_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, double _Complex **a, int64_t *lda, double _Complex **tau, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<double>**>(a), lda, reinterpret_cast<std::complex<double>**>(tau), group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSorgqr_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *k, float **a, int64_t *lda, float **tau, int64_t group_count, int64_t *group_sizes, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::orgqr_batch(device_queue->val, m, n, k, a, lda, tau, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDorgqr_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *k, double **a, int64_t *lda, double **tau, int64_t group_count, int64_t *group_sizes, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::orgqr_batch(device_queue->val, m, n, k, a, lda, tau, group_count, group_sizes, scratchpad, scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCungqr_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *k, float _Complex **a, int64_t *lda, float _Complex **tau, int64_t group_count, int64_t *group_sizes, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::ungqr_batch(device_queue->val, m, n, k, reinterpret_cast<std::complex<float>**>(a), lda, reinterpret_cast<std::complex<float>**>(tau), group_count, group_sizes, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZungqr_batch(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *k, double _Complex **a, int64_t *lda, double _Complex **tau, int64_t group_count, int64_t *group_sizes, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::ungqr_batch(device_queue->val, m, n, k, reinterpret_cast<std::complex<double>**>(a), lda, reinterpret_cast<std::complex<double>**>(tau), group_count, group_sizes, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int64_t onemklSpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::potrf_batch_scratchpad_size<float>(device_queue->val, convert(uplo, group_count), n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::potrf_batch_scratchpad_size<double>(device_queue->val, convert(uplo, group_count), n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::potrf_batch_scratchpad_size<std::complex<float>>(device_queue->val, convert(uplo, group_count), n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::potrf_batch_scratchpad_size<std::complex<double>>(device_queue->val, convert(uplo, group_count), n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklSpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::potrs_batch_scratchpad_size<float>(device_queue->val, convert(uplo, group_count), n, nrhs, lda, ldb, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::potrs_batch_scratchpad_size<double>(device_queue->val, convert(uplo, group_count), n, nrhs, lda, ldb, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::potrs_batch_scratchpad_size<std::complex<float>>(device_queue->val, convert(uplo, group_count), n, nrhs, lda, ldb, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo *uplo, int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::potrs_batch_scratchpad_size<std::complex<double>>(device_queue->val, convert(uplo, group_count), n, nrhs, lda, ldb, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklSgeinv_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::geinv_batch_scratchpad_size<float>(device_queue->val, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDgeinv_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::geinv_batch_scratchpad_size<double>(device_queue->val, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCgeinv_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::geinv_batch_scratchpad_size<std::complex<float>>(device_queue->val, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZgeinv_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::geinv_batch_scratchpad_size<std::complex<double>>(device_queue->val, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklSgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrs_batch_scratchpad_size<float>(device_queue->val, convert(trans, group_count), n, nrhs, lda, ldb, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrs_batch_scratchpad_size<double>(device_queue->val, convert(trans, group_count), n, nrhs, lda, ldb, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrs_batch_scratchpad_size<std::complex<float>>(device_queue->val, convert(trans, group_count), n, nrhs, lda, ldb, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZgetrs_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose *trans, int64_t *n, int64_t *nrhs, int64_t *lda, int64_t *ldb, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getrs_batch_scratchpad_size<std::complex<double>>(device_queue->val, convert(trans, group_count), n, nrhs, lda, ldb, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklSgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<float>(device_queue->val, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<double>(device_queue->val, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<std::complex<float>>(device_queue->val, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<std::complex<double>>(device_queue->val, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklSgeqrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::geqrf_batch_scratchpad_size<float>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDgeqrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::geqrf_batch_scratchpad_size<double>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCgeqrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::geqrf_batch_scratchpad_size<std::complex<float>>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZgeqrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::geqrf_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklSorgqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *k, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::orgqr_batch_scratchpad_size<float>(device_queue->val, m, n, k, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklDorgqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *k, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::orgqr_batch_scratchpad_size<double>(device_queue->val, m, n, k, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklCungqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *k, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::ungqr_batch_scratchpad_size<std::complex<float>>(device_queue->val, m, n, k, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int64_t onemklZungqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t *m, int64_t *n, int64_t *k, int64_t *lda, int64_t group_count, int64_t *group_sizes) {
-   int64_t scratchpad_size = oneapi::mkl::lapack::ungqr_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, k, lda, group_count, group_sizes);
-   return scratchpad_size;
-}
-
-extern "C" int onemklSpotrf_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSpotrf_batch(syclQueue_t device_queue, onemklUplo uplo, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::potrf_batch(device_queue->val, convert(uplo), n, a, lda, stride_a, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDpotrf_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDpotrf_batch(syclQueue_t device_queue, onemklUplo uplo, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::potrf_batch(device_queue->val, convert(uplo), n, a, lda, stride_a, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCpotrf_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCpotrf_batch(syclQueue_t device_queue, onemklUplo uplo, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::potrf_batch(device_queue->val, convert(uplo), n, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZpotrf_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZpotrf_batch(syclQueue_t device_queue, onemklUplo uplo, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::potrf_batch(device_queue->val, convert(uplo), n, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSpotrs_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t stride_a, float *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSpotrs_batch(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t stride_a, float *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo), n, nrhs, a, lda, stride_a, b, ldb, stride_b, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDpotrs_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t stride_a, double *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDpotrs_batch(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t stride_a, double *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo), n, nrhs, a, lda, stride_a, b, ldb, stride_b, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCpotrs_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCpotrs_batch(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo), n, nrhs, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, reinterpret_cast<std::complex<float>*>(b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZpotrs_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZpotrs_batch(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo), n, nrhs, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, reinterpret_cast<std::complex<double>*>(b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, int64_t stride_a, float *tau, int64_t stride_tau, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSgeqrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, int64_t stride_a, float *tau, int64_t stride_tau, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, a, lda, stride_a, tau, stride_tau, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, int64_t stride_a, double *tau, int64_t stride_tau, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDgeqrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, int64_t stride_a, double *tau, int64_t stride_tau, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, a, lda, stride_a, tau, stride_tau, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *tau, int64_t stride_tau, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCgeqrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *tau, int64_t stride_tau, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, reinterpret_cast<std::complex<float>*>(tau), stride_tau, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *tau, int64_t stride_tau, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZgeqrf_batch(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *tau, int64_t stride_tau, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, reinterpret_cast<std::complex<double>*>(tau), stride_tau, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSorgqr_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, float *a, int64_t lda, int64_t stride_a, float *tau, int64_t stride_tau, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSorgqr_batch(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, float *a, int64_t lda, int64_t stride_a, float *tau, int64_t stride_tau, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::orgqr_batch(device_queue->val, m, n, k, a, lda, stride_a, tau, stride_tau, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDorgqr_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, double *a, int64_t lda, int64_t stride_a, double *tau, int64_t stride_tau, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDorgqr_batch(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, double *a, int64_t lda, int64_t stride_a, double *tau, int64_t stride_tau, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::orgqr_batch(device_queue->val, m, n, k, a, lda, stride_a, tau, stride_tau, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCungqr_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *tau, int64_t stride_tau, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCungqr_batch(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *tau, int64_t stride_tau, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::ungqr_batch(device_queue->val, m, n, k, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, reinterpret_cast<std::complex<float>*>(tau), stride_tau, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZungqr_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *tau, int64_t stride_tau, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZungqr_batch(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *tau, int64_t stride_tau, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::ungqr_batch(device_queue->val, m, n, k, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, reinterpret_cast<std::complex<double>*>(tau), stride_tau, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSgetri_batch_strided(syclQueue_t device_queue, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklSgetri_batch(syclQueue_t device_queue, int64_t n, float *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, a, lda, stride_a, ipiv, stride_ipiv, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDgetri_batch_strided(syclQueue_t device_queue, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklDgetri_batch(syclQueue_t device_queue, int64_t n, double *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, a, lda, stride_a, ipiv, stride_ipiv, batch_size, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCgetri_batch_strided(syclQueue_t device_queue, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklCgetri_batch(syclQueue_t device_queue, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, ipiv, stride_ipiv, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZgetri_batch_strided(syclQueue_t device_queue, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+extern "C" int onemklZgetri_batch(syclQueue_t device_queue, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, int64_t *ipiv, int64_t stride_ipiv, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    auto status = oneapi::mkl::lapack::getri_batch(device_queue->val, n, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, ipiv, stride_ipiv, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSgels_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, float *_a, int64_t lda, int64_t stride_a, float *_b, int64_t ldb, int64_t stride_b, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, _a, lda, stride_a, _b, ldb, stride_b, batch_size, scratchpad, scratchpad_size, {});
+extern "C" int onemklSgels_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, float *a, int64_t lda, int64_t stridea, float *b, int64_t ldb, int64_t strideb, int64_t batchsize, float *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, a, lda, stridea, b, ldb, strideb, batchsize, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDgels_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, double *_a, int64_t lda, int64_t stride_a, double *_b, int64_t ldb, int64_t stride_b, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, _a, lda, stride_a, _b, ldb, stride_b, batch_size, scratchpad, scratchpad_size, {});
+extern "C" int onemklDgels_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, double *a, int64_t lda, int64_t stridea, double *b, int64_t ldb, int64_t strideb, int64_t batchsize, double *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, a, lda, stridea, b, ldb, strideb, batchsize, scratchpad, scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCgels_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, float _Complex *_a, int64_t lda, int64_t stride_a, float _Complex *_b, int64_t ldb, int64_t stride_b, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, reinterpret_cast<std::complex<float>*>(_a), lda, stride_a, reinterpret_cast<std::complex<float>*>(_b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
+extern "C" int onemklCgels_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, float _Complex *a, int64_t lda, int64_t stridea, float _Complex *b, int64_t ldb, int64_t strideb, int64_t batchsize, float _Complex *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, reinterpret_cast<std::complex<float>*>(a), lda, stridea, reinterpret_cast<std::complex<float>*>(b), ldb, strideb, batchsize, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZgels_batch_strided(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, double _Complex *_a, int64_t lda, int64_t stride_a, double _Complex *_b, int64_t ldb, int64_t stride_b, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
-   auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, reinterpret_cast<std::complex<double>*>(_a), lda, stride_a, reinterpret_cast<std::complex<double>*>(_b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
+extern "C" int onemklZgels_batch(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t stridea, double _Complex *b, int64_t ldb, int64_t strideb, int64_t batchsize, double _Complex *scratchpad, int64_t scratchpad_size) {
+   auto status = oneapi::mkl::lapack::gels_batch(device_queue->val, convert(trans), m, n, nrhs, reinterpret_cast<std::complex<double>*>(a), lda, stridea, reinterpret_cast<std::complex<double>*>(b), ldb, strideb, batchsize, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int64_t onemklSpotrf_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
+extern "C" int64_t onemklSpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::potrf_batch_scratchpad_size<float>(device_queue->val, convert(uplo), n, lda, stride_a, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDpotrf_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
+extern "C" int64_t onemklDpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::potrf_batch_scratchpad_size<double>(device_queue->val, convert(uplo), n, lda, stride_a, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCpotrf_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
+extern "C" int64_t onemklCpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::potrf_batch_scratchpad_size<std::complex<float>>(device_queue->val, convert(uplo), n, lda, stride_a, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZpotrf_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
+extern "C" int64_t onemklZpotrf_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t lda, int64_t stride_a, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::potrf_batch_scratchpad_size<std::complex<double>>(device_queue->val, convert(uplo), n, lda, stride_a, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklSpotrs_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklSpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::potrs_batch_scratchpad_size<float>(device_queue->val, convert(uplo), n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDpotrs_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklDpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::potrs_batch_scratchpad_size<double>(device_queue->val, convert(uplo), n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCpotrs_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklCpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::potrs_batch_scratchpad_size<std::complex<float>>(device_queue->val, convert(uplo), n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZpotrs_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklZpotrs_batch_scratchpad_size(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::potrs_batch_scratchpad_size<std::complex<double>>(device_queue->val, convert(uplo), n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklSgeqrf_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
+extern "C" int64_t onemklSgeqrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::geqrf_batch_scratchpad_size<float>(device_queue->val, m, n, lda, stride_a, stride_tau, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDgeqrf_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
+extern "C" int64_t onemklDgeqrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::geqrf_batch_scratchpad_size<double>(device_queue->val, m, n, lda, stride_a, stride_tau, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCgeqrf_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
+extern "C" int64_t onemklCgeqrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::geqrf_batch_scratchpad_size<std::complex<float>>(device_queue->val, m, n, lda, stride_a, stride_tau, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZgeqrf_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
+extern "C" int64_t onemklZgeqrf_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::geqrf_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, lda, stride_a, stride_tau, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklSorgqr_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
+extern "C" int64_t onemklSorgqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::orgqr_batch_scratchpad_size<float>(device_queue->val, m, n, k, lda, stride_a, stride_tau, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDorgqr_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
+extern "C" int64_t onemklDorgqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::orgqr_batch_scratchpad_size<double>(device_queue->val, m, n, k, lda, stride_a, stride_tau, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCungqr_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
+extern "C" int64_t onemklCungqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::ungqr_batch_scratchpad_size<std::complex<float>>(device_queue->val, m, n, k, lda, stride_a, stride_tau, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZungqr_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
+extern "C" int64_t onemklZungqr_batch_scratchpad_size(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, int64_t lda, int64_t stride_a, int64_t stride_tau, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::ungqr_batch_scratchpad_size<std::complex<double>>(device_queue->val, m, n, k, lda, stride_a, stride_tau, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklSgetri_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+extern "C" int64_t onemklSgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<float>(device_queue->val, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDgetri_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+extern "C" int64_t onemklDgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<double>(device_queue->val, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCgetri_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+extern "C" int64_t onemklCgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<std::complex<float>>(device_queue->val, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZgetri_batch_strided_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
+extern "C" int64_t onemklZgetri_batch_scratchpad_size(syclQueue_t device_queue, int64_t n, int64_t lda, int64_t stride_a, int64_t stride_ipiv, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::getri_batch_scratchpad_size<std::complex<double>>(device_queue->val, n, lda, stride_a, stride_ipiv, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklSgels_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklSgels_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::gels_batch_scratchpad_size<float>(device_queue->val, convert(trans), m, n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklDgels_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklDgels_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::gels_batch_scratchpad_size<double>(device_queue->val, convert(trans), m, n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklCgels_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklCgels_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::gels_batch_scratchpad_size<std::complex<float>>(device_queue->val, convert(trans), m, n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
-extern "C" int64_t onemklZgels_batch_strided_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
+extern "C" int64_t onemklZgels_batch_scratchpad_size(syclQueue_t device_queue, onemklTranspose trans, int64_t m, int64_t n, int64_t nrhs, int64_t lda, int64_t stride_a, int64_t ldb, int64_t stride_b, int64_t batch_size) {
    int64_t scratchpad_size = oneapi::mkl::lapack::gels_batch_scratchpad_size<std::complex<double>>(device_queue->val, convert(trans), m, n, nrhs, lda, stride_a, ldb, stride_b, batch_size);
    return scratchpad_size;
 }
 
 // SPARSE
-extern "C" int onemklXsparse_init_matrix_handle(matrix_handle_t *p_spMat) {
-   oneapi::mkl::sparse::init_matrix_handle((oneapi::mkl::sparse::matrix_handle_t*) p_spMat);
+extern "C" int onemklXsparse_init_matrix_handle(matrix_handle_t *handle) {
+   oneapi::mkl::sparse::init_matrix_handle((oneapi::mkl::sparse::matrix_handle_t*) handle);
    return 0;
 }
 
-extern "C" int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, matrix_handle_t *p_spMat) {
-   auto status = oneapi::mkl::sparse::release_matrix_handle(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t*) p_spMat, {});
+extern "C" int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float *val) {
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
 }
 
-extern "C" int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float *values) {
-   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, values);
+extern "C" int onemklSsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t handle, int64_t num_rows, int64_t num_cols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float *val) {
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
 }
 
-extern "C" int onemklSsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float *values) {
-   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, values);
+extern "C" int onemklDsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double *val) {
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
 }
 
-extern "C" int onemklDsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double *values) {
-   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, values);
+extern "C" int onemklDsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t handle, int64_t num_rows, int64_t num_cols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double *val) {
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, val);
    return 0;
 }
 
-extern "C" int onemklDsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double *values) {
-   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, values);
+extern "C" int onemklCsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float _Complex *val) {
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(val));
    return 0;
 }
 
-extern "C" int onemklCsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float _Complex *values) {
-   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(values));
+extern "C" int onemklCsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t handle, int64_t num_rows, int64_t num_cols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float _Complex *val) {
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(val));
    return 0;
 }
 
-extern "C" int onemklCsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float _Complex *values) {
-   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(values));
+extern "C" int onemklZsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t handle, int32_t num_rows, int32_t num_cols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double _Complex *val) {
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(val));
    return 0;
 }
 
-extern "C" int onemklZsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double _Complex *values) {
-   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(values));
+extern "C" int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t handle, int64_t num_rows, int64_t num_cols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double _Complex *val) {
+   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) handle, num_rows, num_cols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(val));
    return 0;
 }
 
-extern "C" int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double _Complex *values) {
-   oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(values));
-   return 0;
-}
-
-extern "C" int onemklXsparse_init_matmat_descr(matmat_descr_t *p_desc) {
-   oneapi::mkl::sparse::init_matmat_descr((oneapi::mkl::sparse::matmat_descr_t*) p_desc);
-   return 0;
-}
-
-extern "C" int onemklXsparse_release_matmat_descr(matmat_descr_t *p_desc) {
-   oneapi::mkl::sparse::release_matmat_descr((oneapi::mkl::sparse::matmat_descr_t*) p_desc);
-   return 0;
-}
-
-extern "C" int onemklXsparse_omatcopy(syclQueue_t device_queue, onemklTranspose transpose_val, matrix_handle_t spMat_in, matrix_handle_t spMat_out) {
-   auto status = oneapi::mkl::sparse::omatcopy(device_queue->val, convert(transpose_val), (oneapi::mkl::sparse::matrix_handle_t) spMat_in, (oneapi::mkl::sparse::matrix_handle_t) spMat_out, {});
+extern "C" int onemklSsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, float alpha, matrix_handle_t handle, float *x, float beta, float *y) {
+   auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(transpose_flag), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklXsparse_sort_matrix(syclQueue_t device_queue, matrix_handle_t spMat) {
-   auto status = oneapi::mkl::sparse::sort_matrix(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, {});
+extern "C" int onemklDsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, double alpha, matrix_handle_t handle, double *x, double beta, double *y) {
+   auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(transpose_flag), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spMat, int64_t length, float *new_diag_values) {
-   auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, length, new_diag_values, {});
+extern "C" int onemklCsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, float _Complex alpha, matrix_handle_t handle, float _Complex *x, float _Complex beta, float _Complex *y) {
+   auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(transpose_flag), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<float>*>(x), static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(y), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spMat, int64_t length, double *new_diag_values) {
-   auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, length, new_diag_values, {});
+extern "C" int onemklZsparse_gemv(syclQueue_t device_queue, onemklTranspose transpose_flag, double _Complex alpha, matrix_handle_t handle, double _Complex *x, double _Complex beta, double _Complex *y) {
+   auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(transpose_flag), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spMat, int64_t length, float _Complex *new_diag_values) {
-   auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, length, reinterpret_cast<std::complex<float>*>(new_diag_values), {});
+extern "C" int onemklSsparse_symv(syclQueue_t device_queue, onemklUplo uplo_flag, float alpha, matrix_handle_t handle, float *x, float beta, float *y) {
+   auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_flag), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spMat, int64_t length, double _Complex *new_diag_values) {
-   auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, length, reinterpret_cast<std::complex<double>*>(new_diag_values), {});
+extern "C" int onemklDsparse_symv(syclQueue_t device_queue, onemklUplo uplo_flag, double alpha, matrix_handle_t handle, double *x, double beta, double *y) {
+   auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_flag), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklXsparse_optimize_gemv(syclQueue_t device_queue, onemklTranspose opA, matrix_handle_t A) {
-   auto status = oneapi::mkl::sparse::optimize_gemv(device_queue->val, convert(opA), (oneapi::mkl::sparse::matrix_handle_t) A, {});
-   return 0;
-}
-
-extern "C" int onemklXsparse_optimize_trmv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A) {
-   auto status = oneapi::mkl::sparse::optimize_trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, {});
+extern "C" int onemklCsparse_symv(syclQueue_t device_queue, onemklUplo uplo_flag, float _Complex alpha, matrix_handle_t handle, float _Complex *x, float _Complex beta, float _Complex *y) {
+   auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_flag), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<float>*>(x), static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(y), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklXsparse_optimize_trsv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A) {
-   auto status = oneapi::mkl::sparse::optimize_trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, {});
+extern "C" int onemklZsparse_symv(syclQueue_t device_queue, onemklUplo uplo_flag, double _Complex alpha, matrix_handle_t handle, double _Complex *x, double _Complex beta, double _Complex *y) {
+   auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_flag), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSsparse_gemv(syclQueue_t device_queue, onemklTranspose opA, float alpha, matrix_handle_t A, float *x, float beta, float *y) {
-   auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(opA), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, beta, y, {});
+extern "C" int onemklSsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, float alpha, matrix_handle_t handle, float *x, float beta, float *y) {
+   auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDsparse_gemv(syclQueue_t device_queue, onemklTranspose opA, double alpha, matrix_handle_t A, double *x, double beta, double *y) {
-   auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(opA), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, beta, y, {});
+extern "C" int onemklDsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, double alpha, matrix_handle_t handle, double *x, double beta, double *y) {
+   auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, x, beta, y, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCsparse_gemv(syclQueue_t device_queue, onemklTranspose opA, float _Complex alpha, matrix_handle_t A, float _Complex *x, float _Complex beta, float _Complex *y) {
-   auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(opA), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(y), {});
+extern "C" int onemklCsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, float _Complex alpha, matrix_handle_t handle, float _Complex *x, float _Complex beta, float _Complex *y) {
+   auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<float>*>(x), static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(y), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZsparse_gemv(syclQueue_t device_queue, onemklTranspose opA, double _Complex alpha, matrix_handle_t A, double _Complex *x, double _Complex beta, double _Complex *y) {
-   auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(opA), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), {});
+extern "C" int onemklZsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, double _Complex alpha, matrix_handle_t handle, double _Complex *x, double _Complex beta, double _Complex *y) {
+   auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSsparse_gemvdot(syclQueue_t device_queue, onemklTranspose opA, float alpha, matrix_handle_t A, float *x, float beta, float *y, float *d) {
-   auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(opA), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, beta, y, d, {});
+extern "C" int onemklSsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, matrix_handle_t handle, float *x, float *y) {
+   auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) handle, x, y, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDsparse_gemvdot(syclQueue_t device_queue, onemklTranspose opA, double alpha, matrix_handle_t A, double *x, double beta, double *y, double *d) {
-   auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(opA), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, beta, y, d, {});
+extern "C" int onemklDsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, matrix_handle_t handle, double *x, double *y) {
+   auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) handle, x, y, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCsparse_gemvdot(syclQueue_t device_queue, onemklTranspose opA, float _Complex alpha, matrix_handle_t A, float _Complex *x, float _Complex beta, float _Complex *y, float _Complex *d) {
-   auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(opA), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(y), reinterpret_cast<std::complex<float>*>(d), {});
+extern "C" int onemklCsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, matrix_handle_t handle, float _Complex *x, float _Complex *y) {
+   auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<float>*>(x), reinterpret_cast<std::complex<float>*>(y), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZsparse_gemvdot(syclQueue_t device_queue, onemklTranspose opA, double _Complex alpha, matrix_handle_t A, double _Complex *x, double _Complex beta, double _Complex *y, double _Complex *d) {
-   auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(opA), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), reinterpret_cast<std::complex<double>*>(d), {});
+extern "C" int onemklZsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_flag, onemklTranspose transpose_flag, onemklDiag diag_val, matrix_handle_t handle, double _Complex *x, double _Complex *y) {
+   auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_flag), convert(transpose_flag), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<double>*>(x), reinterpret_cast<std::complex<double>*>(y), {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSsparse_symv(syclQueue_t device_queue, onemklUplo uplo_val, float alpha, matrix_handle_t A, float *x, float beta, float *y) {
-   auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_val), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, beta, y, {});
+extern "C" int onemklSsparse_gemm(syclQueue_t device_queue, onemklLayout dense_matrix_layout, onemklTranspose opA, onemklTranspose opB, float alpha, matrix_handle_t handle, float *b, int64_t columns, int64_t ldb, float beta, float *c, int64_t ldc) {
+   auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(dense_matrix_layout), convert(opA), convert(opB), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, b, columns, ldb, beta, c, ldc, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklDsparse_symv(syclQueue_t device_queue, onemklUplo uplo_val, double alpha, matrix_handle_t A, double *x, double beta, double *y) {
-   auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_val), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, beta, y, {});
+extern "C" int onemklDsparse_gemm(syclQueue_t device_queue, onemklLayout dense_matrix_layout, onemklTranspose opA, onemklTranspose opB, double alpha, matrix_handle_t handle, double *b, int64_t columns, int64_t ldb, double beta, double *c, int64_t ldc) {
+   auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(dense_matrix_layout), convert(opA), convert(opB), alpha, (oneapi::mkl::sparse::matrix_handle_t) handle, b, columns, ldb, beta, c, ldc, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklCsparse_symv(syclQueue_t device_queue, onemklUplo uplo_val, float _Complex alpha, matrix_handle_t A, float _Complex *x, float _Complex beta, float _Complex *y) {
-   auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_val), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(y), {});
+extern "C" int onemklCsparse_gemm(syclQueue_t device_queue, onemklLayout dense_matrix_layout, onemklTranspose opA, onemklTranspose opB, float _Complex alpha, matrix_handle_t handle, float _Complex *b, int64_t columns, int64_t ldb, float _Complex beta, float _Complex *c, int64_t ldc) {
+   auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(dense_matrix_layout), convert(opA), convert(opB), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<float>*>(b), columns, ldb, static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(c), ldc, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklZsparse_symv(syclQueue_t device_queue, onemklUplo uplo_val, double _Complex alpha, matrix_handle_t A, double _Complex *x, double _Complex beta, double _Complex *y) {
-   auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_val), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), {});
+extern "C" int onemklZsparse_gemm(syclQueue_t device_queue, onemklLayout dense_matrix_layout, onemklTranspose opA, onemklTranspose opB, double _Complex alpha, matrix_handle_t handle, double _Complex *b, int64_t columns, int64_t ldb, double _Complex beta, double _Complex *c, int64_t ldc) {
+   auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(dense_matrix_layout), convert(opA), convert(opB), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) handle, reinterpret_cast<std::complex<double>*>(b), columns, ldb, static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(c), ldc, {});
    __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
-extern "C" int onemklSsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, float alpha, matrix_handle_t A, float *x, float beta, float *y) {
-   auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, beta, y, {});
-   __FORCE_MKL_FLUSH__(status);
+extern "C" int onemklXsparse_init_matmat_descr(matmat_descr_t *desc) {
+   oneapi::mkl::sparse::init_matmat_descr((oneapi::mkl::sparse::matmat_descr_t*) desc);
    return 0;
 }
 
-extern "C" int onemklDsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, double alpha, matrix_handle_t A, double *x, double beta, double *y) {
-   auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, beta, y, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, float _Complex alpha, matrix_handle_t A, float _Complex *x, float _Complex beta, float _Complex *y) {
-   auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(y), {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, double _Complex alpha, matrix_handle_t A, double _Complex *x, double _Complex beta, double _Complex *y) {
-   auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(y), {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A, float *x, float *y) {
-   auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, x, y, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A, double *x, double *y) {
-   auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, x, y, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A, float _Complex *x, float _Complex *y) {
-   auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), reinterpret_cast<std::complex<float>*>(y), {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A, double _Complex *x, double _Complex *y) {
-   auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), reinterpret_cast<std::complex<double>*>(y), {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklSsparse_gemm(syclQueue_t device_queue, onemklLayout layout_val, onemklTranspose opA, onemklTranspose opX, float alpha, matrix_handle_t A, float *X, int64_t columns, int64_t ldx, float beta, float *Y, int64_t ldy) {
-   auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(layout_val), convert(opA), convert(opX), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, X, columns, ldx, beta, Y, ldy, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklDsparse_gemm(syclQueue_t device_queue, onemklLayout layout_val, onemklTranspose opA, onemklTranspose opX, double alpha, matrix_handle_t A, double *X, int64_t columns, int64_t ldx, double beta, double *Y, int64_t ldy) {
-   auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(layout_val), convert(opA), convert(opX), alpha, (oneapi::mkl::sparse::matrix_handle_t) A, X, columns, ldx, beta, Y, ldy, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklCsparse_gemm(syclQueue_t device_queue, onemklLayout layout_val, onemklTranspose opA, onemklTranspose opX, float _Complex alpha, matrix_handle_t A, float _Complex *X, int64_t columns, int64_t ldx, float _Complex beta, float _Complex *Y, int64_t ldy) {
-   auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(layout_val), convert(opA), convert(opX), static_cast<std::complex<float> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(X), columns, ldx, static_cast<std::complex<float> >(beta), reinterpret_cast<std::complex<float>*>(Y), ldy, {});
-   __FORCE_MKL_FLUSH__(status);
-   return 0;
-}
-
-extern "C" int onemklZsparse_gemm(syclQueue_t device_queue, onemklLayout layout_val, onemklTranspose opA, onemklTranspose opX, double _Complex alpha, matrix_handle_t A, double _Complex *X, int64_t columns, int64_t ldx, double _Complex beta, double _Complex *Y, int64_t ldy) {
-   auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(layout_val), convert(opA), convert(opX), static_cast<std::complex<double> >(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(X), columns, ldx, static_cast<std::complex<double> >(beta), reinterpret_cast<std::complex<double>*>(Y), ldy, {});
-   __FORCE_MKL_FLUSH__(status);
+extern "C" int onemklXsparse_release_matmat_descr(matmat_descr_t *desc) {
+   oneapi::mkl::sparse::release_matmat_descr((oneapi::mkl::sparse::matmat_descr_t*) desc);
    return 0;
 }
 
 extern "C" int onemklXsparse_set_matmat_data(matmat_descr_t descr, onemklMatrixView viewA, onemklTranspose opA, onemklMatrixView viewB, onemklTranspose opB, onemklMatrixView viewC) {
    oneapi::mkl::sparse::set_matmat_data((oneapi::mkl::sparse::matmat_descr_t) descr, convert(viewA), convert(opA), convert(viewB), convert(opB), convert(viewC));
-   return 0;
-}
-
-extern "C" int onemklXsparse_matmat(syclQueue_t device_queue, matrix_handle_t A, matrix_handle_t B, matrix_handle_t C, onemklMatmatRequest req, matmat_descr_t descr, int64_t *sizeTempBuffer, void *tempBuffer) {
-   auto status = oneapi::mkl::sparse::matmat(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) A, (oneapi::mkl::sparse::matrix_handle_t) B, (oneapi::mkl::sparse::matrix_handle_t) C, convert(req), (oneapi::mkl::sparse::matmat_descr_t) descr, sizeTempBuffer, tempBuffer, {});
-   __FORCE_MKL_FLUSH__(status);
    return 0;
 }
 
