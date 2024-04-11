@@ -6,9 +6,6 @@ const oneAPICompilerJob = CompilerJob{SPIRVCompilerTarget,oneAPICompilerParams}
 
 GPUCompiler.runtime_module(::oneAPICompilerJob) = oneAPI
 
-const ci_cache = GPUCompiler.CodeCache()
-GPUCompiler.ci_cache(::oneAPICompilerJob) = ci_cache
-
 GPUCompiler.method_table(::oneAPICompilerJob) = method_table
 
 # filter out OpenCL built-ins
