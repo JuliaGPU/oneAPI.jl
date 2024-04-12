@@ -15,6 +15,7 @@ using LLVM
 using LLVM.Interop
 using Core: LLVMPtr
 
+using OpenCL_jll
 using SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll
 
 export oneL0
@@ -84,9 +85,9 @@ function __init__()
                  For the time being, it is recommended to use WSL or Linux instead."""
     end
 
-    if Sys.islinux()
-        # ensure that the OpenCL runtime dispatcher finds the ICD files from our artifacts
-        ENV["OCL_ICD_VENDORS"] = oneL0.NEO_jll.libigdrcl
+    if oneL0.NEO_jll.is_available()
+        # ensure that the OpenCL loader finds the ICD files from our artifacts
+        ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
     end
 end
 
