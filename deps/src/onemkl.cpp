@@ -4320,9 +4320,10 @@ extern "C" int onemklXsparse_matmat(syclQueue_t device_queue, matrix_handle_t A,
 
 // oneMKL keeps a cache of SYCL queues and tries to destroy them when unloading the library.
 // that is incompatible with oneAPI.jl destroying queues before that, so call mkl_free_buffers
-// to manually wipe the device cache when we're destroying queues.
+// and mkl_sycl_destructor to manually cleanup oneMKL cache when we're destroying queues.
 
 extern "C" int onemklDestroy() {
     mkl_free_buffers();
+    mkl_sycl_destructor();
     return 0;
 }
