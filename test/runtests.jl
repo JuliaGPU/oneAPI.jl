@@ -79,9 +79,11 @@ for (rootpath, dirs, files) in walkdir(@__DIR__)
   end
 end
 ## GPUArrays testsuite
-for name in keys(TestSuite.tests)
-    push!(tests, "gpuarrays$(Base.Filesystem.path_separator)$name")
-    test_runners["gpuarrays$(Base.Filesystem.path_separator)$name"] = ()->TestSuite.tests[name](oneArray)
+if !haskey(ENV, "ZE_ENABLE_PARAMETER_VALIDATION")
+    for name in keys(TestSuite.tests)
+        push!(tests, "gpuarrays$(Base.Filesystem.path_separator)$name")
+        test_runners["gpuarrays$(Base.Filesystem.path_separator)$name"] = ()->TestSuite.tests[name](oneArray)
+    end
 end
 unique!(tests)
 

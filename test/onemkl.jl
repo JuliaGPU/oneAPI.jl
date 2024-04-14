@@ -27,10 +27,12 @@ k = 13
             @test testf(axpy!, alpha, rand(T,m), rand(T,m))
         end
 
-        @testset "axpby" begin
-            alpha = rand(T)
-            beta = rand(T)
-            @test testf(axpby!, alpha, rand(T,m), beta, rand(T,m))
+        if !haskey(ENV, "ZE_ENABLE_PARAMETER_VALIDATION")
+            @testset "axpby" begin
+                alpha = rand(T)
+                beta = rand(T)
+                @test testf(axpby!, alpha, rand(T,m), beta, rand(T,m))
+            end
         end
 
         @testset "rotate" begin
