@@ -276,7 +276,15 @@ use_ccall_macro = true
 3 = "ZePtr{T}"
 5 = "ZePtr{Int64}"
 
+[api.onemklXiamax_64.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{Int64}"
+
 [api.onemklXiamin.argtypes]
+3 = "ZePtr{T}"
+5 = "ZePtr{Int64}"
+
+[api.onemklXiamin_64.argtypes]
 3 = "ZePtr{T}"
 5 = "ZePtr{Int64}"
 
@@ -358,6 +366,16 @@ use_ccall_macro = true
 7 = "ZePtr{Int64}"
 8 = "ZePtr{T}"
 
+[api.onemklXsparse_set_coo_data.argtypes]
+7 = "ZePtr{Int32}"
+8 = "ZePtr{Int32}"
+9 = "ZePtr{T}"
+
+[api.onemklXsparse_set_coo_data_64.argtypes]
+7 = "ZePtr{Int64}"
+8 = "ZePtr{Int64}"
+9 = "ZePtr{T}"
+
 [api.onemklXsparse_gemv.argtypes]
 3 = "Ref{T}"
 5 = "ZePtr{T}"
@@ -377,8 +395,9 @@ use_ccall_macro = true
 9 = "ZePtr{T}"
 
 [api.onemklXsparse_trsv.argtypes]
-6 = "ZePtr{T}"
+5 = "Ref{T}"
 7 = "ZePtr{T}"
+8 = "ZePtr{T}"
 
 [api.onemklXsparse_update_diagonal_values.argtypes]
 4 = "ZePtr{T}"
@@ -602,3 +621,8 @@ use_ccall_macro = true
 8 = "ZePtr{ComplexF64}"
 10 = "ZePtr{Float64}"
 11 = "ZePtr{ComplexF64}"
+
+[api.onemklXsparse_trsm.argtypes]
+7 = "Ref{T}"
+9 = "ZePtr{T}"
+12 = "ZePtr{T}"
