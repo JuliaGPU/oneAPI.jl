@@ -1,4 +1,4 @@
-export oneSparseMatrixCSR
+export oneSparseMatrixCSR, oneSparseMatrixCOO
 
 abstract type oneAbstractSparseArray{Tv, Ti, N} <: AbstractSparseArray{Tv, Ti, N} end
 const oneAbstractSparseVector{Tv, Ti} = oneAbstractSparseArray{Tv, Ti, 1}
@@ -13,10 +13,19 @@ mutable struct oneSparseMatrixCSR{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
     nnz::Ti
 end
 
-Base.length(A::oneSparseMatrixCSR) = prod(A.dims)
-Base.size(A::oneSparseMatrixCSR) = A.dims
+mutable struct oneSparseMatrixCOO{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
+    handle::matrix_handle_t
+    rowInd::oneVector{Ti}
+    colInd::oneVector{Ti}
+    nzVal::oneVector{Tv}
+    dims::NTuple{2,Int}
+    nnz::Ti
+end
 
-function Base.size(A::oneSparseMatrixCSR, d::Integer)
+Base.length(A::oneAbstractSparseMatrix) = prod(A.dims)
+Base.size(A::oneAbstractSparseMatrix) = A.dims
+
+function Base.size(A::oneAbstractSparseMatrix, d::Integer)
     if d == 1 || d == 2
         return A.dims[d]
     else
@@ -24,10 +33,11 @@ function Base.size(A::oneSparseMatrixCSR, d::Integer)
     end
 end
 
-SparseArrays.nnz(A::oneSparseMatrixCSR) = A.nnz
-SparseArrays.nonzeros(A::oneSparseMatrixCSR) = A.nzVal
+SparseArrays.nnz(A::oneAbstractSparseMatrix) = A.nnz
+SparseArrays.nonzeros(A::oneAbstractSparseMatrix) = A.nzVal
 
-for (gpu, cpu) in [:oneSparseMatrixCSR => :SparseMatrixCSC]
+for (gpu, cpu) in [:oneSparseMatrixCSR => :SparseMatrixCSC,
+                   :oneSparseMatrixCOO => :SparseMatrixCSC]
     @eval Base.show(io::IOContext, x::$gpu) =
         show(io, $cpu(x))
 
