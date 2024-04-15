@@ -1,10 +1,10 @@
 ## (GE) general matrix-matrix multiplication batched
 for (fname, elty) in
-        ((:onemklDgemmBatched,:Float64),
-         (:onemklSgemmBatched,:Float32),
-         (:onemklHgemmBatched,:Float16),
-         (:onemklCgemmBatched,:ComplexF32),
-         (:onemklZgemmBatched,:ComplexF64))
+        ((:onemklDgemm_batch,:Float64),
+         (:onemklSgemm_batch,:Float32),
+         (:onemklHgemm_batch,:Float16),
+         (:onemklCgemm_batch,:ComplexF32),
+         (:onemklZgemm_batch,:ComplexF64))
     @eval begin
         function gemm_batched!(transA::Char,
                                transB::Char,
@@ -77,10 +77,10 @@ end
 
 ## (TR) triangular triangular matrix solution batched
 for (fname, elty) in
-        ((:onemklDtrsmBatched,:Float64),
-         (:onemklStrsmBatched,:Float32),
-         (:onemklCtrsmBatched,:ComplexF32),
-         (:onemklZtrsmBatched,:ComplexF64))
+        ((:onemklDtrsm_batch,:Float64),
+         (:onemklStrsm_batch,:Float32),
+         (:onemklCtrsm_batch,:ComplexF32),
+         (:onemklZtrsm_batch,:ComplexF64))
     @eval begin
         function trsm_batched!(side::Char,
                                uplo::Char,
@@ -1261,11 +1261,11 @@ function dgmm(mode::Char, A::oneStridedMatrix{T}, X::oneStridedVector{T}) where 
 end
 
 for (fname, elty) in
-        ((:onemklSgemmBatchStrided, Float32),
-         (:onemklDgemmBatchStrided, Float64),
-         (:onemklCgemmBatchStrided, ComplexF32),
-         (:onemklZgemmBatchStrided, ComplexF64),
-         (:onemklHgemmBatchStrided, Float16))
+        ((:onemklSgemm_batch_strided, Float32),
+         (:onemklDgemm_batch_strided, Float64),
+         (:onemklCgemm_batch_strided, ComplexF32),
+         (:onemklZgemm_batch_strided, ComplexF64),
+         (:onemklHgemm_batch_strided, Float16))
     @eval begin
         function gemm_strided_batched!(transA::Char,
                                     transB::Char,
