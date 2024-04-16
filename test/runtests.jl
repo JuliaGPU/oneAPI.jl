@@ -79,9 +79,11 @@ for (rootpath, dirs, files) in walkdir(@__DIR__)
   end
 end
 ## GPUArrays testsuite
-for name in keys(TestSuite.tests)
-    push!(tests, "gpuarrays$(Base.Filesystem.path_separator)$name")
-    test_runners["gpuarrays$(Base.Filesystem.path_separator)$name"] = ()->TestSuite.tests[name](oneArray)
+if !validation_layer # oneapi-src/oneMKL#473
+    for name in keys(TestSuite.tests)
+        push!(tests, "gpuarrays$(Base.Filesystem.path_separator)$name")
+        test_runners["gpuarrays$(Base.Filesystem.path_separator)$name"] = ()->TestSuite.tests[name](oneArray)
+    end
 end
 unique!(tests)
 
