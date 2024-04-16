@@ -190,8 +190,7 @@ arguments(kernel)[1] = Int32(42)
 indirect_access!(kernel, oneL0.ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE)
 @test indirect_access(kernel) == oneL0.ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE
 
-# oneapi-src/level-zero#55
-if !parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
+if !parameter_validation # oneapi-src/level-zero#55
     attrs = source_attributes(kernel)
     @test attrs isa Vector{<:AbstractString}
 end

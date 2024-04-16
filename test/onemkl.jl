@@ -27,7 +27,7 @@ k = 13
             @test testf(axpy!, alpha, rand(T,m), rand(T,m))
         end
 
-        if !haskey(ENV, "ZE_ENABLE_PARAMETER_VALIDATION")
+        if !validation_layer # oneapi-src/oneMKL#473
             @testset "axpby" begin
                 alpha = rand(T)
                 beta = rand(T)

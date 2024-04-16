@@ -24,6 +24,9 @@ if float64_supported
 end
 TestSuite.supported_eltypes(::Type{<:oneArray}) = eltypes
 
+const validation_layer = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
+const parameter_validation = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
+
 using Random
 
 
