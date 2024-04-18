@@ -88,6 +88,10 @@ function __init__()
         # ensure that the OpenCL loader finds the ICD files from our artifacts
         ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
     end
+
+    # XXX: work around an issue with SYCL/Level Zero interoperability
+    #      (see JuliaGPU/oneAPI.jl#417)
+    ENV["SYCL_PI_LEVEL_ZERO_BATCH_SIZE"] = "1"
 end
 
 function set_debug!(debug::Bool)
