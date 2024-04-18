@@ -84,10 +84,14 @@ function __init__()
                  For the time being, it is recommended to use WSL or Linux instead."""
     end
 
-    if Sys.islinux()
-        # ensure that the OpenCL runtime dispatcher finds the ICD files from our artifacts
-        ENV["OCL_ICD_VENDORS"] = oneL0.NEO_jll.libigdrcl
+    if oneL0.NEO_jll.is_available()
+        # ensure that the OpenCL loader finds the ICD files from our artifacts
+        ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
     end
+
+    # XXX: work around an issue with SYCL/Level Zero interoperability
+    #      (see JuliaGPU/oneAPI.jl#417)
+    ENV["SYCL_PI_LEVEL_ZERO_BATCH_SIZE"] = "1"
 end
 
 function set_debug!(debug::Bool)
