@@ -16,9 +16,7 @@ struct oneKernelContext <: AbstractKernelContext end
                                              elements::Int, elements_per_thread::Int) where {F,N}
     kernel = @oneapi launch=false f(oneKernelContext(), args...)
 
-    items = suggest_groupsize(kernel.fun, elements).x
-    # XXX: the z dimension of the suggested group size is often non-zero.
-    #      preserve this in GPUArrays?
+    items = launch_configuration(kernel)
     # XXX: how many groups is a good number? the API doesn't tell us.
     #      measured on a low-end IGP, 32 blocks seems like a good sweet spot.
     #      note that this only matters for grid-stride kernels, like broadcast.

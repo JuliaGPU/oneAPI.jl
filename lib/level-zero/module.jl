@@ -234,6 +234,16 @@ export properties
 
 function properties(kernel::ZeKernel)
     props_ref = Ref(ze_kernel_properties_t())
+    preferred_group_size_props_ref = Ref(ze_kernel_preferred_group_size_properties_t())
+    link_extensions(props_ref, preferred_group_size_props_ref)
+    if haskey(oneL0.extension_properties(kernel.mod.context.driver),
+              "ZE_extension_kernel_max_group_size_properties")
+        # TODO: memoize
+        max_group_size_props_ref = Ref(ze_kernel_max_group_size_properties_ext_t())
+        link_extensions(preferred_group_size_props_ref, max_group_size_props_ref)
+    else
+        max_group_size_props_ref = nothing
+    end
     zeKernelGetProperties(kernel, props_ref)
 
     props = props_ref[]
@@ -251,6 +261,9 @@ function properties(kernel::ZeKernel)
         spillMemSize=Int(props.spillMemSize),
         kernel_uuid=Base.UUID(reinterpret(UInt128, [props.uuid.kid...])[1]),
         module_uuid=Base.UUID(reinterpret(UInt128, [props.uuid.mid...])[1]),
+        preferredGroupSize=Int(preferred_group_size_props_ref[].preferredMultiple),
+        maxGroupSize=max_group_size_props_ref === nothing ? missing :
+            Int(max_group_size_props_ref[].maxGroupSize)
     )
 end
 

@@ -20,7 +20,7 @@ api_version(drv)
 
 properties(drv)
 ipc_properties(drv)
-#extension_properties(drv)
+extension_properties(drv)
 
 end
 
