@@ -90,8 +90,7 @@ function (obj::KA.Kernel{oneAPIBackend})(args...; ndrange=nothing, workgroupsize
 
     # figure out the optimal workgroupsize automatically
     if KA.workgroupsize(obj) <: KA.DynamicSize && workgroupsize === nothing
-        items = oneAPI.suggest_groupsize(kernel.fun, prod(ndrange)).x
-        # XXX: the z dimension of the suggested group size is often non-zero. use this?
+        items = oneAPI.launch_configuration(kernel)
         workgroupsize = threads_to_workgroupsize(items, ndrange)
         iterspace, dynamic = KA.partition(obj, ndrange, workgroupsize)
         ctx = KA.mkcontext(obj, ndrange, iterspace)
