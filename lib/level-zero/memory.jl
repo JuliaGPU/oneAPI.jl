@@ -50,11 +50,11 @@ function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer,
         flags = ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE,
     ))
     GC.@preserve relaxed_allocation_ref begin
-        desc_ref = if bytesize > properties(dev).maxMemAllocSize
-            pNext = Base.unsafe_convert(Ptr{Cvoid}, relaxed_allocation_ref)
-            Ref(ze_device_mem_alloc_desc_t(; flags, ordinal, pNext))
+        if bytesize > properties(dev).maxMemAllocSize
+            desc_ref = Ref(ze_device_mem_alloc_desc_t(; flags, ordinal))
+            link_extensions(desc_ref, relaxed_allocation_ref)
         else
-            Ref(ze_device_mem_alloc_desc_t(; flags, ordinal))
+            desc_ref = Ref(ze_device_mem_alloc_desc_t(; flags, ordinal))
         end
 
         ptr_ref = Ref{Ptr{Cvoid}}()

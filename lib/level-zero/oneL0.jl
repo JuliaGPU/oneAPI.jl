@@ -69,6 +69,20 @@ zeroinit(::Type{_ze_native_kernel_uuid_t}) =
 zeroinit(::Type{ze_kernel_uuid_t}) =
     ze_kernel_uuid_t(ntuple(_->zero(UInt8), 16), ntuple(_->zero(UInt8), 16))
 
+# link extension objects in pNext
+function link_extensions(refs...)
+    length(refs) >= 2 || return
+    for (parent, child) in zip(refs[1:end-1], refs[2:end])
+        pNext = Base.unsafe_convert(Ptr{Cvoid}, child)
+        typ = eltype(parent)
+        @assert fieldnames(typ)[2] == :pNext
+        field = Base.unsafe_convert(Ptr{Cvoid}, parent) + fieldoffset(typ, 2)
+        field = convert(Ptr{Ptr{Cvoid}}, field)
+        unsafe_store!(field, pNext)
+    end
+    return
+end
+
 # core wrappers
 include("error.jl")
 include("common.jl")
