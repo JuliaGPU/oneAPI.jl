@@ -23,7 +23,6 @@ version_types_header = Dict{Char, String}('S' => "float",
 comments = ["namespace", "#", "}", "/*", "*", "//", "[[", "ONEMKL_DECLARE_", "ONEMKL_INLINE_DECLARE"]
 
 void_output = ["init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "get_matmat_data"]
-no_force_flush = ["release_matrix_handle", "optimize_gemv", "optimize_trsv", "optimize_trmv", "set_csr_data"]
 
 function generate_headers(library::String, filename::Vector{String}, output::String; pattern::String="")
   routines = Dict{String,Int}()
@@ -426,7 +425,6 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
     if occursin("scratchpad_size", name)
       write(oneapi_cpp, "   return scratchpad_size;\n")
     else
-      !(name ∈ no_force_flush ∪ void_output) && write(oneapi_cpp, "   __FORCE_MKL_FLUSH__(status);\n")
       write(oneapi_cpp, "   return 0;\n")
     end
     write(oneapi_cpp, "}")
