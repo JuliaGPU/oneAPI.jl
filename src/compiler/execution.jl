@@ -162,28 +162,27 @@ struct HostKernel{F,TT} <: AbstractKernel{F,TT}
 end
 
 function launch_configuration(kernel::HostKernel{F,TT}) where {F,TT}
-    # XXX: have the user pass in a global size to clamp against
-    #      maxGroupSizeX/Y/Z?
-
-    # XXX: shrink until a multiple of preferredGroupSize?
+    # Level Zero's zeKernelSuggestGroupSize provides a launch configuration
+    # that exactly cover the input size. This can result in very awkward
+    # configurations, so roll our own version that behaves like CUDA's
+    # occupancy API and assumes the kernel still does bounds checking.
 
     # once the MAX_GROUP_SIZE extension is implemented, we can use it here
     kernel_props = oneL0.properties(kernel.fun)
-    if kernel_props.maxGroupSize !== missing
-        return kernel_props.maxGroupSize
+    group_size = if kernel_props.maxGroupSize !== missing
+        kernel_props.maxGroupSize
+    else
+        dev = kernel.fun.mod.device
+        compute_props = oneL0.compute_properties(dev)
+        max_size = compute_props.maxTotalGroupSize
+
+        ## when the kernel uses many registers (which we can't query without
+        ## extensions that landed _after_ MAX_GROUP_SIZE, so don't bother)
+        ## the groupsize should be halved
+        group_size = max_size ÷ 2
     end
 
-    # otherwise, we'd use `zeKernelSuggestGroupSize` but it's been observed
-    # to return really bad configs (JuliaGPU/oneAPI.jl#430)
-
-    # so instead, calculate it ourselves based on the device properties
-    dev = kernel.fun.mod.device
-    compute_props = oneL0.compute_properties(dev)
-    max_size = compute_props.maxTotalGroupSize
-    ## when the kernel uses many registers (which we can't query without
-    ## extensions that landed _after_ MAX_GROUP_SIZE, so don't bother)
-    ## the groupsize should be halved
-    group_size = max_size ÷ 2
+    # TODO: align the group size based on preferredGroupSize
 
     return group_size
 end
