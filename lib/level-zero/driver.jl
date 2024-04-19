@@ -100,7 +100,6 @@ function ipc_properties(drv::ZeDriver)
     )
 end
 
-# FIXME: throws ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
 function extension_properties(drv::ZeDriver)
     count_ref = Ref{UInt32}(0)
     zeDriverGetExtensionProperties(drv, count_ref, C_NULL)
@@ -108,7 +107,11 @@ function extension_properties(drv::ZeDriver)
     all_props = Vector{ze_driver_extension_properties_t}(undef, count_ref[])
     zeDriverGetExtensionProperties(drv, count_ref, all_props)
 
-    return [(name=String([props.name[1:findfirst(isequal(0), props.name)-1]...]),
-             version=Int(props.version),
-            ) for props in all_props[1:count_ref[]]]
+    extensions = Dict{String,VersionNumber}()
+    for prop in all_props[1:count_ref[]]
+        name = String(UInt8[prop.name[1:findfirst(isequal(0), prop.name)-1]...])
+        version = unmake_version(prop.version)
+        extensions[name] = version
+    end
+    return extensions
 end
