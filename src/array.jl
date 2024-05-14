@@ -500,13 +500,13 @@ function Base.resize!(a::oneVector{T}, n::Integer) where {T}
 
     # replace the data with a new one. this 'unshares' the array.
     # as a result, we can safely support resizing unowned buffers.
-    ctx = context()
+    ctx = context(a)
     dev = device(a)
     buf = allocate(buftype(a), ctx, dev, bufsize, Base.datatype_alignment(T))
     ptr = pointer(buf)
     m = min(length(a), n)
     if m > 0
-        unsafe_copyto!(device(a), ptr, pointer(a), m)
+        unsafe_copyto!(ctx, dev, ptr, pointer(a), m)
     end
     new_data = DataRef(buf) do buf
         free(buf)
