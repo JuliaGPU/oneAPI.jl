@@ -503,7 +503,7 @@ function Base.resize!(a::oneVector{T}, n::Integer) where {T}
     ctx = context()
     dev = device(a)
     buf = allocate(buftype(a), ctx, dev, bufsize, Base.datatype_alignment(T))
-    ptr = ZePtr{T}(buf)
+    ptr = pointer(buf)
     m = min(length(a), n)
     if m > 0
         unsafe_copyto!(device(a), ptr, pointer(a), m)
