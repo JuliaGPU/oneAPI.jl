@@ -74,3 +74,24 @@ end
   e = c .+ d
   @test oneAPI.buftype(e) == oneL0.SharedBuffer
 end
+
+@testset "resizing" begin
+  a = oneArray([1,2,3])
+
+  resize!(a, 3)
+  @test length(a) == 3
+  @test Array(a) == [1,2,3]
+
+  resize!(a, 5)
+  @test length(a) == 5
+  @test Array(a)[1:3] == [1,2,3]
+
+  resize!(a, 2)
+  @test length(a) == 2
+  @test Array(a)[1:2] == [1,2]
+
+  b = oneArray{Int}(undef, 0)
+  @test length(b) == 0
+  resize!(b, 1)
+  @test length(b) == 1
+end
