@@ -167,11 +167,11 @@ function launch_configuration(kernel::HostKernel{F,TT}) where {F,TT}
     # configurations, so roll our own version that behaves like CUDA's
     # occupancy API and assumes the kernel still does bounds checking.
 
-    # once the MAX_GROUP_SIZE extension is implemented, we can use it here
     kernel_props = oneL0.properties(kernel.fun)
     group_size = if kernel_props.maxGroupSize !== missing
         kernel_props.maxGroupSize
     else
+        # without the MAX_GROUP_SIZE extension, we need to be conservative
         dev = kernel.fun.mod.device
         compute_props = oneL0.compute_properties(dev)
         max_size = compute_props.maxTotalGroupSize
