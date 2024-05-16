@@ -101,6 +101,9 @@ include("residency.jl")
 
 const functional = Ref{Bool}(false)
 
+const validation_layer = Ref{Bool}()
+const parameter_validation = Ref{Bool}()
+
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
@@ -132,6 +135,9 @@ function __init__()
         functional[] = false
         return
     end
+
+    validation_layer[] = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
+    parameter_validation[] = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
 end
 
 end
