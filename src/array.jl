@@ -478,3 +478,45 @@ function Base.unsafe_wrap(::Type{Array}, arr::oneArray{T,N,oneL0.SharedBuffer}) 
   ptr = reinterpret(Ptr{T}, pointer(arr))
   unsafe_wrap(Array, ptr, size(arr))
 end
+
+## resizing
+
+"""
+  resize!(a::oneVector, n::Integer)
+
+Resize `a` to contain `n` elements. If `n` is smaller than the current collection length,
+the first `n` elements will be retained. If `n` is larger, the new elements are not
+guaranteed to be initialized.
+"""
+function Base.resize!(a::oneVector{T}, n::Integer) where {T}
+    # TODO: add additional space to allow for quicker resizing
+    maxsize = n * sizeof(T)
+    bufsize = if isbitstype(T)
+        maxsize
+    else
+        # type tag array past the data
+        maxsize + n
+    end
+
+    # replace the data with a new one. this 'unshares' the array.
+    # as a result, we can safely support resizing unowned buffers.
+    ctx = context(a)
+    dev = device(a)
+    buf = allocate(buftype(a), ctx, dev, bufsize, Base.datatype_alignment(T))
+    ptr = convert(ZePtr{T}, buf)
+    m = min(length(a), n)
+    if m > 0
+        unsafe_copyto!(ctx, dev, ptr, pointer(a), m)
+    end
+    new_data = DataRef(buf) do buf
+        free(buf)
+    end
+    unsafe_free!(a)
+
+    a.data = new_data
+    a.dims = (n,)
+    a.maxsize = maxsize
+    a.offset = 0
+
+    a
+end
