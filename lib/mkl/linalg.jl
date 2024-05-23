@@ -91,9 +91,10 @@ end
 
 #
 # BLAS 2
-#
 
-function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul)
+LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul) =
+    LinearAlgebra.generic_matvecmul!(Y, tA, A, B, _add.alpha, _add.beta)
+function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, a::Number, b::Number)
     mA, nA = tA == 'N' ? size(A) : reverse(size(A))
 
     if nA != length(B)
@@ -113,7 +114,7 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
     end
 
     T = eltype(Y)
-    alpha, beta = promote(_add.alpha, _add.beta, zero(T))
+    alpha, beta = promote(a, b, zero(T))
     if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
         if T <: onemklFloat && eltype(A) == eltype(B) == T
             if tA in ('N', 'T', 'C')
@@ -198,9 +199,11 @@ end # VERSION
 # BLAS 3
 #
 
-function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, _add::MulAddMul=MulAddMul())
+LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, _add::MulAddMul=MulAddMul()) =
+    LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, _add.alpha, _add.beta)
+function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, a::Number, b::Number)
     T = eltype(C)
-    alpha, beta = promote(_add.alpha, _add.beta, zero(T))
+    alpha, beta = promote(a, b, zero(T))
     mA, nA = size(A, tA == 'N' ? 1 : 2), size(A, tA == 'N' ? 2 : 1)
     mB, nB = size(B, tB == 'N' ? 1 : 2), size(B, tB == 'N' ? 2 : 1)
 
