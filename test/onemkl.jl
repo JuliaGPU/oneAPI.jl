@@ -27,12 +27,10 @@ k = 13
             @test testf(axpy!, alpha, rand(T,m), rand(T,m))
         end
 
-        if !validation_layer # oneapi-src/oneMKL#473
-            @testset "axpby" begin
-                alpha = rand(T)
-                beta = rand(T)
-                @test testf(axpby!, alpha, rand(T,m), beta, rand(T,m))
-            end
+        @testset "axpby" begin
+            alpha = rand(T)
+            beta = rand(T)
+            @test testf(axpby!, alpha, rand(T,m), beta, rand(T,m))
         end
 
         @testset "rotate" begin
