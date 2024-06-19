@@ -90,7 +90,15 @@ for gentype in generic_types
 @device_function rsqrt(x::$gentype) = @builtin_ccall("rsqrt", $gentype, ($gentype,), x)
 
 @device_override Base.sin(x::$gentype) = @builtin_ccall("sin", $gentype, ($gentype,), x)
-# sincos(x::$gentype, $gentype *cosval) = @builtin_ccall("sincos", $gentype, ($gentype, $gentype *), x, cosval)
+@device_override function Base.sincos(x::$gentype)
+    cosval = Ref{$gentype}()
+    sinval = GC.@preserve cosval begin
+        ptr = Base.unsafe_convert(Ptr{$gentype}, cosval)
+        llvm_ptr = reinterpret(LLVMPtr{$gentype, AS.Private}, ptr)
+        @builtin_ccall("sincos", $gentype, ($gentype, LLVMPtr{$gentype, AS.Private}), x, llvm_ptr)
+    end
+    return sinval, cosval[]
+end
 @device_override Base.sinh(x::$gentype) = @builtin_ccall("sinh", $gentype, ($gentype,), x)
 @device_function sinpi(x::$gentype) = @builtin_ccall("sinpi", $gentype, ($gentype,), x)
 
