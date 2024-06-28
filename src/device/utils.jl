@@ -63,7 +63,7 @@ macro builtin_ccall(name, ret, argtypes, args...)
             # XXX: where does the V come from?
             "P" * ASstr * "V" * mangle(elt)
         else
-            error("Unknown type $t")
+            error("Unknown type $T")
         end
     end
 
