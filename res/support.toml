@@ -69,10 +69,24 @@ use_ccall_macro = true
 9 = "ZePtr{T}"
 11 = "ZePtr{T}"
 
+[api.onemklXtrmm_variant.argtypes]
+8 = "Ref{T}"
+9 = "ZePtr{T}"
+11 = "ZePtr{T}"
+13 = "Ref{T}"
+14 = "ZePtr{T}"
+
 [api.onemklXtrsm.argtypes]
 8 = "Ref{T}"
 9 = "ZePtr{T}"
 11 = "ZePtr{T}"
+
+[api.onemklXtrsm_variant.argtypes]
+8 = "Ref{T}"
+9 = "ZePtr{T}"
+11 = "ZePtr{T}"
+13 = "Ref{T}"
+14 = "ZePtr{T}"
 
 [api.onemklXhemm.argtypes]
 6 = "Ref{T}"
@@ -626,3 +640,7 @@ use_ccall_macro = true
 7 = "Ref{T}"
 9 = "ZePtr{T}"
 12 = "ZePtr{T}"
+
+[api.onemklXsparse_matmatd.argtypes]
+5 = "Ref{T}"
+8 = "Ref{T}"

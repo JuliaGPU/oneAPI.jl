@@ -3,7 +3,8 @@ using oneAPI_Support_Headers_jll
 include("generate_helpers.jl")
 
 blas = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "blas", "buffer_decls.hpp")]
-lapack = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "lapack", "lapack.hpp")]
+lapack = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "lapack", "lapack.hpp"),
+          joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "lapack", "scratchpad.hpp")]
 sparse = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_structures.hpp"),
           joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_auxiliary.hpp"),
           joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_operations.hpp")]
@@ -64,13 +65,15 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
     occursin("get_matmat_data", header) && continue  # SPARSE routine
     occursin("matmat(", header) && continue  # SPARSE routine
     occursin("gemm_bias", header) && continue  # BLAS routine
-    occursin("heevx", header) && continue  # LAPACK routine (compiler bug)
-    occursin("hegvx", header) && continue  # LAPACK routine (compiler bug)
     occursin("getri_batch", header) && occursin("ldainv", header) && continue  # LAPACK routine
 
     # Check if the routine is a template
     template = occursin("template", header)
     if template
+      header = replace(header, "template <typename fp, oneapi::mkl::lapack::internal::is_floating_point<fp> = nullptr>         " => "")
+      header = replace(header, "template <typename fp, oneapi::mkl::lapack::internal::is_real_floating_point<fp> = nullptr>    " => "")
+      header = replace(header, "template <typename fp, oneapi::mkl::lapack::internal::is_complex_floating_point<fp> = nullptr> " => "")
+
       header = replace(header, "template <typename data_t, oneapi::mkl::lapack::internal::is_floating_point<data_t> = nullptr>" => "")
       header = replace(header, "template <typename data_t, oneapi::mkl::lapack::internal::is_real_floating_point<data_t> = nullptr>" => "")
       header = replace(header, "template <typename data_t, oneapi::mkl::lapack::internal::is_complex_floating_point<data_t> = nullptr>" => "")
@@ -99,6 +102,7 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
 
     # Replace the types
     header = replace(header, "sycl::queue &queue" => "syclQueue_t device_queue")
+    header = replace(header, "sycl::queue& queue" => "syclQueue_t device_queue")
 
     if library ∈ ("blas", "sparse")
       header = replace(header, "compute_mode mode = MKL_BLAS_COMPUTE_MODE" => "")
@@ -214,7 +218,12 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
         copy_header = header
         copy_header = replace(copy_header, "typename fp_type::value_type" => version_types_header[blas_version])
         copy_header = replace(copy_header, "fp_type" => version_types_header[blas_version])
+        copy_header = replace(copy_header, "fp" => version_types_header[blas_version])
         copy_header = replace(copy_header, name_routine => "onemkl$(blas_version)$(name_routine)")
+        if name_routine ∈ ("heevx_scratchpad_size", "hegvx_scratchpad_size")
+          copy_header = replace(copy_header, "typename float _Complex::value_type" => "float")
+          copy_header = replace(copy_header, "typename double _Complex::value_type" => "double")
+        end
         if occursin("batch", name_routine) && !occursin("*", header)
           copy_header = replace(copy_header, "_batch" => "_batch_strided")
         end
@@ -222,8 +231,8 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
       end
     else
       if isempty(list_versions)
-        suffix = ""
         # The routine "optimize_trsm" has two versions.
+        suffix = ""
         (name_routine == "optimize_trsm") && occursin("columns", header) && (suffix = "_advanced")
         name_routine ∈ ("set_csr_data", "set_coo_data") && occursin("int64_t", header) && (suffix = "_64")
         occursin("batch", name_routine) && !occursin("**", header) && (suffix = "_strided")
@@ -281,6 +290,13 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
             copy_header = replace(copy_header, "_batch" => "_batch_strided")
           end
           if library == "blas"
+            # Out-of-place variants of trsm and trmm
+            if occursin("trsm", header) && occursin("ldc", header)
+              copy_header = replace(copy_header, "trsm" => "trsm_variant")
+            end
+            if occursin("trmm", header) && occursin("ldc", header)
+              copy_header = replace(copy_header, "trmm" => "trmm_variant")
+            end
             copy_header = replace(copy_header, "compute_mode mode," => "")
             copy_header = replace(copy_header, ", compute_mode mode)" => ")")
             copy_header = replace(copy_header, "value_or_pointer<float _Complex>" => "float _Complex")
@@ -380,11 +396,14 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
     parameters = replace(parameters, ", double " => ", ")
     parameters = replace(parameters, ", **" => ", ")
     parameters = replace(parameters, ", *" => ", ")
-
     parameters = replace(parameters, "onemklTranspose *trans," => "convert(trans, group_count),")
+    parameters = replace(parameters, "onemklTranspose* trans," => "convert(trans, group_count),")
     parameters = replace(parameters, "onemklUplo *uplo," => "convert(uplo, group_count),")
+    parameters = replace(parameters, "onemklUplo* uplo," => "convert(uplo, group_count),")
     parameters = replace(parameters, "onemklDiag *diag," => "convert(diag, group_count),")
+    parameters = replace(parameters, "onemklDiag* diag," => "convert(diag, group_count),")
     parameters = replace(parameters, "onemklSide *side," => "convert(side, group_count),")
+    parameters = replace(parameters, "onemklSide* side," => "convert(side, group_count),")
 
     for type in ("onemklTranspose", "onemklSide", "onemklUplo", "onemklDiag", "onemklGenerate",
                  "onemklLayout", "onemklJob", "onemklJobsvd", "onemklCompz", "onemklRangev",
