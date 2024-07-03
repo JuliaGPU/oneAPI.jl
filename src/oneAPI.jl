@@ -82,9 +82,7 @@ function __init__()
     if Sys.iswindows()
         @warn """oneAPI.jl support for native Windows is experimental and incomplete.
                  For the time being, it is recommended to use WSL or Linux instead."""
-    end
-
-    if oneL0.NEO_jll.is_available()
+    else
         # ensure that the OpenCL loader finds the ICD files from our artifacts
         ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
     end
