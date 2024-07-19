@@ -13,12 +13,10 @@ function LinearAlgebra.generic_matmatmul!(C::oneMatrix{T}, tA, tB, A::oneSparseM
     sparse_gemm!(tA, tB, _add.alpha, A, B, _add.beta, C)
 end
 
-if VERSION ≥ v"1.10-"
-    for SparseMatrixType in (:oneSparseMatrixCSR,)
-        @eval begin
-            function LinearAlgebra.generic_trimatdiv!(C::oneVector{T}, uploc, isunitc, tfun::Function, A::$SparseMatrixType{T}, B::oneVector{T}) where T <: BlasFloat
-                sparse_trsv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
-            end
+for SparseMatrixType in (:oneSparseMatrixCSR,)
+    @eval begin
+        function LinearAlgebra.generic_trimatdiv!(C::oneVector{T}, uploc, isunitc, tfun::Function, A::$SparseMatrixType{T}, B::oneVector{T}) where T <: BlasFloat
+            sparse_trsv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
         end
     end
 end
