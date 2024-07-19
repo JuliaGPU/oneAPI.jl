@@ -71,6 +71,10 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
   function oneArray{T,N}(data::DataRef{B}, dims::Dims{N};
                          maxsize::Int=prod(dims) * sizeof(T), offset::Int=0) where {T,N,B}
     check_eltype(T)
+    if sizeof(T) == 0
+      offset == 0 || error("Singleton arrays cannot have a nonzero offset")
+      maxsize == 0 || error("Singleton arrays cannot have a size")
+    end
     obj = new{T,N,B}(copy(data), maxsize, offset, dims)
     finalizer(unsafe_free!, obj)
   end
@@ -434,7 +438,12 @@ end
 ## derived arrays
 
 function GPUArrays.derive(::Type{T}, a::oneArray, dims::Dims{N}, offset::Int) where {T,N}
-  offset = (a.offset * Base.elsize(a)) ÷ sizeof(T) + offset
+  offset = if sizeof(T) == 0
+    Base.elsize(a) == 0 || error("Cannot derive a singleton array from non-singleton inputs")
+    offset
+  else
+    (a.offset * Base.elsize(a)) ÷ sizeof(T) + offset
+  end
   oneArray{T,N}(a.data, dims; a.maxsize, offset)
 end
 
