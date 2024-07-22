@@ -10,11 +10,15 @@ import KernelAbstractions: Backend
 
 ## execution
 
-struct oneArrayBackend <: Backend end
-
-@inline function GPUArrays.launch_heuristic(::oneArrayBackend, f::F, args::Vararg{Any,N};
+@inline function GPUArrays.launch_heuristic(::oneAPIBackend, f::F, args::Vararg{Any,N};
                                              elements::Int, elements_per_thread::Int) where {F,N}
-    kernel = @oneapi launch=false f(oneKernelContext(), args...)
+    ndrange, workgroupsize, iterspace, dynamic = KA.launch_config(obj, nothing,
+                                                                  nothing)
+
+    # this might not be the final context, since we may tune the workgroupsize
+    ctx = KA.mkcontext(obj, ndrange, iterspace)
+
+    kernel = @oneapi launch=false f(ctx, args...)
 
     items = launch_configuration(kernel)
     # XXX: how many groups is a good number? the API doesn't tell us.

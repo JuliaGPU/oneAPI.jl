@@ -67,13 +67,13 @@ end
 # integrations and specialized functionality
 include("broadcast.jl")
 include("mapreduce.jl")
-include("gpuarrays.jl")
-include("random.jl")
-include("utils.jl")
-
 include("oneAPIKernels.jl")
 import .oneAPIKernels: oneAPIBackend
 export oneAPIBackend
+
+include("gpuarrays.jl")
+include("random.jl")
+include("utils.jl")
 
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
