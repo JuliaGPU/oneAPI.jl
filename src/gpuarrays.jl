@@ -11,7 +11,7 @@ import KernelAbstractions: Backend
 ## execution
 
 @inline function GPUArrays.launch_heuristic(::oneAPIBackend, obj::O, args::Vararg{Any,N};
-                                             elements::Int, elements_per_thread::Int) where {O,N}
+                                            elements::Int, elements_per_thread::Int) where {O,N}
     ndrange = ceil(Int, elements / elements_per_thread)
     ndrange, workgroupsize, iterspace, dynamic = KA.launch_config(obj, ndrange,
                                                                   nothing)

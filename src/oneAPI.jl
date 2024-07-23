@@ -70,8 +70,8 @@ end
 include("broadcast.jl")
 include("mapreduce.jl")
 include("oneAPIKernels.jl")
-import .oneAPIKernels: oneAPIBackend
-export oneAPIBackend, KA.launch_config
+import .oneAPIKernels: oneAPIBackend, KA.launch_config
+export oneAPIBackend
 
 include("gpuarrays.jl")
 include("random.jl")
