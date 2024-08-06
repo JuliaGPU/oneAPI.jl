@@ -237,10 +237,7 @@ function properties(kernel::ZeKernel)
     preferred_group_size_props_ref = Ref(ze_kernel_preferred_group_size_properties_t())
     link_extensions(props_ref, preferred_group_size_props_ref)
     if haskey(oneL0.extension_properties(kernel.mod.context.driver),
-              "ZE_extension_kernel_max_group_size_properties") ||
-       (!validation_layer[] &&  # intel/compute-runtime#733
-        properties(kernel.mod.device).vendorId == 0x8086 &&
-        properties(kernel.mod.context.driver).driverVersion >= v"1.3.29138")
+              "ZE_extension_kernel_max_group_size_properties")
         # TODO: memoize
         max_group_size_props_ref = Ref(ze_kernel_max_group_size_properties_ext_t())
         link_extensions(preferred_group_size_props_ref, max_group_size_props_ref)
