@@ -34,7 +34,10 @@ catch err
     Pkg.build("Conda")
     using Conda
 end
-@show conda_dir
+if !isdir(Conda.ROOTENV)
+    # Same as above
+    Pkg.build("Conda")
+end
 if !isfile(joinpath(conda_dir, "condarc-julia.yml"))
     Conda.create(conda_dir)
     # conda#8850
