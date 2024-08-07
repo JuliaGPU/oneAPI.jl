@@ -37,6 +37,11 @@ end
 
         end
     end
+
+    @testset "exp" begin
+        @test testf(a->exp.(a), Matrix{ComplexF32}([1.0 + 1.0im 1.0 - 1.0im; -1.0 + 1.0im -1.0 - 1.0im]))
+
+    end
 end
 
 
