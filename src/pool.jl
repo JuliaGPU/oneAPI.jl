@@ -55,11 +55,17 @@ end
 function release(buf::oneL0.AbstractBuffer)
     sizeof(buf) == 0 && return
 
-    if buf isa oneL0.DeviceBuffer || buf isa oneL0.SharedBuffer
-        ctx = oneL0.context(buf)
-        dev = oneL0.device(buf)
-        evict(ctx, dev, buf)
-    end
+    # XXX: is it necessary to evice memory if we are going to free it?
+    #      this is racy, because eviction is not queue-ordered, and
+    #      we don't want to synchronize inside what could have been a
+    #      GC-driven finalizer. if we need to, port the stream/queue
+    #      tracking from CUDA.jl so that we can synchronize only the
+    #      queue that's associated with the buffer.
+    #if buf isa oneL0.DeviceBuffer || buf isa oneL0.SharedBuffer
+    #    ctx = oneL0.context(buf)
+    #    dev = oneL0.device(buf)
+    #    evict(ctx, dev, buf)
+    #end
 
     free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE)
 
