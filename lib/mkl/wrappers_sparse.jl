@@ -22,7 +22,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             colVal = oneVector{$intty}(At.rowval)
             nzVal = oneVector{$elty}(At.nzval)
             nnzA = length(At.nzval)
-            queue = global_queue(context(nzVal), device(nzVal))
+            queue = global_queue(context(nzVal), device())
             $fname(sycl_queue(queue), handle_ptr[], m, n, 'O', rowPtr, colVal, nzVal)
             dA = oneSparseMatrixCSR{$elty, $intty}(handle_ptr[], rowPtr, colVal, nzVal, (m,n), nnzA)
             finalizer(sparse_release_matrix_handle, dA)
@@ -56,7 +56,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_coo_data   , :Float32   , :Int3
             colInd = oneVector{$intty}(col)
             nzVal = oneVector{$elty}(val)
             nnzA = length(val)
-            queue = global_queue(context(nzVal), device(nzVal))
+            queue = global_queue(context(nzVal), device())
             $fname(sycl_queue(queue), handle_ptr[], m, n, nnzA, 'O', rowInd, colInd, nzVal)
             dA = oneSparseMatrixCOO{$elty, $intty}(handle_ptr[], rowInd, colInd, nzVal, (m,n), nnzA)
             finalizer(sparse_release_matrix_handle, dA)
@@ -84,7 +84,7 @@ for SparseMatrix in (:oneSparseMatrixCSR, :oneSparseMatrixCOO)
                                   beta::Number,
                                   y::oneStridedVector{$elty})
 
-                queue = global_queue(context(x), device(x))
+                queue = global_queue(context(x), device())
                 $fname(sycl_queue(queue), trans, alpha, A.handle, x, beta, y)
                 y
             end
@@ -120,7 +120,7 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
             nrhs = size(B, 2)
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(C), device(C))
+            queue = global_queue(context(C), device())
             $fname(sycl_queue(queue), 'C', transa, transb, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
             C
         end
@@ -139,7 +139,7 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
-            queue = global_queue(context(y), device(y))
+            queue = global_queue(context(y), device())
             $fname(sycl_queue(queue), uplo, alpha, A.handle, x, beta, y)
             y
         end
@@ -160,7 +160,7 @@ for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
-            queue = global_queue(context(y), device(y))
+            queue = global_queue(context(y), device())
             $fname(sycl_queue(queue), uplo, trans, diag, alpha, A.handle, x, beta, y)
             y
         end
@@ -186,7 +186,7 @@ for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
                               x::oneStridedVector{$elty},
                               y::oneStridedVector{$elty})
 
-            queue = global_queue(context(y), device(y))
+            queue = global_queue(context(y), device())
             $fname(sycl_queue(queue), uplo, trans, diag, alpha, A.handle, x, y)
             y
         end
@@ -222,7 +222,7 @@ for (fname, elty) in ((:onemklSsparse_trsm, :Float32),
             nrhs = size(X, 2)
             ldx = max(1,stride(X,2))
             ldy = max(1,stride(Y,2))
-            queue = global_queue(context(Y), device(Y))
+            queue = global_queue(context(Y), device())
             $fname(sycl_queue(queue), 'C', transA, transX, uplo, diag, alpha, A.handle, X, nrhs, ldx, Y, ldy)
             Y
         end

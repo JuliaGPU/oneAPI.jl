@@ -295,7 +295,7 @@ function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::Array{T}, soffs::I
   @boundscheck checkbounds(dest, doffs+n-1)
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
-  unsafe_copyto!(context(dest), device(dest), dest, doffs, src, soffs, n)
+  unsafe_copyto!(context(dest), device(), dest, doffs, src, soffs, n)
   return dest
 end
 
@@ -309,7 +309,7 @@ function Base.copyto!(dest::Array{T}, doffs::Integer, src::oneDenseArray{T}, sof
   @boundscheck checkbounds(dest, doffs+n-1)
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
-  unsafe_copyto!(context(src), device(src), dest, doffs, src, soffs, n)
+  unsafe_copyto!(context(src), device(), dest, doffs, src, soffs, n)
   return dest
 end
 
@@ -323,8 +323,8 @@ function Base.copyto!(dest::oneDenseArray{T}, doffs::Integer, src::oneDenseArray
   @boundscheck checkbounds(dest, doffs+n-1)
   @boundscheck checkbounds(src, soffs)
   @boundscheck checkbounds(src, soffs+n-1)
-  @assert device(dest) == device(src) && context(dest) == context(src)
-  unsafe_copyto!(context(dest), device(dest), dest, doffs, src, soffs, n)
+  @assert context(dest) == context(src)
+  unsafe_copyto!(context(dest), device(), dest, doffs, src, soffs, n)
   return dest
 end
 
@@ -332,7 +332,7 @@ Base.copyto!(dest::oneDenseArray{T}, src::oneDenseArray{T}) where {T} =
     copyto!(dest, 1, src, 1, length(src))
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
-                             dest::oneDenseArray{T,<:Any,oneL0.DeviceBuffer}, doffs, src::Array{T}, soffs, n) where T
+                             dest::oneDenseArray{T}, doffs, src::Array{T}, soffs, n) where T
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -342,7 +342,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
 end
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
-                             dest::Array{T}, doffs, src::oneDenseArray{T,<:Any,oneL0.DeviceBuffer}, soffs, n) where T
+                             dest::Array{T}, doffs, src::oneDenseArray{T}, soffs, n) where T
   GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -350,7 +350,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
   end
 
   # copies to the host are synchronizing
-  synchronize(global_queue(context(src), device(src)))
+  synchronize(global_queue(context(src), device()))
 
   return dest
 end
@@ -367,13 +367,15 @@ end
 
 # between Array and host-accessible oneArray
 
-function Base.unsafe_copyto!(ctx::ZeContext, dev,
+function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, doffs, src::Array{T}, soffs, n) where T
+  # maintain queue-ordered semantics
+  synchronize(global_queue(ctx, dev))
+
   if Base.isbitsunion(T)
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
   end
-  # XXX: maintain queue-ordered semantics? HostBuffers don't have a device...
   GC.@preserve src dest begin
     ptr = pointer(dest, doffs)
     unsafe_copyto!(pointer(dest, doffs; type=oneL0.HostBuffer), pointer(src, soffs), n)
@@ -386,13 +388,15 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev,
   return dest
 end
 
-function Base.unsafe_copyto!(ctx::ZeContext, dev,
+function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::Array{T}, doffs, src::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, soffs, n) where T
+  # maintain queue-ordered semantics
+  synchronize(global_queue(ctx, dev))
+
   if Base.isbitsunion(T)
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
   end
-  # XXX: maintain queue-ordered semantics? HostBuffers don't have a device...
   GC.@preserve src dest begin
     ptr = pointer(dest, doffs)
     unsafe_copyto!(pointer(dest, doffs), pointer(src, soffs; type=oneL0.HostBuffer), n)
@@ -430,7 +434,7 @@ fill(v, dims::Dims) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 
 function Base.fill!(A::oneDenseArray{T}, val) where T
   B = [convert(T, val)]
-  unsafe_fill!(context(A), device(A), pointer(A), pointer(B), length(A))
+  unsafe_fill!(context(A), device(), pointer(A), pointer(B), length(A))
   A
 end
 
