@@ -10,7 +10,7 @@ for (bname, fname, elty) in ((:onemklSpotrf_scratchpad_size, :onemklSpotrf, :Flo
             n = checksquare(A)
             lda = max(1, stride(A, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), uplo, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), uplo, n, A, lda, scratchpad, scratchpad_size)
@@ -38,7 +38,7 @@ for (bname, fname, elty) in ((:onemklSpotrs_scratchpad_size, :onemklSpotrs, :Flo
             lda  = max(1, stride(A, 2))
             ldb  = max(1, stride(B, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), uplo, n, nrhs, lda, ldb)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), uplo, n, nrhs, A, lda, B, ldb, scratchpad, scratchpad_size)
@@ -60,7 +60,7 @@ for (bname, fname, elty) in ((:onemklSpotri_scratchpad_size, :onemklSpotri, :Flo
             n = checksquare(A)
             lda = max(1, stride(A, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), uplo, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), uplo, n, A, lda, scratchpad, scratchpad_size)
@@ -83,7 +83,7 @@ for (bname, fname, elty) in ((:onemklSsytrf_scratchpad_size, :onemklSsytrf, :Flo
             n = checksquare(A)
             lda = max(1, stride(A, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), uplo, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), uplo, n, A, lda, ipiv, scratchpad, scratchpad_size)
@@ -115,7 +115,7 @@ for (bname, fname, elty) in ((:onemklSgetrf_scratchpad_size, :onemklSgetrf, :Flo
             m,n = size(A)
             lda = max(1, stride(A, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), m, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), m, n, A, lda, ipiv, scratchpad, scratchpad_size)
@@ -151,7 +151,7 @@ for (bname, fname, elty) in ((:onemklSgetrs_scratchpad_size, :onemklSgetrs, :Flo
             lda  = max(1, stride(A, 2))
             ldb  = max(1, stride(B, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), trans, n, nrhs, lda, ldb)
             scratchpad = oneVector{UInt8}(undef, scratchpad_size)
             $fname(sycl_queue(queue), trans, n, nrhs, A, lda, ipiv, B, ldb, scratchpad, scratchpad_size)
@@ -171,7 +171,7 @@ for (bname, fname, elty) in ((:onemklSgetri_scratchpad_size, :onemklSgetri, :Flo
             n = checksquare(A)
             lda = max(1, stride(A, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), n, A, lda, ipiv, scratchpad, scratchpad_size)
@@ -197,7 +197,7 @@ for (bname, fname, elty) in ((:onemklSgeqrf_scratchpad_size, :onemklSgeqrf, :Flo
             m,n = size(A)
             lda = max(1, stride(A, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), m, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), m, n, A, lda, tau, scratchpad, scratchpad_size)
@@ -237,7 +237,7 @@ for (bname, fname, elty) in ((:onemklSormqr_scratchpad_size, :onemklSormqr, :Flo
             lda = max(1, stride(A, 2))
             ldc = max(1, stride(C, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), side, trans, m, n, k, lda, ldc)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), side, trans, m, n, k, A, lda, tau, C, ldc, scratchpad, scratchpad_size)
@@ -258,7 +258,7 @@ for (bname, fname, elty) in ((:onemklSorgqr_scratchpad_size, :onemklSorgqr, :Flo
             lda = max(1, stride(A, 2))
             k = length(tau)
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), m, n, k, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), m, n, k, A, lda, tau, scratchpad, scratchpad_size)
@@ -284,7 +284,7 @@ for (bname, fname, elty, relty) in ((:onemklSgebrd_scratchpad_size, :onemklSgebr
             tauq = oneVector{$elty}(undef, k)
             taup = oneVector{$elty}(undef, k)
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), m, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), m, n, A, lda, D, E, tauq, taup, scratchpad, scratchpad_size)
@@ -329,7 +329,7 @@ for (bname, fname, elty, relty) in ((:onemklSgesvd_scratchpad_size, :onemklSgesv
             end
             ldvt = Vt == oneArray{$elty}(undef, 0, 0) ? 1 : max(1, stride(Vt, 2))
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), jobu, jobvt, m, n, lda, ldu, ldvt)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), jobu, jobvt, m, n, A, lda, S, U, ldu, Vt, ldvt, scratchpad, scratchpad_size)
@@ -353,7 +353,7 @@ for (jname, bname, fname, elty, relty) in ((:syevd!, :onemklSsyevd_scratchpad_si
             lda = max(1, stride(A, 2))
             W = oneVector{$relty}(undef, n)
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), jobz, uplo, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), jobz, uplo, n, A, lda, W, scratchpad, scratchpad_size)
@@ -388,7 +388,7 @@ for (jname, bname, fname, elty, relty) in ((:sygvd!, :onemklSsygvd_scratchpad_si
             ldb = max(1, stride(B, 2))
             W = oneVector{$relty}(undef, n)
 
-            queue = global_queue(context(A), device(A))
+            queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), itype, jobz, uplo, n, lda, ldb)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
             $fname(sycl_queue(queue), itype, jobz, uplo, n, A, lda, B, ldb, W, scratchpad, scratchpad_size)
