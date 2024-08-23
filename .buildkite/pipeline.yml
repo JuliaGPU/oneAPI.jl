@@ -19,7 +19,7 @@ steps:
           intel: "*"
         commands: |
           julia --project=deps deps/build_ci.jl
-        if: build.message !~ /\[skip tests\]/
+        if: build.message !~ /\[skip tests\]/ && build.message !~ /\[skip julia\]/
         timeout_in_minutes: 120
         matrix:
           setup:
@@ -54,7 +54,6 @@ steps:
               # use debug JLLs, for asserts + better backtraces
               using oneAPI
               oneAPI.set_debug!(true)'
-        if: build.message !~ /\[skip tests\]/
         env:
           ZE_ENABLE_VALIDATION_LAYER: '1'
           ZE_ENABLE_PARAMETER_VALIDATION: '1'
@@ -62,7 +61,7 @@ steps:
         agents:
           queue: "juliagpu"
           intel: "*"
-        if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
+        if: build.message !~ /\[skip tests\]/ && build.message !~ /\[skip special\]/ && !build.pull_request.draft
         timeout_in_minutes: 60
         soft_fail: true
 
