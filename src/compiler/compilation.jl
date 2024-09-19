@@ -40,11 +40,11 @@ end
 
 # cache of compilation caches, per device
 const _compiler_caches = Dict{ZeDevice, Dict{Any, Any}}()
-function compiler_cache(ctx::ZeDevice)
-    cache = get(_compiler_caches, ctx, nothing)
+function compiler_cache(dev::ZeDevice)
+    cache = get(_compiler_caches, dev, nothing)
     if cache === nothing
         cache = Dict{Any, Any}()
-        _compiler_caches[ctx] = cache
+        _compiler_caches[dev] = cache
     end
     return cache
 end
