@@ -2,7 +2,7 @@
 
 #include "sycl.h"
 
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 
 struct syclPlatform_st {
     sycl::platform val;
