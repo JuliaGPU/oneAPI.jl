@@ -45,7 +45,7 @@ if !isfile(joinpath(conda_dir, "condarc-julia.yml"))
     touch(joinpath(conda_dir, "conda-meta", "history"))
 end
 Conda.add_channel("https://software.repos.intel.com/python/conda/", conda_dir)
-Conda.add(["dpcpp_linux-64=2024.2.0", "mkl-devel-dpcpp=2024.2.0"], conda_dir)
+Conda.add(["dpcpp_linux-64=2024.2.1", "mkl-devel-dpcpp=2024.2.1"], conda_dir)
 
 Conda.list(conda_dir)
 
