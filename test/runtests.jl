@@ -2,6 +2,7 @@ using Distributed
 using Dates
 import REPL
 using Printf: @sprintf
+using Base.Filesystem: path_separator
 
 # parse some command-line arguments
 function extract_flag!(args, flag, default=nothing)
@@ -73,18 +74,23 @@ for (rootpath, dirs, files) in walkdir(@__DIR__)
     end
   end
 
+  # unify path separators
+  files = map(files) do file
+    replace(file, path_separator => '/')
+  end
+
   append!(tests, files)
   for file in files
     test_runners[file] = ()->include("$(@__DIR__)/$file.jl")
   end
 end
+sort!(tests; by=(file)->stat("$(@__DIR__)/$file.jl").size, rev=true)
 ## GPUArrays testsuite
-if !validation_layer # oneapi-src/oneMKL#473
-    for name in keys(TestSuite.tests)
-        push!(tests, "gpuarrays$(Base.Filesystem.path_separator)$name")
-        test_runners["gpuarrays$(Base.Filesystem.path_separator)$name"] = ()->TestSuite.tests[name](oneArray)
-    end
+for name in keys(TestSuite.tests)
+    pushfirst!(tests, "gpuarrays/$name")
+    test_runners["gpuarrays/$name"] = ()->TestSuite.tests[name](oneArray)
 end
+## finalize
 unique!(tests)
 
 # parse some more command-line arguments
