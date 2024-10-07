@@ -146,7 +146,7 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     kernel_args = kernel_convert.(args)
     kernel_tt = Tuple{Core.Typeof.(kernel_args)...}
     kernel = zefunction(partial_mapreduce_device, kernel_tt)
-    reduce_items = launch_configuration(kernel)
+    reduce_items = compute_items(launch_configuration(kernel))
 
     # how many groups should we launch?
     #
