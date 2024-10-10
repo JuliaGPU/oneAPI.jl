@@ -16,6 +16,7 @@ if isdir(joinpath(@__DIR__), "..", ".git")
     @info "Latest change to the wrappers: $(unix2datetime(deps_timestamp))"
 
     # find out which version of oneAPI_Support_jll we are using
+    Pkg.add(; url="https://github.com/leios/GPUArrays.jl/", rev="yoyoyo_rebase_time")
     Pkg.activate(joinpath(@__DIR__, ".."))
     Pkg.instantiate()
     deps = collect(values(Pkg.dependencies()))
