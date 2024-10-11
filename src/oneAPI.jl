@@ -17,6 +17,8 @@ using Core: LLVMPtr
 
 using SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll
 
+import KernelAbstractions as KA
+
 export oneL0
 
 # core library
@@ -67,13 +69,13 @@ end
 # integrations and specialized functionality
 include("broadcast.jl")
 include("mapreduce.jl")
+include("oneAPIKernels.jl")
+import .oneAPIKernels: oneAPIBackend, KA.launch_config
+export oneAPIBackend
+
 include("gpuarrays.jl")
 include("random.jl")
 include("utils.jl")
-
-include("oneAPIKernels.jl")
-import .oneAPIKernels: oneAPIBackend
-export oneAPIBackend
 
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
