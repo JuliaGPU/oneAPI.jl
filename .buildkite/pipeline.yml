@@ -39,7 +39,7 @@ steps:
       - label: "Validation"
         plugins:
           - JuliaCI/julia#v1:
-              version: "1.10"
+              version: "1.11"
           - JuliaCI/julia-test#v1:
               julia_args: "-g2"
           - JuliaCI/julia-coverage#v1:
