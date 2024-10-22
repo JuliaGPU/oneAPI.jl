@@ -1,17 +1,17 @@
 @testset "work items" begin
     @on_device get_work_dim()
 
-    @on_device get_global_size(0)
-    @on_device get_global_id(0)
+    @on_device get_global_size()
+    @on_device get_global_id()
 
-    @on_device get_local_size(0)
-    @on_device get_enqueued_local_size(0)
-    @on_device get_local_id(0)
+    @on_device get_local_size()
+    @on_device get_enqueued_local_size()
+    @on_device get_local_id()
 
-    @on_device get_num_groups(0)
-    @on_device get_group_id(0)
+    @on_device get_num_groups()
+    @on_device get_group_id()
 
-    @on_device get_global_offset(0)
+    @on_device get_global_offset()
 
     @on_device get_global_linear_id()
     @on_device get_local_linear_id()
@@ -218,7 +218,7 @@ end
 
 @testset "statically typed" begin
     function kernel(d, n)
-        t = get_local_id(0)
+        t = get_local_id()
         tr = n-t+1
 
         s = oneLocalArray(Float32, 1024)
@@ -244,7 +244,7 @@ end
     float64_supported && push!(typs, Float64)
     @testset for typ in typs
         function kernel(d::oneDeviceArray{T}, n) where {T}
-            t = get_local_id(0)
+            t = get_local_id()
             tr = n-t+1
 
             s = oneLocalArray(T, 1024)

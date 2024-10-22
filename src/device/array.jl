@@ -1,6 +1,6 @@
 # Contiguous on-device arrays
 
-export oneDeviceArray, oneDeviceVector, oneDeviceMatrix
+export oneDeviceArray, oneDeviceVector, oneDeviceMatrix, oneLocalArray
 
 
 ## construction
@@ -239,4 +239,17 @@ function Base.reinterpret(::Type{T}, a::oneDeviceArray{S,N,A}) where {T,S,N,A}
   size1 = div(isize[1]*sizeof(S), sizeof(T))
   osize = tuple(size1, Base.tail(isize)...)
   return oneDeviceArray{T,N,A}(osize, reinterpret(LLVMPtr{T,A}, a.ptr), a.maxsize)
+end
+
+
+## local memory
+
+export oneLocalArray
+
+@inline function oneLocalArray(::Type{T}, dims) where {T}
+    len = prod(dims)
+    # NOTE: this relies on const-prop to forward the literal length to the generator.
+    #       maybe we should include the size in the type, like StaticArrays does?
+    ptr = emit_localmemory(T, Val(len))
+    oneDeviceArray(dims, ptr)
 end

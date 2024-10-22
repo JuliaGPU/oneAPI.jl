@@ -160,7 +160,7 @@ len = prod(dims)
 
 @testset "manually allocated" begin
     function kernel(input, output)
-        i = get_global_id(0)
+        i = get_global_id()
 
         val = input[i]
         output[i] = val
@@ -181,8 +181,8 @@ end
 
 @testset "scalar through single-value array" begin
     function kernel(a, x)
-        i = get_global_id(0)
-        max = get_global_size(0)
+        i = get_global_id()
+        max = get_global_size()
         if i == max
             _val = a[i]
             x[] = _val
@@ -204,8 +204,8 @@ end
 @testset "scalar through single-value array, using device function" begin
     @noinline child(a, i) = a[i]
     function parent(a, x)
-        i = get_global_id(0)
-        max = get_global_size(0)
+        i = get_global_id()
+        max = get_global_size()
         if i == max
             _val = child(a, i)
             x[] = _val
@@ -259,7 +259,7 @@ end
     @eval struct ExecGhost end
 
     function kernel(ghost, a, b, c)
-        i = get_global_id(0)
+        i = get_global_id()
         c[i] = a[i] + b[i]
         return
     end
@@ -270,7 +270,7 @@ end
     # bug: ghost type function parameters confused aggregate type rewriting
 
     function kernel(ghost, out, aggregate)
-        i = get_global_id(0)
+        i = get_global_id()
         out[i] = aggregate[1]
         return
     end

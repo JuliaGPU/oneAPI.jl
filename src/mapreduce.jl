@@ -6,8 +6,8 @@
 
 # Reduce a value across a group, using local memory for communication
 @inline function reduce_group(op, val::T, neutral, ::Val{maxitems}) where {T, maxitems}
-    items = get_local_size(0)
-    item = get_local_id(0)
+    items = get_local_size()
+    item = get_local_id()
 
     # local mem for a complete reduction
     shared = oneLocalArray(T, (maxitems,))
@@ -47,10 +47,10 @@ Base.@propagate_inbounds _map_getindex(args::Tuple{}, I) = ()
 function partial_mapreduce_device(f, op, neutral, maxitems, Rreduce, Rother, R, As...)
     # decompose the 1D hardware indices into separate ones for reduction (across items
     # and possibly groups if it doesn't fit) and other elements (remaining groups)
-    localIdx_reduce = get_local_id(0)
-    localDim_reduce = get_local_size(0)
-    groupIdx_reduce, groupIdx_other = fldmod1(get_group_id(0), length(Rother))
-    groupDim_reduce = get_num_groups(0) ÷ length(Rother)
+    localIdx_reduce = get_local_id()
+    localDim_reduce = get_local_size()
+    groupIdx_reduce, groupIdx_other = fldmod1(get_group_id(), length(Rother))
+    groupDim_reduce = get_num_groups() ÷ length(Rother)
 
     # group-based indexing into the values outside of the reduction dimension
     # (that means we can safely synchronize items within this group)
