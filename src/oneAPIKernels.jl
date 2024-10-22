@@ -113,32 +113,32 @@ end
 ## Indexing Functions
 
 @device_override @inline function KA.__index_Local_Linear(ctx)
-    return get_local_id(0)
+    return get_local_id()
 end
 
 @device_override @inline function KA.__index_Group_Linear(ctx)
-    return get_group_id(0)
+    return get_group_id()
 end
 
 @device_override @inline function KA.__index_Global_Linear(ctx)
-    return get_global_id(0)
+    return get_global_id()
 end
 
 @device_override @inline function KA.__index_Local_Cartesian(ctx)
-    @inbounds KA.workitems(KA.__iterspace(ctx))[get_local_id(0)]
+    @inbounds KA.workitems(KA.__iterspace(ctx))[get_local_id()]
 end
 
 @device_override @inline function KA.__index_Group_Cartesian(ctx)
-    @inbounds KA.blocks(KA.__iterspace(ctx))[get_group_id(0)]
+    @inbounds KA.blocks(KA.__iterspace(ctx))[get_group_id()]
 end
 
 @device_override @inline function KA.__index_Global_Cartesian(ctx)
-    return @inbounds KA.expand(KA.__iterspace(ctx), get_group_id(0), get_local_id(0))
+    return @inbounds KA.expand(KA.__iterspace(ctx), get_group_id(), get_local_id())
 end
 
 @device_override @inline function KA.__validindex(ctx)
     if KA.__dynamic_checkbounds(ctx)
-        I = @inbounds KA.expand(KA.__iterspace(ctx), get_group_id(0), get_local_id(0))
+        I = @inbounds KA.expand(KA.__iterspace(ctx), get_group_id(), get_local_id())
         return I in KA.__ndrange(ctx)
     else
         return true
