@@ -80,7 +80,7 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
   end
 end
 
-unsafe_free!(a::oneArray) = GPUArrays.unsafe_free!(a.data)
+GPUArrays.storage(a::oneArray) = a.data
 
 
 ## alias detection
