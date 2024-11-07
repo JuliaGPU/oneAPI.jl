@@ -266,6 +266,20 @@ oneapi::mkl::sparse::matmat_request convert(onemklMatmatRequest val) {
     }
 }
 
+oneapi::mkl::sparse::omatconvert_alg convert(onemklOmatconvertAlg val) {
+    switch (val) {
+    case ONEMKL_OMATCONVERT_DEFAULT_ALG:
+        return oneapi::mkl::sparse::omatconvert_alg::default_alg;
+    }
+}
+
+oneapi::mkl::sparse::omatadd_alg convert(onemklOmataddAlg val) {
+    switch (val) {
+    case ONEMKL_OMATADD_DEFAULT_ALG:
+        return oneapi::mkl::sparse::omatadd_alg::default_alg;
+    }
+}
+
 // gemm
 // https://spec.oneapi.io/versions/1.0-rev-1/elements/oneMKL/source/domains/blas/gemm.html
 class gemmBatchInfo {
