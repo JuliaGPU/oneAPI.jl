@@ -120,11 +120,25 @@ typedef enum {
     ONEMKL_MATMAT_REQUEST_FINALIZE,
 } onemklMatmatRequest;
 
+typedef enum {
+    ONEMKL_OMATCONVERT_DEFAULT_ALG,
+} onemklOmatconvertAlg;
+
+typedef enum {
+    ONEMKL_OMATADD_DEFAULT_ALG,
+} onemklOmataddAlg;
+
 struct matrix_handle;
 typedef struct matrix_handle *matrix_handle_t;
 
 struct matmat_descr;
 typedef struct matmat_descr *matmat_descr_t;
+
+struct omatconvert_descr;
+typedef struct omatconvert_descr *omatconvert_descr_t;
+
+struct omatadd_descr;
+typedef struct omatadd_descr *omatadd_descr_t;
 
 int onemklHgemm_batch(syclQueue_t device_queue, onemklTranspose transa,
                       onemklTranspose transb, int64_t *m,

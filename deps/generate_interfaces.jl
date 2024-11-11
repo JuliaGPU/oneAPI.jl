@@ -2,12 +2,13 @@ using oneAPI_Support_Headers_jll
 
 include("generate_helpers.jl")
 
-blas = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "blas", "buffer_decls.hpp")]
-lapack = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "lapack", "lapack.hpp"),
-          joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "lapack", "scratchpad.hpp")]
-sparse = [joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_structures.hpp"),
-          joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_auxiliary.hpp"),
-          joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include", "oneapi", "mkl", "spblas", "sparse_operations.hpp")]
+include_dir = joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include")
+blas = [joinpath(include_dir, "oneapi", "mkl", "blas", "buffer_decls.hpp")]
+lapack = [joinpath(include_dir, "oneapi", "mkl", "lapack", "lapack.hpp"),
+          joinpath(include_dir, "oneapi", "mkl", "lapack", "scratchpad.hpp")]
+sparse = [joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_structures.hpp"),
+          joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_auxiliary.hpp"),
+          joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_operations.hpp")]
 
 dict_version = Dict{Int, Char}(1 => 'S', 2 => 'D', 3 => 'C', 4 => 'Z')
 
@@ -23,7 +24,8 @@ version_types_header = Dict{Char, String}('S' => "float",
 
 comments = ["namespace", "#", "}", "/*", "*", "//", "[[", "ONEMKL_DECLARE_", "ONEMKL_INLINE_DECLARE"]
 
-void_output = ["init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "get_matmat_data"]
+void_output = ["init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data",
+               "get_matmat_data", "init_omatadd_descr", "init_omatconvert_desc"]
 
 function generate_headers(library::String, filename::Vector{String}, output::String; pattern::String="")
   routines = Dict{String,Int}()
@@ -189,6 +191,8 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
     header = replace(header, ",)" => ")")
     header = replace(header, " void" => "void")
     header = replace(header, " sycl::event" => "sycl::event")
+    header = replace(header, "* const* " => "**")
+    header = replace(header, "int64_t**" => "int64_t **")
 
     ind1 = findfirst(' ', header)
     ind2 = findfirst('(', header)
@@ -245,6 +249,7 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
             (version == 'C') && (header = replace(header, "std::complex " => "float _Complex "))
             (version == 'Z') && (header = replace(header, "std::complex " => "double _Complex "))
           end
+          header = replace(header, "omatconvert (" => "omatconvert(")
           header = replace(header, "transpose " => "onemklTranspose ")
           header = replace(header, "uplo " => "onemklUplo ")
           header = replace(header, "diag " => "onemklDiag ")
@@ -255,6 +260,8 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
           header = replace(header, "sparse::matrix_view_descr " => "onemklMatrixView ")
           header = replace(header, "matrix_view_descr " => "onemklMatrixView ")
           header = replace(header, "sparse::matmat_request " => "onemklMatmatRequest ")
+          header = replace(header, "omatconvert_alg " => "onemklOmatconvertAlg ")
+          header = replace(header, "omatadd_alg " => "onemklOmataddAlg ")
           header = replace(header, name_routine => "sparse_" * name_routine)
         end
         push!(signatures, (header, name_routine, version, type_routine, template))
@@ -381,6 +388,10 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
     parameters = replace(parameters, "matrix_handle_t " => "(oneapi::mkl::sparse::matrix_handle_t) ")
     parameters = replace(parameters, "matmat_descr_t *" => "(oneapi::mkl::sparse::matmat_descr_t*) ")
     parameters = replace(parameters, "matmat_descr_t " => "(oneapi::mkl::sparse::matmat_descr_t) ")
+    parameters = replace(parameters, "omatadd_descr_t *" => "(oneapi::mkl::sparse::omatadd_descr_t*) ")
+    parameters = replace(parameters, "omatadd_descr_t " => "(oneapi::mkl::sparse::omatadd_descr_t) ")
+    parameters = replace(parameters, "omatconvert_descr_t *" => "(oneapi::mkl::sparse::omatconvert_descr_t*) ")
+    parameters = replace(parameters, "omatconvert_descr_t " => "(oneapi::mkl::sparse::omatconvert_descr_t) ")
     parameters = replace(parameters, "short **" => "reinterpret_cast<sycl::half **>")
     parameters = replace(parameters, "float _Complex **" => "reinterpret_cast<std::complex<float> **>")
     parameters = replace(parameters, "double _Complex **" => "reinterpret_cast<std::complex<double> **>")
@@ -407,7 +418,8 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
 
     for type in ("onemklTranspose", "onemklSide", "onemklUplo", "onemklDiag", "onemklGenerate",
                  "onemklLayout", "onemklJob", "onemklJobsvd", "onemklCompz", "onemklRangev",
-                 "onemklIndex", "onemklProperty", "onemklMatrixView", "onemklMatmatRequest")
+                 "onemklIndex", "onemklProperty", "onemklMatrixView", "onemklMatmatRequest",
+                 "onemklOmatconvertAlg", "onemklOmataddAlg")
       parameters = replace(parameters, Regex("$type ([A-Za-z0-9_]+),") => SubstitutionString("convert(\\1),"))
       parameters = replace(parameters, Regex(", $type ([A-Za-z0-9_]+)") => SubstitutionString(", convert(\\1)"))
     end

@@ -45,7 +45,7 @@ if !isfile(joinpath(conda_dir, "condarc-julia.yml"))
     touch(joinpath(conda_dir, "conda-meta", "history"))
 end
 Conda.add_channel("https://software.repos.intel.com/python/conda/", conda_dir)
-Conda.add(["dpcpp_linux-64=2024.2.0", "mkl-devel-dpcpp=2024.2.0"], conda_dir)
+Conda.add(["dpcpp_linux-64=2025.0.0", "mkl-devel-dpcpp=2025.0.0"], conda_dir)
 
 Conda.list(conda_dir)
 
@@ -58,11 +58,11 @@ withenv("PATH"=>"$(ENV["PATH"]):$(Conda.bin_dir(conda_dir))",
     cmake() do cmake_path
     ninja() do ninja_path
         run(```$cmake_path -DCMAKE_CXX_COMPILER="icpx"
-                           -DCMAKE_CXX_FLAGS="-fsycl -isystem $(conda_dir)/include -isystem $include_dir"
+                           -DCMAKE_CXX_FLAGS="-fsycl -isystem $(conda_dir)/include -isystem $include_dir -fdiagnostics-color=always"
                            -DCMAKE_INSTALL_RPATH=$(Conda.lib_dir(conda_dir))
                            -DCMAKE_INSTALL_PREFIX=$install_dir
                            -GNinja -S $(@__DIR__) -B $build_dir```)
-        run(`$ninja_path -C $(build_dir) install`)
+        run(`$cmake_path --build $(build_dir) --target install`)
     end
     end
 end
