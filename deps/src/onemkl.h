@@ -2804,6 +2804,18 @@ int onemklXsparse_init_matmat_descr(matmat_descr_t *p_desc);
 
 int onemklXsparse_release_matmat_descr(matmat_descr_t *p_desc);
 
+int onemklXsparse_init_omatconvert_descr(syclQueue_t device_queue, omatconvert_descr_t
+                                         *p_descr);
+
+int onemklXsparse_release_omatconvert_descr(syclQueue_t device_queue, omatconvert_descr_t
+                                            descr);
+
+int onemklXsparse_init_omatadd_descr(syclQueue_t device_queue, omatadd_descr_t
+                                     *p_omatadd_desc);
+
+int onemklXsparse_release_omatadd_descr(syclQueue_t device_queue, omatadd_descr_t
+                                        omatadd_desc);
+
 int onemklXsparse_omatcopy(syclQueue_t device_queue, onemklTranspose transpose_val,
                            matrix_handle_t spMat_in, matrix_handle_t spMat_out);
 

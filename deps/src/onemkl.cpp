@@ -3973,6 +3973,26 @@ extern "C" int onemklXsparse_release_matmat_descr(matmat_descr_t *p_desc) {
    return 0;
 }
 
+extern "C" int onemklXsparse_init_omatconvert_descr(syclQueue_t device_queue, omatconvert_descr_t *p_descr) {
+   oneapi::mkl::sparse::init_omatconvert_descr(device_queue->val, (oneapi::mkl::sparse::omatconvert_descr_t*) p_descr);
+   return 0;
+}
+
+extern "C" int onemklXsparse_release_omatconvert_descr(syclQueue_t device_queue, omatconvert_descr_t descr) {
+   auto status = oneapi::mkl::sparse::release_omatconvert_descr(device_queue->val, (oneapi::mkl::sparse::omatconvert_descr_t) descr, {});
+   return 0;
+}
+
+extern "C" int onemklXsparse_init_omatadd_descr(syclQueue_t device_queue, omatadd_descr_t *p_omatadd_desc) {
+   oneapi::mkl::sparse::init_omatadd_descr(device_queue->val, (oneapi::mkl::sparse::omatadd_descr_t*) p_omatadd_desc);
+   return 0;
+}
+
+extern "C" int onemklXsparse_release_omatadd_descr(syclQueue_t device_queue, omatadd_descr_t omatadd_desc) {
+   auto status = oneapi::mkl::sparse::release_omatadd_descr(device_queue->val, (oneapi::mkl::sparse::omatadd_descr_t) omatadd_desc, {});
+   return 0;
+}
+
 extern "C" int onemklXsparse_omatcopy(syclQueue_t device_queue, onemklTranspose transpose_val, matrix_handle_t spMat_in, matrix_handle_t spMat_out) {
    auto status = oneapi::mkl::sparse::omatcopy(device_queue->val, convert(transpose_val), (oneapi::mkl::sparse::matrix_handle_t) spMat_in, (oneapi::mkl::sparse::matrix_handle_t) spMat_out, {});
    return 0;

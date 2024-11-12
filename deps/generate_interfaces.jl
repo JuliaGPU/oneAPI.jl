@@ -25,7 +25,7 @@ version_types_header = Dict{Char, String}('S' => "float",
 comments = ["namespace", "#", "}", "/*", "*", "//", "[[", "ONEMKL_DECLARE_", "ONEMKL_INLINE_DECLARE"]
 
 void_output = ["init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data",
-               "get_matmat_data", "init_omatadd_descr", "init_omatconvert_desc"]
+               "get_matmat_data", "init_omatadd_descr", "init_omatconvert_descr"]
 
 function generate_headers(library::String, filename::Vector{String}, output::String; pattern::String="")
   routines = Dict{String,Int}()
@@ -66,6 +66,9 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
     occursin("release_matrix_handle(matrix_handle_t", header) && continue  # SPARSE routine
     occursin("get_matmat_data", header) && continue  # SPARSE routine
     occursin("matmat(", header) && continue  # SPARSE routine
+    bool = occursin("release", header) || occursin("init", header)
+    (library == "sparse") && occursin("omatconvert", header) && !bool && continue  # SPARSE routine
+    (library == "sparse") && occursin("omatadd", header) && !bool && continue  # SPARSE routine
     occursin("gemm_bias", header) && continue  # BLAS routine
     occursin("getri_batch", header) && occursin("ldainv", header) && continue  # LAPACK routine
 
@@ -249,7 +252,6 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
             (version == 'C') && (header = replace(header, "std::complex " => "float _Complex "))
             (version == 'Z') && (header = replace(header, "std::complex " => "double _Complex "))
           end
-          header = replace(header, "omatconvert (" => "omatconvert(")
           header = replace(header, "transpose " => "onemklTranspose ")
           header = replace(header, "uplo " => "onemklUplo ")
           header = replace(header, "diag " => "onemklDiag ")
