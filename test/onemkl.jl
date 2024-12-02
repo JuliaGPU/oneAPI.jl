@@ -1426,7 +1426,7 @@ end
                 for jobvt in ('A', 'S', 'N', 'O')
                     (jobu == 'A') && (jobvt == 'A') && continue
                     (jobu == 'O') && (jobvt == 'O') && continue
-                    d_A = CuMatrix(A)
+                    d_A = oneMatrix(A)
                     U2, Σ2, Vt2 = oneMKL.gesvd!(jobu, jobvt, d_A)
                     @test Σ ≈ Σ2
                 end
