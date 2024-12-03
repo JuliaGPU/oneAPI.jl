@@ -312,11 +312,11 @@ for (bname, fname, elty, relty) in ((:onemklSgesvd_scratchpad_size, :onemklSgesv
             elseif jobu === 'S'
                 oneMatrix{$elty}(undef, m, k)
             elseif jobu === 'N' || jobu === 'O'
-                oneMatrix{$elty}(undef, 0, 0) # Equivalence of CU_NULL?
+                ZE_NULL
             else
                 error("jobu must be one of 'A', 'S', 'O', or 'N'")
             end
-            ldu = U == oneMatrix{$elty}(undef, 0, 0) ? 1 : max(1, stride(U, 2))
+            ldu = U == ZE_NULL ? 1 : max(1, stride(U, 2))
             S = oneVector{$relty}(undef, k)
 
             Vt = if jobvt === 'A'
@@ -324,11 +324,11 @@ for (bname, fname, elty, relty) in ((:onemklSgesvd_scratchpad_size, :onemklSgesv
             elseif jobvt === 'S'
                 oneMatrix{$elty}(undef, k, n)
             elseif jobvt === 'N' || jobvt === 'O'
-                oneMatrix{$elty}(undef, 0, 0)
+                ZE_NULL
             else
                 error("jobvt must be one of 'A', 'S', 'O', or 'N'")
             end
-            ldvt = Vt == oneMatrix{$elty}(undef, 0, 0) ? 1 : max(1, stride(Vt, 2))
+            ldvt = Vt == ZE_NULL ? 1 : max(1, stride(Vt, 2))
 
             queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), jobu, jobvt, m, n, lda, ldu, ldvt)
