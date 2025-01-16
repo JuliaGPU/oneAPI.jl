@@ -60,12 +60,16 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
 
     ctx = context()
     dev = device()
-    buf = allocate(B, ctx, dev, bufsize, Base.datatype_alignment(T))
-    data = DataRef(buf) do buf
-      release(buf)
+    alignment = Base.datatype_alignment(T)
+    data = GPUArrays.cached_alloc((oneArray, B, ctx, dev, bufsize, alignment)) do
+        buf = allocate(B, ctx, dev, bufsize, alignment)
+        data = DataRef(buf) do buf
+          release(buf)
+        end
     end
     obj = new{T,N,B}(data, maxsize, 0, dims)
-    finalizer(unsafe_free!, obj)
+    return finalizer(unsafe_free!, obj)
+    return arr
   end
 
   function oneArray{T,N}(data::DataRef{B}, dims::Dims{N};
