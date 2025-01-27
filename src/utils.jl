@@ -1,19 +1,11 @@
 
 function versioninfo(io::IO=stdout)
-    # get a hold of Pkg without adding a dependency on the package
-    Pkg = let
-        id = Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg")
-        Base.loaded_modules[id]
-    end
-    deps = Pkg.dependencies()
-    versions = Dict(map(uuid->deps[uuid].name => deps[uuid].version, collect(keys(deps))))
-
     if Sys.islinux()
         println(io, "Binary dependencies:")
         for jll in [oneL0.NEO_jll, oneL0.NEO_jll.libigc_jll, oneL0.NEO_jll.gmmlib_jll,
                     SPIRV_LLVM_Translator_unified_jll, SPIRV_Tools_jll]
             name = string(jll)
-            print(io, "- $(name[1:end-4]): $(versions[name])")
+            print(io, "- $(name[1:end-4]): $(Base.pkgversion(jll))")
             if jll.host_platform !== nothing
                 debug = tryparse(Bool, get(jll.host_platform.tags, "debug", "false"))
                 if debug === true
