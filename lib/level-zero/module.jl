@@ -31,7 +31,7 @@ mutable struct ZeModule
                 pConstants=Base.unsafe_convert(Ptr{ze_module_constants_t}, constants)
             ))
             handle_ref = Ref{ze_module_handle_t}()
-            res = unsafe_zeModuleCreate(ctx, dev, desc_ref, handle_ref, log_ref)
+            res = unchecked_zeModuleCreate(ctx, dev, desc_ref, handle_ref, log_ref)
         end
 
         # read the log

@@ -1,7 +1,8 @@
 module APIUtils
 
 # helpers that facilitate working with C APIs
-include("call.jl")
+using GPUToolbox: @checked, @debug_ccall
+export @checked, @debug_ccall
 include("enum.jl")
 
 end

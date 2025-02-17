@@ -29,7 +29,7 @@ Base.wait(fence::ZeFence, timeout::Number=typemax(UInt64)) =
 Base.reset(fence::ZeFence) = zeFenceReset(fence)
 
 function Base.isdone(fence::ZeFence)
-    res = unsafe_zeFenceQueryStatus(fence)
+    res = unchecked_zeFenceQueryStatus(fence)
     if res == RESULT_NOT_READY
         return false
     elseif res == RESULT_SUCCESS

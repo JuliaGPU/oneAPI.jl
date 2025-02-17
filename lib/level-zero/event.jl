@@ -65,7 +65,7 @@ Base.reset(event::ZeEvent) = zeEventHostReset(event)
 append_reset!(list::ZeCommandList, event::ZeEvent) = zeCommandListAppendEventReset(list, event)
 
 function Base.isdone(event::ZeEvent)
-    res = unsafe_zeEventQueryStatus(event)
+    res = unchecked_zeEventQueryStatus(event)
     if res == RESULT_NOT_READY
         return false
     elseif res == RESULT_SUCCESS
