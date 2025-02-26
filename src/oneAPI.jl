@@ -73,17 +73,20 @@ function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
 
-    if Sys.iswindows()
-        @warn """oneAPI.jl support for native Windows is experimental and incomplete.
+    if oneL0.NEO_jll.is_available() && oneL0.functional[]
+        if Sys.iswindows()
+            @warn """oneAPI.jl support for native Windows is experimental and incomplete.
                  For the time being, it is recommended to use WSL or Linux instead."""
-    else
-        # ensure that the OpenCL loader finds the ICD files from our artifacts
-        ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
-    end
+        else
+            # ensure that the OpenCL loader finds the ICD files from our artifacts
+            ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
+        end
 
-    # XXX: work around an issue with SYCL/Level Zero interoperability
-    #      (see JuliaGPU/oneAPI.jl#417)
-    ENV["SYCL_PI_LEVEL_ZERO_BATCH_SIZE"] = "1"
+        # XXX: work around an issue with SYCL/Level Zero interoperability
+        #      (see JuliaGPU/oneAPI.jl#417)
+        ENV["SYCL_PI_LEVEL_ZERO_BATCH_SIZE"] = "1"
+    end
+    return nothing
 end
 
 function set_debug!(debug::Bool)
