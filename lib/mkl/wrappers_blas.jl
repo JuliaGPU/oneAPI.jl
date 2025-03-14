@@ -1139,6 +1139,76 @@ function trsm(side::Char,
     trsm!(side, uplo, transa, diag, alpha, A, copy(B))
 end
 
+for (mmname_variant, smname_variant, elty) in
+        ((:onemklDtrmm_variant, :onemklDtrsm_variant, :Float64),
+         (:onemklStrmm_variant, :onemklStrsm_variant, :Float32),
+         (:onemklZtrmm_variant, :onemklZtrsm_variant, :ComplexF64),
+         (:onemklCtrmm_variant, :onemklCtrsm_variant, :ComplexF32))
+    @eval begin
+        function trmm!(side::Char,
+                       uplo::Char,
+                       transa::Char,
+                       diag::Char,
+                       alpha::Number,
+                       beta::Number,
+                       A::oneStridedMatrix{$elty},
+                       B::oneStridedMatrix{$elty},
+                       C::oneStridedMatrix{$elty})
+            m, n = size(B)
+            mA, nA = size(A)
+            if mA != nA throw(DimensionMismatch("A must be square")) end
+            if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trmm!")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            queue = global_queue(context(A), device())
+            $mmname_variant(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
+            B
+        end
+
+        function trsm!(side::Char,
+                       uplo::Char,
+                       transa::Char,
+                       diag::Char,
+                       alpha::Number,
+                       beta::Number,
+                       A::oneStridedMatrix{$elty},
+                       B::oneStridedMatrix{$elty},
+                       C::oneStridedMatrix{$elty})
+            m, n = size(B)
+            mA, nA = size(A)
+            if mA != nA throw(DimensionMismatch("A must be square")) end
+            if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm!")) end
+            lda = max(1,stride(A,2))
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+            queue = global_queue(context(A), device())
+            $smname_variant(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
+            B
+        end
+    end
+end
+function trmm!(side::Char,
+               uplo::Char,
+               transa::Char,
+               diag::Char,
+               alpha::Number,
+               A::oneStridedMatrix{T},
+               B::oneStridedMatrix{T},
+               C::oneStridedMatrix{T}) where T
+    trmm!(side, uplo, transa, diag, alpha, zero(T), A, B, C)
+end
+function trsm!(side::Char,
+               uplo::Char,
+               transa::Char,
+               diag::Char,
+               alpha::Number,
+               A::oneStridedMatrix{T},
+               B::oneStridedMatrix{T},
+               C::oneStridedMatrix{T}) where T
+    trsm!(side, uplo, transa, diag, alpha, zero(T), A, B, C)
+end
+
 ## hemm
 for (fname, elty) in ((:onemklZhemm,:ComplexF64),
                       (:onemklChemm,:ComplexF32))
