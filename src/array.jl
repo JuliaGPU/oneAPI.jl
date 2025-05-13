@@ -68,8 +68,7 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
         end
     end
     obj = new{T,N,B}(data, maxsize, 0, dims)
-    return finalizer(unsafe_free!, obj)
-    return arr
+    finalizer(unsafe_free!, obj)
   end
 
   function oneArray{T,N}(data::DataRef{B}, dims::Dims{N};
