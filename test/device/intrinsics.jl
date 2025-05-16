@@ -1,20 +1,20 @@
 @testset "work items" begin
-    @on_device get_work_dim()
+    @on_device get_work_dim() |> sink
 
-    @on_device get_global_size()
-    @on_device get_global_id()
+    @on_device get_global_size() |> sink
+    @on_device get_global_id() |> sink
 
-    @on_device get_local_size()
-    @on_device get_enqueued_local_size()
-    @on_device get_local_id()
+    @on_device get_local_size() |> sink
+    @on_device get_enqueued_local_size() |> sink
+    @on_device get_local_id() |> sink
 
-    @on_device get_num_groups()
-    @on_device get_group_id()
+    @on_device get_num_groups() |> sink
+    @on_device get_group_id() |> sink
 
-    @on_device get_global_offset()
+    @on_device get_global_offset() |> sink
 
-    @on_device get_global_linear_id()
-    @on_device get_local_linear_id()
+    @on_device get_global_linear_id() |> sink
+    @on_device get_local_linear_id() |> sink
 end
 
 
