@@ -57,15 +57,15 @@ julia> using oneAPI
 
 julia> oneAPI.versioninfo()
 Binary dependencies:
-- NEO_jll: 22.43.24595+0
-- libigc_jll: 1.0.12504+0
-- gmmlib_jll: 22.3.0+0
-- SPIRV_LLVM_Translator_unified_jll: 0.2.0+0
-- SPIRV_Tools_jll: 2022.1.0+0
+- NEO: 24.26.30049+0
+- libigc: 1.0.17193+0
+- gmmlib: 22.3.20+0
+- SPIRV_LLVM_Translator: 20.1.0+1
+- SPIRV_Tools: 2025.1.0+1
 
 Toolchain:
-- Julia: 1.8.5
-- LLVM: 13.0.1
+- Julia: 1.11.5
+- LLVM: 16.0.6
 
 1 driver:
 - 00000000-0000-0000-173d-d94201036013 (v1.3.24595, API v1.3.0)
