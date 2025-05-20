@@ -1,11 +1,11 @@
 # interfacing with LinearAlgebra standard library
 
 import LinearAlgebra
-using LinearAlgebra: Transpose, Adjoint,
+using LinearAlgebra: Transpose, Adjoint, AdjOrTrans,
                      Hermitian, Symmetric,
                      LowerTriangular, UnitLowerTriangular,
                      UpperTriangular, UnitUpperTriangular,
-                     MulAddMul, wrap
+                     UpperOrLowerTriangular, MulAddMul, wrap
 
 #
 # BLAS 1
@@ -163,12 +163,50 @@ function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStr
     GPUArrays.generic_matmatmul!(C, wrap(A, tA), wrap(B, tB), alpha, beta)
 end
 
+const AdjOrTransOroneMatrix{T} = Union{oneStridedMatrix{T}, AdjOrTrans{<:T,<:oneStridedMatrix}}
+
+function LinearAlgebra.generic_trimatmul!(
+    C::oneStridedMatrix{T}, uplocA, isunitcA,
+    tfunA::Function, A::oneStridedMatrix{T},
+    triB::UpperOrLowerTriangular{T, <: AdjOrTransOroneMatrix{T}},
+) where {T<:onemklFloat}
+    uplocB = LinearAlgebra.uplo_char(triB)
+    isunitcB = LinearAlgebra.isunit_char(triB)
+    B = parent(triB)
+    tfunB = LinearAlgebra.wrapperop(B)
+    transa = tfunA === identity ? 'N' : tfunA === transpose ? 'T' : 'C'
+    transb = tfunB === identity ? 'N' : tfunB === transpose ? 'T' : 'C'
+    if uplocA == 'L' && tfunA === identity && tfunB === identity && uplocB == 'U' && isunitcB == 'N' # lower * upper
+        triu!(B)
+        trmm!('L', uplocA, transa, isunitcA, one(T), A, B, C)
+    elseif uplocA == 'U' && tfunA === identity && tfunB === identity && uplocB == 'L' && isunitcB == 'N' # upper * lower
+        tril!(B)
+        trmm!('L', uplocA, transa, isunitcA, one(T), A, B, C)
+    elseif uplocA == 'U' && tfunA === identity && tfunB !== identity && uplocB == 'U' && isunitcA == 'N'
+        # operation is reversed to avoid executing the tranpose
+        triu!(A)
+        trmm!('R', uplocB, transb, isunitcB, one(T), parent(B), A, C)
+    elseif uplocA == 'L' && tfunA !== identity && tfunB === identity && uplocB == 'L' && isunitcB == 'N'
+        tril!(B)
+        trmm!('L', uplocA, transa, isunitcA, one(T), A, B, C)
+    elseif uplocA == 'U' && tfunA !== identity && tfunB === identity && uplocB == 'U' && isunitcB == 'N'
+        triu!(B)
+        trmm!('L', uplocA, transa, isunitcA, one(T), A, B, C)
+    elseif uplocA == 'L' && tfunA === identity && tfunB !== identity && uplocB == 'L' && isunitcA == 'N'
+        tril!(A)
+        trmm!('R', uplocB, transb, isunitcB, one(T), parent(B), A, C)
+    else
+        throw("mixed triangular-triangular multiplication") # TODO: rethink
+    end
+    return C
+end
+
 # triangular
 LinearAlgebra.generic_trimatmul!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
-    trmm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, C === B ? C : copyto!(C, B))
+    trmm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
 LinearAlgebra.generic_mattrimul!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
-    trmm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, C === A ? C : copyto!(C, A))
-LinearAlgebra.generic_trimatdiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
-    trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, C === B ? C : copyto!(C, B))
-LinearAlgebra.generic_mattridiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
-    trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, C === A ? C : copyto!(C, A))
+    trmm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, A, C)
+LinearAlgebra.generic_trimatdiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::AbstractMatrix{T}) where {T<:onemklFloat} =
+    trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
+LinearAlgebra.generic_mattridiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::AbstractMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
+    trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, A, C)
