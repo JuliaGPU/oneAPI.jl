@@ -52,4 +52,4 @@ libigc_jll = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
 
 [sources]
 GPUCompiler = {url="https://github.com/JuliaGPU/GPUCompiler.jl", rev="vc/mtv"}
-SPIRVIntrinsics = {url="https://github/JuliaGPU/OpenCL.jl", rev="vc/mtv", subdir="lib/intrinsics"}
+SPIRVIntrinsics = {url="https://github.com/JuliaGPU/OpenCL.jl", rev="vc/mtv", subdir="lib/intrinsics"}
