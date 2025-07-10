@@ -17,9 +17,12 @@ oneAPI.jl provides support for working with the [oneAPI unified programming
 model](https://software.intel.com/en-us/oneapi). The package is verified to work with the
 (currently) only implementation of this interface [that is part of the Intel Compute
 Runtime](https://github.com/intel/compute-runtime), only available on Linux.
+Windows support is experimental.
 
 
 ## Status
+
+**oneAPI.jl is looking for contributors and/or a maintainer. Reach out if you can help!**
 
 The current version of oneAPI.jl supports most of the oneAPI Level Zero interface, has
 good kernel programming capabilties, and as a demonstration of that it fully implements
