@@ -33,13 +33,13 @@ Adapt = "4"
 CEnum = "0.4, 0.5"
 ExprTools = "0.1"
 GPUArrays = "11.2.1"
-GPUCompiler = "1.5"
+GPUCompiler = "1.6"
 GPUToolbox = "0.1, 0.2"
 KernelAbstractions = "0.9.1"
 LLVM = "6, 7, 8, 9"
 NEO_jll = "=24.26.30049"
 Preferences = "1"
-SPIRVIntrinsics = "0.2"
+SPIRVIntrinsics = "0.4"
 SPIRV_LLVM_Translator_jll = "20"
 SpecialFunctions = "1.3, 2"
 StaticArrays = "1"
@@ -49,7 +49,3 @@ oneAPI_Support_jll = "0.8"
 
 [extras]
 libigc_jll = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-
-[sources]
-GPUCompiler = {url="https://github.com/JuliaGPU/GPUCompiler.jl", rev="vc/mtv"}
-SPIRVIntrinsics = {url="https://github.com/JuliaGPU/OpenCL.jl", rev="vc/mtv", subdir="lib/intrinsics"}
