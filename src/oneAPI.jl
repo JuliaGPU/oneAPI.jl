@@ -25,10 +25,14 @@ include("../lib/level-zero/oneL0.jl")
 using .oneL0
 functional() = oneL0.functional[]
 
+
 # device functionality
 import SPIRVIntrinsics
 SPIRVIntrinsics.@import_all
 SPIRVIntrinsics.@reexport_public
+# local method table for device functions
+Base.Experimental.@MethodTable(method_table)
+
 include("device/runtime.jl")
 include("device/array.jl")
 include("device/quirks.jl")
