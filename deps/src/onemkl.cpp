@@ -4038,6 +4038,16 @@ extern "C" int onemklXsparse_optimize_trsv(syclQueue_t device_queue, onemklUplo 
    return 0;
 }
 
+extern "C" int onemklXsparse_optimize_gemm(syclQueue_t device_queue, onemklTranspose opA, matrix_handle_t A) {
+   auto status = oneapi::mkl::sparse::optimize_gemm(device_queue->val, convert(opA), (oneapi::mkl::sparse::matrix_handle_t) A, {});
+   return 0;
+}
+
+extern "C" int onemklXsparse_optimize_gemm_advanced(syclQueue_t device_queue, onemklLayout layout_val, onemklTranspose opA, onemklTranspose opB, matrix_handle_t A, int64_t columns) {
+   auto status = oneapi::mkl::sparse::optimize_gemm(device_queue->val, convert(layout_val), convert(opA), convert(opB), (oneapi::mkl::sparse::matrix_handle_t) A, columns, {});
+   return 0;
+}
+
 extern "C" int onemklXsparse_optimize_trsm(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose opA, onemklDiag diag_val, matrix_handle_t A) {
    auto status = oneapi::mkl::sparse::optimize_trsm(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, {});
    return 0;
