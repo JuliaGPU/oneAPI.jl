@@ -241,6 +241,7 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
         # The routine "optimize_trsm" has two versions.
         suffix = ""
         (name_routine == "optimize_trsm") && occursin("columns", header) && (suffix = "_advanced")
+        (name_routine == "optimize_gemm") && occursin("columns", header) && (suffix = "_advanced")
         name_routine ∈ ("set_csr_data", "set_coo_data") && occursin("int64_t", header) && (suffix = "_64")
         occursin("batch", name_routine) && !occursin("**", header) && (suffix = "_strided")
 

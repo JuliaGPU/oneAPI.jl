@@ -127,6 +127,18 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
     end
 end
 
+function sparse_optimize_gemm!(trans::Char, A::oneSparseMatrixCSR)
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    onemklXsparse_optimize_gemm(sycl_queue(queue), trans, A.handle)
+    return A
+end
+
+function sparse_optimize_gemm!(trans::Char, transB::Char, nrhs::Int, A::oneSparseMatrixCSR)
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    onemklXsparse_optimize_gemm_advanced(sycl_queue(queue), 'C', trans, transB, A.handle, nrhs)
+    return A
+end
+
 for (fname, elty) in ((:onemklSsparse_symv, :Float32),
                       (:onemklDsparse_symv, :Float64),
                       (:onemklCsparse_symv, :ComplexF32),
