@@ -11,7 +11,7 @@ end
 
 function check(f)
     res = retry_reclaim(err -> err == RESULT_ERROR_OUT_OF_HOST_MEMORY ||
-                            err == RESULT_ERROR_OUT_OF_DEVICE_MEMORY) do
+                               err == RESULT_ERROR_OUT_OF_DEVICE_MEMORY) do
         return f()
     end
 
@@ -147,6 +147,11 @@ const ze_ipc_event_pool_handle_t = _ze_ipc_event_pool_handle_t
     ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE = 2013265945
     ZE_RESULT_ERROR_OVERLAPPING_REGIONS = 2013265946
     ZE_RESULT_WARNING_ACTION_REQUIRED = 2013265947
+    ZE_RESULT_ERROR_INVALID_KERNEL_HANDLE = 2013265948
+    ZE_RESULT_EXT_RTAS_BUILD_RETRY = 2013265949
+    ZE_RESULT_EXT_RTAS_BUILD_DEFERRED = 2013265950
+    ZE_RESULT_EXT_ERROR_OPERANDS_INCOMPATIBLE = 2013265951
+    ZE_RESULT_ERROR_SURVIVABILITY_MODE_DETECTED = 2013265952
     ZE_RESULT_ERROR_UNKNOWN = 2147483646
     ZE_RESULT_FORCE_UINT32 = 2147483647
 end
@@ -239,6 +244,22 @@ const ze_result_t = _ze_result_t
     ZE_STRUCTURE_TYPE_PITCHED_ALLOC_DEVICE_EXP_PROPERTIES = 131101
     ZE_STRUCTURE_TYPE_BINDLESS_IMAGE_EXP_DESC = 131102
     ZE_STRUCTURE_TYPE_PITCHED_IMAGE_EXP_DESC = 131103
+    ZE_STRUCTURE_TYPE_MUTABLE_GRAPH_ARGUMENT_EXP_DESC = 131104
+    ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC = 131105
+    ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC = 131106
+    ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WIN32_EXT_DESC = 131107
+    ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_FD_EXT_DESC = 131108
+    ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT = 131109
+    ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT = 131110
+    ZE_STRUCTURE_TYPE_DRIVER_DDI_HANDLES_EXT_PROPERTIES = 131111
+    ZE_STRUCTURE_TYPE_DEVICE_CACHELINE_SIZE_EXT = 131112
+    ZE_STRUCTURE_TYPE_DEVICE_VECTOR_WIDTH_PROPERTIES_EXT = 131113
+    ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXT_DESC = 131120
+    ZE_STRUCTURE_TYPE_RTAS_BUILDER_BUILD_OP_EXT_DESC = 131121
+    ZE_STRUCTURE_TYPE_RTAS_BUILDER_EXT_PROPERTIES = 131122
+    ZE_STRUCTURE_TYPE_RTAS_PARALLEL_OPERATION_EXT_PROPERTIES = 131123
+    ZE_STRUCTURE_TYPE_RTAS_DEVICE_EXT_PROPERTIES = 131124
+    ZE_STRUCTURE_TYPE_RTAS_GEOMETRY_AABBS_EXT_CB_PARAMS = 131125
     ZE_STRUCTURE_TYPE_FORCE_UINT32 = 2147483647
 end
 
@@ -305,6 +326,16 @@ struct _ze_base_desc_t
 end
 
 const ze_base_desc_t = _ze_base_desc_t
+
+const ze_init_driver_type_flags_t = UInt32
+
+struct _ze_init_driver_type_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_init_driver_type_flags_t
+end
+
+const ze_init_driver_type_desc_t = _ze_init_driver_type_desc_t
 
 struct _ze_driver_uuid_t
     id::NTuple{16,UInt8}
@@ -687,6 +718,9 @@ const ze_fence_desc_t = _ze_fence_desc_t
     ZE_IMAGE_FORMAT_LAYOUT_444P = 40
     ZE_IMAGE_FORMAT_LAYOUT_RGBP = 41
     ZE_IMAGE_FORMAT_LAYOUT_BRGP = 42
+    ZE_IMAGE_FORMAT_LAYOUT_8_8_8 = 43
+    ZE_IMAGE_FORMAT_LAYOUT_16_16_16 = 44
+    ZE_IMAGE_FORMAT_LAYOUT_32_32_32 = 45
     ZE_IMAGE_FORMAT_LAYOUT_FORCE_UINT32 = 2147483647
 end
 
@@ -1037,6 +1071,345 @@ struct _ze_relaxed_allocation_limits_exp_desc_t
 end
 
 const ze_relaxed_allocation_limits_exp_desc_t = _ze_relaxed_allocation_limits_exp_desc_t
+
+const ze_driver_ddi_handle_ext_flags_t = UInt32
+
+struct _ze_driver_ddi_handles_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_driver_ddi_handle_ext_flags_t
+end
+
+const ze_driver_ddi_handles_ext_properties_t = _ze_driver_ddi_handles_ext_properties_t
+
+const ze_external_semaphore_ext_flags_t = UInt32
+
+struct _ze_external_semaphore_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_external_semaphore_ext_flags_t
+end
+
+const ze_external_semaphore_ext_desc_t = _ze_external_semaphore_ext_desc_t
+
+struct _ze_external_semaphore_win32_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    handle::Ptr{Cvoid}
+    name::Ptr{Cchar}
+end
+
+const ze_external_semaphore_win32_ext_desc_t = _ze_external_semaphore_win32_ext_desc_t
+
+struct _ze_external_semaphore_fd_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    fd::Cint
+end
+
+const ze_external_semaphore_fd_ext_desc_t = _ze_external_semaphore_fd_ext_desc_t
+
+struct _ze_external_semaphore_signal_params_ext_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    value::UInt64
+end
+
+const ze_external_semaphore_signal_params_ext_t = _ze_external_semaphore_signal_params_ext_t
+
+struct _ze_external_semaphore_wait_params_ext_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    value::UInt64
+end
+
+const ze_external_semaphore_wait_params_ext_t = _ze_external_semaphore_wait_params_ext_t
+
+struct _ze_device_cache_line_size_ext_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    cacheLineSize::Csize_t
+end
+
+const ze_device_cache_line_size_ext_t = _ze_device_cache_line_size_ext_t
+
+@cenum _ze_rtas_builder_ext_version_t::UInt32 begin
+    ZE_RTAS_BUILDER_EXT_VERSION_1_0 = 65536
+    ZE_RTAS_BUILDER_EXT_VERSION_CURRENT = 65536
+    ZE_RTAS_BUILDER_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_ext_version_t = _ze_rtas_builder_ext_version_t
+
+struct _ze_rtas_builder_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    builderVersion::ze_rtas_builder_ext_version_t
+end
+
+const ze_rtas_builder_ext_desc_t = _ze_rtas_builder_ext_desc_t
+
+const ze_rtas_builder_ext_flags_t = UInt32
+
+struct _ze_rtas_builder_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_rtas_builder_ext_flags_t
+    rtasBufferSizeBytesExpected::Csize_t
+    rtasBufferSizeBytesMaxRequired::Csize_t
+    scratchBufferSizeBytes::Csize_t
+end
+
+const ze_rtas_builder_ext_properties_t = _ze_rtas_builder_ext_properties_t
+
+const ze_rtas_parallel_operation_ext_flags_t = UInt32
+
+struct _ze_rtas_parallel_operation_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_rtas_parallel_operation_ext_flags_t
+    maxConcurrency::UInt32
+end
+
+const ze_rtas_parallel_operation_ext_properties_t = _ze_rtas_parallel_operation_ext_properties_t
+
+const ze_rtas_device_ext_flags_t = UInt32
+
+@cenum _ze_rtas_format_ext_t::UInt32 begin
+    ZE_RTAS_FORMAT_EXT_INVALID = 0
+    ZE_RTAS_FORMAT_EXT_MAX = 2147483646
+    ZE_RTAS_FORMAT_EXT_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_format_ext_t = _ze_rtas_format_ext_t
+
+struct _ze_rtas_device_ext_properties_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    flags::ze_rtas_device_ext_flags_t
+    rtasFormat::ze_rtas_format_ext_t
+    rtasBufferAlignment::UInt32
+end
+
+const ze_rtas_device_ext_properties_t = _ze_rtas_device_ext_properties_t
+
+struct _ze_rtas_float3_ext_t
+    x::Cfloat
+    y::Cfloat
+    z::Cfloat
+end
+
+const ze_rtas_float3_ext_t = _ze_rtas_float3_ext_t
+
+struct _ze_rtas_transform_float3x4_column_major_ext_t
+    vx_x::Cfloat
+    vx_y::Cfloat
+    vx_z::Cfloat
+    vy_x::Cfloat
+    vy_y::Cfloat
+    vy_z::Cfloat
+    vz_x::Cfloat
+    vz_y::Cfloat
+    vz_z::Cfloat
+    p_x::Cfloat
+    p_y::Cfloat
+    p_z::Cfloat
+end
+
+const ze_rtas_transform_float3x4_column_major_ext_t = _ze_rtas_transform_float3x4_column_major_ext_t
+
+struct _ze_rtas_transform_float3x4_aligned_column_major_ext_t
+    vx_x::Cfloat
+    vx_y::Cfloat
+    vx_z::Cfloat
+    pad0::Cfloat
+    vy_x::Cfloat
+    vy_y::Cfloat
+    vy_z::Cfloat
+    pad1::Cfloat
+    vz_x::Cfloat
+    vz_y::Cfloat
+    vz_z::Cfloat
+    pad2::Cfloat
+    p_x::Cfloat
+    p_y::Cfloat
+    p_z::Cfloat
+    pad3::Cfloat
+end
+
+const ze_rtas_transform_float3x4_aligned_column_major_ext_t = _ze_rtas_transform_float3x4_aligned_column_major_ext_t
+
+struct _ze_rtas_transform_float3x4_row_major_ext_t
+    vx_x::Cfloat
+    vy_x::Cfloat
+    vz_x::Cfloat
+    p_x::Cfloat
+    vx_y::Cfloat
+    vy_y::Cfloat
+    vz_y::Cfloat
+    p_y::Cfloat
+    vx_z::Cfloat
+    vy_z::Cfloat
+    vz_z::Cfloat
+    p_z::Cfloat
+end
+
+const ze_rtas_transform_float3x4_row_major_ext_t = _ze_rtas_transform_float3x4_row_major_ext_t
+
+struct _ze_rtas_aabb_ext_t
+    lower::ze_rtas_float3_ext_t
+    upper::ze_rtas_float3_ext_t
+end
+
+const ze_rtas_aabb_ext_t = _ze_rtas_aabb_ext_t
+
+struct _ze_rtas_triangle_indices_uint32_ext_t
+    v0::UInt32
+    v1::UInt32
+    v2::UInt32
+end
+
+const ze_rtas_triangle_indices_uint32_ext_t = _ze_rtas_triangle_indices_uint32_ext_t
+
+struct _ze_rtas_quad_indices_uint32_ext_t
+    v0::UInt32
+    v1::UInt32
+    v2::UInt32
+    v3::UInt32
+end
+
+const ze_rtas_quad_indices_uint32_ext_t = _ze_rtas_quad_indices_uint32_ext_t
+
+const ze_rtas_builder_packed_geometry_type_ext_t = UInt8
+
+struct _ze_rtas_builder_geometry_info_ext_t
+    geometryType::ze_rtas_builder_packed_geometry_type_ext_t
+end
+
+const ze_rtas_builder_geometry_info_ext_t = _ze_rtas_builder_geometry_info_ext_t
+
+const ze_rtas_builder_packed_geometry_ext_flags_t = UInt8
+
+const ze_rtas_builder_packed_input_data_format_ext_t = UInt8
+
+struct _ze_rtas_builder_triangles_geometry_info_ext_t
+    geometryType::ze_rtas_builder_packed_geometry_type_ext_t
+    geometryFlags::ze_rtas_builder_packed_geometry_ext_flags_t
+    geometryMask::UInt8
+    triangleFormat::ze_rtas_builder_packed_input_data_format_ext_t
+    vertexFormat::ze_rtas_builder_packed_input_data_format_ext_t
+    triangleCount::UInt32
+    vertexCount::UInt32
+    triangleStride::UInt32
+    vertexStride::UInt32
+    pTriangleBuffer::Ptr{Cvoid}
+    pVertexBuffer::Ptr{Cvoid}
+end
+
+const ze_rtas_builder_triangles_geometry_info_ext_t = _ze_rtas_builder_triangles_geometry_info_ext_t
+
+struct _ze_rtas_builder_quads_geometry_info_ext_t
+    geometryType::ze_rtas_builder_packed_geometry_type_ext_t
+    geometryFlags::ze_rtas_builder_packed_geometry_ext_flags_t
+    geometryMask::UInt8
+    quadFormat::ze_rtas_builder_packed_input_data_format_ext_t
+    vertexFormat::ze_rtas_builder_packed_input_data_format_ext_t
+    quadCount::UInt32
+    vertexCount::UInt32
+    quadStride::UInt32
+    vertexStride::UInt32
+    pQuadBuffer::Ptr{Cvoid}
+    pVertexBuffer::Ptr{Cvoid}
+end
+
+const ze_rtas_builder_quads_geometry_info_ext_t = _ze_rtas_builder_quads_geometry_info_ext_t
+
+struct _ze_rtas_geometry_aabbs_ext_cb_params_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    primID::UInt32
+    primIDCount::UInt32
+    pGeomUserPtr::Ptr{Cvoid}
+    pBuildUserPtr::Ptr{Cvoid}
+    pBoundsOut::Ptr{ze_rtas_aabb_ext_t}
+end
+
+const ze_rtas_geometry_aabbs_ext_cb_params_t = _ze_rtas_geometry_aabbs_ext_cb_params_t
+
+# typedef void ( * ze_rtas_geometry_aabbs_cb_ext_t ) ( ze_rtas_geometry_aabbs_ext_cb_params_t * params ///< [in] callback function parameters structure )
+const ze_rtas_geometry_aabbs_cb_ext_t = Ptr{Cvoid}
+
+struct _ze_rtas_builder_procedural_geometry_info_ext_t
+    geometryType::ze_rtas_builder_packed_geometry_type_ext_t
+    geometryFlags::ze_rtas_builder_packed_geometry_ext_flags_t
+    geometryMask::UInt8
+    reserved::UInt8
+    primCount::UInt32
+    pfnGetBoundsCb::ze_rtas_geometry_aabbs_cb_ext_t
+    pGeomUserPtr::Ptr{Cvoid}
+end
+
+const ze_rtas_builder_procedural_geometry_info_ext_t = _ze_rtas_builder_procedural_geometry_info_ext_t
+
+const ze_rtas_builder_packed_instance_ext_flags_t = UInt8
+
+struct _ze_rtas_builder_instance_geometry_info_ext_t
+    geometryType::ze_rtas_builder_packed_geometry_type_ext_t
+    instanceFlags::ze_rtas_builder_packed_instance_ext_flags_t
+    geometryMask::UInt8
+    transformFormat::ze_rtas_builder_packed_input_data_format_ext_t
+    instanceUserID::UInt32
+    pTransform::Ptr{Cvoid}
+    pBounds::Ptr{ze_rtas_aabb_ext_t}
+    pAccelerationStructure::Ptr{Cvoid}
+end
+
+const ze_rtas_builder_instance_geometry_info_ext_t = _ze_rtas_builder_instance_geometry_info_ext_t
+
+@cenum _ze_rtas_builder_build_quality_hint_ext_t::UInt32 begin
+    ZE_RTAS_BUILDER_BUILD_QUALITY_HINT_EXT_LOW = 0
+    ZE_RTAS_BUILDER_BUILD_QUALITY_HINT_EXT_MEDIUM = 1
+    ZE_RTAS_BUILDER_BUILD_QUALITY_HINT_EXT_HIGH = 2
+    ZE_RTAS_BUILDER_BUILD_QUALITY_HINT_EXT_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_build_quality_hint_ext_t = _ze_rtas_builder_build_quality_hint_ext_t
+
+const ze_rtas_builder_build_op_ext_flags_t = UInt32
+
+struct _ze_rtas_builder_build_op_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    rtasFormat::ze_rtas_format_ext_t
+    buildQuality::ze_rtas_builder_build_quality_hint_ext_t
+    buildFlags::ze_rtas_builder_build_op_ext_flags_t
+    ppGeometries::Ptr{Ptr{ze_rtas_builder_geometry_info_ext_t}}
+    numGeometries::UInt32
+end
+
+const ze_rtas_builder_build_op_ext_desc_t = _ze_rtas_builder_build_op_ext_desc_t
+
+struct _ze_device_vector_width_properties_ext_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    vector_width_size::UInt32
+    preferred_vector_width_char::UInt32
+    preferred_vector_width_short::UInt32
+    preferred_vector_width_int::UInt32
+    preferred_vector_width_long::UInt32
+    preferred_vector_width_float::UInt32
+    preferred_vector_width_double::UInt32
+    preferred_vector_width_half::UInt32
+    native_vector_width_char::UInt32
+    native_vector_width_short::UInt32
+    native_vector_width_int::UInt32
+    native_vector_width_long::UInt32
+    native_vector_width_float::UInt32
+    native_vector_width_double::UInt32
+    native_vector_width_half::UInt32
+end
+
+const ze_device_vector_width_properties_ext_t = _ze_device_vector_width_properties_ext_t
 
 struct _ze_cache_reservation_ext_desc_t
     stype::ze_structure_type_t
@@ -1425,6 +1798,7 @@ const ze_rtas_device_exp_flags_t = UInt32
 
 @cenum _ze_rtas_format_exp_t::UInt32 begin
     ZE_RTAS_FORMAT_EXP_INVALID = 0
+    ZE_RTAS_FORMAT_EXP_MAX = 2147483646
     ZE_RTAS_FORMAT_EXP_FORCE_UINT32 = 2147483647
 end
 
@@ -1752,6 +2126,16 @@ end
 
 const ze_mutable_global_offset_exp_desc_t = _ze_mutable_global_offset_exp_desc_t
 
+struct _ze_mutable_graph_argument_exp_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    commandId::UInt64
+    argIndex::UInt32
+    pArgValue::Ptr{Cvoid}
+end
+
+const ze_mutable_graph_argument_exp_desc_t = _ze_mutable_graph_argument_exp_desc_t
+
 const ze_init_flags_t = UInt32
 
 @cenum _ze_init_flag_t::UInt32 begin
@@ -1771,6 +2155,20 @@ end
                                     phDrivers::Ptr{ze_driver_handle_t})::ze_result_t
 end
 
+@cenum _ze_init_driver_type_flag_t::UInt32 begin
+    ZE_INIT_DRIVER_TYPE_FLAG_GPU = 1
+    ZE_INIT_DRIVER_TYPE_FLAG_NPU = 2
+    ZE_INIT_DRIVER_TYPE_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_init_driver_type_flag_t = _ze_init_driver_type_flag_t
+
+@checked function zeInitDrivers(pCount, phDrivers, desc)
+    @ccall libze_loader.zeInitDrivers(pCount::Ptr{UInt32},
+                                      phDrivers::Ptr{ze_driver_handle_t},
+                                      desc::Ptr{ze_init_driver_type_desc_t})::ze_result_t
+end
+
 @cenum _ze_api_version_t::UInt32 begin
     ZE_API_VERSION_1_0 = 65536
     ZE_API_VERSION_1_1 = 65537
@@ -1782,7 +2180,11 @@ end
     ZE_API_VERSION_1_7 = 65543
     ZE_API_VERSION_1_8 = 65544
     ZE_API_VERSION_1_9 = 65545
-    ZE_API_VERSION_CURRENT = 65545
+    ZE_API_VERSION_1_10 = 65546
+    ZE_API_VERSION_1_11 = 65547
+    ZE_API_VERSION_1_12 = 65548
+    ZE_API_VERSION_1_13 = 65549
+    ZE_API_VERSION_CURRENT = 65549
     ZE_API_VERSION_FORCE_UINT32 = 2147483647
 end
 
@@ -2939,7 +3341,8 @@ end
 end
 
 @cenum _ze_physical_mem_flag_t::UInt32 begin
-    ZE_PHYSICAL_MEM_FLAG_TBD = 1
+    ZE_PHYSICAL_MEM_FLAG_ALLOCATE_ON_DEVICE = 1
+    ZE_PHYSICAL_MEM_FLAG_ALLOCATE_ON_HOST = 2
     ZE_PHYSICAL_MEM_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -3031,6 +3434,271 @@ const ze_relaxed_allocation_limits_exp_version_t = _ze_relaxed_allocation_limits
 end
 
 const ze_relaxed_allocation_limits_exp_flag_t = _ze_relaxed_allocation_limits_exp_flag_t
+
+@cenum _ze_kernel_get_binary_exp_version_t::UInt32 begin
+    ZE_KERNEL_GET_BINARY_EXP_VERSION_1_0 = 65536
+    ZE_KERNEL_GET_BINARY_EXP_VERSION_CURRENT = 65536
+    ZE_KERNEL_GET_BINARY_EXP_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_kernel_get_binary_exp_version_t = _ze_kernel_get_binary_exp_version_t
+
+@checked function zeKernelGetBinaryExp(hKernel, pSize, pKernelBinary)
+    @ccall libze_loader.zeKernelGetBinaryExp(hKernel::ze_kernel_handle_t,
+                                             pSize::Ptr{Csize_t},
+                                             pKernelBinary::Ptr{UInt8})::ze_result_t
+end
+
+@cenum _ze_driver_ddi_handles_ext_version_t::UInt32 begin
+    ZE_DRIVER_DDI_HANDLES_EXT_VERSION_1_0 = 65536
+    ZE_DRIVER_DDI_HANDLES_EXT_VERSION_CURRENT = 65536
+    ZE_DRIVER_DDI_HANDLES_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_driver_ddi_handles_ext_version_t = _ze_driver_ddi_handles_ext_version_t
+
+@cenum _ze_driver_ddi_handle_ext_flag_t::UInt32 begin
+    ZE_DRIVER_DDI_HANDLE_EXT_FLAG_DDI_HANDLE_EXT_SUPPORTED = 1
+    ZE_DRIVER_DDI_HANDLE_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_driver_ddi_handle_ext_flag_t = _ze_driver_ddi_handle_ext_flag_t
+
+@cenum _ze_external_semaphore_ext_version_t::UInt32 begin
+    ZE_EXTERNAL_SEMAPHORE_EXT_VERSION_1_0 = 65536
+    ZE_EXTERNAL_SEMAPHORE_EXT_VERSION_CURRENT = 65536
+    ZE_EXTERNAL_SEMAPHORE_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_external_semaphore_ext_version_t = _ze_external_semaphore_ext_version_t
+
+mutable struct _ze_external_semaphore_ext_handle_t end
+
+const ze_external_semaphore_ext_handle_t = Ptr{_ze_external_semaphore_ext_handle_t}
+
+@cenum _ze_external_semaphore_ext_flag_t::UInt32 begin
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_OPAQUE_FD = 1
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_OPAQUE_WIN32 = 2
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_OPAQUE_WIN32_KMT = 4
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE = 8
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D11_FENCE = 16
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_KEYED_MUTEX = 32
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_KEYED_MUTEX_KMT = 64
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_VK_TIMELINE_SEMAPHORE_FD = 128
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_VK_TIMELINE_SEMAPHORE_WIN32 = 256
+    ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_external_semaphore_ext_flag_t = _ze_external_semaphore_ext_flag_t
+
+@checked function zeDeviceImportExternalSemaphoreExt(hDevice, desc, phSemaphore)
+    @ccall libze_loader.zeDeviceImportExternalSemaphoreExt(hDevice::ze_device_handle_t,
+                                                           desc::Ptr{ze_external_semaphore_ext_desc_t},
+                                                           phSemaphore::Ptr{ze_external_semaphore_ext_handle_t})::ze_result_t
+end
+
+@checked function zeDeviceReleaseExternalSemaphoreExt(hSemaphore)
+    @ccall libze_loader.zeDeviceReleaseExternalSemaphoreExt(hSemaphore::ze_external_semaphore_ext_handle_t)::ze_result_t
+end
+
+@checked function zeCommandListAppendSignalExternalSemaphoreExt(hCommandList, numSemaphores,
+                                                                phSemaphores, signalParams,
+                                                                hSignalEvent, numWaitEvents,
+                                                                phWaitEvents)
+    @ccall libze_loader.zeCommandListAppendSignalExternalSemaphoreExt(hCommandList::ze_command_list_handle_t,
+                                                                      numSemaphores::UInt32,
+                                                                      phSemaphores::Ptr{ze_external_semaphore_ext_handle_t},
+                                                                      signalParams::Ptr{ze_external_semaphore_signal_params_ext_t},
+                                                                      hSignalEvent::ze_event_handle_t,
+                                                                      numWaitEvents::UInt32,
+                                                                      phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@checked function zeCommandListAppendWaitExternalSemaphoreExt(hCommandList, numSemaphores,
+                                                              phSemaphores, waitParams,
+                                                              hSignalEvent, numWaitEvents,
+                                                              phWaitEvents)
+    @ccall libze_loader.zeCommandListAppendWaitExternalSemaphoreExt(hCommandList::ze_command_list_handle_t,
+                                                                    numSemaphores::UInt32,
+                                                                    phSemaphores::Ptr{ze_external_semaphore_ext_handle_t},
+                                                                    waitParams::Ptr{ze_external_semaphore_wait_params_ext_t},
+                                                                    hSignalEvent::ze_event_handle_t,
+                                                                    numWaitEvents::UInt32,
+                                                                    phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@cenum _ze_device_cache_line_size_ext_version_t::UInt32 begin
+    ZE_DEVICE_CACHE_LINE_SIZE_EXT_VERSION_1_0 = 65536
+    ZE_DEVICE_CACHE_LINE_SIZE_EXT_VERSION_CURRENT = 65536
+    ZE_DEVICE_CACHE_LINE_SIZE_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_device_cache_line_size_ext_version_t = _ze_device_cache_line_size_ext_version_t
+
+@cenum _ze_rtas_device_ext_flag_t::UInt32 begin
+    ZE_RTAS_DEVICE_EXT_FLAG_RESERVED = 1
+    ZE_RTAS_DEVICE_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_device_ext_flag_t = _ze_rtas_device_ext_flag_t
+
+@cenum _ze_rtas_builder_ext_flag_t::UInt32 begin
+    ZE_RTAS_BUILDER_EXT_FLAG_RESERVED = 1
+    ZE_RTAS_BUILDER_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_ext_flag_t = _ze_rtas_builder_ext_flag_t
+
+@cenum _ze_rtas_parallel_operation_ext_flag_t::UInt32 begin
+    ZE_RTAS_PARALLEL_OPERATION_EXT_FLAG_RESERVED = 1
+    ZE_RTAS_PARALLEL_OPERATION_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_parallel_operation_ext_flag_t = _ze_rtas_parallel_operation_ext_flag_t
+
+const ze_rtas_builder_geometry_ext_flags_t = UInt32
+
+@cenum _ze_rtas_builder_geometry_ext_flag_t::UInt32 begin
+    ZE_RTAS_BUILDER_GEOMETRY_EXT_FLAG_NON_OPAQUE = 1
+    ZE_RTAS_BUILDER_GEOMETRY_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_geometry_ext_flag_t = _ze_rtas_builder_geometry_ext_flag_t
+
+const ze_rtas_builder_instance_ext_flags_t = UInt32
+
+@cenum _ze_rtas_builder_instance_ext_flag_t::UInt32 begin
+    ZE_RTAS_BUILDER_INSTANCE_EXT_FLAG_TRIANGLE_CULL_DISABLE = 1
+    ZE_RTAS_BUILDER_INSTANCE_EXT_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE = 2
+    ZE_RTAS_BUILDER_INSTANCE_EXT_FLAG_TRIANGLE_FORCE_OPAQUE = 4
+    ZE_RTAS_BUILDER_INSTANCE_EXT_FLAG_TRIANGLE_FORCE_NON_OPAQUE = 8
+    ZE_RTAS_BUILDER_INSTANCE_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_instance_ext_flag_t = _ze_rtas_builder_instance_ext_flag_t
+
+@cenum _ze_rtas_builder_build_op_ext_flag_t::UInt32 begin
+    ZE_RTAS_BUILDER_BUILD_OP_EXT_FLAG_COMPACT = 1
+    ZE_RTAS_BUILDER_BUILD_OP_EXT_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION = 2
+    ZE_RTAS_BUILDER_BUILD_OP_EXT_FLAG_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_build_op_ext_flag_t = _ze_rtas_builder_build_op_ext_flag_t
+
+@cenum _ze_rtas_builder_geometry_type_ext_t::UInt32 begin
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXT_TRIANGLES = 0
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXT_QUADS = 1
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXT_PROCEDURAL = 2
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXT_INSTANCE = 3
+    ZE_RTAS_BUILDER_GEOMETRY_TYPE_EXT_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_geometry_type_ext_t = _ze_rtas_builder_geometry_type_ext_t
+
+@cenum _ze_rtas_builder_input_data_format_ext_t::UInt32 begin
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXT_FLOAT3 = 0
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXT_FLOAT3X4_COLUMN_MAJOR = 1
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXT_FLOAT3X4_ALIGNED_COLUMN_MAJOR = 2
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXT_FLOAT3X4_ROW_MAJOR = 3
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXT_AABB = 4
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXT_TRIANGLE_INDICES_UINT32 = 5
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXT_QUAD_INDICES_UINT32 = 6
+    ZE_RTAS_BUILDER_INPUT_DATA_FORMAT_EXT_FORCE_UINT32 = 2147483647
+end
+
+const ze_rtas_builder_input_data_format_ext_t = _ze_rtas_builder_input_data_format_ext_t
+
+mutable struct _ze_rtas_builder_ext_handle_t end
+
+const ze_rtas_builder_ext_handle_t = Ptr{_ze_rtas_builder_ext_handle_t}
+
+mutable struct _ze_rtas_parallel_operation_ext_handle_t end
+
+const ze_rtas_parallel_operation_ext_handle_t = Ptr{_ze_rtas_parallel_operation_ext_handle_t}
+
+@checked function zeRTASBuilderCreateExt(hDriver, pDescriptor, phBuilder)
+    @ccall libze_loader.zeRTASBuilderCreateExt(hDriver::ze_driver_handle_t,
+                                               pDescriptor::Ptr{ze_rtas_builder_ext_desc_t},
+                                               phBuilder::Ptr{ze_rtas_builder_ext_handle_t})::ze_result_t
+end
+
+@checked function zeRTASBuilderGetBuildPropertiesExt(hBuilder, pBuildOpDescriptor,
+                                                     pProperties)
+    @ccall libze_loader.zeRTASBuilderGetBuildPropertiesExt(hBuilder::ze_rtas_builder_ext_handle_t,
+                                                           pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_ext_desc_t},
+                                                           pProperties::Ptr{ze_rtas_builder_ext_properties_t})::ze_result_t
+end
+
+@checked function zeDriverRTASFormatCompatibilityCheckExt(hDriver, rtasFormatA, rtasFormatB)
+    @ccall libze_loader.zeDriverRTASFormatCompatibilityCheckExt(hDriver::ze_driver_handle_t,
+                                                                rtasFormatA::ze_rtas_format_ext_t,
+                                                                rtasFormatB::ze_rtas_format_ext_t)::ze_result_t
+end
+
+@checked function zeRTASBuilderBuildExt(hBuilder, pBuildOpDescriptor, pScratchBuffer,
+                                        scratchBufferSizeBytes, pRtasBuffer,
+                                        rtasBufferSizeBytes, hParallelOperation,
+                                        pBuildUserPtr, pBounds, pRtasBufferSizeBytes)
+    @ccall libze_loader.zeRTASBuilderBuildExt(hBuilder::ze_rtas_builder_ext_handle_t,
+                                              pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_ext_desc_t},
+                                              pScratchBuffer::Ptr{Cvoid},
+                                              scratchBufferSizeBytes::Csize_t,
+                                              pRtasBuffer::Ptr{Cvoid},
+                                              rtasBufferSizeBytes::Csize_t,
+                                              hParallelOperation::ze_rtas_parallel_operation_ext_handle_t,
+                                              pBuildUserPtr::Ptr{Cvoid},
+                                              pBounds::Ptr{ze_rtas_aabb_ext_t},
+                                              pRtasBufferSizeBytes::Ptr{Csize_t})::ze_result_t
+end
+
+@checked function zeRTASBuilderCommandListAppendCopyExt(hCommandList, dstptr, srcptr, size,
+                                                        hSignalEvent, numWaitEvents,
+                                                        phWaitEvents)
+    @ccall libze_loader.zeRTASBuilderCommandListAppendCopyExt(hCommandList::ze_command_list_handle_t,
+                                                              dstptr::Ptr{Cvoid},
+                                                              srcptr::Ptr{Cvoid},
+                                                              size::Csize_t,
+                                                              hSignalEvent::ze_event_handle_t,
+                                                              numWaitEvents::UInt32,
+                                                              phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@checked function zeRTASBuilderDestroyExt(hBuilder)
+    @ccall libze_loader.zeRTASBuilderDestroyExt(hBuilder::ze_rtas_builder_ext_handle_t)::ze_result_t
+end
+
+@checked function zeRTASParallelOperationCreateExt(hDriver, phParallelOperation)
+    @ccall libze_loader.zeRTASParallelOperationCreateExt(hDriver::ze_driver_handle_t,
+                                                         phParallelOperation::Ptr{ze_rtas_parallel_operation_ext_handle_t})::ze_result_t
+end
+
+@checked function zeRTASParallelOperationGetPropertiesExt(hParallelOperation, pProperties)
+    @ccall libze_loader.zeRTASParallelOperationGetPropertiesExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t,
+                                                                pProperties::Ptr{ze_rtas_parallel_operation_ext_properties_t})::ze_result_t
+end
+
+@checked function zeRTASParallelOperationJoinExt(hParallelOperation)
+    @ccall libze_loader.zeRTASParallelOperationJoinExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t)::ze_result_t
+end
+
+@checked function zeRTASParallelOperationDestroyExt(hParallelOperation)
+    @ccall libze_loader.zeRTASParallelOperationDestroyExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t)::ze_result_t
+end
+
+@cenum _ze_device_vector_sizes_ext_version_t::UInt32 begin
+    ZE_DEVICE_VECTOR_SIZES_EXT_VERSION_1_0 = 65536
+    ZE_DEVICE_VECTOR_SIZES_EXT_VERSION_CURRENT = 65536
+    ZE_DEVICE_VECTOR_SIZES_EXT_VERSION_FORCE_UINT32 = 2147483647
+end
+
+const ze_device_vector_sizes_ext_version_t = _ze_device_vector_sizes_ext_version_t
+
+@checked function zeDeviceGetVectorWidthPropertiesExt(hDevice, pCount,
+                                                      pVectorWidthProperties)
+    @ccall libze_loader.zeDeviceGetVectorWidthPropertiesExt(hDevice::ze_device_handle_t,
+                                                            pCount::Ptr{UInt32},
+                                                            pVectorWidthProperties::Ptr{ze_device_vector_width_properties_ext_t})::ze_result_t
+end
 
 @cenum _ze_cache_reservation_ext_version_t::UInt32 begin
     ZE_CACHE_RESERVATION_EXT_VERSION_1_0 = 65536
@@ -3619,6 +4287,7 @@ const ze_bindless_image_exp_version_t = _ze_bindless_image_exp_version_t
 
 @cenum _ze_image_bindless_exp_flag_t::UInt32 begin
     ZE_IMAGE_BINDLESS_EXP_FLAG_BINDLESS = 1
+    ZE_IMAGE_BINDLESS_EXP_FLAG_SAMPLED_IMAGE = 2
     ZE_IMAGE_BINDLESS_EXP_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -3673,7 +4342,8 @@ end
 
 @cenum _ze_mutable_command_list_exp_version_t::UInt32 begin
     ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_1_0 = 65536
-    ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_CURRENT = 65536
+    ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_1_1 = 65537
+    ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_CURRENT = 65537
     ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_FORCE_UINT32 = 2147483647
 end
 
@@ -3686,6 +4356,8 @@ const ze_mutable_command_list_exp_version_t = _ze_mutable_command_list_exp_versi
     ZE_MUTABLE_COMMAND_EXP_FLAG_GLOBAL_OFFSET = 8
     ZE_MUTABLE_COMMAND_EXP_FLAG_SIGNAL_EVENT = 16
     ZE_MUTABLE_COMMAND_EXP_FLAG_WAIT_EVENTS = 32
+    ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION = 64
+    ZE_MUTABLE_COMMAND_EXP_FLAG_GRAPH_ARGUMENTS = 128
     ZE_MUTABLE_COMMAND_EXP_FLAG_FORCE_UINT32 = 2147483647
 end
 
@@ -3702,6 +4374,16 @@ const ze_mutable_command_list_exp_flag_t = _ze_mutable_command_list_exp_flag_t
     @ccall libze_loader.zeCommandListGetNextCommandIdExp(hCommandList::ze_command_list_handle_t,
                                                          desc::Ptr{ze_mutable_command_id_exp_desc_t},
                                                          pCommandId::Ptr{UInt64})::ze_result_t
+end
+
+@checked function zeCommandListGetNextCommandIdWithKernelsExp(hCommandList, desc,
+                                                              numKernels, phKernels,
+                                                              pCommandId)
+    @ccall libze_loader.zeCommandListGetNextCommandIdWithKernelsExp(hCommandList::ze_command_list_handle_t,
+                                                                    desc::Ptr{ze_mutable_command_id_exp_desc_t},
+                                                                    numKernels::UInt32,
+                                                                    phKernels::Ptr{ze_kernel_handle_t},
+                                                                    pCommandId::Ptr{UInt64})::ze_result_t
 end
 
 @checked function zeCommandListUpdateMutableCommandsExp(hCommandList, desc)
@@ -3723,6 +4405,14 @@ end
                                                                        commandId::UInt64,
                                                                        numWaitEvents::UInt32,
                                                                        phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+end
+
+@checked function zeCommandListUpdateMutableCommandKernelsExp(hCommandList, numKernels,
+                                                              pCommandId, phKernels)
+    @ccall libze_loader.zeCommandListUpdateMutableCommandKernelsExp(hCommandList::ze_command_list_handle_t,
+                                                                    numKernels::UInt32,
+                                                                    pCommandId::Ptr{UInt64},
+                                                                    phKernels::Ptr{ze_kernel_handle_t})::ze_result_t
 end
 
 struct _ze_init_params_t
@@ -5317,6 +6007,8 @@ const ZE_MAX_IPC_HANDLE_SIZE = 64
 
 const ZE_MAX_UUID_SIZE = 16
 
+const ZE_API_VERSION_CURRENT_M = ZE_MAKE_VERSION(1, 13)
+
 const ZE_MAX_DRIVER_UUID_SIZE = 16
 
 const ZE_MAX_EXTENSION_NAME = 256
@@ -5342,6 +6034,18 @@ const ZE_FLOAT_ATOMICS_EXT_NAME = "ZE_extension_float_atomics"
 const ZE_GLOBAL_OFFSET_EXP_NAME = "ZE_experimental_global_offset"
 
 const ZE_RELAXED_ALLOCATION_LIMITS_EXP_NAME = "ZE_experimental_relaxed_allocation_limits"
+
+const ZE_GET_KERNEL_BINARY_EXP_NAME = "ZE_extension_kernel_binary_exp"
+
+const ZE_DRIVER_DDI_HANDLES_EXT_NAME = "ZE_extension_driver_ddi_handles"
+
+const ZE_EXTERNAL_SEMAPHORES_EXTENSION_NAME = "ZE_extension_external_semaphores"
+
+const ZE_CACHELINE_SIZE_EXT_NAME = "ZE_extension_device_cache_line_size"
+
+const ZE_RTAS_EXT_NAME = "ZE_extension_rtas"
+
+const ZE_DEVICE_VECTOR_SIZES_EXT_NAME = "ZE_extension_device_vector_sizes"
 
 const ZE_CACHE_RESERVATION_EXT_NAME = "ZE_extension_cache_reservation"
 

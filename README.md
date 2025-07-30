@@ -302,3 +302,4 @@ The discovered paths will be written to a global file with preferences, typicall
 `$HOME/.julia/environments/vX.Y/LocalPreferences.toml` (where `vX.Y` refers to the Julia
 version you are using). You can modify this file, or remove it when you want to revert to
 default set of binaries.
+

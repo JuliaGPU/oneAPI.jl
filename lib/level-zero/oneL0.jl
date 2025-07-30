@@ -19,6 +19,7 @@ include("utils.jl")
 include("pointer.jl")
 
 # core API
+include("common.jl")
 include("libze.jl")
 
 # level zero's structure types are often assumed to be zero-initialized (`= {}` in C).
@@ -85,9 +86,41 @@ end
 
 # core wrappers
 include("error.jl")
-include("common.jl")
 include("driver.jl")
 include("device.jl")
+
+# Define OutOfGPUMemoryError after device.jl to ensure ZeDevice is available
+export OutOfGPUMemoryError
+
+"""
+    OutOfGPUMemoryError(sz::Integer=0, dev::ZeDevice)
+
+An operation allocated too much GPU memory.
+"""
+struct OutOfGPUMemoryError <: Exception
+  sz::Int
+  dev::Union{ZeDevice, Nothing}
+
+  function OutOfGPUMemoryError(sz::Integer=0, dev::Union{ZeDevice, Nothing}=nothing)
+    new(sz, dev)
+  end
+end
+
+function Base.showerror(io::IO, err::OutOfGPUMemoryError)
+    print(io, "Out of GPU memory")
+    if err.sz > 0
+      print(io, " trying to allocate $(Base.format_bytes(err.sz))")
+    end
+    if err.dev !== nothing
+        print(" on device $(properties(err.dev).name)")
+        if length(memory_properties(err.dev)) == 1
+            # XXX: how to handle multiple memories?
+            print(" with $(Base.format_bytes(only(memory_properties(err.dev)).totalSize))")
+        end
+    end
+    return io
+end
+
 include("context.jl")
 include("cmdqueue.jl")
 include("cmdlist.jl")
