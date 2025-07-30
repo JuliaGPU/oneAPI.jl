@@ -2842,6 +2842,13 @@ int onemklXsparse_optimize_trmv(syclQueue_t device_queue, onemklUplo uplo_val, o
 int onemklXsparse_optimize_trsv(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose
                                 opA, onemklDiag diag_val, matrix_handle_t A);
 
+int onemklXsparse_optimize_gemm(syclQueue_t device_queue, onemklTranspose opA, matrix_handle_t
+                                A);
+
+int onemklXsparse_optimize_gemm_advanced(syclQueue_t device_queue, onemklLayout layout_val,
+                                         onemklTranspose opA, onemklTranspose opB,
+                                         matrix_handle_t A, int64_t columns);
+
 int onemklXsparse_optimize_trsm(syclQueue_t device_queue, onemklUplo uplo_val, onemklTranspose
                                 opA, onemklDiag diag_val, matrix_handle_t A);
 

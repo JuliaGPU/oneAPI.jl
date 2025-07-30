@@ -1,6 +1,6 @@
 non_parametric_routines = ["init_matrix_handle", "release_matrix_handle", "set_matrix_property",
 "init_matmat_descr", "release_matmat_descr", "set_matmat_data", "get_matmat_data", "matmat",
-"omatcopy", "sort_matrix", "optimize_gemv", "optimize_trmv", "optimize_trsv", "optimize_trsm",
+"omatcopy", "sort_matrix", "optimize_gemv", "optimize_gemm", "optimize_trmv", "optimize_trsv", "optimize_trsm",
 "init_omatconvert_descr", "release_omatconvert_descr", "init_omatadd_descr", "release_omatadd_descr",
 "omatconvert_buffer_size", "omatconvert_analyze", "omatconvert_get_nnz", "omatconvert",
 "omatadd_buffer_size", "omatadd_analyze", "omatadd_get_nnz"]
