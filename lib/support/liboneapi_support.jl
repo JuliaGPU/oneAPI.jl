@@ -180,6 +180,14 @@ end
     ONEMKL_MATMAT_REQUEST_FINALIZE = 8
 end
 
+@cenum onemklOmatconvertAlg::UInt32 begin
+    ONEMKL_OMATCONVERT_DEFAULT_ALG = 0
+end
+
+@cenum onemklOmataddAlg::UInt32 begin
+    ONEMKL_OMATADD_DEFAULT_ALG = 0
+end
+
 mutable struct matrix_handle end
 
 const matrix_handle_t = Ptr{matrix_handle}
@@ -187,6 +195,14 @@ const matrix_handle_t = Ptr{matrix_handle}
 mutable struct matmat_descr end
 
 const matmat_descr_t = Ptr{matmat_descr}
+
+mutable struct omatconvert_descr end
+
+const omatconvert_descr_t = Ptr{omatconvert_descr}
+
+mutable struct omatadd_descr end
+
+const omatadd_descr_t = Ptr{omatadd_descr}
 
 function onemklHgemm_batch(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
                            beta, c, ldc, group_count, group_size)
@@ -6596,6 +6612,26 @@ function onemklXsparse_release_matmat_descr(p_desc)
     @ccall liboneapi_support.onemklXsparse_release_matmat_descr(p_desc::Ptr{matmat_descr_t})::Cint
 end
 
+function onemklXsparse_init_omatconvert_descr(device_queue, p_descr)
+    @ccall liboneapi_support.onemklXsparse_init_omatconvert_descr(device_queue::syclQueue_t,
+                                                                  p_descr::Ptr{omatconvert_descr_t})::Cint
+end
+
+function onemklXsparse_release_omatconvert_descr(device_queue, descr)
+    @ccall liboneapi_support.onemklXsparse_release_omatconvert_descr(device_queue::syclQueue_t,
+                                                                     descr::omatconvert_descr_t)::Cint
+end
+
+function onemklXsparse_init_omatadd_descr(device_queue, p_omatadd_desc)
+    @ccall liboneapi_support.onemklXsparse_init_omatadd_descr(device_queue::syclQueue_t,
+                                                              p_omatadd_desc::Ptr{omatadd_descr_t})::Cint
+end
+
+function onemklXsparse_release_omatadd_descr(device_queue, omatadd_desc)
+    @ccall liboneapi_support.onemklXsparse_release_omatadd_descr(device_queue::syclQueue_t,
+                                                                 omatadd_desc::omatadd_descr_t)::Cint
+end
+
 function onemklXsparse_omatcopy(device_queue, transpose_val, spMat_in, spMat_out)
     @ccall liboneapi_support.onemklXsparse_omatcopy(device_queue::syclQueue_t,
                                                     transpose_val::onemklTranspose,
@@ -6656,6 +6692,22 @@ function onemklXsparse_optimize_trsv(device_queue, uplo_val, opA, diag_val, A)
                                                          opA::onemklTranspose,
                                                          diag_val::onemklDiag,
                                                          A::matrix_handle_t)::Cint
+end
+
+function onemklXsparse_optimize_gemm(device_queue, opA, A)
+    @ccall liboneapi_support.onemklXsparse_optimize_gemm(device_queue::syclQueue_t,
+                                                         opA::onemklTranspose,
+                                                         A::matrix_handle_t)::Cint
+end
+
+function onemklXsparse_optimize_gemm_advanced(device_queue, layout_val, opA, opB, A,
+                                              columns)
+    @ccall liboneapi_support.onemklXsparse_optimize_gemm_advanced(device_queue::syclQueue_t,
+                                                                  layout_val::onemklLayout,
+                                                                  opA::onemklTranspose,
+                                                                  opB::onemklTranspose,
+                                                                  A::matrix_handle_t,
+                                                                  columns::Int64)::Cint
 end
 
 function onemklXsparse_optimize_trsm(device_queue, uplo_val, opA, diag_val, A)

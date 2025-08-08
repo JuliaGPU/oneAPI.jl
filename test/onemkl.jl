@@ -1132,6 +1132,7 @@ end
 
                     alpha = rand(T)
                     beta = rand(T)
+                    oneMKL.sparse_optimize_gemm!(transa, dA)
                     oneMKL.sparse_gemm!(transa, transb, alpha, dA, dB, beta, dC)
                     @test alpha * opa(A) * opb(B) + beta * C ≈ collect(dC)
                 end
