@@ -15,6 +15,7 @@ else
     using oneAPI_Level_Zero_Loader_jll
 end
 
+include("common.jl")
 include("utils.jl")
 include("pointer.jl")
 
@@ -85,7 +86,6 @@ end
 
 # core wrappers
 include("error.jl")
-include("common.jl")
 include("driver.jl")
 include("device.jl")
 include("context.jl")
@@ -131,7 +131,7 @@ function __init__()
         zeInit(0)
         functional[] = true
     catch err
-        @error "Failed to initialize oneAPI" exception=(err,catch_backtrace())
+        @warn "Failed to initialize oneAPI"
         functional[] = false
         return
     end
