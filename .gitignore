@@ -1,2 +1,8 @@
 LocalPreferences.toml
 Manifest.toml
+deps/onemkl_blas.cpp
+deps/onemkl_blas.h
+deps/onemkl_lapack.cpp
+deps/onemkl_lapack.h
+deps/onemkl_sparse.cpp
+deps/onemkl_sparse.h

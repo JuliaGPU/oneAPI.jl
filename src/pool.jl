@@ -1,32 +1,3 @@
-export OutOfGPUMemoryError
-
-"""
-    OutOfGPUMemoryError()
-
-An operation allocated too much GPU memory.
-"""
-struct OutOfGPUMemoryError <: Exception
-  sz::Int
-  dev::ZeDevice
-
-  function OutOfGPUMemoryError(sz::Integer=0, dev::ZeDevice=device())
-    new(sz, dev)
-  end
-end
-
-function Base.showerror(io::IO, err::OutOfGPUMemoryError)
-    print(io, "Out of GPU memory")
-    if err.sz > 0
-      print(io, " trying to allocate $(Base.format_bytes(err.sz))")
-    end
-    print(" on device $(properties(err.dev).name)")
-    if length(memory_properties(err.dev)) == 1
-        # XXX: how to handle multiple memories?
-        print(" with $(Base.format_bytes(only(memory_properties(err.dev)).totalSize))")
-    end
-    return io
-end
-
 function allocate(::Type{oneL0.DeviceBuffer}, ctx, dev, bytes::Int, alignment::Int)
     bytes == 0 && return oneL0.DeviceBuffer(ZE_NULL, bytes, ctx, dev)
 
