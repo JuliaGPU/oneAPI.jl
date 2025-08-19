@@ -7058,3 +7058,181 @@ end
 function onemklDestroy()
     @ccall liboneapi_support.onemklDestroy()::Cint
 end
+
+@cenum onemklDftPrecision::UInt32 begin
+    ONEMKL_DFT_PRECISION_SINGLE = 0
+    ONEMKL_DFT_PRECISION_DOUBLE = 1
+end
+
+@cenum onemklDftDomain::UInt32 begin
+    ONEMKL_DFT_DOMAIN_REAL = 0
+    ONEMKL_DFT_DOMAIN_COMPLEX = 1
+end
+
+@cenum onemklDftConfigParam::UInt32 begin
+    ONEMKL_DFT_PARAM_FORWARD_DOMAIN = 0
+    ONEMKL_DFT_PARAM_DIMENSION = 1
+    ONEMKL_DFT_PARAM_LENGTHS = 2
+    ONEMKL_DFT_PARAM_PRECISION = 3
+    ONEMKL_DFT_PARAM_FORWARD_SCALE = 4
+    ONEMKL_DFT_PARAM_BACKWARD_SCALE = 5
+    ONEMKL_DFT_PARAM_NUMBER_OF_TRANSFORMS = 6
+    ONEMKL_DFT_PARAM_COMPLEX_STORAGE = 7
+    ONEMKL_DFT_PARAM_PLACEMENT = 8
+    ONEMKL_DFT_PARAM_INPUT_STRIDES = 9
+    ONEMKL_DFT_PARAM_OUTPUT_STRIDES = 10
+    ONEMKL_DFT_PARAM_FWD_DISTANCE = 11
+    ONEMKL_DFT_PARAM_BWD_DISTANCE = 12
+    ONEMKL_DFT_PARAM_WORKSPACE = 13
+    ONEMKL_DFT_PARAM_WORKSPACE_ESTIMATE_BYTES = 14
+    ONEMKL_DFT_PARAM_WORKSPACE_BYTES = 15
+    ONEMKL_DFT_PARAM_FWD_STRIDES = 16
+    ONEMKL_DFT_PARAM_BWD_STRIDES = 17
+    ONEMKL_DFT_PARAM_WORKSPACE_PLACEMENT = 18
+    ONEMKL_DFT_PARAM_WORKSPACE_EXTERNAL_BYTES = 19
+end
+
+@cenum onemklDftConfigValue::UInt32 begin
+    ONEMKL_DFT_VALUE_COMMITTED = 0
+    ONEMKL_DFT_VALUE_UNCOMMITTED = 1
+    ONEMKL_DFT_VALUE_COMPLEX_COMPLEX = 2
+    ONEMKL_DFT_VALUE_REAL_REAL = 3
+    ONEMKL_DFT_VALUE_INPLACE = 4
+    ONEMKL_DFT_VALUE_NOT_INPLACE = 5
+    ONEMKL_DFT_VALUE_WORKSPACE_AUTOMATIC = 6
+    ONEMKL_DFT_VALUE_ALLOW = 7
+    ONEMKL_DFT_VALUE_AVOID = 8
+    ONEMKL_DFT_VALUE_WORKSPACE_INTERNAL = 9
+    ONEMKL_DFT_VALUE_WORKSPACE_EXTERNAL = 10
+end
+
+mutable struct onemklDftDescriptor_st end
+
+const onemklDftDescriptor_t = Ptr{onemklDftDescriptor_st}
+
+function onemklDftCreate1D(desc, precision, domain, length)
+    @ccall liboneapi_support.onemklDftCreate1D(desc::Ptr{onemklDftDescriptor_t},
+                                               precision::onemklDftPrecision,
+                                               domain::onemklDftDomain, length::Int64)::Cint
+end
+
+function onemklDftCreateND(desc, precision, domain, dim, lengths)
+    @ccall liboneapi_support.onemklDftCreateND(desc::Ptr{onemklDftDescriptor_t},
+                                               precision::onemklDftPrecision,
+                                               domain::onemklDftDomain, dim::Int64,
+                                               lengths::Ptr{Int64})::Cint
+end
+
+function onemklDftDestroy(desc)
+    @ccall liboneapi_support.onemklDftDestroy(desc::onemklDftDescriptor_t)::Cint
+end
+
+function onemklDftCommit(desc, queue)
+    @ccall liboneapi_support.onemklDftCommit(desc::onemklDftDescriptor_t,
+                                             queue::syclQueue_t)::Cint
+end
+
+function onemklDftSetValueInt64(desc, param, value)
+    @ccall liboneapi_support.onemklDftSetValueInt64(desc::onemklDftDescriptor_t,
+                                                    param::onemklDftConfigParam,
+                                                    value::Int64)::Cint
+end
+
+function onemklDftSetValueDouble(desc, param, value)
+    @ccall liboneapi_support.onemklDftSetValueDouble(desc::onemklDftDescriptor_t,
+                                                     param::onemklDftConfigParam,
+                                                     value::Cdouble)::Cint
+end
+
+function onemklDftSetValueInt64Array(desc, param, values, n)
+    @ccall liboneapi_support.onemklDftSetValueInt64Array(desc::onemklDftDescriptor_t,
+                                                         param::onemklDftConfigParam,
+                                                         values::Ptr{Int64}, n::Int64)::Cint
+end
+
+function onemklDftSetValueConfigValue(desc, param, value)
+    @ccall liboneapi_support.onemklDftSetValueConfigValue(desc::onemklDftDescriptor_t,
+                                                          param::onemklDftConfigParam,
+                                                          value::onemklDftConfigValue)::Cint
+end
+
+function onemklDftGetValueInt64(desc, param, value)
+    @ccall liboneapi_support.onemklDftGetValueInt64(desc::onemklDftDescriptor_t,
+                                                    param::onemklDftConfigParam,
+                                                    value::Ptr{Int64})::Cint
+end
+
+function onemklDftGetValueDouble(desc, param, value)
+    @ccall liboneapi_support.onemklDftGetValueDouble(desc::onemklDftDescriptor_t,
+                                                     param::onemklDftConfigParam,
+                                                     value::Ptr{Cdouble})::Cint
+end
+
+function onemklDftGetValueInt64Array(desc, param, values, n)
+    @ccall liboneapi_support.onemklDftGetValueInt64Array(desc::onemklDftDescriptor_t,
+                                                         param::onemklDftConfigParam,
+                                                         values::Ptr{Int64},
+                                                         n::Ptr{Int64})::Cint
+end
+
+function onemklDftGetValueConfigValue(desc, param, value)
+    @ccall liboneapi_support.onemklDftGetValueConfigValue(desc::onemklDftDescriptor_t,
+                                                          param::onemklDftConfigParam,
+                                                          value::Ptr{onemklDftConfigValue})::Cint
+end
+
+function onemklDftComputeForward(desc, inout)
+    @ccall liboneapi_support.onemklDftComputeForward(desc::onemklDftDescriptor_t,
+                                                     inout::Ptr{Cvoid})::Cint
+end
+
+function onemklDftComputeForwardOutOfPlace(desc, in, out)
+    @ccall liboneapi_support.onemklDftComputeForwardOutOfPlace(desc::onemklDftDescriptor_t,
+                                                               in::Ptr{Cvoid},
+                                                               out::Ptr{Cvoid})::Cint
+end
+
+function onemklDftComputeBackward(desc, inout)
+    @ccall liboneapi_support.onemklDftComputeBackward(desc::onemklDftDescriptor_t,
+                                                      inout::Ptr{Cvoid})::Cint
+end
+
+function onemklDftComputeBackwardOutOfPlace(desc, in, out)
+    @ccall liboneapi_support.onemklDftComputeBackwardOutOfPlace(desc::onemklDftDescriptor_t,
+                                                                in::Ptr{Cvoid},
+                                                                out::Ptr{Cvoid})::Cint
+end
+
+function onemklDftComputeForwardBuffer(desc, inout)
+    @ccall liboneapi_support.onemklDftComputeForwardBuffer(desc::onemklDftDescriptor_t,
+                                                           inout::Ptr{Cvoid})::Cint
+end
+
+function onemklDftComputeForwardOutOfPlaceBuffer(desc, in, out)
+    @ccall liboneapi_support.onemklDftComputeForwardOutOfPlaceBuffer(desc::onemklDftDescriptor_t,
+                                                                     in::Ptr{Cvoid},
+                                                                     out::Ptr{Cvoid})::Cint
+end
+
+function onemklDftComputeBackwardBuffer(desc, inout)
+    @ccall liboneapi_support.onemklDftComputeBackwardBuffer(desc::onemklDftDescriptor_t,
+                                                            inout::Ptr{Cvoid})::Cint
+end
+
+function onemklDftComputeBackwardOutOfPlaceBuffer(desc, in, out)
+    @ccall liboneapi_support.onemklDftComputeBackwardOutOfPlaceBuffer(desc::onemklDftDescriptor_t,
+                                                                      in::Ptr{Cvoid},
+                                                                      out::Ptr{Cvoid})::Cint
+end
+
+function onemklDftQueryParamIndices(out, n)
+    @ccall liboneapi_support.onemklDftQueryParamIndices(out::Ptr{Int64}, n::Int64)::Cint
+end
+
+const ONEMKL_DFT_STATUS_SUCCESS = 0
+
+const ONEMKL_DFT_STATUS_ERROR = -1
+
+const ONEMKL_DFT_STATUS_INVALID_ARGUMENT = -2
+
+const ONEMKL_DFT_STATUS_BAD_STATE = -3
