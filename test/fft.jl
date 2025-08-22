@@ -14,6 +14,10 @@ function cmp(a,b; rtol=MYRTOL, atol=MYATOL)
     @test isapprox(Array(a), Array(b); rtol=rtol, atol=atol)
 end
 
+function cmp_broken(a,b; rtol=MYRTOL, atol=MYATOL)
+    @test_broken isapprox(Array(a), Array(b); rtol=rtol, atol=atol)
+end
+
 @testset "FFT" begin
     Ns = (8,32,64,8)
 
@@ -53,14 +57,14 @@ end
             cmp(dZ, X)
 
             # region/batched (1D along dim 1)
-            # X = rand(T, Ns[1], Ns[2])
-            # dX = gpu(X)
-            # p = plan_fft!(dX, 1)
-            # p * dX
-            # cmp(dX, fft(X,1))
-            # pinv = plan_ifft!(dX,1)
-            # pinv * dX
-            # cmp(dX, X)
+            X = rand(T, Ns[1], Ns[2])
+            dX = gpu(X)
+            p = plan_fft!(dX, 1)
+            p * dX
+            cmp_broken(dX, fft(X,1))
+            pinv = plan_ifft!(dX,1)
+            pinv * dX
+            cmp_broken(dX, X)
         end
     end
 
@@ -82,9 +86,9 @@ end
             p = plan_rfft(dX)
             dY = p * dX
             cmp(dY, rfft(X, (1,)))  # Compare with 1D FFT along first dim, not multi-dimensional FFT
-            # pinv = plan_irfft(dY, size(X,1))
-            # dZ = pinv * dY
-            # cmp(dZ, X)
+            pinv = plan_irfft(dY, size(X,1))
+            dZ = pinv * dY
+            cmp_broken(dZ, X)
         end
     end
 
@@ -101,7 +105,7 @@ end
         X = gpu(rand(T, Ns[1], Ns[2]))
         Y = rfft(X)
         cmp(Y, rfft(Array(X), (1,)))  # Compare with 1D FFT along first dim, not multi-dimensional FFT
-        # Z = irfft(Y, size(X,1))
-        # cmp(Z, Array(X))
+        Z = irfft(Y, size(X,1))
+        cmp_broken(Z, Array(X))
     end
 end
