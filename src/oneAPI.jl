@@ -26,6 +26,7 @@ include("../lib/level-zero/oneL0.jl")
 using .oneL0
 functional() = oneL0.functional[]
 
+# Base.Experimental.@MethodTable(method_table)
 # device functionality
 import SPIRVIntrinsics
 SPIRVIntrinsics.@import_all
