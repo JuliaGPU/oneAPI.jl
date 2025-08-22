@@ -452,6 +452,7 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
     else
       if !(name ∈ void_output)
         write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
+        write(oneapi_cpp, "   device_queue->val.wait_and_throw();\n")
       else
         write(oneapi_cpp, "   oneapi::mkl::$library::$variant$name($parameters);\n")
       end
