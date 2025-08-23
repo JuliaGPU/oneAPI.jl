@@ -393,6 +393,7 @@ extern "C" int onemklHgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                                  int64_t *ldb, uint16_t *beta, short **c,
                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
     gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    device_queue->val.wait_and_throw();
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
                         &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
                         m, n, k, reinterpret_cast<sycl::half *>(alpha),
@@ -400,6 +401,7 @@ extern "C" int onemklHgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                         reinterpret_cast<const sycl::half **>(&b[0]), ldb,
                         reinterpret_cast<sycl::half *>(beta), reinterpret_cast<sycl::half **>(&c[0]),
                         ldc, group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
 
@@ -410,6 +412,7 @@ extern "C" int onemklSgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                                  int64_t *ldb, float *beta, float **c,
                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
     gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    device_queue->val.wait_and_throw();
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
                         &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
                         m, n, k, alpha,
@@ -417,6 +420,7 @@ extern "C" int onemklSgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                         (const float **)&b[0], ldb,
                         beta, &c[0], ldc,
                         group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
 
@@ -427,6 +431,7 @@ extern "C" int onemklDgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                                  int64_t *ldb, double *beta, double **c,
                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
     gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    device_queue->val.wait_and_throw();
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
                         &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
                         m, n, k, alpha,
@@ -434,6 +439,7 @@ extern "C" int onemklDgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                         (const double **)&b[0], ldb,
                         beta, &c[0], ldc,
                         group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
 
@@ -445,6 +451,7 @@ extern "C" int onemklCgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                                  int64_t *ldb, float _Complex *beta, float _Complex **c,
                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
     gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    device_queue->val.wait_and_throw();
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
                         &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
                         m, n, k, reinterpret_cast<std::complex<float> *>(alpha),
@@ -455,6 +462,7 @@ extern "C" int onemklCgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                         reinterpret_cast<std::complex<float> *>(beta),
                         reinterpret_cast<std::complex<float> **>(&c[0]), ldc,
                         group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
 
@@ -467,6 +475,7 @@ extern "C" int onemklZgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                                  double _Complex **c,
                                  int64_t *ldc, int64_t group_count, int64_t *group_size) {
     gemmBatchInfo gemmInfo(device_queue, group_count, transa, transb);
+    device_queue->val.wait_and_throw();
     auto status = oneapi::mkl::blas::column_major::gemm_batch(device_queue->val,
                         &gemmInfo.m_transa[0], &gemmInfo.m_transb[0],
                         m, n, k, reinterpret_cast<std::complex<double> *>(alpha),
@@ -477,6 +486,7 @@ extern "C" int onemklZgemm_batch(syclQueue_t device_queue, onemklTranspose trans
                         reinterpret_cast<std::complex<double> *>(beta),
                         reinterpret_cast<std::complex<double> **>(&c[0]), ldc,
                         group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
 
@@ -487,12 +497,14 @@ extern "C" int onemklStrsm_batch(syclQueue_t device_queue, onemklSide left_right
                                  int64_t group_count, int64_t *group_size) {
     trsmBatchInfo trsmInfo(device_queue, left_right, upper_lower, transa,
                            unit_diag, group_count);
+    device_queue->val.wait_and_throw();
 
     auto status = oneapi::mkl::blas::column_major::trsm_batch(device_queue->val,
                         &trsmInfo.m_leftright[0], &trsmInfo.m_upperlower[0],
                         &trsmInfo.m_transa[0], &trsmInfo.m_unitdiag[0],
                         m, n, alpha, (const float **)&a[0], lda,
                         &b[0], ldb, group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
 
@@ -504,12 +516,14 @@ extern "C" int onemklDtrsm_batch(syclQueue_t device_queue, onemklSide left_right
                                  int64_t *group_size) {
     trsmBatchInfo trsmInfo(device_queue, left_right, upper_lower, transa,
                                 unit_diag, group_count);
+    device_queue->val.wait_and_throw();
 
     auto status = oneapi::mkl::blas::column_major::trsm_batch(device_queue->val,
                         &trsmInfo.m_leftright[0], &trsmInfo.m_upperlower[0],
                         &trsmInfo.m_transa[0], &trsmInfo.m_unitdiag[0],
                         m, n, alpha, (const double **)&a[0], lda, &b[0],
                         ldb, group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
 
@@ -521,6 +535,7 @@ extern "C" int onemklCtrsm_batch(syclQueue_t device_queue, onemklSide left_right
                                  int64_t group_count, int64_t *group_size) {
     trsmBatchInfo trsmInfo(device_queue, left_right, upper_lower, transa,
                                 unit_diag, group_count);
+    device_queue->val.wait_and_throw();
 
     auto status = oneapi::mkl::blas::column_major::trsm_batch(device_queue->val,
                         &trsmInfo.m_leftright[0], &trsmInfo.m_upperlower[0],
@@ -529,6 +544,7 @@ extern "C" int onemklCtrsm_batch(syclQueue_t device_queue, onemklSide left_right
                         reinterpret_cast<const std::complex<float> **>(&a[0]),
                         lda, reinterpret_cast<std::complex<float> **>(&b[0]),
                         ldb, group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
 
@@ -540,6 +556,7 @@ extern "C" int onemklZtrsm_batch(syclQueue_t device_queue, onemklSide left_right
                                  int64_t group_count, int64_t *group_size) {
     trsmBatchInfo trsmInfo(device_queue, left_right,
                                 upper_lower, transa, unit_diag, group_count);
+    device_queue->val.wait_and_throw();
 
     auto status = oneapi::mkl::blas::column_major::trsm_batch(device_queue->val,
                         &trsmInfo.m_leftright[0], &trsmInfo.m_upperlower[0],
@@ -548,5 +565,6 @@ extern "C" int onemklZtrsm_batch(syclQueue_t device_queue, onemklSide left_right
                         reinterpret_cast<const std::complex<double> **>(&a[0]),
                         lda, reinterpret_cast<std::complex<double> **>(&b[0]),
                         ldb, group_count, group_size, {});
+    device_queue->val.wait_and_throw();
     return 0;
 }
