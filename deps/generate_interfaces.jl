@@ -447,14 +447,17 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
     write(oneapi_cpp, "extern \"C\" $header {\n")
     if template
       type = version_types[version]
-      !occursin("scratchpad_size", name) && write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n")
-      occursin("scratchpad_size", name)  && write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n")
+      !occursin("scratchpad_size", name) && write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n   device_queue->val.wait_and_throw();\n")
+      occursin("scratchpad_size", name)  && write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n   device_queue->val.wait_and_throw();\n")
+      # !occursin("scratchpad_size", name) && write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n")
+      # occursin("scratchpad_size", name)  && write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n")
     else
       if !(name ∈ void_output)
         write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
-        write(oneapi_cpp, "   device_queue->val.wait_and_throw();\n")
+        occursin("device_queue", parameters) && write(oneapi_cpp, "   device_queue->val.wait_and_throw();\n")
       else
         write(oneapi_cpp, "   oneapi::mkl::$library::$variant$name($parameters);\n")
+        occursin("device_queue", parameters) && write(oneapi_cpp, "   device_queue->val.wait_and_throw();\n")
       end
     end
     if occursin("scratchpad_size", name)
