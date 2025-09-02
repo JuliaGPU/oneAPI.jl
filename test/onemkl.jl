@@ -661,6 +661,14 @@ end
             # move to host and compare
             h_C = Array(dB)
             @test C ≈ h_C
+
+            C = rand(T,m,n)
+            dC = oneArray(C)
+            beta = zero(T)  # rand(T)
+            oneMKL.trmm!('L','U','N','N',alpha,beta,dA,dB,dC)
+            h_C = Array(dC)
+            D = alpha*A*B + beta*C
+            @test D ≈ h_C
         end
 
         @testset "trmm" begin
@@ -684,6 +692,14 @@ end
             dC = copy(dB)
             oneMKL.trsm!('L','U','N','N',alpha,dA,dC)
             @test C ≈ Array(dC)
+
+            C = rand(T,m,n)
+            dC = oneArray(C)
+            beta = rand(T)
+            oneMKL.trsm!('L','U','N','N',alpha,beta,dA,dB,dC)
+            h_C = Array(dC)
+            D = alpha*(A\B) + beta*C
+            @test D ≈ h_C
         end
 
         @testset "left trsm" begin
@@ -725,6 +741,14 @@ end
                 dC = copy(dA)
                 oneMKL.trsm!('R','U','N','N',alpha,dB,dC)
                 @test C ≈ Array(dC)
+
+                C = rand(T,m,m)
+                dC = oneArray(C)
+                beta = rand(T)
+                oneMKL.trsm!('R','U','N','N',alpha,beta,dA,dB,dC)
+                h_C = Array(dC)
+                D = alpha*(A/B) + beta*C
+                @test D ≈ h_C
             end
 
             @testset "right trsm" begin
