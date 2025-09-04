@@ -29,6 +29,7 @@ include("wrappers_lapack.jl")
 include("wrappers_sparse.jl")
 include("linalg.jl")
 include("interfaces.jl")
+include("fft.jl")
 
 function band(A::StridedArray, kl, ku)
     m, n = size(A)
