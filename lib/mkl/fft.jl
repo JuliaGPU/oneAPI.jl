@@ -191,6 +191,29 @@ function plan_bfft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,
     cMKLFFTPlan{T,MKLFFT_INVERSE,true,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)
 end
 
+# Real input methods - convert to complex like FFTW does
+function plan_fft(X::oneAPI.oneArray{T,N}, region) where {T<:Union{Float32,Float64},N}
+    CT = Complex{T}
+    # Create a complex plan by converting the real array to complex
+    X_complex = oneAPI.oneArray{CT}(undef, size(X))
+    plan_fft(X_complex, region)
+end
+
+function plan_bfft(X::oneAPI.oneArray{T,N}, region) where {T<:Union{Float32,Float64},N}
+    CT = Complex{T}
+    # Create a complex plan by converting the real array to complex
+    X_complex = oneAPI.oneArray{CT}(undef, size(X))
+    plan_bfft(X_complex, region)
+end
+
+function plan_fft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{Float32,Float64},N}
+    error("In-place FFT not supported for real input arrays. Use plan_fft instead.")
+end
+
+function plan_bfft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{Float32,Float64},N}
+    error("In-place FFT not supported for real input arrays. Use plan_bfft instead.")
+end
+
 # Real forward (out-of-place) - only support 1D transforms for now
 function plan_rfft(X::oneAPI.oneArray{T,N}, region) where {T<:Union{Float32,Float64},N}
     # Convert region to tuple if it's a range
@@ -374,6 +397,27 @@ function Base.:*(p::rMKLFFTPlan{T,MKLFFT_INVERSE,false}, X::oneAPI.oneArray{T}) 
 end
 function LinearAlgebra.mul!(Y::oneAPI.oneArray{R}, p::rMKLFFTPlan{T,MKLFFT_INVERSE,false}, X::oneAPI.oneArray{T}) where {R,T<:Complex{R}}
     _exec!(p,X,Y)
+end
+
+# Support for applying complex plans to real arrays (convert real to complex first)
+function Base.:*(p::cMKLFFTPlan{T,K,false}, X::oneAPI.oneArray{R}) where {T,K,R<:Union{Float32,Float64}}
+    # Only allow if T is the complex version of R
+    if T != Complex{R}
+        error("Type mismatch: plan expects $(T) but got $(R)")
+    end
+    # Convert real input to complex
+    X_complex = complex.(X)
+    p * X_complex
+end
+
+function LinearAlgebra.mul!(Y::oneAPI.oneArray{T}, p::cMKLFFTPlan{T,K,false}, X::oneAPI.oneArray{R}) where {T,K,R<:Union{Float32,Float64}}
+    # Only allow if T is the complex version of R
+    if T != Complex{R}
+        error("Type mismatch: plan expects $(T) but got $(R)")
+    end
+    # Convert real input to complex
+    X_complex = complex.(X)
+    _exec!(p, X_complex, Y)
 end
 
 end # module FFT
