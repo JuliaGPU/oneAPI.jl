@@ -121,6 +121,55 @@ for SparseMatrix in (:oneSparseMatrixCSR, :oneSparseMatrixCOO)
     end
 end
 
+# Special handling for CSC matrices since they are stored as transposed CSR
+for (fname, elty) in ((:onemklSsparse_gemv, :Float32),
+                      (:onemklDsparse_gemv, :Float64),
+                      (:onemklCsparse_gemv, :ComplexF32),
+                      (:onemklZsparse_gemv, :ComplexF64))
+    @eval begin
+        function sparse_gemv!(trans::Char,
+                              alpha::Number,
+                              A::oneSparseMatrixCSC{$elty},
+                              x::oneStridedVector{$elty},
+                              beta::Number,
+                              y::oneStridedVector{$elty})
+
+            # CSC of A is stored as CSR of A^T, so we need to transpose the operation
+            # A*x -> we have A^T stored, so we need (A^T)^T * x, which means 'T' operation on stored matrix
+            # A^T*x -> we have A^T stored, so we use 'N' operation on stored matrix
+            # A^H*x (conjugate transpose):
+            #   - For real matrices: A^H = A^T, so we use 'N' (since we have A^T stored)
+            #   - For complex matrices: A^H requires conjugation, so we use 'C' operation on stored A^T
+            if trans == 'N'
+                actual_trans = 'T'
+            elseif trans == 'T'
+                actual_trans = 'N'
+            else  # trans == 'C'
+                actual_trans = ($elty <: Complex) ? 'T' : 'N'
+            end
+
+            queue = global_queue(context(x), device())
+            $fname(sycl_queue(queue), actual_trans, alpha, A.handle, x, beta, y)
+            y
+        end
+    end
+end
+
+function sparse_optimize_gemv!(trans::Char, A::oneSparseMatrixCSC)
+    # For CSC matrices stored as transposed CSR, we need to optimize with the transposed operation
+    if trans == 'N'
+        actual_trans = 'T'
+    elseif trans == 'T'
+        actual_trans = 'N'
+    else  # trans == 'C'
+        actual_trans = (eltype(A.nzVal) <: Complex) ? 'T' : 'N'
+    end
+
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    onemklXsparse_optimize_gemv(sycl_queue(queue), actual_trans, A.handle)
+    return A
+end
+
 for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
                       (:onemklDsparse_gemm, :Float64),
                       (:onemklCsparse_gemm, :ComplexF32),
