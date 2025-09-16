@@ -112,10 +112,14 @@ using oneAPI_Level_Zero_Headers_jll
 
 function main()
     wrap("ze", oneAPI_Level_Zero_Headers_jll.ze_api)
-    wrap("support",
-         joinpath(dirname(@__DIR__), "deps", "src", "sycl.h"),
-         joinpath(dirname(@__DIR__), "deps", "src", "onemkl.h"); dependents=false,
-         include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))])
+    wrap(
+            "support",
+            joinpath(dirname(@__DIR__), "deps", "src", "sycl.h"),
+            joinpath(dirname(@__DIR__), "deps", "src", "onemkl.h"),
+            joinpath(dirname(@__DIR__), "deps", "src", "onemkl_dft.h");
+            dependents=false,
+            include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))]
+        )
 end
 
 isinteractive() || main()
