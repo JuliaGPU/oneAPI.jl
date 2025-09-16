@@ -134,23 +134,45 @@ for (fname, elty) in ((:onemklSsparse_gemv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
-            # CSC of A is stored as CSR of A^T, so we need to transpose the operation
-            # A*x -> we have A^T stored, so we need (A^T)^T * x, which means 'T' operation on stored matrix
-            # A^T*x -> we have A^T stored, so we use 'N' operation on stored matrix
-            # A^H*x (conjugate transpose):
-            #   - For real matrices: A^H = A^T, so we use 'N' (since we have A^T stored)
-            #   - For complex matrices: A^H requires conjugation, so we use 'C' operation on stored A^T
-            if trans == 'N'
-                actual_trans = 'T'
-            elseif trans == 'T'
-                actual_trans = 'N'
-            else  # trans == 'C'
-                actual_trans = ($elty <: Complex) ? 'T' : 'N'
-            end
+            # CSC(A) is represented by storing CSR(A^T). Map operations accordingly:
+            #  - trans = 'N': want A*x -> use op(S)='T' with S=A^T.
+            #  - trans = 'T': want A^T*x -> use op(S)='N' with S=A^T.
+            #  - trans = 'C': want A^H*x.
+            #      * For real eltypes, A^H == A^T -> use op(S)='N'.
+            #      * For complex eltypes, we cannot express A^H using a single op(S).
+            #        Use identity: conj(y_new) = conj(alpha) * A * conj(x) + conj(beta) * conj(y)
+            #        and compute with op(S)='T' (since S^T = A), conjugating x and y around the call.
 
-            queue = global_queue(context(x), device())
-            $fname(sycl_queue(queue), actual_trans, alpha, A.handle, x, beta, y)
-            y
+            if trans == 'N'
+                queue = global_queue(context(x), device())
+                $fname(sycl_queue(queue), 'T', alpha, A.handle, x, beta, y)
+                return y
+            elseif trans == 'T'
+                queue = global_queue(context(x), device())
+                $fname(sycl_queue(queue), 'N', alpha, A.handle, x, beta, y)
+                return y
+            else
+                # trans == 'C'
+                if $elty <: Complex
+                    # Compute A^H*x via identity:
+                    #   conj(y_new) = conj(alpha) * (A^T) * conj(x) + conj(beta) * conj(y)
+                    # Since S=A^T and op='N' computes S*x = A^T*x, we can realize this with one call.
+                    y .= conj.(y)
+                    x_conj = similar(x)
+                    x_conj .= conj.(x)
+
+                    queue = global_queue(context(x), device())
+                    $fname(sycl_queue(queue), 'N', conj(alpha), A.handle, x_conj, conj(beta), y)
+
+                    y .= conj.(y)
+                    return y
+                else
+                    # real eltype: A^H == A^T
+                    queue = global_queue(context(x), device())
+                    $fname(sycl_queue(queue), 'N', alpha, A.handle, x, beta, y)
+                    return y
+                end
+            end
         end
     end
 end
@@ -162,7 +184,8 @@ function sparse_optimize_gemv!(trans::Char, A::oneSparseMatrixCSC)
     elseif trans == 'T'
         actual_trans = 'N'
     else  # trans == 'C'
-        actual_trans = (eltype(A.nzVal) <: Complex) ? 'T' : 'N'
+        # complex 'C' case is implemented using op='N' on S=A^T with conjugation trick
+        actual_trans = 'N'
     end
 
     queue = global_queue(context(A.nzVal), device(A.nzVal))
