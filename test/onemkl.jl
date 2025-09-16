@@ -1112,7 +1112,7 @@ end
         @testset "sparse gemv" begin
             @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCOO, oneSparseMatrixCSR, oneSparseMatrixCSC)
                 @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
-                    (T isa Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                    (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                     A = sprand(T, 20, 10, 0.5)
                     x = transa == 'N' ? rand(T, 10) : rand(T, 20)
                     y = transa == 'N' ? rand(T, 20) : rand(T, 10)
@@ -1135,7 +1135,7 @@ end
                 @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                     @testset "transb = $transb" for (transb, opb) in [('N', identity), ('T', transpose), ('C', adjoint)]
                         (transb == 'N') || continue
-                        (T isa Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                        (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                         A = sprand(T, 10, 10, 0.5)
                         B = transb == 'N' ? rand(T, 10, 2) : rand(T, 2, 10)
                         C = rand(T, 10, 2)
@@ -1157,7 +1157,7 @@ end
         @testset "sparse symv" begin
             @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
                 @testset "uplo = $uplo" for uplo in ('L', 'U')
-                    (T isa Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                    (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                     A = sprand(T, 10, 10, 0.5)
                     A = A + A'
                     x = rand(T, 10)
@@ -1181,7 +1181,7 @@ end
                     for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                                   ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
                         (transa == 'N') || continue
-                        (T isa Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                        (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                         A = sprand(T, 10, 10, 0.5)
                         x = rand(T, 10)
                         y = rand(T, 10)
@@ -1209,7 +1209,7 @@ end
                     for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                                   ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
                         (transa == 'N') || continue
-                        (T isa Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                        (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                         alpha = rand(T)
                         A = rand(T, 10, 10) + I
                         A = sparse(A)
@@ -1239,7 +1239,7 @@ end
                         for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                                       ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
                             (transa == 'N') || continue
-                            (T isa Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                            (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                             alpha = rand(T)
                             A = rand(T, 10, 10) + I
                             A = sparse(A)
