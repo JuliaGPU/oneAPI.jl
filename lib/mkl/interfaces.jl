@@ -7,16 +7,35 @@ function LinearAlgebra.generic_matvecmul!(C::oneVector{T}, tA::AbstractChar, A::
     sparse_gemv!(tA, _add.alpha, A, B, _add.beta, C)
 end
 
+function LinearAlgebra.generic_matvecmul!(C::oneVector{T}, tA::AbstractChar, A::oneSparseMatrixCSC{T}, B::oneVector{T}, _add::MulAddMul) where T <: BlasReal
+    tA = tA in ('S', 's', 'H', 'h') ? 'T' : flip_trans(tA)
+    sparse_gemv!(tA, _add.alpha, A, B, _add.beta, C)
+end
+
 function LinearAlgebra.generic_matmatmul!(C::oneMatrix{T}, tA, tB, A::oneSparseMatrixCSR{T}, B::oneMatrix{T}, _add::MulAddMul) where T <: BlasFloat
     tA = tA in ('S', 's', 'H', 'h') ? 'N' : tA
     tB = tB in ('S', 's', 'H', 'h') ? 'N' : tB
     sparse_gemm!(tA, tB, _add.alpha, A, B, _add.beta, C)
 end
 
-for SparseMatrixType in (:oneSparseMatrixCSR,)
-    @eval begin
-        function LinearAlgebra.generic_trimatdiv!(C::oneVector{T}, uploc, isunitc, tfun::Function, A::$SparseMatrixType{T}, B::oneVector{T}) where T <: BlasFloat
-            sparse_trsv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
-        end
-    end
+function LinearAlgebra.generic_matmatmul!(C::oneMatrix{T}, tA, tB, A::oneSparseMatrixCSC{T}, B::oneMatrix{T}, _add::MulAddMul) where T <: BlasReal
+    tA = tA in ('S', 's', 'H', 'h') ? 'T' : flip_trans(tA)
+    tB = tB in ('S', 's', 'H', 'h') ? 'N' : tB
+    sparse_gemm!(tA, tB, _add.alpha, A, B, _add.beta, C)
+end
+
+function LinearAlgebra.generic_trimatdiv!(C::oneVector{T}, uploc, isunitc, tfun::Function, A::oneSparseMatrixCSR{T}, B::oneVector{T}) where T <: BlasFloat
+    sparse_trsv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
+end
+
+function LinearAlgebra.generic_trimatdiv!(C::oneVector{T}, uploc, isunitc, tfun::Function, A::oneSparseMatrixCSC{T}, B::oneVector{T}) where T <: BlasReal
+    sparse_trsv!(flip_uplo(uploc), tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
+end
+
+function LinearAlgebra.generic_trimatdiv!(C::oneMatrix{T}, uploc, isunitc, tfun::Function, A::oneSparseMatrixCSR{T}, B::oneMatrix{T}) where T <: BlasFloat
+    sparse_trsm!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', 'N', isunitc, one(T), A, B, C)
+end
+
+function LinearAlgebra.generic_trimatdiv!(C::oneMatrix{T}, uploc, isunitc, tfun::Function, A::oneSparseMatrixCSC{T}, B::oneMatrix{T}) where T <: BlasReal
+    sparse_trsm!(flip_uplo(uploc), tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', 'N', isunitc, one(T), A, B, C)
 end

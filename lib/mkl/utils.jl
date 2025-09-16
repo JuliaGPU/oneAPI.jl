@@ -113,3 +113,6 @@ end
     ptrs = pointer.(batch)
     return oneArray(ptrs)
 end
+
+flip_trans(trans::Char) = trans == 'N' ? 'T' : 'N'
+flip_uplo(uplo::Char) = uplo == 'L' ? 'U' : 'L'
