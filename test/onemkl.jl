@@ -3,7 +3,7 @@ if Sys.iswindows()
 else
 
 using oneAPI
-using oneAPI.oneMKL: band, bandex, oneSparseMatrixCSR, oneSparseMatrixCOO
+using oneAPI.oneMKL: band, bandex, oneSparseMatrixCSR, oneSparseMatrixCOO, oneSparseMatrixCSC
 
 using SparseArrays
 using LinearAlgebra
