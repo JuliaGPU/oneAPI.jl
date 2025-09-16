@@ -58,19 +58,10 @@ end
     # test_plan(AbstractFFTs.plan_rfft!, Float32)
     test_plan(_FFT(), AbstractFFTs.fft, dim, ComplexF32, AbstractFFTs.ifft)
     test_plan(_FFT(), AbstractFFTs.fft, dim, ComplexF32, AbstractFFTs.bfft)
-    test_plan(_FFT(), AbstractFFTs.rfft, dim, Float32, AbstractFFTs.irfft)
-    test_plan(_FFT(), AbstractFFTs.rfft, dim, Float32, AbstractFFTs.brfft)
-
-    # # Test real inverse FFTs (irfft/brfft) if 1D
-    # if length(dim) == 1
-    #     # Test irfft - create appropriate complex input
-    #     X_real = rand(Float32, dim)
-    #     X_complex = AbstractFFTs.rfft(X_real)
-    #     dX_complex = gpu(X_complex)
-    #     Y_real = AbstractFFTs.irfft(Array(dX_complex), dim[1])
-    #     dY_real = AbstractFFTs.irfft(dX_complex, dim[1])
-    #     cmp(dY_real, Y_real)
-    # end
+    if length(dim) == 1  # irfft/brfft only for 1D
+        test_plan(_FFT(), AbstractFFTs.rfft, dim, Float32, AbstractFFTs.irfft)
+        test_plan(_FFT(), AbstractFFTs.rfft, dim, Float32, AbstractFFTs.brfft)
+    end
 
     test_plan(_Plan(), AbstractFFTs.plan_fft, dim, ComplexF64, AbstractFFTs.plan_ifft)
     test_plan(_Plan(), AbstractFFTs.plan_fft, dim, ComplexF64, AbstractFFTs.plan_bfft)
@@ -82,7 +73,9 @@ end
     # test_plan(AbstractFFTs.plan_rfft!, Float64)
     test_plan(_FFT(), AbstractFFTs.fft, dim, ComplexF64, AbstractFFTs.ifft)
     test_plan(_FFT(), AbstractFFTs.fft, dim, ComplexF64, AbstractFFTs.bfft)
-    test_plan(_FFT(), AbstractFFTs.rfft, dim, Float64, AbstractFFTs.irfft)
-    test_plan(_FFT(), AbstractFFTs.rfft, dim, Float64, AbstractFFTs.brfft)
+    if length(dim) == 1  # irfft/brfft only for 1D
+        test_plan(_FFT(), AbstractFFTs.rfft, dim, Float64, AbstractFFTs.irfft)
+        test_plan(_FFT(), AbstractFFTs.rfft, dim, Float64, AbstractFFTs.brfft)
+    end
 end
 end
