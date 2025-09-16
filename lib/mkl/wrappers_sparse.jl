@@ -232,6 +232,115 @@ function sparse_optimize_gemm!(trans::Char, transB::Char, nrhs::Int, A::oneSpars
     return A
 end
 
+# Special handling for CSC matrices since they are stored as transposed CSR (S = A^T)
+for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
+                      (:onemklDsparse_gemm, :Float64),
+                      (:onemklCsparse_gemm, :ComplexF32),
+                      (:onemklZsparse_gemm, :ComplexF64))
+    @eval begin
+        function sparse_gemm!(transa::Char,
+                              transb::Char,
+                              alpha::Number,
+                              A::oneSparseMatrixCSC{$elty},
+                              B::oneStridedMatrix{$elty},
+                              beta::Number,
+                              C::oneStridedMatrix{$elty})
+
+            # Map op(A) to op(S) where S = A^T stored as CSR in the handle
+            # transa: 'N' -> op(S)='T'; 'T' -> op(S)='N'; 'C' ->
+            #   real: op(S)='N' (since A^H == A^T)
+            #   complex: use conjugation identity on B and C with op(S)='N'
+
+            mB, nB = size(B)
+            mC, nC = size(C)
+            (nB != nC) && (transb == 'N') && throw(ArgumentError("B and C must have the same number of columns."))
+            (mB != nC) && (transb != 'N') && throw(ArgumentError("Bᵀ and C must have the same number of columns."))
+            nrhs = size(B, 2)
+            ldb = max(1,stride(B,2))
+            ldc = max(1,stride(C,2))
+
+            queue = global_queue(context(C), device())
+
+            if transa == 'N'
+                # Want A * opB -> use S^T * opB
+                $fname(sycl_queue(queue), 'C', 'T', transb, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
+                return C
+            elseif transa == 'T'
+                # Want A^T * opB -> use S * opB
+                $fname(sycl_queue(queue), 'C', 'N', transb, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
+                return C
+            else
+                # transa == 'C'
+                if $elty <: Complex
+                    # Use identity: conj(C_new) = conj(alpha) * S * conj(opB(B)) + conj(beta) * conj(C)
+                    # Prepare conj(C) in-place and conj(B) into a temporary if needed
+                    C .= conj.(C)
+
+                    # Determine how to supply opB under conjugation
+                    # - transb == 'N': pass transb='N' and use conj(B)
+                    # - transb == 'T': pass transb='T' and use conj(B)
+                    # - transb == 'C': since conj(B^H) = B^T, pass transb='T' and use B as-is
+                    local transb_eff::Char
+                    local Beff
+                    if transb == 'N'
+                        transb_eff = 'N'
+                        Beff = similar(B)
+                        Beff .= conj.(B)
+                    elseif transb == 'T'
+                        transb_eff = 'T'
+                        Beff = similar(B)
+                        Beff .= conj.(B)
+                    else
+                        # transb == 'C'
+                        transb_eff = 'T'
+                        Beff = B
+                    end
+
+                    $fname(sycl_queue(queue), 'C', 'N', transb_eff, conj(alpha), A.handle, Beff, nrhs, ldb, conj(beta), C, ldc)
+
+                    # Undo conjugation to obtain C_new
+                    C .= conj.(C)
+                    return C
+                else
+                    # real eltype: A^H == A^T -> use S * opB
+                    $fname(sycl_queue(queue), 'C', 'N', transb, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
+                    return C
+                end
+            end
+        end
+    end
+end
+
+function sparse_optimize_gemm!(trans::Char, A::oneSparseMatrixCSC)
+    # Map requested op(A) to op(S) for S = A^T
+    actual_trans = if trans == 'N'
+        'T'
+    elseif trans == 'T'
+        'N'
+    else
+        # 'C' case: complex handled via conjugation with op(S)='N'; real reduces to 'T' which maps to 'N'
+        'N'
+    end
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    onemklXsparse_optimize_gemm(sycl_queue(queue), actual_trans, A.handle)
+    return A
+end
+
+function sparse_optimize_gemm!(trans::Char, transB::Char, nrhs::Int, A::oneSparseMatrixCSC)
+    # Map as in the basic optimize, and adjust transB for the complex 'C' case if needed at runtime.
+    # We don't know eltype here; choose conservative mapping for A like above.
+    actual_trans = if trans == 'N'
+        'T'
+    elseif trans == 'T'
+        'N'
+    else
+        'N'
+    end
+    queue = global_queue(context(A.nzVal), device(A.nzVal))
+    onemklXsparse_optimize_gemm_advanced(sycl_queue(queue), 'C', actual_trans, transB, A.handle, nrhs)
+    return A
+end
+
 for (fname, elty) in ((:onemklSsparse_symv, :Float32),
                       (:onemklDsparse_symv, :Float64),
                       (:onemklCsparse_symv, :ComplexF32),

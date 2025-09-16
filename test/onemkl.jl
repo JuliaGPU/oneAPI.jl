@@ -1129,28 +1129,28 @@ k = 13
             end
         end
 
-    #     @testset "sparse gemm" begin
-    #         @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
-    #             @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
-    #                 @testset "transb = $transb" for (transb, opb) in [('N', identity), ('T', transpose), ('C', adjoint)]
-    #                     (transb == 'N') || continue
-    #                     A = sprand(T, 10, 10, 0.5)
-    #                     B = transb == 'N' ? rand(T, 10, 2) : rand(T, 2, 10)
-    #                     C = rand(T, 10, 2)
+        @testset "sparse gemm" begin
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                    @testset "transb = $transb" for (transb, opb) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                        (transb == 'N') || continue
+                        A = sprand(T, 10, 10, 0.5)
+                        B = transb == 'N' ? rand(T, 10, 2) : rand(T, 2, 10)
+                        C = rand(T, 10, 2)
 
-    #                     dA = SparseMatrix(A)
-    #                     dB = oneMatrix{T}(B)
-    #                     dC = oneMatrix{T}(C)
+                        dA = SparseMatrix(A)
+                        dB = oneMatrix{T}(B)
+                        dC = oneMatrix{T}(C)
 
-    #                     alpha = rand(T)
-    #                     beta = rand(T)
-    #                     oneMKL.sparse_optimize_gemm!(transa, dA)
-    #                     oneMKL.sparse_gemm!(transa, transb, alpha, dA, dB, beta, dC)
-    #                     @test alpha * opa(A) * opb(B) + beta * C ≈ collect(dC)
-    #                 end
-    #             end
-    #         end
-    #     end
+                        alpha = rand(T)
+                        beta = rand(T)
+                        oneMKL.sparse_optimize_gemm!(transa, dA)
+                        oneMKL.sparse_gemm!(transa, transb, alpha, dA, dB, beta, dC)
+                        @test alpha * opa(A) * opb(B) + beta * C ≈ collect(dC)
+                    end
+                end
+            end
+        end
 
     #     @testset "sparse symv" begin
     #         @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
