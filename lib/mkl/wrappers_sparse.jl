@@ -439,7 +439,7 @@ function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, A::oneSparse
     return A
 end
 
-function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A::oneSparseMatrixCSR)
+function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A::oneSparseMatrixCSC)
     queue = global_queue(context(A.nzVal), device(A.nzVal))
     onemklXsparse_optimize_trsm_advanced(sycl_queue(queue), 'C', flip_uplo(uplo), trans, diag, A.handle, nrhs)
     return A
