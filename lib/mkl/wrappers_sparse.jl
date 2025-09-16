@@ -220,7 +220,7 @@ end
 
 function sparse_optimize_gemm!(trans::Char, transB::Char, nrhs::Int, A::oneSparseMatrixCSC)
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_gemm_advanced(sycl_queue(queue), 'C', filp_trans(trans), transB, A.handle, nrhs)
+    onemklXsparse_optimize_gemm_advanced(sycl_queue(queue), 'C', flip_trans(trans), transB, A.handle, nrhs)
     return A
 end
 
@@ -242,7 +242,6 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
         end
     end
 end
-
 
 for (fname, elty) in ((:onemklSsparse_symv, :Float32),
                       (:onemklDsparse_symv, :Float64))
@@ -301,7 +300,7 @@ for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
                               y::oneStridedVector{$elty})
 
             queue = global_queue(context(y), device())
-            $fname(sycl_queue(queue), flip_uplo(uplo), trans, diag, alpha, A.handle, x, beta, y)
+            $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, A.handle, x, beta, y)
             y
         end
     end
@@ -309,7 +308,7 @@ end
 
 function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trmv(sycl_queue(queue), flip_uplo(uplo), trans, diag, A.handle)
+    onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
     return A
 end
 
@@ -351,7 +350,7 @@ for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
                               y::oneStridedVector{$elty})
 
             queue = global_queue(context(y), device())
-            $fname(sycl_queue(queue), filp_uplo(uplo), trans, diag, alpha, A.handle, x, y)
+            $fname(sycl_queue(queue), flip_uplo(uplo), trans, diag, alpha, A.handle, x, y)
             y
         end
     end
@@ -435,7 +434,7 @@ end
 
 function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsm(sycl_queue(queue), filp_uplo(uplo), trans, diag, A.handle)
+    onemklXsparse_optimize_trsm(sycl_queue(queue), flip_uplo(uplo), trans, diag, A.handle)
     return A
 end
 

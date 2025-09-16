@@ -1078,6 +1078,8 @@ end
 
 @testset "SPARSE" begin
     @testset "$T" for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
+        ε = sqrt(eps(real(T)))
+
         @testset "oneSparseMatrixCSR" begin
             for S in (Int32, Int64)
                 A = sprand(T, 20, 10, 0.5)
@@ -1125,7 +1127,7 @@ end
                     beta = rand(T)
                     oneMKL.sparse_optimize_gemv!(transa, dA)
                     oneMKL.sparse_gemv!(transa, alpha, dA, dx, beta, dy)
-                    @test alpha * opa(A) * x + beta * y ≈ collect(dy)
+                    @test isapprox(alpha * opa(A) * x + beta * y, collect(dy), atol=ε)
                 end
             end
         end
@@ -1148,7 +1150,9 @@ end
                         beta = rand(T)
                         oneMKL.sparse_optimize_gemm!(transa, dA)
                         oneMKL.sparse_gemm!(transa, transb, alpha, dA, dB, beta, dC)
-                        @test alpha * opa(A) * opb(B) + beta * C ≈ collect(dC)
+                        @test isapprox(alpha * opa(A) * opb(B) + beta * C, collect(dC), atol=ε)
+
+                        oneMKL.sparse_optimize_gemm!(transa, transb, 2, dA)
                     end
                 end
             end
@@ -1170,7 +1174,7 @@ end
                     alpha = rand(T)
                     beta = rand(T)
                     oneMKL.sparse_symv!(uplo, alpha, dA, dx, beta, dy)
-                    @test alpha * A * x + beta * y ≈ collect(dy)
+                    @test isapprox(alpha * A * x + beta * y, collect(dy), atol=ε)
                 end
             end
         end
@@ -1197,7 +1201,7 @@ end
 
                         oneMKL.sparse_optimize_trmv!(uplo, transa, diag, dA)
                         oneMKL.sparse_trmv!(uplo, transa, diag, alpha, dA, dx, beta, dy)
-                        @test alpha * wrapper(opa(A)) * x + beta * y ≈ collect(dy)
+                        @test isapprox(alpha * wrapper(opa(A)) * x + beta * y, collect(dy), atol=ε)
                     end
                 end
             end
@@ -1225,7 +1229,7 @@ end
                         oneMKL.sparse_optimize_trsv!(uplo, transa, diag, dA)
                         oneMKL.sparse_trsv!(uplo, transa, diag, alpha, dA, dx, dy)
                         y = wrapper(opa(A)) \ (alpha * x)
-                        @test y ≈ collect(dy)
+                        @test isapprox(y, collect(dy), atol=ε)
                     end
                 end
             end
@@ -1255,7 +1259,7 @@ end
                             oneMKL.sparse_optimize_trsm!(uplo, transa, diag, dA)
                             oneMKL.sparse_trsm!(uplo, transa, transx, diag, alpha, dA, dX, dY)
                             Y = wrapper(opa(A)) \ (alpha * opx(X))
-                            @test Y ≈ collect(dY)
+                            @test isapprox(Y, collect(dY), atol=ε)
 
                             oneMKL.sparse_optimize_trsm!(uplo, transa, diag, 4, dA)
                         end
