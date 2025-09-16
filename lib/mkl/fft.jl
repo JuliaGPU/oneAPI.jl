@@ -156,7 +156,7 @@ function plan_fft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,C
     R = length(region); reg = NTuple{R,Int}(region)
     # For now, only support full transforms (all dimensions)
     if reg != ntuple(identity, N)
-        @info "Partial dimension FFT not yet supported. Region $reg must be $(ntuple(identity, N))"
+        error("Partial dimension FFT not yet supported. Region $reg must be $(ntuple(identity, N))")
     end
     desc,q = _create_descriptor(size(X),T,true)
     onemklDftSetValueConfigValue(desc, ONEMKL_DFT_PARAM_PLACEMENT, ONEMKL_DFT_VALUE_INPLACE)
@@ -175,7 +175,7 @@ function plan_bfft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,
     R = length(region); reg = NTuple{R,Int}(region)
     # For now, only support full transforms (all dimensions)
     if reg != ntuple(identity, N)
-        @info "Partial dimension FFT not yet supported. Region $reg must be $(ntuple(identity, N))"
+        error("Partial dimension FFT not yet supported. Region $reg must be $(ntuple(identity, N))")
     end
     desc,q = _create_descriptor(size(X),T,true)
     onemklDftSetValueConfigValue(desc, ONEMKL_DFT_PARAM_PLACEMENT, ONEMKL_DFT_VALUE_INPLACE)
@@ -414,6 +414,9 @@ function Base.:*(p::ComplexBasedRealIFFTPlan{T,N,R}, X::oneAPI.oneArray{T}) wher
     fill!(X_full, zero(T))
 
     # Copy the input data to the appropriate slice
+    # NOTE: This is a simplified approach that doesn't fully reconstruct
+    # conjugate symmetry. For full accuracy, proper conjugate symmetric
+    # reconstruction should be implemented.
     copy_indices = ntuple(N) do i
         if i in p.region && i == minimum(p.region)
             1:xdims[i]  # Only the available part
