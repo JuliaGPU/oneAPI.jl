@@ -7,8 +7,19 @@ function LinearAlgebra.generic_matvecmul!(C::oneVector{T}, tA::AbstractChar, A::
     sparse_gemv!(tA, _add.alpha, A, B, _add.beta, C)
 end
 
+function LinearAlgebra.generic_matvecmul!(C::oneVector{T}, tA::AbstractChar, A::oneSparseMatrixCSC{T}, B::oneVector{T}, _add::MulAddMul) where T <: BlasReal
+    tA = tA in ('S', 's', 'H', 'h') ? 'T' : (tA == 'N' ? 'T' : 'N')
+    sparse_gemv!(tA, _add.alpha, A, B, _add.beta, C)
+end
+
 function LinearAlgebra.generic_matmatmul!(C::oneMatrix{T}, tA, tB, A::oneSparseMatrixCSR{T}, B::oneMatrix{T}, _add::MulAddMul) where T <: BlasFloat
     tA = tA in ('S', 's', 'H', 'h') ? 'N' : tA
+    tB = tB in ('S', 's', 'H', 'h') ? 'N' : tB
+    sparse_gemm!(tA, tB, _add.alpha, A, B, _add.beta, C)
+end
+
+function LinearAlgebra.generic_matmatmul!(C::oneMatrix{T}, tA, tB, A::oneSparseMatrixCSC{T}, B::oneMatrix{T}, _add::MulAddMul) where T <: BlasReal
+    tA = tA in ('S', 's', 'H', 'h') ? 'T' : (tA == 'N' ? 'T' : 'N')
     tB = tB in ('S', 's', 'H', 'h') ? 'N' : tB
     sparse_gemm!(tA, tB, _add.alpha, A, B, _add.beta, C)
 end

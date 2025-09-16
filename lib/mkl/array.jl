@@ -13,6 +13,15 @@ mutable struct oneSparseMatrixCSR{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
     nnz::Ti
 end
 
+mutable struct oneSparseMatrixCSC{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
+    handle::matrix_handle_t
+    colPtr::oneVector{Ti}
+    rowVal::oneVector{Ti}
+    nzVal::oneVector{Tv}
+    dims::NTuple{2,Int}
+    nnz::Ti
+end
+
 mutable struct oneSparseMatrixCOO{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
     handle::matrix_handle_t
     rowInd::oneVector{Ti}
@@ -37,6 +46,7 @@ SparseArrays.nnz(A::oneAbstractSparseMatrix) = A.nnz
 SparseArrays.nonzeros(A::oneAbstractSparseMatrix) = A.nzVal
 
 for (gpu, cpu) in [:oneSparseMatrixCSR => :SparseMatrixCSC,
+                   :oneSparseMatrixCSC => :SparseMatrixCSC,
                    :oneSparseMatrixCOO => :SparseMatrixCSC]
     @eval Base.show(io::IOContext, x::$gpu) =
         show(io, $cpu(x))

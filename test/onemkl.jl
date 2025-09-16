@@ -1088,6 +1088,17 @@ end
             end
         end
 
+        @testset "oneSparseMatrixCSC" begin
+            (T isa Complex) && continue
+            for S in (Int32, Int64)
+                A = sprand(T, 20, 10, 0.5)
+                A = SparseMatrixCSC{T, S}(A)
+                B = oneSparseMatrixCSC(A)
+                A2 = SparseMatrixCSC(B)
+                @test A == A2
+            end
+        end
+
         @testset "oneSparseMatrixCOO" begin
             for S in (Int32, Int64)
                 A = sprand(T, 20, 10, 0.5)

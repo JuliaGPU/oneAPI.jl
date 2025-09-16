@@ -35,6 +35,27 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             A_csc = SparseMatrixCSC(At |> transpose)
             return A_csc
         end
+
+        function oneSparseMatrixCSC(A::SparseMatrixCSC{$elty, $intty})
+            handle_ptr = Ref{matrix_handle_t}()
+            onemklXsparse_init_matrix_handle(handle_ptr)
+            m, n = size(A)
+            colPtr = oneVector{$intty}(A.colptr)
+            rowVal = oneVector{$intty}(A.rowval)
+            nzVal = oneVector{$elty}(A.nzval)
+            nnzA = length(A.nzval)
+            queue = global_queue(context(nzVal), device())
+            $fname(sycl_queue(queue), handle_ptr[], n, m, 'O', colPtr, rowVal, nzVal)  # CSC of A is CSR of Aᵀ
+            dA = oneSparseMatrixCSC{$elty, $intty}(handle_ptr[], colPtr, rowVal, nzVal, (m,n), nnzA)
+            finalizer(sparse_release_matrix_handle, dA)
+            return dA
+        end
+
+        function SparseMatrixCSC(A::oneSparseMatrixCSC{$elty, $intty})
+            handle_ptr = Ref{matrix_handle_t}()
+            A_csc = SparseMatrixCSC(A.dims..., Vector(A.colPtr), Vector(A.rowVal), Vector(A.nzVal))
+            return A_csc
+        end
     end
 end
 
