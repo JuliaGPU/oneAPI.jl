@@ -301,14 +301,14 @@ end
 #                               x::oneStridedVector{$elty},
 #                               beta::Number,
 #                               y::oneStridedVector{$elty})
-
+#
 #             queue = global_queue(context(y), device())
 #             $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, A.handle, x, beta, y)
 #             y
 #         end
 #     end
 # end
-
+#
 # function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
 #     queue = global_queue(context(A.nzVal), device(A.nzVal))
 #     onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
@@ -341,29 +341,32 @@ function sparse_optimize_trsv!(uplo::Char, trans::Char, diag::Char, A::oneSparse
     return A
 end
 
-for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
-                      (:onemklDsparse_trsv, :Float64))
-    @eval begin
-        function sparse_trsv!(uplo::Char,
-                              trans::Char,
-                              diag::Char,
-                              alpha::Number,
-                              A::oneSparseMatrixCSC{$elty},
-                              x::oneStridedVector{$elty},
-                              y::oneStridedVector{$elty})
-
-            queue = global_queue(context(y), device())
-            $fname(sycl_queue(queue), flip_uplo(uplo), trans, diag, alpha, A.handle, x, y)
-            y
-        end
-    end
-end
-
-function sparse_optimize_trsv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
-    queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsv(sycl_queue(queue), flip_uplo(uplo), trans, diag, A.handle)
-    return A
-end
+# Only trans = 'N' is supported with oneSparseMatrixCSR.
+# We can't use any trick to support sparse "trsv" for oneSparseMatrixCSC.
+#
+# for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
+#                       (:onemklDsparse_trsv, :Float64))
+#     @eval begin
+#         function sparse_trsv!(uplo::Char,
+#                               trans::Char,
+#                               diag::Char,
+#                               alpha::Number,
+#                               A::oneSparseMatrixCSC{$elty},
+#                               x::oneStridedVector{$elty},
+#                               y::oneStridedVector{$elty})
+#
+#             queue = global_queue(context(y), device())
+#             $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, A.handle, x, y)
+#             y
+#         end
+#     end
+# end
+#
+# function sparse_optimize_trsv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
+#     queue = global_queue(context(A.nzVal), device(A.nzVal))
+#     onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
+#     return A
+# end
 
 for (fname, elty) in ((:onemklSsparse_trsm, :Float32),
                       (:onemklDsparse_trsm, :Float64),
@@ -407,42 +410,45 @@ function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A
     return A
 end
 
-for (fname, elty) in ((:onemklSsparse_trsm, :Float32),
-                      (:onemklDsparse_trsm, :Float64))
-    @eval begin
-        function sparse_trsm!(uplo::Char,
-                              transA::Char,
-                              transX::Char,
-                              diag::Char,
-                              alpha::Number,
-                              A::oneSparseMatrixCSC{$elty},
-                              X::oneStridedMatrix{$elty},
-                              Y::oneStridedMatrix{$elty})
-
-            mX, nX = size(X)
-            mY, nY = size(Y)
-            (mX != mY) && (transX == 'N') && throw(ArgumentError("X and Y must have the same number of rows."))
-            (nX != nY) && (transX == 'N') && throw(ArgumentError("X and Y must have the same number of columns."))
-            (nX != mY) && (transX != 'N') && throw(ArgumentError("Xᵀ and Y must have the same number of rows."))
-            (mX != nY) && (transX != 'N') && throw(ArgumentError("Xᵀ and Y must have the same number of columns."))
-            nrhs = size(X, 2)
-            ldx = max(1,stride(X,2))
-            ldy = max(1,stride(Y,2))
-            queue = global_queue(context(Y), device())
-            $fname(sycl_queue(queue), 'C', transA, transX, flip_uplo(uplo), diag, alpha, A.handle, X, nrhs, ldx, Y, ldy)
-            Y
-        end
-    end
-end
-
-function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
-    queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsm(sycl_queue(queue), flip_uplo(uplo), trans, diag, A.handle)
-    return A
-end
-
-function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A::oneSparseMatrixCSC)
-    queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsm_advanced(sycl_queue(queue), 'C', flip_uplo(uplo), trans, diag, A.handle, nrhs)
-    return A
-end
+# Only transA = 'N' is supported with oneSparseMatrixCSR.
+# We can't use any trick to support sparse "trsm" for oneSparseMatrixCSC.
+#
+# for (fname, elty) in ((:onemklSsparse_trsm, :Float32),
+#                       (:onemklDsparse_trsm, :Float64))
+#     @eval begin
+#         function sparse_trsm!(uplo::Char,
+#                               transA::Char,
+#                               transX::Char,
+#                               diag::Char,
+#                               alpha::Number,
+#                               A::oneSparseMatrixCSC{$elty},
+#                               X::oneStridedMatrix{$elty},
+#                               Y::oneStridedMatrix{$elty})
+#
+#             mX, nX = size(X)
+#             mY, nY = size(Y)
+#             (mX != mY) && (transX == 'N') && throw(ArgumentError("X and Y must have the same number of rows."))
+#             (nX != nY) && (transX == 'N') && throw(ArgumentError("X and Y must have the same number of columns."))
+#             (nX != mY) && (transX != 'N') && throw(ArgumentError("Xᵀ and Y must have the same number of rows."))
+#             (mX != nY) && (transX != 'N') && throw(ArgumentError("Xᵀ and Y must have the same number of columns."))
+#             nrhs = size(X, 2)
+#             ldx = max(1,stride(X,2))
+#             ldy = max(1,stride(Y,2))
+#             queue = global_queue(context(Y), device())
+#             $fname(sycl_queue(queue), 'C', flip_trans(transA), transX, uplo, diag, alpha, A.handle, X, nrhs, ldx, Y, ldy)
+#             Y
+#         end
+#     end
+# end
+#
+# function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
+#     queue = global_queue(context(A.nzVal), device(A.nzVal))
+#     onemklXsparse_optimize_trsm(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
+#     return A
+# end
+#
+# function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A::oneSparseMatrixCSC)
+#     queue = global_queue(context(A.nzVal), device(A.nzVal))
+#     onemklXsparse_optimize_trsm_advanced(sycl_queue(queue), 'C', uplo, flip_trans(trans), diag, A.handle, nrhs)
+#     return A
+# end

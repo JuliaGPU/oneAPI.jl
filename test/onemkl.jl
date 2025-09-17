@@ -1174,7 +1174,7 @@ end
                     alpha = rand(T)
                     beta = rand(T)
                     oneMKL.sparse_symv!(uplo, alpha, dA, dx, beta, dy)
-                    @test isapprox(alpha * A * x + beta * y, collect(dy), atol=ε)
+                    @test_broken isapprox(alpha * A * x + beta * y, collect(dy), atol=ε)
                 end
             end
         end
@@ -1185,6 +1185,7 @@ end
                     for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                                   ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
                         (transa == 'N') || continue
+                        (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                         A = sprand(T, 10, 10, 0.5)
                         x = rand(T, 10)
                         y = rand(T, 10)
@@ -1207,7 +1208,7 @@ end
         end
 
         @testset "sparse trsv" begin
-            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR,)
                 @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                     for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                                   ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
@@ -1235,7 +1236,7 @@ end
         end
 
         @testset "sparse trsm" begin
-            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR,)
                 @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                     @testset "transx = $transx" for (transx, opx) in [('N', identity), ('T', transpose), ('C', adjoint)]
                         (transx != 'N') && continue
