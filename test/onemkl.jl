@@ -1163,7 +1163,7 @@ end
                 @testset "uplo = $uplo" for uplo in ('L', 'U')
                     (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                     A = sprand(T, 10, 10, 0.5)
-                    A = A + A'
+                    A = A + transpose(A)
                     x = rand(T, 10)
                     y = rand(T, 10)
 
@@ -1174,7 +1174,7 @@ end
                     alpha = rand(T)
                     beta = rand(T)
                     oneMKL.sparse_symv!(uplo, alpha, dA, dx, beta, dy)
-                    @test_broken isapprox(alpha * A * x + beta * y, collect(dy), atol=ε)
+                    @test isapprox(alpha * A * x + beta * y, collect(dy), atol=ε)
                 end
             end
         end
