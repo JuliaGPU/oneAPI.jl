@@ -492,6 +492,12 @@ headers_epilogue = read("onemkl_epilogue.h", String)
 write(io, headers_epilogue)
 close(io)
 
+# Add the version of oneMKL in src/onemkl.h
+headers_onemkl = read("src/onemkl.h", String)
+version_onemkl = pkgversion(oneAPI_Support_Headers_jll)
+headers_onemkl = replace(headers_onemkl, "void onemkl_version" => "const int64_t ONEMKL_VERSION_MAJOR = $(version_onemkl.major);\nconst int64_t ONEMKL_VERSION_MINOR = $(version_onemkl.minor);\nconst int64_t ONEMKL_VERSION_PATCH = $(version_onemkl.patch);\nvoid onemkl_version")
+write("src/onemkl.h", headers_onemkl)
+
 # Generate "src/onemkl.cpp"
 generate_cpp("blas", blas, "onemkl_blas.cpp", pattern="§")
 generate_cpp("lapack", lapack, "onemkl_lapack.cpp", pattern="§")

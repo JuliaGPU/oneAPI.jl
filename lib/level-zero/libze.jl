@@ -1,4 +1,4 @@
-using CEnum
+using CEnum: CEnum, @cenum
 
 # outlined functionality to avoid GC frame allocation
 @noinline function throw_api_error(res)

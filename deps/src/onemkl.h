@@ -140,6 +140,11 @@ typedef struct omatconvert_descr *omatconvert_descr_t;
 struct omatadd_descr;
 typedef struct omatadd_descr *omatadd_descr_t;
 
+const int64_t ONEMKL_VERSION_MAJOR = 2025;
+const int64_t ONEMKL_VERSION_MINOR = 2;
+const int64_t ONEMKL_VERSION_PATCH = 0;
+void onemkl_version(int64_t *major, int64_t *minor, int64_t *patch);
+
 int onemklHgemm_batch(syclQueue_t device_queue, onemklTranspose transa,
                       onemklTranspose transb, int64_t *m,
                       int64_t *n, int64_t *k, uint16_t *alpha,
