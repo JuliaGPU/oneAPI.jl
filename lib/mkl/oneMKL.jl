@@ -31,6 +31,14 @@ include("linalg.jl")
 include("interfaces.jl")
 include("fft.jl")
 
+function version()
+    major = Ref{Int64}()
+    minor = Ref{Int64}()
+    patch = Ref{Int64}()
+    onemkl_version(major, minor, patch)
+    return VersionNumber(major[], minor[], patch[])
+end
+
 function band(A::StridedArray, kl, ku)
     m, n = size(A)
     AB = zeros(eltype(A),kl+ku+1,n)

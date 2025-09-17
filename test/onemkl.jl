@@ -12,6 +12,11 @@ m = 20
 n = 35
 k = 13
 
+@testset "Version" begin
+    version_onemkl = oneMKL.version()
+    @test version_onemkl ≥ v"2025.2.0"
+end
+
 ############################################################################################
 @testset "level 1" begin
     @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])

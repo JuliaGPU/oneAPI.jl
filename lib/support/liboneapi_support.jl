@@ -1,4 +1,4 @@
-using CEnum
+using CEnum: CEnum, @cenum
 
 mutable struct syclPlatform_st end
 
@@ -203,6 +203,11 @@ const omatconvert_descr_t = Ptr{omatconvert_descr}
 mutable struct omatadd_descr end
 
 const omatadd_descr_t = Ptr{omatadd_descr}
+
+function onemkl_version(major, minor, patch)
+    @ccall liboneapi_support.onemkl_version(major::Ptr{Int64}, minor::Ptr{Int64},
+                                            patch::Ptr{Int64})::Cvoid
+end
 
 function onemklHgemm_batch(device_queue, transa, transb, m, n, k, alpha, a, lda, b, ldb,
                            beta, c, ldc, group_count, group_size)

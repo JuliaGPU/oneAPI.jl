@@ -280,6 +280,14 @@ oneapi::mkl::sparse::omatadd_alg convert(onemklOmataddAlg val) {
     }
 }
 
+// version
+extern "C" void onemkl_version(int64_t *major, int64_t *minor, int64_t *patch) {
+    *major = ONEMKL_VERSION_MAJOR;
+    *minor = ONEMKL_VERSION_MINOR;
+    *patch = ONEMKL_VERSION_PATCH;
+    return;
+}
+
 // gemm
 // https://spec.oneapi.io/versions/1.0-rev-1/elements/oneMKL/source/domains/blas/gemm.html
 class gemmBatchInfo {
