@@ -1180,12 +1180,11 @@ end
         end
 
         @testset "sparse trmv" begin
-            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR,)
                 @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                     for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                                   ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
                         (transa == 'N') || continue
-                        (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                         A = sprand(T, 10, 10, 0.5)
                         x = rand(T, 10)
                         y = rand(T, 10)

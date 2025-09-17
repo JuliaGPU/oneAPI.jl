@@ -287,30 +287,33 @@ function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparse
     return A
 end
 
-for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
-                      (:onemklDsparse_trmv, :Float64))
-    @eval begin
-        function sparse_trmv!(uplo::Char,
-                              trans::Char,
-                              diag::Char,
-                              alpha::Number,
-                              A::oneSparseMatrixCSC{$elty},
-                              x::oneStridedVector{$elty},
-                              beta::Number,
-                              y::oneStridedVector{$elty})
+# Only trans = 'N' is supported with oneSparseMatrixCSR.
+# We can't use any trick to support sparse "trmv" for oneSparseMatrixCSC.
+#
+# for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
+#                       (:onemklDsparse_trmv, :Float64))
+#     @eval begin
+#         function sparse_trmv!(uplo::Char,
+#                               trans::Char,
+#                               diag::Char,
+#                               alpha::Number,
+#                               A::oneSparseMatrixCSC{$elty},
+#                               x::oneStridedVector{$elty},
+#                               beta::Number,
+#                               y::oneStridedVector{$elty})
 
-            queue = global_queue(context(y), device())
-            $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, A.handle, x, beta, y)
-            y
-        end
-    end
-end
+#             queue = global_queue(context(y), device())
+#             $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, A.handle, x, beta, y)
+#             y
+#         end
+#     end
+# end
 
-function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
-    queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
-    return A
-end
+# function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
+#     queue = global_queue(context(A.nzVal), device(A.nzVal))
+#     onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
+#     return A
+# end
 
 for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
                       (:onemklDsparse_trsv, :Float64),
