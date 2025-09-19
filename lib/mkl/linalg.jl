@@ -172,3 +172,23 @@ LinearAlgebra.generic_trimatdiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::F
     trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, C === B ? C : copyto!(C, B))
 LinearAlgebra.generic_mattridiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
     trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, C === A ? C : copyto!(C, A))
+
+#
+# BLAS extensions
+#
+
+# Extend LinearAlgebra.BLAS.herk! to dispatch to oneAPI implementation
+for (elty) in ([Float32, ComplexF32], [Float64, ComplexF64])
+    @eval begin
+        LinearAlgebra.BLAS.herk!(uplo::Char, trans::Char, alpha::$elty[1], A::oneStridedVecOrMat{$elty[2]}, beta::$elty[1], C::oneStridedMatrix{$elty[2]}) =
+            herk!(uplo, trans, alpha, A, beta, C)
+    end
+end
+
+# Extend LinearAlgebra.BLAS.syrk! to dispatch to oneAPI implementation
+for (elty) in (Float32, Float64, ComplexF32, ComplexF64)
+    @eval begin
+        LinearAlgebra.BLAS.syrk!(uplo::Char, trans::Char, alpha::$elty, A::oneStridedVecOrMat{$elty}, beta::$elty, C::oneStridedMatrix{$elty}) =
+            syrk!(uplo, trans, alpha, A, beta, C)
+    end
+end
