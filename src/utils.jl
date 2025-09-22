@@ -3,7 +3,7 @@ function versioninfo(io::IO=stdout)
     if Sys.islinux()
         println(io, "Binary dependencies:")
         for jll in [oneL0.NEO_jll, oneL0.NEO_jll.libigc_jll, oneL0.NEO_jll.gmmlib_jll,
-                    SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll]
+                    SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll, oneAPI_Support_jll]
             name = string(jll)
             print(io, "- $(name[1:end-4]): $(Base.pkgversion(jll))")
             if jll.host_platform !== nothing
@@ -11,6 +11,10 @@ function versioninfo(io::IO=stdout)
                 if debug === true
                     print(io, " (debug)")
                 end
+            end
+            if jll === oneAPI_Support_jll
+                ver = oneAPI.oneMKL.version()
+                print(io, " (oneMKL v$ver)")
             end
             println(io)
         end
