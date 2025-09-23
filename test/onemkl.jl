@@ -3,7 +3,7 @@ if Sys.iswindows()
 else
 
 using oneAPI
-using oneAPI.oneMKL: band, bandex, oneSparseMatrixCSR, oneSparseMatrixCOO
+using oneAPI.oneMKL: band, bandex, oneSparseMatrixCSR, oneSparseMatrixCOO, oneSparseMatrixCSC
 
 using SparseArrays
 using LinearAlgebra
@@ -1083,11 +1083,24 @@ end
 
 @testset "SPARSE" begin
     @testset "$T" for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
+        ε = sqrt(eps(real(T)))
+
         @testset "oneSparseMatrixCSR" begin
             for S in (Int32, Int64)
                 A = sprand(T, 20, 10, 0.5)
                 A = SparseMatrixCSC{T, S}(A)
                 B = oneSparseMatrixCSR(A)
+                A2 = SparseMatrixCSC(B)
+                @test A == A2
+            end
+        end
+
+        @testset "oneSparseMatrixCSC" begin
+            (T isa Complex) && continue
+            for S in (Int32, Int64)
+                A = sprand(T, 20, 10, 0.5)
+                A = SparseMatrixCSC{T, S}(A)
+                B = oneSparseMatrixCSC(A)
                 A2 = SparseMatrixCSC(B)
                 @test A == A2
             end
@@ -1104,8 +1117,9 @@ end
         end
 
         @testset "sparse gemv" begin
-            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCOO, oneSparseMatrixCSR)
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCOO, oneSparseMatrixCSR, oneSparseMatrixCSC)
                 @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                    (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                     A = sprand(T, 20, 10, 0.5)
                     x = transa == 'N' ? rand(T, 10) : rand(T, 20)
                     y = transa == 'N' ? rand(T, 20) : rand(T, 10)
@@ -1118,125 +1132,142 @@ end
                     beta = rand(T)
                     oneMKL.sparse_optimize_gemv!(transa, dA)
                     oneMKL.sparse_gemv!(transa, alpha, dA, dx, beta, dy)
-                    @test alpha * opa(A) * x + beta * y ≈ collect(dy)
+                    @test isapprox(alpha * opa(A) * x + beta * y, collect(dy), atol=ε)
                 end
             end
         end
 
         @testset "sparse gemm" begin
-            @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
-                @testset "transb = $transb" for (transb, opb) in [('N', identity), ('T', transpose), ('C', adjoint)]
-                    (transb == 'N') || continue
-                    A = sprand(T, 10, 10, 0.5)
-                    B = transb == 'N' ? rand(T, 10, 2) : rand(T, 2, 10)
-                    C = rand(T, 10, 2)
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                    @testset "transb = $transb" for (transb, opb) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                        (transb == 'N') || continue
+                        (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                        A = sprand(T, 10, 10, 0.5)
+                        B = transb == 'N' ? rand(T, 10, 2) : rand(T, 2, 10)
+                        C = rand(T, 10, 2)
 
-                    dA = oneSparseMatrixCSR(A)
-                    dB = oneMatrix{T}(B)
-                    dC = oneMatrix{T}(C)
+                        dA = SparseMatrix(A)
+                        dB = oneMatrix{T}(B)
+                        dC = oneMatrix{T}(C)
 
-                    alpha = rand(T)
-                    beta = rand(T)
-                    oneMKL.sparse_optimize_gemm!(transa, dA)
-                    oneMKL.sparse_gemm!(transa, transb, alpha, dA, dB, beta, dC)
-                    @test alpha * opa(A) * opb(B) + beta * C ≈ collect(dC)
+                        alpha = rand(T)
+                        beta = rand(T)
+                        oneMKL.sparse_optimize_gemm!(transa, dA)
+                        oneMKL.sparse_gemm!(transa, transb, alpha, dA, dB, beta, dC)
+                        @test isapprox(alpha * opa(A) * opb(B) + beta * C, collect(dC), atol=ε)
+
+                        oneMKL.sparse_optimize_gemm!(transa, transb, 2, dA)
+                    end
                 end
             end
         end
 
         @testset "sparse symv" begin
-            @testset "uplo = $uplo" for uplo in ('L', 'U')
-                A = sprand(T, 10, 10, 0.5)
-                A = A + A'
-                x = rand(T, 10)
-                y = rand(T, 10)
-
-                dA = uplo == 'L' ? oneSparseMatrixCSR(A |> tril) : oneSparseMatrixCSR(A |> triu)
-                dx = oneVector{T}(x)
-                dy = oneVector{T}(y)
-
-                alpha = rand(T)
-                beta = rand(T)
-                oneMKL.sparse_symv!(uplo, alpha, dA, dx, beta, dy)
-                # @test alpha * A * x + beta * y ≈ collect(dy)
-            end
-        end
-
-        @testset "sparse trmv" begin
-            @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
-                for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
-                                              ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
-                    (transa == 'N') || continue
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset "uplo = $uplo" for uplo in ('L', 'U')
+                    (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
                     A = sprand(T, 10, 10, 0.5)
+                    A = A + transpose(A)
                     x = rand(T, 10)
                     y = rand(T, 10)
 
-                    B = uplo == 'L' ? tril(A) : triu(A)
-                    B = diag == 'U' ? B - Diagonal(B) + I : B
-                    dA = oneSparseMatrixCSR(B)
+                    dA = uplo == 'L' ? SparseMatrix(A |> tril) : SparseMatrix(A |> triu)
                     dx = oneVector{T}(x)
                     dy = oneVector{T}(y)
 
                     alpha = rand(T)
                     beta = rand(T)
+                    oneMKL.sparse_symv!(uplo, alpha, dA, dx, beta, dy)
+                    @test isapprox(alpha * A * x + beta * y, collect(dy), atol=ε)
+                end
+            end
+        end
 
-                    oneMKL.sparse_optimize_trmv!(uplo, transa, diag, dA)
-                    oneMKL.sparse_trmv!(uplo, transa, diag, alpha, dA, dx, beta, dy)
-                    @test alpha * wrapper(opa(A)) * x + beta * y ≈ collect(dy)
+        @testset "sparse trmv" begin
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR,)
+                @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                    for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
+                                                  ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
+                        (transa == 'N') || continue
+                        (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                        A = sprand(T, 10, 10, 0.5)
+                        x = rand(T, 10)
+                        y = rand(T, 10)
+
+                        B = uplo == 'L' ? tril(A) : triu(A)
+                        B = diag == 'U' ? B - Diagonal(B) + I : B
+                        dA = SparseMatrix(B)
+                        dx = oneVector{T}(x)
+                        dy = oneVector{T}(y)
+
+                        alpha = rand(T)
+                        beta = rand(T)
+
+                        oneMKL.sparse_optimize_trmv!(uplo, transa, diag, dA)
+                        oneMKL.sparse_trmv!(uplo, transa, diag, alpha, dA, dx, beta, dy)
+                        @test isapprox(alpha * wrapper(opa(A)) * x + beta * y, collect(dy), atol=ε)
+                    end
                 end
             end
         end
 
         @testset "sparse trsv" begin
-            @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
-                for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
-                                              ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
-                    (transa == 'N') || continue
-                    alpha = rand(T)
-                    A = rand(T, 10, 10) + I
-                    A = sparse(A)
-                    x = rand(T, 10)
-                    y = rand(T, 10)
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR,)
+                @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                    for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
+                                                  ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
+                        (transa == 'N') || continue
+                        (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                        alpha = rand(T)
+                        A = rand(T, 10, 10) + I
+                        A = sparse(A)
+                        x = rand(T, 10)
+                        y = rand(T, 10)
 
-                    B = uplo == 'L' ? tril(A) : triu(A)
-                    B = diag == 'U' ? B - Diagonal(B) + I : B
-                    dA = oneSparseMatrixCSR(B)
-                    dx = oneVector{T}(x)
-                    dy = oneVector{T}(y)
+                        B = uplo == 'L' ? tril(A) : triu(A)
+                        B = diag == 'U' ? B - Diagonal(B) + I : B
+                        dA = SparseMatrix(B)
+                        dx = oneVector{T}(x)
+                        dy = oneVector{T}(y)
 
-                    oneMKL.sparse_optimize_trsv!(uplo, transa, diag, dA)
-                    oneMKL.sparse_trsv!(uplo, transa, diag, alpha, dA, dx, dy)
-                    y = wrapper(opa(A)) \ (alpha * x)
-                    @test y ≈ collect(dy)
+                        oneMKL.sparse_optimize_trsv!(uplo, transa, diag, dA)
+                        oneMKL.sparse_trsv!(uplo, transa, diag, alpha, dA, dx, dy)
+                        y = wrapper(opa(A)) \ (alpha * x)
+                        @test isapprox(y, collect(dy), atol=ε)
+                    end
                 end
             end
         end
 
         @testset "sparse trsm" begin
-            @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
-                @testset "transx = $transx" for (transx, opx) in [('N', identity), ('T', transpose), ('C', adjoint)]
-                    (transx != 'N') && continue
-                    for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
-                                                  ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
-                        (transa == 'N') || continue
-                        alpha = rand(T)
-                        A = rand(T, 10, 10) + I
-                        A = sparse(A)
-                        X = transx == 'N' ? rand(T, 10, 4) : rand(T, 4, 10)
-                        Y = rand(T, 10, 4)
+            @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR,)
+                @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                    @testset "transx = $transx" for (transx, opx) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                        (transx != 'N') && continue
+                        for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
+                                                      ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
+                            (transa == 'N') || continue
+                            (T <: Complex) && (SparseMatrix == oneSparseMatrixCSC) && continue
+                            alpha = rand(T)
+                            A = rand(T, 10, 10) + I
+                            A = sparse(A)
+                            X = transx == 'N' ? rand(T, 10, 4) : rand(T, 4, 10)
+                            Y = rand(T, 10, 4)
 
-                        B = uplo == 'L' ? tril(A) : triu(A)
-                        B = diag == 'U' ? B - Diagonal(B) + I : B
-                        dA = oneSparseMatrixCSR(B)
-                        dX = oneMatrix{T}(X)
-                        dY = oneMatrix{T}(Y)
+                            B = uplo == 'L' ? tril(A) : triu(A)
+                            B = diag == 'U' ? B - Diagonal(B) + I : B
+                            dA = SparseMatrix(B)
+                            dX = oneMatrix{T}(X)
+                            dY = oneMatrix{T}(Y)
 
-                        oneMKL.sparse_optimize_trsm!(uplo, transa, diag, dA)
-                        oneMKL.sparse_trsm!(uplo, transa, transx, diag, alpha, dA, dX, dY)
-                        Y = wrapper(opa(A)) \ (alpha * opx(X))
-                        @test Y ≈ collect(dY)
+                            oneMKL.sparse_optimize_trsm!(uplo, transa, diag, dA)
+                            oneMKL.sparse_trsm!(uplo, transa, transx, diag, alpha, dA, dX, dY)
+                            Y = wrapper(opa(A)) \ (alpha * opx(X))
+                            @test isapprox(Y, collect(dY), atol=ε)
 
-                        oneMKL.sparse_optimize_trsm!(uplo, transa, diag, 4, dA)
+                            oneMKL.sparse_optimize_trsm!(uplo, transa, diag, 4, dA)
+                        end
                     end
                 end
             end
