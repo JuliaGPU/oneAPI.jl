@@ -46,7 +46,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             nnzA = length(A.nzval)
             queue = global_queue(context(nzVal), device())
             $fname(sycl_queue(queue), handle_ptr[], n, m, 'O', colPtr, rowVal, nzVal)  # CSC of A is CSR of Aᵀ
-            dA = oneSparseMatrixCSC{$elty, $intty}(handle_ptr[], colPtr, rowVal, nzVal, (m, n), nnzA)
+            dA = oneSparseMatrixCSC{$elty, $intty}(handle_ptr[], colPtr, rowVal, nzVal, (m,n), nnzA)
             finalizer(sparse_release_matrix_handle, dA)
             return dA
         end
@@ -134,11 +134,11 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                           (:onemklDsparse_gemv, :Float64))
         @eval begin
             function sparse_gemv!(trans::Char,
-                    alpha::Number,
-                    A::$SparseMatrix{$elty},
-                    x::oneStridedVector{$elty},
-                    beta::Number,
-                    y::oneStridedVector{$elty})
+                                  alpha::Number,
+                                  A::$SparseMatrix{$elty},
+                                  x::oneStridedVector{$elty},
+                                  beta::Number,
+                                  y::oneStridedVector{$elty})
 
                 queue = global_queue(context(x), device())
                 $fname(sycl_queue(queue), flip_trans(trans), alpha, A.handle, x, beta, y)
