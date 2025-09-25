@@ -147,16 +147,20 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
         end
     end
 
-# Special handling for CSC matrices since they are stored as transposed CSR
-    for (fname, elty) in ((:onemklCsparse_gemv, :ComplexF32),
-                          (:onemklZsparse_gemv, :ComplexF64))
+    # Special handling for CSC matrices since they are stored as transposed CSR
+    for (fname, elty) in (
+            (:onemklCsparse_gemv, :ComplexF32),
+            (:onemklZsparse_gemv, :ComplexF64),
+        )
         @eval begin
-            function sparse_gemv!(trans::Char,
+            function sparse_gemv!(
+                    trans::Char,
                     alpha::Number,
                     A::$SparseMatrix{$elty},
                     x::oneStridedVector{$elty},
                     beta::Number,
-                    y::oneStridedVector{$elty})
+                    y::oneStridedVector{$elty}
+                )
 
                 # Compute A^H*x via identity:
                 #   conj(y_new) = conj(alpha) * (A^T) * conj(x) + conj(beta) * conj(y)
@@ -177,32 +181,34 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                     # Restore x
                     x .= conj.(x)
                 end
-                y
+                return y
             end
         end
     end
     @eval begin
-    function sparse_optimize_gemv!(trans::Char, A::$SparseMatrix)
-        # complex 'C' case is implemented using op='N' on S=A^T with conjugation trick
-        queue = global_queue(context(A.nzVal), device(A.nzVal))
-        onemklXsparse_optimize_gemv(sycl_queue(queue), flip_trans(trans), A.handle)
-        return A
+        function sparse_optimize_gemv!(trans::Char, A::$SparseMatrix)
+            # complex 'C' case is implemented using op='N' on S=A^T with conjugation trick
+            queue = global_queue(context(A.nzVal), device(A.nzVal))
+            onemklXsparse_optimize_gemv(sycl_queue(queue), flip_trans(trans), A.handle)
+            return A
         end
     end
 end
 
 for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
-                    (:onemklDsparse_gemm, :Float64),
-                    (:onemklCsparse_gemm, :ComplexF32),
-                    (:onemklZsparse_gemm, :ComplexF64))
+        (:onemklDsparse_gemm, :Float64),
+        (:onemklCsparse_gemm, :ComplexF32),
+        (:onemklZsparse_gemm, :ComplexF64),
+    )
     @eval begin
         function sparse_gemm!(transa::Char,
-                            transb::Char,
-                            alpha::Number,
-                            A::oneSparseMatrixCSR{$elty},
-                            B::oneStridedMatrix{$elty},
-                            beta::Number,
-                            C::oneStridedMatrix{$elty})
+                transb::Char,
+                alpha::Number,
+                A::oneSparseMatrixCSR{$elty},
+                B::oneStridedMatrix{$elty},
+                beta::Number,
+                C::oneStridedMatrix{$elty}
+            )
 
             mB, nB = size(B)
             mC, nC = size(C)
@@ -261,13 +267,15 @@ for (fname, elty) in (
         (:onemklZsparse_gemm, :ComplexF64),
     )
     @eval begin
-        function sparse_gemm!(transa::Char,
+        function sparse_gemm!(
+                transa::Char,
                 transb::Char,
                 alpha::Number,
                 A::oneSparseMatrixCSC{$elty},
                 B::oneStridedMatrix{$elty},
                 beta::Number,
-                C::oneStridedMatrix{$elty})
+                C::oneStridedMatrix{$elty}
+            )
 
             # Map op(A) to op(S) where S = A^T stored as CSR in the handle
             # transa: 'N' -> op(S)='T'; 'T' -> op(S)='N'; 'C' ->
@@ -279,8 +287,8 @@ for (fname, elty) in (
             (nB != nC) && (transb == 'N') && throw(ArgumentError("B and C must have the same number of columns."))
             (mB != nC) && (transb != 'N') && throw(ArgumentError("Bᵀ and C must have the same number of columns."))
             nrhs = size(B, 2)
-            ldb = max(1,stride(B,2))
-            ldc = max(1,stride(C,2))
+            ldb = max(1, stride(B, 2))
+            ldc = max(1, stride(C, 2))
             queue = global_queue(context(C), device())
 
             # Use identity: conj(C_new) = conj(alpha) * S * conj(opB(B)) + conj(beta) * conj(C)
@@ -359,9 +367,10 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
 end
 
 for (fname, elty) in ((:onemklSsparse_symv, :Float32),
-                      (:onemklDsparse_symv, :Float64),
-                      (:onemklCsparse_symv, :ComplexF32),
-                      (:onemklZsparse_symv, :ComplexF64))
+        (:onemklDsparse_symv, :Float64),
+        (:onemklCsparse_symv, :ComplexF32),
+        (:onemklZsparse_symv, :ComplexF64),
+    )
     @eval begin
         function sparse_symv!(uplo::Char,
                               alpha::Number,
@@ -435,7 +444,7 @@ for (fname, elty) in (
             )
             queue = global_queue(context(y), device())
             $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, A.handle, x, beta, y)
-            y
+            return y
         end
     end
 end
@@ -444,8 +453,8 @@ function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparse
     throw(
         ArgumentError(
             "sparse_optimize_trmv! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
-            "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
-            "Convert to oneSparseMatrixCSR format instead."
+                "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
+                "Convert to oneSparseMatrixCSR format instead."
         )
     )
     queue = global_queue(context(A.nzVal), device(A.nzVal))
@@ -499,8 +508,8 @@ for (fname, elty) in (
             throw(
                 ArgumentError(
                     "sparse_trsv! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
-                    "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
-                    "Convert to oneSparseMatrixCSR format instead."
+                        "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
+                        "Convert to oneSparseMatrixCSR format instead."
                 )
             )
             queue = global_queue(context(y), device())
@@ -514,8 +523,8 @@ function sparse_optimize_trsv!(uplo::Char, trans::Char, diag::Char, A::oneSparse
     throw(
         ArgumentError(
             "sparse_optimize_trsv! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
-            "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
-            "Convert to oneSparseMatrixCSR format instead."
+                "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
+                "Convert to oneSparseMatrixCSR format instead."
         )
     )
     queue = global_queue(context(A.nzVal), device(A.nzVal))
@@ -571,7 +580,8 @@ for (fname, elty) in (
         (:onemklSsparse_trsm, :Float32),
         (:onemklDsparse_trsm, :Float64),
         (:onemklCsparse_trsm, :ComplexF32),
-        (:onemklZsparse_trsm, :ComplexF64))
+        (:onemklZsparse_trsm, :ComplexF64),
+    )
     @eval begin
         function sparse_trsm!(
                 uplo::Char,
@@ -581,7 +591,8 @@ for (fname, elty) in (
                 alpha::Number,
                 A::oneSparseMatrixCSC{$elty},
                 X::oneStridedMatrix{$elty},
-                Y::oneStridedMatrix{$elty})
+                Y::oneStridedMatrix{$elty}
+            )
 
             # Intel oneAPI sparse trsm only supports nontrans operations for the matrix A.
             # Since CSC(A) is stored as CSR(A^T), we cannot map CSC operations
@@ -601,11 +612,11 @@ for (fname, elty) in (
             (nX != mY) && (transX != 'N') && throw(ArgumentError("Xᵀ and Y must have the same number of rows."))
             (mX != nY) && (transX != 'N') && throw(ArgumentError("Xᵀ and Y must have the same number of columns."))
             nrhs = size(X, 2)
-            ldx = max(1,stride(X,2))
-            ldy = max(1,stride(Y,2))
+            ldx = max(1, stride(X, 2))
+            ldy = max(1, stride(Y, 2))
             queue = global_queue(context(Y), device())
             $fname(sycl_queue(queue), 'C', flip_trans(transA), transX, uplo, diag, alpha, A.handle, X, nrhs, ldx, Y, ldy)
-            Y
+            return Y
         end
     end
 end
@@ -614,8 +625,8 @@ function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, A::oneSparse
     throw(
         ArgumentError(
             "sparse_optimize_trsm! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
-            "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
-            "Convert to oneSparseMatrixCSR format instead."
+                "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
+                "Convert to oneSparseMatrixCSR format instead."
         )
     )
     queue = global_queue(context(A.nzVal), device(A.nzVal))
@@ -627,8 +638,8 @@ function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A
     throw(
         ArgumentError(
             "sparse_optimize_trsm! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
-            "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
-            "Convert to oneSparseMatrixCSR format instead."
+                "Intel sparse library only supports nontrans operations for triangular matrix operations. " *
+                "Convert to oneSparseMatrixCSR format instead."
         )
     )
     queue = global_queue(context(A.nzVal), device(A.nzVal))

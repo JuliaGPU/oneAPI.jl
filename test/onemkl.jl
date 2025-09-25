@@ -1082,7 +1082,7 @@ end
 end
 
 @testset "SPARSE" begin
-    @testset "$T" for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
+        @testset "$T" for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
         @testset "oneSparseMatrixCSR" begin
             for S in (Int32, Int64)
                 A = sprand(T, 20, 10, 0.5)
@@ -1116,7 +1116,7 @@ end
 
         @testset "sparse gemv" begin
                 @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCOO, oneSparseMatrixCSR, oneSparseMatrixCSC)
-                @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
+                    @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                     A = sprand(T, 20, 10, 0.5)
                     x = transa == 'N' ? rand(T, 10) : rand(T, 20)
                     y = transa == 'N' ? rand(T, 20) : rand(T, 10)
@@ -1129,7 +1129,7 @@ end
                     beta = rand(T)
                     oneMKL.sparse_optimize_gemv!(transa, dA)
                     oneMKL.sparse_gemv!(transa, alpha, dA, dx, beta, dy)
-                    @test alpha * opa(A) * x + beta * y ≈ collect(dy)
+                        @test alpha * opa(A) * x + beta * y ≈ collect(dy)
                 end
             end
         end
@@ -1174,7 +1174,7 @@ end
                     alpha = rand(T)
                     beta = rand(T)
                     oneMKL.sparse_symv!(uplo, alpha, dA, dx, beta, dy)
-                    @test alpha * A * x + beta * y ≈ collect(dy)
+                        @test alpha * A * x + beta * y ≈ collect(dy)
                 end
             end
         end
@@ -1182,8 +1182,10 @@ end
             @testset "sparse trmv" begin
                 @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
-                        for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
-                                                      ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
+                        for (uplo, diag, wrapper) in [
+                                ('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
+                                ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular),
+                            ]
                             (transa == 'N') || continue
                             A = sprand(T, 10, 10, 0.5)
                             x = rand(T, 10)
@@ -1216,8 +1218,9 @@ end
                 @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                     for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
-                                ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
-                        (transa == 'N') || continue
+                                ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular),
+                            ]
+                            (transa == 'N') || continue
                         alpha = rand(T)
                         A = rand(T, 10, 10) + I
                         A = sparse(A)
@@ -1250,8 +1253,10 @@ end
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                         @testset "transx = $transx" for (transx, opx) in [('N', identity), ('T', transpose), ('C', adjoint)]
                             (transx != 'N') && continue
-                            for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
-                                                          ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular)]
+                            for (uplo, diag, wrapper) in [
+                                    ('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
+                                    ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular),
+                                ]
                                 (transa == 'N') || continue
                                 alpha = rand(T)
                                 A = rand(T, 10, 10) + I
