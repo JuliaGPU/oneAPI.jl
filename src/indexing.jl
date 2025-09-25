@@ -27,7 +27,7 @@ function Base.findall(bools::oneArray{Bool})
     ys = oneArray{I}(undef, n)
 
     if n > 0
-        @oneapi items=length(bools) _ker!(ys, bools, indices)
+        @oneapi items = length(bools) _ker!(ys, bools, indices)
     end
     oneL0.synchronize()
     unsafe_free!(indices)
