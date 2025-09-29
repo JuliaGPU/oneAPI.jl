@@ -51,7 +51,7 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
     # NOTE: dev purposefully does not default to context() or device() to stress that
     #       objects should track ownership, and not rely on implicit global state.
     get!(task_local_storage(), (:ZeCommandQueue, ctx, dev)) do
-        ZeCommandQueue(ctx, dev)
+        ZeCommandQueue(ctx, dev; flags=oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
     end
 end
 
