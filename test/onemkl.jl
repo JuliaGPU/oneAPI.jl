@@ -1130,9 +1130,16 @@ end
                     oneMKL.sparse_optimize_gemv!(transa, dA)
                     oneMKL.sparse_gemv!(transa, alpha, dA, dx, beta, dy)
                         @test alpha * opa(A) * x + beta * y ≈ collect(dy)
-                end
-            end
+                        dy = oneVector{T}(y)
+                        @test alpha * opa(A) * x + beta * y ≈ Array(alpha * opa(dA) * dx + beta * dy)
+                        tx = transa == 'N' ? rand(T, 20) : rand(T, 10)
+                        ty = transa == 'N' ? rand(T, 10) : rand(T, 20)
+                        dtx = oneVector{T}(tx)
+                        dty = oneVector{T}(ty)
+                        t = @test alpha * opa(A') * tx + beta * ty ≈ Array(alpha * opa(dA') * dtx + beta * dty)
+                    end
         end
+            end
 
         @testset "sparse gemm" begin
                 @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
@@ -1153,6 +1160,8 @@ end
                             oneMKL.sparse_gemm!(transa, transb, alpha, dA, dB, beta, dC)
 
                             @test alpha * opa(A) * opb(B) + beta * C ≈ collect(dC)
+                            dC = oneMatrix{T}(C)
+                            @test alpha * opa(A) * opb(B) + beta * C ≈ Array(alpha * opa(dA) * opb(dB) + beta * dC)
                             oneMKL.sparse_optimize_gemm!(transa, transb, 2, dA)
                         end
                 end
