@@ -153,7 +153,7 @@ for (fname, elty) in ((:onemklSsymm, :Float32),
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $fname(sycl_queue(queue), side, uplo, m, n, alpha, A, lda, B, ldb,
                    beta, C, ldc)
             C
@@ -193,7 +193,7 @@ for (fname, elty) in ((:onemklSsyrk, :Float32),
             k  = size(A, trans == 'N' ? 2 : 1)
             lda = max(1,stride(A,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
             C
         end
@@ -234,7 +234,7 @@ for (fname, elty) in ((:onemklDsyr2k,:Float64),
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
             C
         end
@@ -268,7 +268,7 @@ for (fname, elty) in ((:onemklZherk, :ComplexF64),
             k  = size(A, trans == 'N' ? 2 : 1)
             lda = max(1,stride(A,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
             C
         end
@@ -305,7 +305,7 @@ for (fname, elty) in ((:onemklZher2k,:ComplexF64),
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $fname(sycl_queue(queue), uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
             C
         end
@@ -336,7 +336,7 @@ for (fname, elty) in ((:onemklSgemv, :Float32),
                        x::oneStridedArray{$elty},
                        beta::Number,
                        y::oneStridedArray{$elty})
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
              # handle trans
              m,n = size(a)
              # check dimensions
@@ -380,7 +380,7 @@ for (fname, elty) in ((:onemklChemv,:ComplexF32),
             lda = max(1,stride(A,2))
             incx = stride(x,1)
             incy = stride(y,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, n, alpha, A, lda, x, incx, beta, y, incy)
             y
         end
@@ -414,7 +414,7 @@ for (fname, elty) in ((:onemklChbmv,:ComplexF32),
             lda = max(1,stride(A,2))
             incx = stride(x,1)
             incy = stride(y,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, n, k, alpha, A, lda, x, incx, beta, y, incy)
             y
         end
@@ -443,7 +443,7 @@ for (fname, elty) in ((:onemklCher,:ComplexF32),
             length(x) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
             incx = stride(x,1)
             lda = max(1,stride(A,2))
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, n, alpha, x, incx, A, lda)
             A
         end
@@ -466,7 +466,7 @@ for (fname, elty) in ((:onemklCher2,:ComplexF32),
             incx = stride(x,1)
             incy = stride(y,1)
             lda = max(1,stride(A,2))
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, n, alpha, x, incx, y, incy, A, lda)
             A
         end
@@ -486,7 +486,7 @@ for (fname, elty) in
                        alpha::Number,
                        x::oneStridedArray{$elty},
                        y::oneStridedArray{$elty})
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             alpha = $elty(alpha)
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1), y, stride(y,1))
             y
@@ -506,7 +506,7 @@ for (fname, elty) in
                         x::oneStridedArray{$elty},
                         beta::Number,
                         y::oneStridedArray{$elty})
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             alpha = $elty(alpha)
             beta = $elty(beta)
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1), beta, y, stride(y,1))
@@ -528,7 +528,7 @@ for (fname, elty, cty, sty, supty) in ((:onemklSrot,:Float32,:Float32,:Float32,:
                       y::oneStridedArray{$elty},
                       c::Real,
                       s::$supty)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             c = $cty(c)
             s = $sty(s)
             $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1), c, s)
@@ -560,7 +560,7 @@ for (fname, elty) in
         function scal!(n::Integer,
                        alpha::$elty,
                        x::oneStridedArray{$elty})
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
             x
         end
@@ -586,7 +586,7 @@ for (fname, elty, ret_type) in
      (:onemklZnrm2, :ComplexF64,:Float64))
     @eval begin
         function nrm2(n::Integer, x::oneStridedArray{$elty})
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             result = oneArray{$ret_type}([0]);
             $fname(sycl_queue(queue), n, x, stride(x,1), result)
             res = Array(result)
@@ -616,7 +616,7 @@ for (jname, fname, elty) in
         function $jname(n::Integer,
                          x::oneStridedArray{$elty},
                          y::oneStridedArray{$elty})
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             result = oneArray{$elty}([0]);
             $fname(sycl_queue(queue), n, x, stride(x,1), y, stride(y,1), result)
             res = Array(result)
@@ -649,7 +649,7 @@ for (fname, elty) in ((:onemklSsbmv, :Float32),
             if !(1<=(1+k)<=n) throw(DimensionMismatch("Incorrect number of bands")) end
             if m < 1+k throw(DimensionMismatch("Array A has fewer than 1+k rows")) end
             if n != length(x) || n != length(y) throw(DimensionMismatch("")) end
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             lda = max(1, stride(a,2))
             incx = stride(x,1)
             incy = stride(y,1)
@@ -676,7 +676,7 @@ for (fname, elty, celty) in ((:onemklCSscal, :Float32, :ComplexF32),
         function scal!(n::Integer,
                        alpha::$elty,
                        x::oneStridedArray{$celty})
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
         end
     end
@@ -696,7 +696,7 @@ for (fname, elty) in ((:onemklSger, :Float32),
             m,n = size(a)
             m == length(x) || throw(DimensionMismatch(""))
             n == length(y) || throw(DimensionMismatch(""))
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), m, n, alpha, x, stride(x,1), y, stride(y,1), a, max(1,stride(a,2)))
             a
         end
@@ -714,7 +714,7 @@ for (fname, elty) in ((:onemklSspr, :Float32),
             n = round(Int, (sqrt(8*length(A))-1)/2)
             length(x) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
             incx = stride(x,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, n, alpha, x, incx, A)
             A
         end
@@ -738,7 +738,7 @@ for (fname, elty) in ((:onemklSsymv,:Float32),
             lda = max(1,stride(A,2))
             incx = stride(x,1)
             incy = stride(y,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, n, alpha, A, lda, x, incx, beta, y, incy)
             y
         end
@@ -764,7 +764,7 @@ for (fname, elty) in ((:onemklSsyr,:Float32),
             length(x) == n || throw(DimensionMismatch("Length of vector must be the same as the matrix dimensions"))
             incx = stride(x,1)
             lda = max(1,stride(A,2))
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, n, alpha, x, incx, A, lda)
             A
         end
@@ -786,7 +786,7 @@ for (fname, elty) in
         function copy!(n::Integer,
                        x::oneStridedArray{$elty},
                        y::oneStridedArray{$elty})
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
             y
         end
@@ -807,7 +807,7 @@ for (fname, elty, ret_type) in
         function asum(n::Integer,
                       x::oneStridedArray{$elty})
             result = oneArray{$ret_type}([0])
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, x, stride(x, 1), result)
             res = Array(result)
             return res[1]
@@ -824,7 +824,7 @@ for (fname, elty) in
     @eval begin
         function iamax(x::oneStridedArray{$elty})
             n = length(x)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             result = oneArray{Int64}([0]);
             $fname(sycl_queue(queue), n, x, stride(x, 1), result, 'O')
             return Array(result)[1]
@@ -842,7 +842,7 @@ for (fname, elty) in
         function iamin(x::StridedArray{$elty})
             n = length(x)
             result = oneArray{Int64}([0]);
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue),n, x, stride(x, 1), result, 'O')
             return Array(result)[1]
         end
@@ -859,7 +859,7 @@ for (fname, elty) in ((:onemklSswap,:Float32),
             x::oneStridedArray{$elty},
             y::oneStridedArray{$elty})
             # Assuming both memory allocated on same device & context
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
             x, y
         end
@@ -885,7 +885,7 @@ for (fname, elty) in ((:onemklSgbmv, :Float32),
             n = size(a,2)
             length(x) == (trans == 'N' ? n : m) && length(y) ==
                          (trans == 'N' ? m : n) || throw(DimensionMismatch(""))
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             lda = max(1, stride(a,2))
             incx = stride(x,1)
             incy = stride(y,1)
@@ -903,7 +903,7 @@ function gbmv(trans::Char,
               x::oneStridedArray{T}) where T
     n = size(a,2)
     leny = trans == 'N' ? m : n
-    queue = global_queue(context(x), device())
+    queue = global_queue(context(x), device(x))
     gbmv!(trans, m, kl, ku, alpha, a, x, zero(T), similar(x, leny))
 end
 function gbmv(trans::Char,
@@ -912,7 +912,7 @@ function gbmv(trans::Char,
               ku::Integer,
               a::oneStridedArray{T},
               x::oneStridedArray{T}) where T
-    queue = global_queue(context(x), device())
+    queue = global_queue(context(x), device(x))
     gbmv(trans, m, kl, ku, one(T), a, x)
 end
 
@@ -932,7 +932,7 @@ for (fname, elty) in ((:onemklSspmv, :Float32),
             end
             incx = stride(x,1)
             incy = stride(y,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, n, alpha, A, x, incx, beta, y, incy)
             y
         end
@@ -966,7 +966,7 @@ for (fname, elty) in ((:onemklStbsv, :Float32),
             if n != length(x) throw(DimensionMismatch("")) end
             lda = max(1,stride(A,2))
             incx = stride(x,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, trans, diag, n, k, A, lda, x, incx)
             x
         end
@@ -996,7 +996,7 @@ for (fname, elty) in ((:onemklStbmv,:Float32),
             if n != length(x) throw(DimensionMismatch("")) end
             lda = max(1,stride(A,2))
             incx = stride(x,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, trans, diag, n, k, A, lda, x, incx)
             x
         end
@@ -1029,7 +1029,7 @@ for (fname, elty) in ((:onemklStrmv, :Float32),
             end
             lda = max(1,stride(A,2))
             incx = stride(x,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, trans, diag, n, A, lda, x, incx)
             x
         end
@@ -1061,7 +1061,7 @@ for (fname, elty) in ((:onemklStrsv, :Float32),
             end
             lda = max(1,stride(A,2))
             incx = stride(x,1)
-            queue = global_queue(context(x), device())
+            queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), uplo, trans, diag, n, A, lda, x, incx)
             x
         end
@@ -1096,7 +1096,7 @@ for (mmname, smname, elty) in
             if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trmm!")) end
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $mmname(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb)
             B
         end
@@ -1114,7 +1114,7 @@ for (mmname, smname, elty) in
             if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm!")) end
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $smname(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb)
             B
         end
@@ -1160,7 +1160,7 @@ for (fname, elty) in ((:onemklZhemm,:ComplexF64),
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $fname(sycl_queue(queue), side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
             C
         end
@@ -1202,9 +1202,9 @@ for (fname, elty) in
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
 
-            device() == device(B) == device(C) || error("Multi-device GEMM not supported")
+            device(A) == device(B) == device(C) || error("Multi-device GEMM not supported")
             context(A) == context(B) == context(C) || error("Multi-context GEMM not supported")
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
 
             alpha = $elty(alpha)
             beta = $elty(beta)
@@ -1249,7 +1249,7 @@ for (fname, elty) in ((:onemklSdgmm, :Float32),
             lda = max(1,stride(A,2))
             incx = stride(X,1)
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $fname(sycl_queue(queue), mode, m, n, A, lda, X, incx, C, ldc)
             C
         end
@@ -1292,7 +1292,7 @@ for (fname, elty) in
             strideB = size(B, 3) == 1 ? 0 : stride(B, 3)
             strideC = stride(C, 3)
             batchCount = size(C, 3)
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             alpha = $elty(alpha)
             beta = $elty(beta)
             $fname(sycl_queue(queue), transA, transB, m, n, k, alpha, A, lda, strideA, B,
