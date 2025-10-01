@@ -1090,6 +1090,10 @@ end
                 B = oneSparseMatrixCSR(A)
                 A2 = SparseMatrixCSC(B)
                 @test A == A2
+                    C = oneSparseMatrixCSR(B.rowPtr, B.colVal, B.nzVal, size(B))
+                    A3 = SparseMatrixCSC(C)
+                    @test A == A3
+                    D = oneSparseMatrixCSR(oneVector(S[]), oneVector(S[]), oneVector(T[]), (0, 0)) # empty matrix
             end
         end
 
@@ -1101,6 +1105,10 @@ end
                     B = oneSparseMatrixCSC(A)
                     A2 = SparseMatrixCSC(B)
                     @test A == A2
+                    C = oneSparseMatrixCSC(A.colptr |> oneVector, A.rowval |> oneVector, A.nzval |> oneVector, size(A))
+                    A3 = SparseMatrixCSC(C)
+                    @test A == A3
+                    D = oneSparseMatrixCSC(oneVector(S[]), oneVector(S[]), oneVector(T[]), (0, 0)) # empty matrix
                 end
             end
 
