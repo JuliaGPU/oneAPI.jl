@@ -5,7 +5,7 @@ const oneAbstractSparseVector{Tv, Ti} = oneAbstractSparseArray{Tv, Ti, 1}
 const oneAbstractSparseMatrix{Tv, Ti} = oneAbstractSparseArray{Tv, Ti, 2}
 
 mutable struct oneSparseMatrixCSR{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
-    handle::matrix_handle_t
+    handle::Union{Nothing, matrix_handle_t}
     rowPtr::oneVector{Ti}
     colVal::oneVector{Ti}
     nzVal::oneVector{Tv}
@@ -14,7 +14,7 @@ mutable struct oneSparseMatrixCSR{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
 end
 
 mutable struct oneSparseMatrixCSC{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
-    handle::matrix_handle_t
+    handle::Union{Nothing, matrix_handle_t}
     colPtr::oneVector{Ti}
     rowVal::oneVector{Ti}
     nzVal::oneVector{Tv}
@@ -23,7 +23,7 @@ mutable struct oneSparseMatrixCSC{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
 end
 
 mutable struct oneSparseMatrixCOO{Tv, Ti} <: oneAbstractSparseMatrix{Tv, Ti}
-    handle::matrix_handle_t
+    handle::Union{Nothing, matrix_handle_t}
     rowInd::oneVector{Ti}
     colInd::oneVector{Ti}
     nzVal::oneVector{Tv}
