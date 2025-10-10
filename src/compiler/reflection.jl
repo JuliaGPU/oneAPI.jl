@@ -65,7 +65,7 @@ export @device_code_lowered, @device_code_typed, @device_code_warntype,
 #
 
 """
-    Metal.return_type(f, tt) -> r::Type
+    return_type(f, tt) -> r::Type
 
 Return a type `r` such that `f(args...)::r` where `args::tt`.
 """
@@ -75,5 +75,5 @@ function return_type(@nospecialize(func), @nospecialize(tt))
     job = CompilerJob(source, config)
     interp = GPUCompiler.get_interpreter(job)
     sig = Base.signature_type(func, tt)
-    Core.Compiler.return_type(interp, sig)
+    Core.Compiler._return_type(interp, sig)
 end
