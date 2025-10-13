@@ -1,7 +1,7 @@
 name = "oneAPI"
 uuid = "8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"
 authors = ["Tim Besard <tim.besard@gmail.com>"]
-version = "2.3.0"
+version = "2.4.0"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
