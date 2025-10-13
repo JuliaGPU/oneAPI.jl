@@ -131,45 +131,50 @@ if VERSION >= v"1.12-"
     end
 end
 
-LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, _add::MulAddMul=MulAddMul()) =
-    LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, _add.alpha, _add.beta)
-function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, a::Number, b::Number)
+LinearAlgebra.generic_matmatmul!(
+    C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
+    B::oneStridedVecOrMat, _add::MulAddMul,
+) = LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, _add.alpha, _add.beta)
+function LinearAlgebra.generic_matmatmul!(
+    C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
+    B::oneStridedVecOrMat, alpha::Number, beta::Number,
+)
     T = eltype(C)
-    alpha, beta = promote(a, b, zero(T))
     mA, nA = size(A, tA == 'N' ? 1 : 2), size(A, tA == 'N' ? 2 : 1)
     mB, nB = size(B, tB == 'N' ? 1 : 2), size(B, tB == 'N' ? 2 : 1)
-    if nA != mB
-        throw(DimensionMismatch("A has dimensions ($mA,$nA) but B has dimensions ($mB,$nB)"))
-    end
 
-    if C === A || B === C
-        throw(ArgumentError("output matrix must not be aliased with input matrix"))
-    end
+    nA != mB && throw(DimensionMismatch(
+        "A has dimensions ($mA,$nA) but B has dimensions ($mB,$nB)"))
+    (C === A || B === C) && throw(ArgumentError(
+        "output matrix must not be aliased with input matrix"))
 
     if mA == 0 || nA == 0 || nB == 0
-        if size(C) != (mA, nB)
-            throw(DimensionMismatch("C has dimensions $(size(C)), should have ($mA,$nB)"))
-        end
+        size(C) != (mA, nB) && throw(DimensionMismatch(
+            "C has dimensions $(size(C)), should have ($mA,$nB)"))
         return LinearAlgebra.rmul!(C, 0)
     end
 
-    if all(in(('N', 'T', 'C')), (tA, tB))
-        if T <: Union{onemklFloat, onemklComplex, onemklHalf} && eltype(A) == eltype(B) == T
-            return gemm!(tA, tB, alpha, A, B, beta, C)
-        end
-    end
+    T = eltype(C)
+
     if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
         # TODO: should the gemm part above be included in this branch?
-        if (tA == 'S' || tA == 's') && tB == 'N'
-            return symm!('L', tA == 'S' ? 'U' : 'L', alpha, A, B, beta, C)
+        α, β = T(alpha), T(beta)
+        if (
+            all(in(('N', 'T', 'C')), (tA, tB)) && T <: Union{onemklFloat, onemklComplex, onemklHalf} &&
+            A isa oneStridedArray{T} && B isa oneStridedArray{T}
+        )
+                return gemm!(tA, tB, α, A, B, β, C)
+        elseif (tA == 'S' || tA == 's') && tB == 'N'
+            return symm!('L', tA == 'S' ? 'U' : 'L', α, A, B, β, C)
         elseif (tB == 'S' || tB == 's') && tA == 'N'
-            return symm!('R', tB == 'S' ? 'U' : 'L', alpha, B, A, beta, C)
+            return symm!('R', tB == 'S' ? 'U' : 'L', α, B, A, β, C)
         elseif (tA == 'H' || tA == 'h') && tB == 'N'
-            return hemm!('L', tA == 'H' ? 'U' : 'L', alpha, A, B, beta, C)
+            return hemm!('L', tA == 'H' ? 'U' : 'L', α, A, B, β, C)
         elseif (tB == 'H' || tB == 'h') && tA == 'N'
-            return hemm!('R', tB == 'H' ? 'U' : 'L', alpha, B, A, beta, C)
+            return hemm!('R', tB == 'H' ? 'U' : 'L', α, B, A, β, C)
         end
     end
+
     GPUArrays.generic_matmatmul!(C, wrap(A, tA), wrap(B, tB), alpha, beta)
 end
 
