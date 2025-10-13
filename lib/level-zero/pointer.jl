@@ -40,8 +40,8 @@ Base.eltype(::Type{<:ZePtr{T}}) where {T} = T
 Base.convert(::Type{T}, x::ZePtr) where {T<:Integer} = T(UInt(x))
 ## integer to pointer
 Base.convert(::Type{ZePtr{T}}, x::Union{Int,UInt}) where {T} = ZePtr{T}(x)
-Int(x::ZePtr)  = Base.bitcast(Int, x)
-UInt(x::ZePtr) = Base.bitcast(UInt, x)
+Base.Int(x::ZePtr) = Base.bitcast(Int, x)
+Base.UInt(x::ZePtr) = Base.bitcast(UInt, x)
 
 # between regular and oneAPI pointers
 Base.convert(::Type{<:Ptr}, p::ZePtr) =
@@ -71,8 +71,8 @@ Base.:(==)(x::ZePtr, y::ZePtr) = UInt(x) == UInt(y)
 Base.:(<)(x::ZePtr,  y::ZePtr) = UInt(x) < UInt(y)
 Base.:(-)(x::ZePtr,  y::ZePtr) = UInt(x) - UInt(y)
 
-Base.:(+)(x::ZePtr, y::Integer) = oftype(x, Base.add_ptr(UInt(x), (y % UInt) % UInt))
-Base.:(-)(x::ZePtr, y::Integer) = oftype(x, Base.sub_ptr(UInt(x), (y % UInt) % UInt))
+Base.:(+)(x::ZePtr, y::Integer) = oftype(x, UInt(x) + (y % UInt) % UInt)
+Base.:(-)(x::ZePtr, y::Integer) = oftype(x, UInt(x) - (y % UInt) % UInt)
 Base.:(+)(x::Integer, y::ZePtr) = y + x
 
 

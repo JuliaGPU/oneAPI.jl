@@ -104,7 +104,7 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
             end
         end
     end
-    LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, MulAddMul(alpha, beta))
+    return LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, alpha, beta)
 end
 
 # triangular
@@ -120,46 +120,71 @@ LinearAlgebra.generic_trimatdiv!(C::oneStridedVector{T}, uploc, isunitc, tfun::F
 # BLAS 3
 #
 
-LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, _add::MulAddMul=MulAddMul()) =
-    LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, _add.alpha, _add.beta)
-function LinearAlgebra.generic_matmatmul!(C::oneStridedMatrix, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, a::Number, b::Number)
+if VERSION >= v"1.12-"
+    # Otherwise dispatches onto:
+    # https://github.com/JuliaLang/LinearAlgebra.jl/blob/4e7c3f40316a956119ac419a97c4b8aad7a17e6c/src/matmul.jl#L490
+    for blas_flag in (LinearAlgebra.BlasFlag.SyrkHerkGemm, LinearAlgebra.BlasFlag.SymmHemmGeneric)
+        @eval LinearAlgebra.generic_matmatmul_wrapper!(
+            C::oneStridedMatrix, tA::AbstractChar, tB::AbstractChar, A::oneStridedVecOrMat, B::oneStridedVecOrMat,
+            alpha::Number, beta::Number, ::$blas_flag
+        ) =
+            LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, alpha, beta)
+    end
+end
+
+LinearAlgebra.generic_matmatmul!(
+    C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
+    B::oneStridedVecOrMat, _add::MulAddMul,
+) = LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, _add.alpha, _add.beta)
+function LinearAlgebra.generic_matmatmul!(
+        C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
+        B::oneStridedVecOrMat, alpha::Number, beta::Number,
+    )
     T = eltype(C)
-    alpha, beta = promote(a, b, zero(T))
     mA, nA = size(A, tA == 'N' ? 1 : 2), size(A, tA == 'N' ? 2 : 1)
     mB, nB = size(B, tB == 'N' ? 1 : 2), size(B, tB == 'N' ? 2 : 1)
 
-    if nA != mB
-        throw(DimensionMismatch("A has dimensions ($mA,$nA) but B has dimensions ($mB,$nB)"))
-    end
-
-    if C === A || B === C
-        throw(ArgumentError("output matrix must not be aliased with input matrix"))
-    end
+    nA != mB && throw(
+        DimensionMismatch(
+            "A has dimensions ($mA,$nA) but B has dimensions ($mB,$nB)"
+        )
+    )
+    (C === A || B === C) && throw(
+        ArgumentError(
+            "output matrix must not be aliased with input matrix"
+        )
+    )
 
     if mA == 0 || nA == 0 || nB == 0
-        if size(C) != (mA, nB)
-            throw(DimensionMismatch("C has dimensions $(size(C)), should have ($mA,$nB)"))
-        end
+        size(C) != (mA, nB) && throw(
+            DimensionMismatch(
+                "C has dimensions $(size(C)), should have ($mA,$nB)"
+            )
+        )
         return LinearAlgebra.rmul!(C, 0)
     end
 
-    if all(in(('N', 'T', 'C')), (tA, tB))
-        if T <: Union{onemklFloat, onemklComplex, onemklHalf} && eltype(A) == eltype(B) == T
-            return gemm!(tA, tB, alpha, A, B, beta, C)
-        end
-    end
+    T = eltype(C)
+
     if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
         # TODO: should the gemm part above be included in this branch?
-        if (tA == 'S' || tA == 's') && tB == 'N'
-            return symm!('L', tA == 'S' ? 'U' : 'L', alpha, A, B, beta, C)
+        α, β = T(alpha), T(beta)
+        if (
+                all(in(('N', 'T', 'C')), (tA, tB)) && T <: Union{onemklFloat, onemklComplex, onemklHalf} &&
+                    A isa oneStridedArray{T} && B isa oneStridedArray{T}
+            )
+            return gemm!(tA, tB, α, A, B, β, C)
+        elseif (tA == 'S' || tA == 's') && tB == 'N'
+            return symm!('L', tA == 'S' ? 'U' : 'L', α, A, B, β, C)
         elseif (tB == 'S' || tB == 's') && tA == 'N'
-            return symm!('R', tB == 'S' ? 'U' : 'L', alpha, B, A, beta, C)
+            return symm!('R', tB == 'S' ? 'U' : 'L', α, B, A, β, C)
         elseif (tA == 'H' || tA == 'h') && tB == 'N'
-            return hemm!('L', tA == 'H' ? 'U' : 'L', alpha, A, B, beta, C)
+            return hemm!('L', tA == 'H' ? 'U' : 'L', α, A, B, β, C)
         elseif (tB == 'H' || tB == 'h') && tA == 'N'
-            return hemm!('R', tB == 'H' ? 'U' : 'L', alpha, B, A, beta, C)
+            return hemm!('R', tB == 'H' ? 'U' : 'L', α, B, A, β, C)
         end
     end
+
     GPUArrays.generic_matmatmul!(C, wrap(A, tA), wrap(B, tB), alpha, beta)
 end
 
@@ -172,3 +197,23 @@ LinearAlgebra.generic_trimatdiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::F
     trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, C === B ? C : copyto!(C, B))
 LinearAlgebra.generic_mattridiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
     trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, C === A ? C : copyto!(C, A))
+
+#
+# BLAS extensions
+#
+
+# Extend LinearAlgebra.BLAS.herk! to dispatch to oneAPI implementation
+for (elty) in ([Float32, ComplexF32], [Float64, ComplexF64])
+    @eval begin
+        LinearAlgebra.BLAS.herk!(uplo::Char, trans::Char, alpha::$elty[1], A::oneStridedVecOrMat{$elty[2]}, beta::$elty[1], C::oneStridedMatrix{$elty[2]}) =
+            herk!(uplo, trans, alpha, A, beta, C)
+    end
+end
+
+# Extend LinearAlgebra.BLAS.syrk! to dispatch to oneAPI implementation
+for (elty) in (Float32, Float64, ComplexF32, ComplexF64)
+    @eval begin
+        LinearAlgebra.BLAS.syrk!(uplo::Char, trans::Char, alpha::$elty, A::oneStridedVecOrMat{$elty}, beta::$elty, C::oneStridedMatrix{$elty}) =
+            syrk!(uplo, trans, alpha, A, beta, C)
+    end
+end

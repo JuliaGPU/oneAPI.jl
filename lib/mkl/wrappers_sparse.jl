@@ -29,7 +29,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             return dA
         end
 
-        function SparseMatrixCSC(A::oneSparseMatrixCSR{$elty, $intty})
+        function SparseArrays.SparseMatrixCSC(A::oneSparseMatrixCSR{$elty, $intty})
             handle_ptr = Ref{matrix_handle_t}()
             At = SparseMatrixCSC(reverse(A.dims)..., Vector(A.rowPtr), Vector(A.colVal), Vector(A.nzVal))
             A_csc = SparseMatrixCSC(At |> transpose)
@@ -51,7 +51,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             return dA
         end
 
-        function SparseMatrixCSC(A::oneSparseMatrixCSC{$elty, $intty})
+        function SparseArrays.SparseMatrixCSC(A::oneSparseMatrixCSC{$elty, $intty})
             handle_ptr = Ref{matrix_handle_t}()
             A_csc = SparseMatrixCSC(A.dims..., Vector(A.colPtr), Vector(A.rowVal), Vector(A.nzVal))
             return A_csc
@@ -84,7 +84,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_coo_data   , :Float32   , :Int3
             return dA
         end
 
-        function SparseMatrixCSC(A::oneSparseMatrixCOO{$elty, $intty})
+        function SparseArrays.SparseMatrixCSC(A::oneSparseMatrixCOO{$elty, $intty})
             handle_ptr = Ref{matrix_handle_t}()
             A = sparse(Vector(A.rowInd), Vector(A.colInd), Vector(A.nzVal), A.dims...)
             return A
