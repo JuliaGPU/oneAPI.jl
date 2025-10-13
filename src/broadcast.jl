@@ -11,8 +11,9 @@ BroadcastStyle(W::Type{<:oneWrappedArray{T, N}}) where {T, N} =
 # when we are dealing with different buffer styles, we cannot know
 # which one is better, so use shared memory
 BroadcastStyle(
-    ::oneArrayStyle{N, B1},
-               ::oneArrayStyle{N, B2}) where {N,B1,B2} =
+        ::oneArrayStyle{N, B1},
+        ::oneArrayStyle{N, B2},
+    ) where {N,B1,B2} =
     oneArrayStyle{N, oneL0.SharedBuffer}()
 
 # allocation of output arrays

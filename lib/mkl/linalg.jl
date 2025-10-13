@@ -104,7 +104,7 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
             end
         end
     end
-    LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, alpha, beta)
+    return LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, alpha, beta)
 end
 
 # triangular
@@ -126,7 +126,8 @@ if VERSION >= v"1.12-"
     for blas_flag in (LinearAlgebra.BlasFlag.SyrkHerkGemm, LinearAlgebra.BlasFlag.SymmHemmGeneric)
         @eval LinearAlgebra.generic_matmatmul_wrapper!(
             C::oneStridedMatrix, tA::AbstractChar, tB::AbstractChar, A::oneStridedVecOrMat, B::oneStridedVecOrMat,
-            alpha::Number, beta::Number, ::$blas_flag) =
+            alpha::Number, beta::Number, ::$blas_flag
+        ) =
             LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, alpha, beta)
     end
 end
@@ -136,21 +137,30 @@ LinearAlgebra.generic_matmatmul!(
     B::oneStridedVecOrMat, _add::MulAddMul,
 ) = LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, _add.alpha, _add.beta)
 function LinearAlgebra.generic_matmatmul!(
-    C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
-    B::oneStridedVecOrMat, alpha::Number, beta::Number,
-)
+        C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
+        B::oneStridedVecOrMat, alpha::Number, beta::Number,
+    )
     T = eltype(C)
     mA, nA = size(A, tA == 'N' ? 1 : 2), size(A, tA == 'N' ? 2 : 1)
     mB, nB = size(B, tB == 'N' ? 1 : 2), size(B, tB == 'N' ? 2 : 1)
 
-    nA != mB && throw(DimensionMismatch(
-        "A has dimensions ($mA,$nA) but B has dimensions ($mB,$nB)"))
-    (C === A || B === C) && throw(ArgumentError(
-        "output matrix must not be aliased with input matrix"))
+    nA != mB && throw(
+        DimensionMismatch(
+            "A has dimensions ($mA,$nA) but B has dimensions ($mB,$nB)"
+        )
+    )
+    (C === A || B === C) && throw(
+        ArgumentError(
+            "output matrix must not be aliased with input matrix"
+        )
+    )
 
     if mA == 0 || nA == 0 || nB == 0
-        size(C) != (mA, nB) && throw(DimensionMismatch(
-            "C has dimensions $(size(C)), should have ($mA,$nB)"))
+        size(C) != (mA, nB) && throw(
+            DimensionMismatch(
+                "C has dimensions $(size(C)), should have ($mA,$nB)"
+            )
+        )
         return LinearAlgebra.rmul!(C, 0)
     end
 
@@ -160,10 +170,10 @@ function LinearAlgebra.generic_matmatmul!(
         # TODO: should the gemm part above be included in this branch?
         α, β = T(alpha), T(beta)
         if (
-            all(in(('N', 'T', 'C')), (tA, tB)) && T <: Union{onemklFloat, onemklComplex, onemklHalf} &&
-            A isa oneStridedArray{T} && B isa oneStridedArray{T}
-        )
-                return gemm!(tA, tB, α, A, B, β, C)
+                all(in(('N', 'T', 'C')), (tA, tB)) && T <: Union{onemklFloat, onemklComplex, onemklHalf} &&
+                    A isa oneStridedArray{T} && B isa oneStridedArray{T}
+            )
+            return gemm!(tA, tB, α, A, B, β, C)
         elseif (tA == 'S' || tA == 's') && tB == 'N'
             return symm!('L', tA == 'S' ? 'U' : 'L', α, A, B, β, C)
         elseif (tB == 'S' || tB == 's') && tA == 'N'
