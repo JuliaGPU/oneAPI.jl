@@ -15,7 +15,8 @@ GPUCompiler.isintrinsic(job::oneAPICompilerJob, fn::String) =
     invoke(GPUCompiler.isintrinsic,
            Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(fn)},
            job, fn) ||
-    in(fn, opencl_builtins)
+    in(fn, known_intrinsics) ||
+    contains(fn, "__spirv_")
 
 function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module,
                                     entry::LLVM.Function)
