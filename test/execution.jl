@@ -606,7 +606,7 @@ end
     # conversions from integers to pointers resulted in lost memory stores
 
     function kernel(ptr)
-        ptr = reinterpret(Core.LLVMPtr{Float32, AS.Global}, ptr)
+        ptr = reinterpret(Core.LLVMPtr{Float32, AS.CrossWorkgroup}, ptr)
         unsafe_store!(ptr, 42)
         return
     end
