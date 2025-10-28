@@ -226,7 +226,7 @@ end
 
         s[t] = d[t]
         s2[t] = 2*d[t]
-        barrier()
+        barrier(0)
         d[t] = s[tr]
 
         return
@@ -252,7 +252,7 @@ end
 
             s[t] = d[t]
             s2[t] = d[t]
-            barrier()
+            barrier(0)
             d[t] = s[tr]
 
             return

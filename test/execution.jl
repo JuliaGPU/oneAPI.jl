@@ -569,18 +569,18 @@ end
 
         r[tx] = r_[tx]
 
-        barrier()
+        barrier(0)
 
         for j=1:n
             if tx == 1
                 r[j] = r[j] / 2f0
             end
-            barrier()
+            barrier(0)
 
             if tx > j && tx <= 4
                 r[tx] = r[tx] - 2f0*r[j]
             end
-            barrier()
+            barrier(0)
         end
 
         if bx == 1

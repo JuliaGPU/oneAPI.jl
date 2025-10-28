@@ -147,7 +147,7 @@ translator](https://github.com/KhronosGroup/SPIRV-LLVM-Translator):
 
 ```julia
 julia> function kernel()
-         barrier()
+         barrier(0)
          return
        end
 

@@ -16,7 +16,7 @@
     # perform a reduction
     d = 1
     while d < items
-        barrier()
+        barrier(0)
         index = 2 * d * (item-1) + 1
         @inbounds if index <= items
             other_val = if index + d <= items

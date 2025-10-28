@@ -161,7 +161,7 @@ end
 ## Synchronization and Printing
 
 @device_override @inline function KA.__synchronize()
-    barrier()
+    barrier(0)
 end
 
 @device_override @inline function KA.__print(args...)
