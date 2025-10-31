@@ -65,4 +65,8 @@ end
         @inline
         return checkindex(Bool, eachindex(IndexLinear(), v), i)
     end
+
+    # Less accurate division for Float32 than Base Julia which relies on Float64
+    # https://github.com/JuliaLang/julia/pull/49637
+    @device_override Base.div(x::Float32, y::Float32) = trunc(x / y)
 end
