@@ -88,7 +88,7 @@ Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} = reinterpret(Ptr{
 
 # convert oneAPI host arrays to device arrays
 Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
-  Base.unsafe_convert(oneDeviceArray{T,N,AS.Global}, xs)
+  Base.unsafe_convert(oneDeviceArray{T,N,AS.CrossWorkgroup}, xs)
 
 # Base.RefValue isn't GPU compatible, so provide a compatible alternative.
 # TODO: port improvements from CUDA.jl

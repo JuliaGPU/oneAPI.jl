@@ -6,7 +6,8 @@ const oneAPICompilerJob = CompilerJob{SPIRVCompilerTarget,oneAPICompilerParams}
 
 GPUCompiler.runtime_module(::oneAPICompilerJob) = oneAPI
 
-GPUCompiler.method_table(::oneAPICompilerJob) = method_table
+GPUCompiler.method_table_view(job::oneAPICompilerJob) =
+    GPUCompiler.StackedMethodTable(job.world, method_table, SPIRVIntrinsics.method_table)
 
 # filter out OpenCL built-ins
 # TODO: eagerly lower these using the translator API
@@ -14,7 +15,8 @@ GPUCompiler.isintrinsic(job::oneAPICompilerJob, fn::String) =
     invoke(GPUCompiler.isintrinsic,
            Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(fn)},
            job, fn) ||
-    in(fn, opencl_builtins)
+    in(fn, known_intrinsics) ||
+    contains(fn, "__spirv_")
 
 function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module,
                                     entry::LLVM.Function)

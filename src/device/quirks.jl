@@ -60,10 +60,13 @@ end
 
 # From Metal.jl to avoid widemul and Int128
 @static if VERSION >= v"1.12.0-DEV.1736" # Partially reverts JuliaLang/julia PR #56750
-    let BitInteger64 = Union{Int64, UInt64}
-        @device_override function Base.checkbounds(::Type{Bool}, v::StepRange{<:BitInteger64, <:BitInteger64}, i::BitInteger64)
-            @inline
-            return checkindex(Bool, eachindex(IndexLinear(), v), i)
-        end
+    const BitInteger64 = Union{Int64, UInt64}
+    @device_override function Base.checkbounds(::Type{Bool}, v::StepRange{<:BitInteger64, <:BitInteger64}, i::BitInteger64)
+        @inline
+        return checkindex(Bool, eachindex(IndexLinear(), v), i)
     end
+
+    # Less accurate division for Float32 than Base Julia which relies on Float64
+    # https://github.com/JuliaLang/julia/pull/49637
+    @device_override Base.div(x::Float32, y::Float32) = trunc(x / y)
 end

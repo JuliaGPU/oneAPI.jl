@@ -279,8 +279,8 @@ end
 
 ## interop with GPU arrays
 
-function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.Global}}, a::oneArray{T,N}) where {T,N}
-  oneDeviceArray{T,N,AS.Global}(size(a), reinterpret(LLVMPtr{T,AS.Global}, pointer(a)),
+function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.CrossWorkgroup}}, a::oneArray{T,N}) where {T,N}
+  oneDeviceArray{T,N,AS.CrossWorkgroup}(size(a), reinterpret(LLVMPtr{T,AS.CrossWorkgroup}, pointer(a)),
                                 a.maxsize - a.offset*Base.elsize(a))
 end
 

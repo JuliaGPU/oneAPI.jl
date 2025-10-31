@@ -569,18 +569,18 @@ end
 
         r[tx] = r_[tx]
 
-        barrier()
+        barrier(0)
 
         for j=1:n
             if tx == 1
                 r[j] = r[j] / 2f0
             end
-            barrier()
+            barrier(0)
 
             if tx > j && tx <= 4
                 r[tx] = r[tx] - 2f0*r[j]
             end
-            barrier()
+            barrier(0)
         end
 
         if bx == 1
@@ -606,7 +606,7 @@ end
     # conversions from integers to pointers resulted in lost memory stores
 
     function kernel(ptr)
-        ptr = reinterpret(Core.LLVMPtr{Float32, AS.Global}, ptr)
+        ptr = reinterpret(Core.LLVMPtr{Float32, AS.CrossWorkgroup}, ptr)
         unsafe_store!(ptr, 42)
         return
     end
