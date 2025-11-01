@@ -68,7 +68,10 @@ end
     supports_fp64 = oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
 
     # TODO: emit printf format strings in constant memory
-    extensions = String["SPV_EXT_relaxed_printf_string_address_space"]
+    extensions = String[
+        "SPV_EXT_relaxed_printf_string_address_space",
+        "SPV_EXT_shader_atomic_float_add"
+    ]
 
     # create GPUCompiler objects
     target = SPIRVCompilerTarget(; extensions, supports_fp16, supports_fp64, kwargs...)
