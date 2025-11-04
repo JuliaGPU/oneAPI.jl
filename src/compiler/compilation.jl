@@ -45,7 +45,7 @@ function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
                    job, mod, entry)
 
     # FIX: Flatten nested insertvalue instructions to work around SPIR-V bug
-    # See: https://github.com/JuliaGPU/oneAPI.jl/issues/XXX
+    # See: https://github.com/JuliaGPU/oneAPI.jl/issues/259
     # Intel's SPIR-V runtime has a bug where OpCompositeInsert with nested
     # indices (e.g., "1 0") corrupts adjacent struct fields.
     flatten_nested_insertvalue!(mod)
