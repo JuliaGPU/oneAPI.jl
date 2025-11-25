@@ -162,12 +162,34 @@ function __init__()
 
     try
         zeInit(0)
-        functional[] = true
     catch err
+        # Handle the specific case where no oneAPI device is available
+        if err isa ZeError && err.code == RESULT_ERROR_UNINITIALIZED
+            functional[] = false
+            return
+        end
+        # For other errors, still report them as errors
         @error "Failed to initialize oneAPI" exception=(err,catch_backtrace())
         functional[] = false
         return
     end
+
+    # Check if there are actually any drivers/devices available
+    try
+        drv_count = Ref{UInt32}(0)
+        zeDriverGet(drv_count, C_NULL)
+        if drv_count[] == 0
+            @info "oneAPI initialized but no drivers found. oneAPI.jl will not be functional."
+            functional[] = false
+            return
+        end
+    catch err
+        @error "Failed to enumerate oneAPI drivers" exception = (err, catch_backtrace())
+        functional[] = false
+        return
+    end
+
+    functional[] = true
 
     validation_layer[] = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
     parameter_validation[] = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
