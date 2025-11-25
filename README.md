@@ -29,20 +29,20 @@ good kernel programming capabilties, and as a demonstration of that it fully imp
 the GPUArrays.jl array interfaces. This results in a full-featured GPU array type.
 
 However, the package has not been extensively tested, and performance issues might be
-present. The integration with vendor libraries like oneMKL or oneDNN is still in
-development, and as result certain array operations may be unavailable or slow.
+present. The integration with vendor libraries like oneMKL has been extended with support
+for sparse linear algebra operations. Some operations may still be unavailable or slow.
 
 
 ## Quick start
 
-You need to use Julia 1.8 or higher, and it is strongly advised to use [the official
+You need to use Julia 1.10 or higher, and it is strongly advised to use [the official
 binaries](https://julialang.org/downloads/). For now, only Linux is supported.
 On Windows, you need to use the second generation Windows Subsystem for Linux (WSL2).
 **If you're using Intel Arc GPUs (A580, A750, A770, etc), you need to use at least
 Linux 6.2.** For other hardware, any recent Linux distribution should work.
 
 Once you have installed Julia, proceed by entering the package manager REPL mode by pressing
-`]` and adding theoneAPI package:
+`]` and adding the oneAPI package:
 
 ```
 pkg> add oneAPI
@@ -60,11 +60,12 @@ julia> using oneAPI
 
 julia> oneAPI.versioninfo()
 Binary dependencies:
-- NEO: 24.26.30049+0
+- NEO: 25.35.35096
 - libigc: 1.0.17193+0
 - gmmlib: 22.3.20+0
-- SPIRV_LLVM_Translator: 20.1.0+1
-- SPIRV_Tools: 2025.1.0+1
+- SPIRV_LLVM_Translator: 21
+- SPIRV_Tools: 2025.4.0
+- oneAPI_Support: 0.9.2 (oneMKL v2025.2.0)
 
 Toolchain:
 - Julia: 1.11.5
@@ -217,6 +218,17 @@ julia> a .+ 1
 2×2 oneArray{Float32,2}:
  1.59298  1.99615
  1.87436  1.23285
+```
+
+The oneMKL integration provides extended support for linear algebra operations, including sparse
+matrix operations that integrate with Julia's standard LinearAlgebra interface:
+
+```julia
+julia> using oneAPI, oneAPI.oneMKL, SparseArrays, LinearAlgebra
+julia> A = sprand(100, 100, 0.1)
+julia> dA = oneMKL.oneSparseMatrixCSC(A)
+julia> x = oneArray(rand(100))
+julia> y = dA * x  # Matrix-vector multiplication via LinearAlgebra
 ```
 
 ### `Float64` support
