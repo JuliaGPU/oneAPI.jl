@@ -184,7 +184,7 @@ function __init__()
             return
         end
     catch err
-        @error "Failed to enumerate oneAPI drivers" exception=(err,catch_backtrace())
+        @error "Failed to enumerate oneAPI drivers" exception = (err, catch_backtrace())
         functional[] = false
         return
     end
