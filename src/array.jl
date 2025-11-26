@@ -41,6 +41,46 @@ function check_eltype(T)
   end
 end
 
+"""
+    oneArray{T,N,B} <: AbstractGPUArray{T,N}
+
+N-dimensional dense array type for Intel GPU programming using oneAPI and Level Zero.
+
+# Type Parameters
+- `T`: Element type (must be stored inline, no isbits-unions)
+- `N`: Number of dimensions
+- `B`: Buffer type, one of:
+  - `oneL0.DeviceBuffer`: GPU device memory (default, not CPU-accessible)
+  - `oneL0.SharedBuffer`: Unified shared memory (CPU and GPU accessible)
+  - `oneL0.HostBuffer`: Pinned host memory (CPU-accessible, GPU-visible)
+
+# Memory Types
+
+- **Device memory** (default): Fastest GPU access, not directly accessible from CPU
+- **Shared memory**: Accessible from both CPU and GPU, with unified virtual addressing
+- **Host memory**: CPU memory that's visible to the GPU, useful for staging
+
+Use [`is_device`](@ref), [`is_shared`](@ref), [`is_host`](@ref) to query memory type.
+
+# Examples
+```julia
+# Create arrays with different memory types
+A = oneArray{Float32,2}(undef, 10, 10)                    # Device memory (default)
+B = oneArray{Float32,2,oneL0.SharedBuffer}(undef, 10, 10) # Shared memory
+C = oneArray{Float32,2,oneL0.HostBuffer}(undef, 10, 10)   # Host memory
+
+# From existing array
+D = oneArray(rand(Float32, 10, 10))  # Creates device memory array
+
+# Using do-block for automatic cleanup
+result = oneArray{Float32}(100) do arr
+    # Use arr...
+    Array(arr)  # Copy result back before cleanup
+end
+```
+
+See also: [`oneVector`](@ref), [`oneMatrix`](@ref), [`is_device`](@ref), [`is_shared`](@ref)
+"""
 mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
   data::DataRef{B}
 
@@ -179,8 +219,37 @@ end
 buftype(x::oneArray) = buftype(typeof(x))
 buftype(::Type{<:oneArray{<:Any,<:Any,B}}) where {B} = @isdefined(B) ? B : Any
 
+"""
+    is_device(a::oneArray) -> Bool
+
+Check if the array is stored in device memory (not directly CPU-accessible).
+
+Device memory provides the fastest GPU access but cannot be directly accessed from the CPU.
+
+See also: [`is_shared`](@ref), [`is_host`](@ref)
+"""
 is_device(a::oneArray) = isa(a.data[], oneL0.DeviceBuffer)
+
+"""
+    is_shared(a::oneArray) -> Bool
+
+Check if the array is stored in shared (unified) memory.
+
+Shared memory is accessible from both CPU and GPU with unified virtual addressing.
+
+See also: [`is_device`](@ref), [`is_host`](@ref)
+"""
 is_shared(a::oneArray) = isa(a.data[], oneL0.SharedBuffer)
+
+"""
+    is_host(a::oneArray) -> Bool
+
+Check if the array is stored in pinned host memory.
+
+Host memory resides on the CPU but is visible to the GPU, useful for staging data.
+
+See also: [`is_device`](@ref), [`is_shared`](@ref)
+"""
 is_host(a::oneArray) = isa(a.data[], oneL0.HostBuffer)
 
 ## derived types

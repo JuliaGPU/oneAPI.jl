@@ -2,7 +2,7 @@
 
 *Julia support for the oneAPI programming toolkit.*
 
-[![][doi-img]][doi-url] [![][buildkite-img]][buildkite-url] [![][codecov-img]][codecov-url]
+[![][doi-img]][doi-url] [![][buildkite-img]][buildkite-url] [![][codecov-img]][codecov-url] [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url]
 
 [doi-img]: https://zenodo.org/badge/252466420.svg
 [doi-url]: https://zenodo.org/badge/latestdoi/252466420
@@ -12,6 +12,12 @@
 
 [codecov-img]: https://codecov.io/gh/JuliaGPU/oneAPI.jl/branch/master/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/JuliaGPU/oneAPI.jl
+
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: https://juliagpu.github.io/oneAPI.jl/stable
+
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://juliagpu.github.io/oneAPI.jl/dev
 
 oneAPI.jl provides support for working with the [oneAPI unified programming
 model](https://software.intel.com/en-us/oneapi). The package is verified to work with the

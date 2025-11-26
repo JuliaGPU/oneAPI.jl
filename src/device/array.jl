@@ -8,6 +8,40 @@ export oneDeviceArray, oneDeviceVector, oneDeviceMatrix, oneLocalArray
 # NOTE: we can't support the typical `tuple or series of integer` style construction,
 #       because we're currently requiring a trailing pointer argument.
 
+"""
+    oneDeviceArray{T,N,A} <: DenseArray{T,N}
+
+Device-side array type for use within GPU kernels.
+
+This type represents a view of GPU memory accessible within kernel code. Unlike
+[`oneArray`](@ref) which is used on the host, `oneDeviceArray` is designed for
+device-side operations and cannot be directly constructed on the host.
+
+# Type Parameters
+- `T`: Element type
+- `N`: Number of dimensions
+- `A`: Address space (typically `AS.CrossWorkgroup` for global memory)
+
+# Usage
+
+`oneDeviceArray` is typically not constructed directly. Instead, `oneArray` objects
+are automatically converted to `oneDeviceArray` when passed as kernel arguments.
+
+# Examples
+
+```julia
+function kernel(a::oneDeviceArray{Float32,1})
+    i = get_global_id()
+    @inbounds a[i] = a[i] * 2.0f0
+    return
+end
+
+a = oneArray(rand(Float32, 100))
+@oneapi groups=1 items=100 kernel(a)  # a is converted to oneDeviceArray
+```
+
+See also: [`oneArray`](@ref), [`oneLocalArray`](@ref), [`@oneapi`](@ref)
+"""
 struct oneDeviceArray{T,N,A} <: DenseArray{T,N}
     ptr::LLVMPtr{T,A}
     maxsize::Int
@@ -257,6 +291,47 @@ end
 
 export oneLocalArray
 
+"""
+    oneLocalArray(::Type{T}, dims)
+
+Allocate local (workgroup-shared) memory within a GPU kernel.
+
+Local memory is shared among all work-items in a workgroup and provides faster access than
+global memory. It's useful for algorithms that require cooperation between work-items,
+such as reductions or matrix multiplication tiling.
+
+# Arguments
+- `T`: Element type
+- `dims`: Dimensions (must be compile-time constants)
+
+# Examples
+
+```julia
+function matmul_kernel(A, B, C)
+    # Allocate 16x16 tile in local memory
+    tile_A = oneLocalArray(Float32, (16, 16))
+    tile_B = oneLocalArray(Float32, (16, 16))
+
+    # Load data into local memory
+    local_i = get_local_id(0)
+    local_j = get_local_id(1)
+    tile_A[local_i, local_j] = A[...]
+    tile_B[local_i, local_j] = B[...]
+
+    barrier()  # Synchronize workgroup
+
+    # Compute using local memory
+    # ...
+    return
+end
+```
+
+!!! note
+    The dimensions must be known at compile time. Local memory is limited (typically 64KB
+    per workgroup), so large allocations may fail.
+
+See also: [`oneDeviceArray`](@ref), [`barrier`](@ref)
+"""
 @inline function oneLocalArray(::Type{T}, dims) where {T}
     len = prod(dims)
     # NOTE: this relies on const-prop to forward the literal length to the generator.
