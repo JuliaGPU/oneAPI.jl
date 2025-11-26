@@ -59,7 +59,7 @@ export SYCL
 include("../lib/mkl/oneMKL.jl")
 export oneMKL
 end
-import AcceleratedKernels as AK
+
 # integrations and specialized functionality
 include("broadcast.jl")
 include("mapreduce.jl")
@@ -69,7 +69,6 @@ include("utils.jl")
 
 include("oneAPIKernels.jl")
 import .oneAPIKernels: oneAPIBackend
-include("accumulate.jl")
 include("indexing.jl")
 export oneAPIBackend
 
