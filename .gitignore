@@ -6,3 +6,4 @@ deps/onemkl_lapack.cpp
 deps/onemkl_lapack.h
 deps/onemkl_sparse.cpp
 deps/onemkl_sparse.h
+docs/build

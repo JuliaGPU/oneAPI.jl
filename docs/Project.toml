@@ -1,0 +1,9 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+oneAPI = "8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"
+
+[sources]
+oneAPI = {path = "/home/michel/git/oneAPI.jl"}
+
+[compat]
+Documenter = "1"

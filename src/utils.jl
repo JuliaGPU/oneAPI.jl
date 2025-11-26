@@ -68,7 +68,7 @@ end
 
 Run expression `ex` and synchronize the GPU afterwards.
 
-See also: [`synchronize`](@ref).
+See also: `synchronize`.
 """
 macro sync(ex)
     quote

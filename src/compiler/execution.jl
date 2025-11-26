@@ -7,6 +7,54 @@ const MACRO_KWARGS = [:launch]
 const COMPILER_KWARGS = [:kernel, :name, :always_inline]
 const LAUNCH_KWARGS = [:groups, :items, :queue]
 
+"""
+    @oneapi [kwargs...] kernel(args...)
+
+High-level interface for launching Julia kernels on Intel GPUs using oneAPI.
+
+This macro compiles a Julia function to SPIR-V, prepares the arguments, and optionally
+launches the kernel on the GPU.
+
+# Keyword Arguments
+
+## Macro Keywords (compile-time)
+- `launch::Bool=true`: Whether to launch the kernel immediately. If `false`, returns the
+  compiled kernel object without executing it.
+
+## Compiler Keywords
+- `kernel::Bool=false`: Whether to compile as a kernel (true) or device function (false)
+- `name::Union{String,Nothing}=nothing`: Explicit name for the kernel
+- `always_inline::Bool=false`: Whether to always inline device functions
+
+## Launch Keywords (runtime)
+- `groups`: Number of workgroups (required). Can be an integer or tuple.
+- `items`: Number of work-items per workgroup (required). Can be an integer or tuple.
+- `queue::ZeCommandQueue=global_queue(...)`: Command queue to submit to.
+
+# Examples
+
+```julia
+# Simple vector addition kernel
+function vadd(a, b, c)
+    i = get_global_id()
+    @inbounds c[i] = a[i] + b[i]
+    return
+end
+
+a = oneArray(rand(Float32, 1024))
+b = oneArray(rand(Float32, 1024))
+c = similar(a)
+
+# Launch with 4 workgroups of 256 items each
+@oneapi groups=4 items=256 vadd(a, b, c)
+
+# Compile without launching
+kernel = @oneapi launch=false vadd(a, b, c)
+kernel(a, b, c; groups=4, items=256)  # Launch later
+```
+
+See also: `zefunction`, `kernel_convert`
+"""
 macro oneapi(ex...)
     call = ex[end]
     kwargs = map(ex[1:end-1]) do kwarg
