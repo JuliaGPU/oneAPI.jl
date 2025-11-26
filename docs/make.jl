@@ -47,7 +47,7 @@ makedocs(
 deploydocs(
     repo = "github.com/JuliaGPU/oneAPI.jl.git",
     target = "build",
-    devbranch = "main",
+    devbranch = "master",
     devurl = "dev",
     push_preview = true,
 )
