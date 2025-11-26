@@ -17,6 +17,20 @@ using oneAPI
     data = oneArray(collect(1:6))
     mask = oneArray(Bool[true, false, true, false, false, true])
     @test Array(data[mask]) == collect(1:6)[findall(Bool[true, false, true, false, false, true])]
+
+    # Test with array larger than 1024 to trigger multiple groups
+    large_size = 2048
+    large_mask = oneArray(rand(Bool, large_size))
+    large_result_gpu = Array(findall(large_mask))
+    large_result_cpu = findall(Array(large_mask))
+    @test large_result_gpu == large_result_cpu
+
+    # Test with even larger array to ensure robustness
+    very_large_size = 5000
+    very_large_mask = oneArray(fill(true, very_large_size))  # all true for predictable result
+    very_large_result_gpu = Array(findall(very_large_mask))
+    very_large_result_cpu = findall(fill(true, very_large_size))
+    @test very_large_result_gpu == very_large_result_cpu
 end
 
 @testset "CartesianIndices with mapreduce" begin

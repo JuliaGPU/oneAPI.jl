@@ -20,17 +20,17 @@ function Base.findall(bools::oneArray{Bool})
     I = keytype(bools)
 
     indices = cumsum(reshape(bools, prod(size(bools))))
-    oneL0.synchronize()
 
     n = isempty(indices) ? 0 : @allowscalar indices[end]
 
     ys = oneArray{I}(undef, n)
 
     if n > 0
-        @oneapi items = length(bools) _ker!(ys, bools, indices)
+        kernel = @oneapi launch=false _ker!(ys, bools, indices)
+        group_size = launch_configuration(kernel)
+        kernel(ys, bools, indices; items=group_size, groups=cld(length(bools), group_size))
     end
-    oneL0.synchronize()
-    unsafe_free!(indices)
+    # unsafe_free!(indices)
 
     return ys
 end
