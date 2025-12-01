@@ -505,8 +505,17 @@ fill(v, dims...) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 fill(v, dims::Dims) = fill!(oneArray{typeof(v)}(undef, dims...), v)
 
 function Base.fill!(A::oneDenseArray{T}, val) where T
-  B = [convert(T, val)]
-  unsafe_fill!(context(A), device(), pointer(A), pointer(B), length(A))
+  length(A) == 0 && return A
+  val = convert(T, val)
+  sizeof(T) == 0 && return A
+
+  # execute! is async, so we need to allocate the pattern in USM memory
+  # and keep it alive until the operation completes.
+  buf = oneL0.host_alloc(context(A), sizeof(T), Base.datatype_alignment(T))
+  unsafe_store!(convert(Ptr{T}, buf), val)
+  unsafe_fill!(context(A), device(), pointer(A), convert(ZePtr{T}, buf), length(A))
+  synchronize(global_queue(context(A), device()))
+  oneL0.free(buf)
   A
 end
 
