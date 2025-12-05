@@ -271,13 +271,23 @@ let src = rand(Int, 1024)
     synchronize(queue)
     @test chk == src
 
+    # FIX: Allocate pattern in USM Host Memory
+    # Standard Host memory (stack/heap) is not accessible by discrete GPUs for fill patterns.
+    # We must use USM Host Memory.
+    pattern_val = 42
+    pattern_buf = oneL0.host_alloc(ctx, sizeof(Int), Base.datatype_alignment(Int))
+    unsafe_store!(convert(Ptr{Int}, pattern_buf), pattern_val)
+
     execute!(queue) do list
-        pattern = [42]
-        append_fill!(list, pointer(dst), pointer(pattern), sizeof(pattern), sizeof(src))
+        # Use the USM pointer (converted to ZePtr)
+        append_fill!(list, pointer(dst), convert(ZePtr{Int}, pattern_buf), sizeof(Int), sizeof(src))
         append_barrier!(list)
         append_copy!(list, pointer(chk), pointer(dst), sizeof(src))
     end
     synchronize(queue)
+
+    oneL0.free(pattern_buf)
+
     @test all(isequal(42), chk)
 
     free(dst)
