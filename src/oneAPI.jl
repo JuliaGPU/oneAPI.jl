@@ -69,6 +69,7 @@ include("utils.jl")
 
 include("oneAPIKernels.jl")
 import .oneAPIKernels: oneAPIBackend
+include("accumulate.jl")
 include("indexing.jl")
 export oneAPIBackend
 
