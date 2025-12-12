@@ -1,7 +1,7 @@
 name = "oneAPI"
 uuid = "8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"
-version = "2.6.0"
 authors = ["Tim Besard <tim.besard@gmail.com>", "Alexis Montoison", "Michel Schanen <michel.schanen@gmail.com>"]
+version = "2.6.0"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -29,12 +29,6 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 oneAPI_Level_Zero_Headers_jll = "f4bc562b-d309-54f8-9efb-476e56f0410d"
 oneAPI_Level_Zero_Loader_jll = "13eca655-d68d-5b81-8367-6d99d727ab01"
 oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
-
-[weakdeps]
-AcceleratedKernels = "6a4ca0a5-0e36-4168-a932-d9be78d558f1"
-
-[extensions]
-oneAPIAcceleratedKernelsExt = "AcceleratedKernels"
 
 [compat]
 AbstractFFTs = "1.5.0"
