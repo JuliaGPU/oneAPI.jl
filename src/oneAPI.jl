@@ -34,6 +34,7 @@ Base.Experimental.@MethodTable(method_table)
 include("device/runtime.jl")
 include("device/array.jl")
 include("device/quirks.jl")
+include("device/atomics.jl")
 
 # essential stuff
 include("context.jl")
