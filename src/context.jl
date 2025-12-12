@@ -108,7 +108,7 @@ function device!(i::Int)
     if i < 1 || i > length(devs)
         throw(ArgumentError("Invalid device index $i (must be between 1 and $(length(devs)))"))
     end
-    device!(devs[i])
+    return device!(devs[i])
 end
 
 const global_contexts = Dict{ZeDriver,ZeContext}()

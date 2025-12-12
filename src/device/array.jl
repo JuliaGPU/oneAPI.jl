@@ -195,7 +195,7 @@ end
     end
 end
 
-@device_function @inline function unsafe_cached_load(ptr::LLVMPtr{T,A}, i::Integer, align::Val) where {T,A}
+@device_function @inline function unsafe_cached_load(ptr::LLVMPtr{T, A}, i::Integer, align::Val) where {T, A}
     # For SPIR-V/Level Zero, we don't have explicit cache control intrinsics like CUDA's __ldg
     # So we fall back to a regular unsafe_load. The SPIR-V compiler may still apply
     # appropriate optimizations based on context.

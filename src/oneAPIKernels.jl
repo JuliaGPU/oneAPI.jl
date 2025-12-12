@@ -19,16 +19,17 @@ struct oneAPIBackend <: KA.GPU
     always_inline::Bool
 end
 
-oneAPIBackend(; prefer_blocks=false, always_inline=false) = oneAPIBackend(prefer_blocks, always_inline)
+oneAPIBackend(; prefer_blocks = false, always_inline = false) = oneAPIBackend(prefer_blocks, always_inline)
 
-@inline KA.allocate(::oneAPIBackend, ::Type{T}, dims::Tuple; unified::Bool = false) where T = oneArray{T, length(dims), unified ? oneAPI.oneL0.SharedBuffer : oneAPI.oneL0.DeviceBuffer}(undef, dims)
-@inline KA.zeros(::oneAPIBackend, ::Type{T}, dims::Tuple; unified::Bool = false) where T = fill!(oneArray{T, length(dims), unified ? oneAPI.oneL0.SharedBuffer : oneAPI.oneL0.DeviceBuffer}(undef, dims), zero(T))
-@inline KA.ones(::oneAPIBackend, ::Type{T}, dims::Tuple; unified::Bool = false) where T = fill!(oneArray{T, length(dims), unified ? oneAPI.oneL0.SharedBuffer : oneAPI.oneL0.DeviceBuffer}(undef, dims), one(T))
+@inline KA.allocate(::oneAPIBackend, ::Type{T}, dims::Tuple; unified::Bool = false) where {T} = oneArray{T, length(dims), unified ? oneAPI.oneL0.SharedBuffer : oneAPI.oneL0.DeviceBuffer}(undef, dims)
+@inline KA.zeros(::oneAPIBackend, ::Type{T}, dims::Tuple; unified::Bool = false) where {T} = fill!(oneArray{T, length(dims), unified ? oneAPI.oneL0.SharedBuffer : oneAPI.oneL0.DeviceBuffer}(undef, dims), zero(T))
+@inline KA.ones(::oneAPIBackend, ::Type{T}, dims::Tuple; unified::Bool = false) where {T} = fill!(oneArray{T, length(dims), unified ? oneAPI.oneL0.SharedBuffer : oneAPI.oneL0.DeviceBuffer}(undef, dims), one(T))
 
 KA.get_backend(::oneArray) = oneAPIBackend()
 # TODO should be non-blocking
 KA.synchronize(::oneAPIBackend) = oneAPI.oneL0.synchronize()
 KA.supports_float64(::oneAPIBackend) = false  # TODO: Check if this is device dependent
+KA.supports_unified(::oneAPIBackend) = true
 
 KA.functional(::oneAPIBackend) = oneAPI.functional()
 
@@ -59,7 +60,7 @@ function KA.device(::oneAPIBackend)::Int
 end
 
 function KA.device!(backend::oneAPIBackend, id::Int)
-    oneAPI.device!(id)
+    return oneAPI.device!(id)
 end
 
 
@@ -121,7 +122,7 @@ function (obj::KA.Kernel{oneAPIBackend})(args...; ndrange=nothing, workgroupsize
         # maxthreads = nothing
     end
 
-    kernel = @oneapi launch=false always_inline=backend.always_inline obj.f(ctx, args...)
+    kernel = @oneapi launch = false always_inline = backend.always_inline obj.f(ctx, args...)
 
     # figure out the optimal workgroupsize automatically
     if KA.workgroupsize(obj) <: KA.DynamicSize && workgroupsize === nothing
@@ -137,9 +138,9 @@ function (obj::KA.Kernel{oneAPIBackend})(args...; ndrange=nothing, workgroupsize
             # (Simplified logic compared to CUDA.jl which uses explicit occupancy calculators)
             total_items = prod(ndrange)
             if total_items < items * 16 # Heuristic factor
-                 # Force at least a few blocks if possible by reducing items per block
-                 target_blocks = 16 # Target at least 16 blocks
-                 items = max(1, min(items, cld(total_items, target_blocks)))
+                # Force at least a few blocks if possible by reducing items per block
+                target_blocks = 16 # Target at least 16 blocks
+                items = max(1, min(items, cld(total_items, target_blocks)))
             end
         end
 
@@ -251,7 +252,8 @@ function KA.priority!(::oneAPIBackend, prio::Symbol)
     # Replace the queue in task_local_storage
     # The key used by global_queue is (:ZeCommandQueue, ctx, dev)
 
-    new_queue = oneAPI.oneL0.ZeCommandQueue(ctx, dev;
+    new_queue = oneAPI.oneL0.ZeCommandQueue(
+        ctx, dev;
         flags = oneAPI.oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
         priority = priority_enum
     )
