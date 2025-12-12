@@ -204,6 +204,8 @@ Base.length(iter::ZeDevices) = length(iter.handles)
 
 Base.IteratorSize(::ZeDevices) = Base.HasLength()
 
+Base.keys(iter::ZeDevices) = 1:length(iter)
+
 function Base.show(io::IO, ::MIME"text/plain", iter::ZeDevices)
     print(io, "ZeDevice iterator for $(length(iter)) devices")
     if !isempty(iter)
