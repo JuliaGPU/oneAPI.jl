@@ -26,9 +26,9 @@ function Base.findall(bools::oneArray{Bool})
     ys = oneArray{I}(undef, n)
 
     if n > 0
-        kernel = @oneapi launch=false _ker!(ys, bools, indices)
+        kernel = @oneapi launch = false _ker!(ys, bools, indices)
         group_size = launch_configuration(kernel)
-        kernel(ys, bools, indices; items=group_size, groups=cld(length(bools), group_size))
+        kernel(ys, bools, indices; items = group_size, groups = cld(length(bools), group_size))
     end
     # unsafe_free!(indices)
 

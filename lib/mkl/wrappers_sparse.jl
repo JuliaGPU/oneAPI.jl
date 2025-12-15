@@ -1,5 +1,5 @@
 function sparse_release_matrix_handle(A::oneAbstractSparseMatrix)
-    if A.handle !== nothing
+    return if A.handle !== nothing
         try
             queue = global_queue(context(A.nzVal), device(A.nzVal))
             handle_ptr = Ref{matrix_handle_t}(A.handle)
@@ -8,7 +8,7 @@ function sparse_release_matrix_handle(A::oneAbstractSparseMatrix)
             synchronize(queue)
         catch err
             # Don't let finalizer errors crash the program
-            @warn "Error releasing sparse matrix handle" exception=err
+            @warn "Error releasing sparse matrix handle" exception = err
         end
     end
 end
@@ -117,10 +117,10 @@ for (fname, elty, intty) in ((:onemklSsparse_set_coo_data   , :Float32   , :Int3
             queue = global_queue(context(nzVal), device(nzVal))
             if m != 0 && n != 0
                 $fname(sycl_queue(queue), handle_ptr[], m, n, nnzA, 'O', rowInd, colInd, nzVal)
-                dA = oneSparseMatrixCOO{$elty, $intty}(handle_ptr[], rowInd, colInd, nzVal, (m,n), nnzA)
+                dA = oneSparseMatrixCOO{$elty, $intty}(handle_ptr[], rowInd, colInd, nzVal, (m, n), nnzA)
                 finalizer(sparse_release_matrix_handle, dA)
             else
-                dA = oneSparseMatrixCOO{$elty, $intty}(nothing, rowInd, colInd, nzVal, (m,n), nnzA)
+                dA = oneSparseMatrixCOO{$elty, $intty}(nothing, rowInd, colInd, nzVal, (m, n), nnzA)
             end
             return dA
         end
