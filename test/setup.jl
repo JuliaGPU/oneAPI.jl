@@ -1,4 +1,4 @@
-using Distributed, Test, oneAPI, AcceleratedKernels
+using Distributed, Test, oneAPI
 
 oneAPI.functional() || error("oneAPI.jl is not functional on this system")
 

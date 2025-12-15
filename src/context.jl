@@ -103,7 +103,13 @@ See also: [`device`](@ref), [`devices`](@ref)
 function device!(drv::ZeDevice)
     task_local_storage(:ZeDevice, drv)
 end
-device!(i::Int) = device!(devices(driver())[i])
+function device!(i::Int)
+    devs = devices(driver())
+    if i < 1 || i > length(devs)
+        throw(ArgumentError("Invalid device index $i (must be between 1 and $(length(devs)))"))
+    end
+    return device!(devs[i])
+end
 
 const global_contexts = Dict{ZeDriver,ZeContext}()
 

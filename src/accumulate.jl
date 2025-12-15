@@ -1,5 +1,3 @@
-module oneAPIAcceleratedKernelsExt
-
 import oneAPI
 import oneAPI: oneArray, oneAPIBackend
 import AcceleratedKernels as AK
@@ -13,5 +11,3 @@ Base.accumulate(op, A::oneArray; init = zero(eltype(A)), kwargs...) =
 
 Base.cumsum(src::oneArray; kwargs...) = AK.cumsum(src, oneAPIBackend(); kwargs...)
 Base.cumprod(src::oneArray; kwargs...) = AK.cumprod(src, oneAPIBackend(); kwargs...)
-
-end # module
