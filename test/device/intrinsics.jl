@@ -276,7 +276,7 @@ end
 
 @testset "atomics (low level)" begin
 
-@testset "atomic_add($T)" for T in [Int32, UInt32, Float32]
+    @testset "atomic_add($T)" for T in [Int32, UInt32, Float32]
     a = oneArray([zero(T)])
 
     function kernel(a, b)
@@ -288,7 +288,7 @@ end
     @test Array(a)[1] == T(256)
 end
 
-@testset "atomic_sub($T)" for T in [Int32, UInt32, Float32]
+    @testset "atomic_sub($T)" for T in [Int32, UInt32, Float32]
     a = oneArray([T(256)])
 
     function kernel(a, b)
@@ -300,7 +300,7 @@ end
     @test Array(a)[1] == T(0)
 end
 
-@testset "atomic_inc($T)" for T in [Int32, UInt32, Float32]
+    @testset "atomic_inc($T)" for T in [Int32, UInt32, Float32]
     a = oneArray([zero(T)])
 
     function kernel(a)
@@ -312,7 +312,7 @@ end
     @test Array(a)[1] == T(256)
 end
 
-@testset "atomic_dec($T)" for T in [Int32, UInt32, Float32]
+    @testset "atomic_dec($T)" for T in [Int32, UInt32, Float32]
     a = oneArray([T(256)])
 
     function kernel(a)
@@ -324,12 +324,12 @@ end
     @test Array(a)[1] == T(0)
 end
 
-@testset "atomic_min($T)" for T in [Int32, UInt32, Float32]
+    @testset "atomic_min($T)" for T in [Int32, UInt32, Float32]
     a = oneArray([T(256)])
 
     function kernel(a, T)
         i = get_global_id()
-        oneAPI.atomic_min!(pointer(a), T(i))
+            oneAPI.atomic_min!(pointer(a), T(i))
         return
     end
 
@@ -337,12 +337,12 @@ end
     @test Array(a)[1] == one(T)
 end
 
-@testset "atomic_max($T)" for T in [Int32, UInt32, Float32]
+    @testset "atomic_max($T)" for T in [Int32, UInt32, Float32]
     a = oneArray([zero(T)])
 
     function kernel(a, T)
         i = get_global_id()
-        oneAPI.atomic_max!(pointer(a), T(i))
+            oneAPI.atomic_max!(pointer(a), T(i))
         return
     end
 
