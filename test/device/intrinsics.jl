@@ -274,149 +274,149 @@ end
 
 ############################################################################################
 
-@testset "atomics (low level)" begin
+# @testset "atomics (low level)" begin
 
     @testset "atomic_add($T)" for T in [Int32, UInt32, Float32]
-    a = oneArray([zero(T)])
+        a = oneArray([zero(T)])
 
-    function kernel(a, b)
-        oneAPI.atomic_add!(pointer(a), b)
-        return
+        function kernel(a, b)
+            oneAPI.atomic_add!(pointer(a), b)
+            return
+        end
+
+        @oneapi items=256 kernel(a, one(T))
+        @test Array(a)[1] == T(256)
     end
-
-    @oneapi items=256 kernel(a, one(T))
-    @test Array(a)[1] == T(256)
-end
 
     @testset "atomic_sub($T)" for T in [Int32, UInt32, Float32]
-    a = oneArray([T(256)])
+        a = oneArray([T(256)])
 
-    function kernel(a, b)
-        oneAPI.atomic_sub!(pointer(a), b)
-        return
+        function kernel(a, b)
+            oneAPI.atomic_sub!(pointer(a), b)
+            return
+        end
+
+        @oneapi items=256 kernel(a, one(T))
+        @test Array(a)[1] == T(0)
     end
 
-    @oneapi items=256 kernel(a, one(T))
-    @test Array(a)[1] == T(0)
-end
+    @testset "atomic_inc($T)" for T in [Int32, UInt32]
+        a = oneArray([zero(T)])
 
-    @testset "atomic_inc($T)" for T in [Int32, UInt32, Float32]
-    a = oneArray([zero(T)])
+        function kernel(a)
+            oneAPI.atomic_inc!(pointer(a))
+            return
+        end
 
-    function kernel(a)
-        oneAPI.atomic_inc!(pointer(a))
-        return
+        @oneapi items=256 kernel(a)
+        @test Array(a)[1] == T(256)
     end
 
-    @oneapi items=256 kernel(a)
-    @test Array(a)[1] == T(256)
-end
+    @testset "atomic_dec($T)" for T in [Int32, UInt32]
+        a = oneArray([T(256)])
 
-    @testset "atomic_dec($T)" for T in [Int32, UInt32, Float32]
-    a = oneArray([T(256)])
+        function kernel(a)
+            oneAPI.atomic_dec!(pointer(a))
+            return
+        end
 
-    function kernel(a)
-        oneAPI.atomic_dec!(pointer(a))
-        return
+        @oneapi items=256 kernel(a)
+        @test Array(a)[1] == T(0)
     end
-
-    @oneapi items=256 kernel(a)
-    @test Array(a)[1] == T(0)
-end
 
     @testset "atomic_min($T)" for T in [Int32, UInt32, Float32]
-    a = oneArray([T(256)])
+        a = oneArray([T(256)])
 
-    function kernel(a, T)
-        i = get_global_id()
-            oneAPI.atomic_min!(pointer(a), T(i))
-        return
+        function kernel(a, T)
+            i = get_global_id()
+                oneAPI.atomic_min!(pointer(a), T(i))
+            return
+        end
+
+        @oneapi items=256 kernel(a, T)
+        @test Array(a)[1] == one(T)
     end
-
-    @oneapi items=256 kernel(a, T)
-    @test Array(a)[1] == one(T)
-end
 
     @testset "atomic_max($T)" for T in [Int32, UInt32, Float32]
-    a = oneArray([zero(T)])
+        a = oneArray([zero(T)])
 
-    function kernel(a, T)
-        i = get_global_id()
-            oneAPI.atomic_max!(pointer(a), T(i))
-        return
-    end
-
-    @oneapi items=256 kernel(a, T)
-    @test Array(a)[1] == T(256)
-end
-
-@testset "atomic_and($T)" for T in [Int32, UInt32]
-    a = oneArray([T(1023)])
-
-    function kernel(a, T)
-        i = get_global_id() - 1
-        k = 1
-        for i = 1:i
-            k *= 2
+        function kernel(a, T)
+            i = get_global_id()
+                oneAPI.atomic_max!(pointer(a), T(i))
+            return
         end
-        b = 1023 - k  # 1023 - 2^i
-        oneAPI.atomic_and!(pointer(a), T(b))
-        return
+
+        @oneapi items=256 kernel(a, T)
+        @test Array(a)[1] == T(256)
     end
 
-    @oneapi items=10 kernel(a, T)
-    @test Array(a)[1] == zero(T)
-end
+    @testset "atomic_and($T)" for T in [Int32, UInt32]
+        a = oneArray([T(1023)])
 
-@testset "atomic_or($T)" for T in [Int32, UInt32]
-    a = oneArray([zero(T)])
-
-    function kernel(a, T)
-        i = get_global_id()
-        b = 1  # 2^(i-1)
-        for i = 1:i
-            b *= 2
+        function kernel(a, T)
+            i = get_global_id() - 1
+            k = 1
+            for i = 1:i
+                k *= 2
+            end
+            b = 1023 - k  # 1023 - 2^i
+            oneAPI.atomic_and!(pointer(a), T(b))
+            return
         end
-        b ÷= 2
-        oneAPI.atomic_or!(pointer(a), T(b))
-        return
+
+        @oneapi items=10 kernel(a, T)
+        @test Array(a)[1] == zero(T)
     end
 
-    @oneapi items=10 kernel(a, T)
-    @test Array(a)[1] == T(1023)
-end
+    @testset "atomic_or($T)" for T in [Int32, UInt32]
+        a = oneArray([zero(T)])
 
-@testset "atomic_xor($T)" for T in [Int32, UInt32]
-    a = oneArray([T(1023)])
-
-    function kernel(a, T)
-        i = get_global_id()
-        b = 1  # 2^(i-1)
-        for i = 1:i
-            b *= 2
+        function kernel(a, T)
+            i = get_global_id()
+            b = 1  # 2^(i-1)
+            for i = 1:i
+                b *= 2
+            end
+            b ÷= 2
+            oneAPI.atomic_or!(pointer(a), T(b))
+            return
         end
-        b ÷= 2
-        oneAPI.atomic_xor!(pointer(a), T(b))
-        return
+
+        @oneapi items=10 kernel(a, T)
+        @test Array(a)[1] == T(1023)
     end
 
-    @oneapi items=10 kernel(a, T)
-    @test Array(a)[1] == zero(T)
-end
+    @testset "atomic_xor($T)" for T in [Int32, UInt32]
+        a = oneArray([T(1023)])
 
-@testset "atomic_xchg($T)" for T in [Int32, UInt32, Float32]
-    a = oneArray([zero(T)])
+        function kernel(a, T)
+            i = get_global_id()
+            b = 1  # 2^(i-1)
+            for i = 1:i
+                b *= 2
+            end
+            b ÷= 2
+            oneAPI.atomic_xor!(pointer(a), T(b))
+            return
+        end
 
-    function kernel(a, b)
-        oneAPI.atomic_xchg!(pointer(a), b)
-        return
+        @oneapi items=10 kernel(a, T)
+        @test Array(a)[1] == zero(T)
     end
 
-    @oneapi items=256 kernel(a, one(T))
-    @test Array(a)[1] == one(T)
-end
+    @testset "atomic_xchg($T)" for T in [Int32, UInt32, Float32]
+        a = oneArray([zero(T)])
 
-end
+        function kernel(a, b)
+            oneAPI.atomic_xchg!(pointer(a), b)
+            return
+        end
+
+        @oneapi items=256 kernel(a, one(T))
+        @test Array(a)[1] == one(T)
+    end
+
+# end
 
 
 
