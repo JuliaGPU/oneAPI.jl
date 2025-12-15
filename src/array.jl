@@ -348,14 +348,14 @@ end
 ## indexing
 
 # Host-accessible arrays can be indexed from CPU, bypassing GPUArrays restrictions
-function Base.getindex(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer,oneL0.SharedBuffer}}, I::Int)
-  @boundscheck checkbounds(x, I)
-  unsafe_load(pointer(x, I; type=oneL0.HostBuffer))
+function Base.getindex(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, I::Int)
+    @boundscheck checkbounds(x, I)
+    return unsafe_load(pointer(x, I; type = oneL0.HostBuffer))
 end
 
-function Base.setindex!(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer,oneL0.SharedBuffer}}, v, I::Int)
-  @boundscheck checkbounds(x, I)
-  unsafe_store!(pointer(x, I; type=oneL0.HostBuffer), v)
+function Base.setindex!(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, v, I::Int)
+    @boundscheck checkbounds(x, I)
+    return unsafe_store!(pointer(x, I; type = oneL0.HostBuffer), v)
 end
 
 
