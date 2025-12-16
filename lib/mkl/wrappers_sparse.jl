@@ -1,7 +1,16 @@
 function sparse_release_matrix_handle(A::oneAbstractSparseMatrix)
-    queue = global_queue(context(A.nzVal), device(A.nzVal))
-    handle_ptr = Ref{matrix_handle_t}(A.handle)
-    onemklXsparse_release_matrix_handle(sycl_queue(queue), handle_ptr)
+    return if A.handle !== nothing
+        try
+            queue = global_queue(context(A.nzVal), device(A.nzVal))
+            handle_ptr = Ref{matrix_handle_t}(A.handle)
+            onemklXsparse_release_matrix_handle(sycl_queue(queue), handle_ptr)
+            # Only synchronize after successful release to ensure completion
+            synchronize(queue)
+        catch err
+            # Don't let finalizer errors crash the program
+            @warn "Error releasing sparse matrix handle" exception = err
+        end
+    end
 end
 
 for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int32),
@@ -13,20 +22,55 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
                              (:onemklZsparse_set_csr_data   , :ComplexF64, :Int32),
                              (:onemklZsparse_set_csr_data_64, :ComplexF64, :Int64))
     @eval begin
-        function oneSparseMatrixCSR(A::SparseMatrixCSC{$elty, $intty})
+
+        function oneSparseMatrixCSR(
+                rowPtr::oneVector{$intty}, colVal::oneVector{$intty},
+                nzVal::oneVector{$elty}, dims::NTuple{2, Int}
+            )
             handle_ptr = Ref{matrix_handle_t}()
             onemklXsparse_init_matrix_handle(handle_ptr)
+            m, n = dims
+            nnzA = length(nzVal)
+            queue = global_queue(context(nzVal), device(nzVal))
+            # Don't update handle if matrix is empty
+            if m != 0 && n != 0
+                $fname(sycl_queue(queue), handle_ptr[], m, n, 'O', rowPtr, colVal, nzVal)
+                dA = oneSparseMatrixCSR{$elty, $intty}(handle_ptr[], rowPtr, colVal, nzVal, (m, n), nnzA)
+                finalizer(sparse_release_matrix_handle, dA)
+            else
+                dA = oneSparseMatrixCSR{$elty, $intty}(nothing, rowPtr, colVal, nzVal, (m, n), nnzA)
+            end
+            return dA
+        end
+
+        function oneSparseMatrixCSC(
+                colPtr::oneVector{$intty}, rowVal::oneVector{$intty},
+                nzVal::oneVector{$elty}, dims::NTuple{2, Int}
+            )
+            queue = global_queue(context(nzVal), device(nzVal))
+            handle_ptr = Ref{matrix_handle_t}()
+            onemklXsparse_init_matrix_handle(handle_ptr)
+            m, n = dims
+            nnzA = length(nzVal)
+            # Don't update handle if matrix is empty
+            if m != 0 && n != 0
+                $fname(sycl_queue(queue), handle_ptr[], n, m, 'O', colPtr, rowVal, nzVal)  # CSC of A is CSR of Aᵀ
+                dA = oneSparseMatrixCSC{$elty, $intty}(handle_ptr[], colPtr, rowVal, nzVal, (m, n), nnzA)
+                finalizer(sparse_release_matrix_handle, dA)
+            else
+                dA = oneSparseMatrixCSC{$elty, $intty}(nothing, colPtr, rowVal, nzVal, (m, n), nnzA)
+            end
+            return dA
+        end
+
+
+        function oneSparseMatrixCSR(A::SparseMatrixCSC{$elty, $intty})
             m, n = size(A)
             At = SparseMatrixCSC(A |> transpose)
             rowPtr = oneVector{$intty}(At.colptr)
             colVal = oneVector{$intty}(At.rowval)
             nzVal = oneVector{$elty}(At.nzval)
-            nnzA = length(At.nzval)
-            queue = global_queue(context(nzVal), device())
-            $fname(sycl_queue(queue), handle_ptr[], m, n, 'O', rowPtr, colVal, nzVal)
-            dA = oneSparseMatrixCSR{$elty, $intty}(handle_ptr[], rowPtr, colVal, nzVal, (m,n), nnzA)
-            finalizer(sparse_release_matrix_handle, dA)
-            return dA
+            return oneSparseMatrixCSR(rowPtr, colVal, nzVal, (m, n))
         end
 
         function SparseArrays.SparseMatrixCSC(A::oneSparseMatrixCSR{$elty, $intty})
@@ -37,18 +81,11 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
         end
 
         function oneSparseMatrixCSC(A::SparseMatrixCSC{$elty, $intty})
-            handle_ptr = Ref{matrix_handle_t}()
-            onemklXsparse_init_matrix_handle(handle_ptr)
             m, n = size(A)
             colPtr = oneVector{$intty}(A.colptr)
             rowVal = oneVector{$intty}(A.rowval)
             nzVal = oneVector{$elty}(A.nzval)
-            nnzA = length(A.nzval)
-            queue = global_queue(context(nzVal), device())
-            $fname(sycl_queue(queue), handle_ptr[], n, m, 'O', colPtr, rowVal, nzVal)  # CSC of A is CSR of Aᵀ
-            dA = oneSparseMatrixCSC{$elty, $intty}(handle_ptr[], colPtr, rowVal, nzVal, (m,n), nnzA)
-            finalizer(sparse_release_matrix_handle, dA)
-            return dA
+            return oneSparseMatrixCSC(colPtr, rowVal, nzVal, (m, n))
         end
 
         function SparseArrays.SparseMatrixCSC(A::oneSparseMatrixCSC{$elty, $intty})
@@ -77,10 +114,14 @@ for (fname, elty, intty) in ((:onemklSsparse_set_coo_data   , :Float32   , :Int3
             colInd = oneVector{$intty}(col)
             nzVal = oneVector{$elty}(val)
             nnzA = length(val)
-            queue = global_queue(context(nzVal), device())
-            $fname(sycl_queue(queue), handle_ptr[], m, n, nnzA, 'O', rowInd, colInd, nzVal)
-            dA = oneSparseMatrixCOO{$elty, $intty}(handle_ptr[], rowInd, colInd, nzVal, (m,n), nnzA)
-            finalizer(sparse_release_matrix_handle, dA)
+            queue = global_queue(context(nzVal), device(nzVal))
+            if m != 0 && n != 0
+                $fname(sycl_queue(queue), handle_ptr[], m, n, nnzA, 'O', rowInd, colInd, nzVal)
+                dA = oneSparseMatrixCOO{$elty, $intty}(handle_ptr[], rowInd, colInd, nzVal, (m, n), nnzA)
+                finalizer(sparse_release_matrix_handle, dA)
+            else
+                dA = oneSparseMatrixCOO{$elty, $intty}(nothing, rowInd, colInd, nzVal, (m, n), nnzA)
+            end
             return dA
         end
 
@@ -105,7 +146,7 @@ for SparseMatrix in (:oneSparseMatrixCSR, :oneSparseMatrixCOO)
                                   beta::Number,
                                   y::oneStridedVector{$elty})
 
-                queue = global_queue(context(x), device())
+                queue = global_queue(context(x), device(x))
                 $fname(sycl_queue(queue), trans, alpha, A.handle, x, beta, y)
                 y
             end
@@ -140,8 +181,11 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                                   beta::Number,
                                   y::oneStridedVector{$elty})
 
-                queue = global_queue(context(x), device())
-                $fname(sycl_queue(queue), flip_trans(trans), alpha, A.handle, x, beta, y)
+                queue = global_queue(context(x), device(x))
+                m, n = size(A)
+                if m != 0 && n != 0
+                    $fname(sycl_queue(queue), flip_trans(trans), alpha, A.handle, x, beta, y)
+                end
                 y
             end
         end
@@ -173,7 +217,7 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                     beta = conj(beta)
                 end
 
-                queue = global_queue(context(x), device())
+                queue = global_queue(context(x), device(x))
                 $fname(sycl_queue(queue), flip_trans(trans), alpha, A.handle, x, beta, y)
 
                 if trans == 'C'
@@ -217,7 +261,7 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
             nrhs = size(B, 2)
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(C), device())
+            queue = global_queue(context(C), device(C))
             $fname(sycl_queue(queue), 'C', transa, transb, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
             C
         end
@@ -254,7 +298,7 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
             nrhs = size(B, 2)
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(C), device())
+            queue = global_queue(context(C), device(C))
             $fname(sycl_queue(queue), 'C', flip_trans(transa), transb, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
             C
         end
@@ -289,7 +333,7 @@ for (fname, elty) in (
             nrhs = size(B, 2)
             ldb = max(1, stride(B, 2))
             ldc = max(1, stride(C, 2))
-            queue = global_queue(context(C), device())
+            queue = global_queue(context(C), device(C))
 
             # Use identity: conj(C_new) = conj(alpha) * S * conj(opB(B)) + conj(beta) * conj(C)
             # Prepare conj(C) in-place and conj(B) into a temporary if needed
@@ -359,7 +403,7 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
-            queue = global_queue(context(y), device())
+            queue = global_queue(context(y), device(y))
             $fname(sycl_queue(queue), uplo, alpha, A.handle, x, beta, y)
             y
         end
@@ -379,7 +423,7 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
-            queue = global_queue(context(y), device())
+            queue = global_queue(context(y), device(y))
             $fname(sycl_queue(queue), flip_uplo(uplo), alpha, A.handle, x, beta, y)
             y
         end
@@ -400,7 +444,7 @@ for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
-            queue = global_queue(context(y), device())
+            queue = global_queue(context(y), device(y))
             $fname(sycl_queue(queue), uplo, trans, diag, alpha, A.handle, x, beta, y)
             y
         end
@@ -442,7 +486,7 @@ for (fname, elty) in (
                         "Convert to oneSparseMatrixCSR format instead."
                 )
             )
-            queue = global_queue(context(y), device())
+            queue = global_queue(context(y), device(y))
             $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, A.handle, x, beta, y)
             return y
         end
@@ -475,7 +519,7 @@ for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
                               x::oneStridedVector{$elty},
                               y::oneStridedVector{$elty})
 
-            queue = global_queue(context(y), device())
+            queue = global_queue(context(y), device(y))
             $fname(sycl_queue(queue), uplo, trans, diag, alpha, A.handle, x, y)
             y
         end
@@ -512,7 +556,7 @@ for (fname, elty) in (
                         "Convert to oneSparseMatrixCSR format instead."
                 )
             )
-            queue = global_queue(context(y), device())
+            queue = global_queue(context(y), device(y))
             onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
             return A
         end
@@ -555,7 +599,7 @@ for (fname, elty) in ((:onemklSsparse_trsm, :Float32),
             nrhs = size(X, 2)
             ldx = max(1,stride(X,2))
             ldy = max(1,stride(Y,2))
-            queue = global_queue(context(Y), device())
+            queue = global_queue(context(Y), device(Y))
             $fname(sycl_queue(queue), 'C', transA, transX, uplo, diag, alpha, A.handle, X, nrhs, ldx, Y, ldy)
             Y
         end
@@ -614,7 +658,7 @@ for (fname, elty) in (
             nrhs = size(X, 2)
             ldx = max(1, stride(X, 2))
             ldy = max(1, stride(Y, 2))
-            queue = global_queue(context(Y), device())
+            queue = global_queue(context(Y), device(Y))
             $fname(sycl_queue(queue), 'C', flip_trans(transA), transX, uplo, diag, alpha, A.handle, X, nrhs, ldx, Y, ldy)
             return Y
         end
