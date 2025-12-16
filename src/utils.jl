@@ -26,6 +26,14 @@ function versioninfo(io::IO=stdout)
     println(io, "- LLVM: $(LLVM.version())")
     println(io)
 
+    println(io, "Julia packages:")
+    println(io, "- oneAPI.jl: $(Base.pkgversion(oneAPI))")
+    for name in [:GPUArrays, :GPUCompiler, :KernelAbstractions, :LLVM]
+        mod = getfield(oneAPI, name)
+        println(io, "- $(name): $(Base.pkgversion(mod))")
+    end
+    println(io)
+
     env = filter(var->startswith(var, "JULIA_ONEAPI"), keys(ENV))
     if !isempty(env)
         println(io, "Environment:")
