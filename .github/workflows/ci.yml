@@ -14,17 +14,15 @@ jobs:
   self-runner:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ZE_ENABLE_VALIDATION_LAYER: '1'
+      ZE_ENABLE_PARAMETER_VALIDATION: '1'
+      EnableDebugBreak: '0'
     runs-on: [self-hosted, linux, X64]
     strategy:
       matrix:
         os: [ubuntu-latest]
         julia-version: ['1']
         julia-arch: [x64]
-    env:
-      ZE_ENABLE_VALIDATION_LAYER: '1'
-      ZE_ENABLE_PARAMETER_VALIDATION: '1'
-      EnableDebugBreak: '0'
-
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@latest
