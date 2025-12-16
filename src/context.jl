@@ -6,7 +6,7 @@
 
 # XXX: rework this -- it doesn't work well when altering the state
 
-export driver, driver!, device, device!, context, context!, global_queue, synchronize
+export driver, driver!, device, device!, context, context!, global_queue, synchronize, is_integrated
 
 """
     driver() -> ZeDriver
@@ -109,6 +109,40 @@ function device!(i::Int)
         throw(ArgumentError("Invalid device index $i (must be between 1 and $(length(devs)))"))
     end
     return device!(devs[i])
+end
+
+"""
+    is_integrated(dev::ZeDevice=device()) -> Bool
+
+Check if the given device is an integrated GPU (i.e., integrated with the host processor).
+
+Integrated GPUs share memory with the CPU and are typically found in laptop and desktop
+processors with integrated graphics.
+
+# Arguments
+- `dev::ZeDevice`: The device to check. Defaults to the current device.
+
+# Returns
+- `true` if the device is integrated, `false` otherwise (e.g., discrete GPU).
+
+# Examples
+```julia
+if is_integrated()
+    println("Running on integrated graphics")
+else
+    println("Running on discrete GPU")
+end
+
+# Check a specific device
+dev = devices()[1]
+is_integrated(dev)
+```
+
+See also: [`device`](@ref), [`devices`](@ref)
+"""
+function is_integrated(dev::ZeDevice=device())
+    props = oneL0.properties(dev)
+    return (props.flags & oneL0.ZE_DEVICE_PROPERTY_FLAG_INTEGRATED) != 0
 end
 
 const global_contexts = Dict{ZeDriver,ZeContext}()
