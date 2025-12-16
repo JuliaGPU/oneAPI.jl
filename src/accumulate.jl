@@ -1,7 +1,3 @@
-import oneAPI
-import oneAPI: oneArray, oneAPIBackend
-import AcceleratedKernels as AK
-
 # Accumulate operations using AcceleratedKernels
 Base.accumulate!(op, B::oneArray, A::oneArray; init = zero(eltype(A)), kwargs...) =
     AK.accumulate!(op, B, A, oneAPIBackend(); init, kwargs...)
