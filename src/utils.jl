@@ -28,7 +28,7 @@ function versioninfo(io::IO=stdout)
 
     println(io, "Julia packages:")
     println(io, "- oneAPI.jl: $(Base.pkgversion(oneAPI))")
-    for name in [:GPUArrays, :GPUCompiler, :KernelAbstractions, :LLVM]
+    for name in [:GPUArrays, :GPUCompiler, :KernelAbstractions, :LLVM, :SPIRVIntrinsics]
         mod = getfield(oneAPI, name)
         println(io, "- $(name): $(Base.pkgversion(mod))")
     end
