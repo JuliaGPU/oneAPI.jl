@@ -11,6 +11,8 @@ using SpecialFunctions
 
 import Preferences
 
+import KernelAbstractions: KernelAbstractions
+
 using LLVM
 using LLVM.Interop
 using Core: LLVMPtr
