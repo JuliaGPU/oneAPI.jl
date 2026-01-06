@@ -4,7 +4,7 @@ export @oneapi, zefunction, kernel_convert
 ## high-level @oneapi interface
 
 const MACRO_KWARGS = [:launch]
-const COMPILER_KWARGS = [:kernel, :name, :always_inline]
+const COMPILER_KWARGS = [:kernel, :name, :always_inline, :sub_group_size]
 const LAUNCH_KWARGS = [:groups, :items, :queue]
 
 """
