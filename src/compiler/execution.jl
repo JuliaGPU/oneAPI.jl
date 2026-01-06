@@ -4,7 +4,7 @@ export @oneapi, zefunction, kernel_convert
 ## high-level @oneapi interface
 
 const MACRO_KWARGS = [:launch]
-const COMPILER_KWARGS = [:kernel, :name, :always_inline]
+const COMPILER_KWARGS = [:kernel, :name, :always_inline, :sub_group_size]
 const LAUNCH_KWARGS = [:groups, :items, :queue]
 
 """
@@ -25,6 +25,9 @@ launches the kernel on the GPU.
 - `kernel::Bool=false`: Whether to compile as a kernel (true) or device function (false)
 - `name::Union{String,Nothing}=nothing`: Explicit name for the kernel
 - `always_inline::Bool=false`: Whether to always inline device functions
+- `sub_group_size::Union{Int,Nothing}=nothing`: The sub-group size the kernel has to be
+  compiled for, one of the device's `oneL0.compute_properties(dev).subGroupSizes`. By
+  default, the compiler chooses one.
 
 ## Launch Keywords (runtime)
 - `groups`: Number of workgroups (required). Can be an integer or tuple.
