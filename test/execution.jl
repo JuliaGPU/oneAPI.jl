@@ -41,6 +41,22 @@ end
 end
 
 
+function store_max_sub_group_size(a)
+    @inbounds a[1] = get_max_sub_group_size()
+    return
+end
+
+@testset "sub-group size" begin
+    a = oneArray{UInt32}(undef, 1)
+    sizes = oneL0.compute_properties(device()).subGroupSizes
+    for sub_group_size in sizes
+        @oneapi items=64 sub_group_size store_max_sub_group_size(a)
+        @test Array(a)[1] == sub_group_size
+    end
+    @test_throws ArgumentError @oneapi sub_group_size=maximum(sizes)+1 dummy()
+end
+
+
 @testset "inference" begin
     foo() = @oneapi dummy()
     @inferred foo()
