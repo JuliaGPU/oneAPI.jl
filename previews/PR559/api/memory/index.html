@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Memory Management · oneAPI.jl</title><meta name="title" content="Memory Management · oneAPI.jl"/><meta property="og:title" content="Memory Management · oneAPI.jl"/><meta property="twitter:title" content="Memory Management · oneAPI.jl"/><meta name="description" content="Documentation for oneAPI.jl."/><meta property="og:description" content="Documentation for oneAPI.jl."/><meta property="twitter:description" content="Documentation for oneAPI.jl."/><meta property="og:url" content="https://exanauts.github.io/ExaPF.jl/stable/api/memory/"/><meta property="twitter:url" content="https://exanauts.github.io/ExaPF.jl/stable/api/memory/"/><link rel="canonical" href="https://exanauts.github.io/ExaPF.jl/stable/api/memory/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">oneAPI.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><span class="tocitem">Usage</span><ul><li><a class="tocitem" href="../../arrays/">Array Programming</a></li><li><a class="tocitem" href="../../kernels/">Kernel Programming</a></li><li><a class="tocitem" href="../../memory/">Memory Management</a></li><li><a class="tocitem" href="../../device/">Device Intrinsics</a></li><li><a class="tocitem" href="../../usage/performance/">Performance Guide</a></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><a class="tocitem" href="../context/">Context &amp; Device Management</a></li><li><a class="tocitem" href="../arrays/">Array Operations</a></li><li><a class="tocitem" href="../kernels/">Kernel Programming</a></li><li class="is-active"><a class="tocitem" href>Memory Management</a><ul class="internal"><li><a class="tocitem" href="#Memory-Operations"><span>Memory Operations</span></a></li><li><a class="tocitem" href="#Memory-Types"><span>Memory Types</span></a></li><li><a class="tocitem" href="#Memory-Type-Comparison"><span>Memory Type Comparison</span></a></li><li><a class="tocitem" href="#Memory-Allocation-and-Deallocation"><span>Memory Allocation and Deallocation</span></a></li><li><a class="tocitem" href="#Memory-Pooling"><span>Memory Pooling</span></a></li><li><a class="tocitem" href="#Checking-Memory-Usage"><span>Checking Memory Usage</span></a></li><li><a class="tocitem" href="#Out-of-Memory-Errors"><span>Out of Memory Errors</span></a></li><li><a class="tocitem" href="#Low-Level-Memory-Operations"><span>Low-Level Memory Operations</span></a></li><li><a class="tocitem" href="#Memory-Advise-and-Prefetch"><span>Memory Advise and Prefetch</span></a></li><li><a class="tocitem" href="#Best-Practices"><span>Best Practices</span></a></li><li><a class="tocitem" href="#Example:-Efficient-Memory-Usage"><span>Example: Efficient Memory Usage</span></a></li></ul></li><li><a class="tocitem" href="../compiler/">Compiler &amp; Reflection</a></li><li><a class="tocitem" href="../../level_zero/">Level Zero (oneL0)</a></li><li><a class="tocitem" href="../../onemkl/">oneMKL</a></li></ul></li><li><a class="tocitem" href="../../troubleshooting/">Troubleshooting</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">API Reference</a></li><li class="is-active"><a href>Memory Management</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Memory Management</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaGPU/oneAPI.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/JuliaGPU/oneAPI.jl/blob/master/docs/src/api/memory.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Memory-Management"><a class="docs-heading-anchor" href="#Memory-Management">Memory Management</a><a id="Memory-Management-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Management" title="Permalink"></a></h1><p>This page documents memory management in oneAPI.jl.</p><h2 id="Memory-Operations"><a class="docs-heading-anchor" href="#Memory-Operations">Memory Operations</a><a id="Memory-Operations-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Operations" title="Permalink"></a></h2><h3 id="Base.unsafe_copyto!(ctx::ZeContext,-dev::ZeDevice,-dst,-src,-N)"><a class="docs-heading-anchor" href="#Base.unsafe_copyto!(ctx::ZeContext,-dev::ZeDevice,-dst,-src,-N)"><code>Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dst, src, N)</code></a><a id="Base.unsafe_copyto!(ctx::ZeContext,-dev::ZeDevice,-dst,-src,-N)-1"></a><a class="docs-heading-anchor-permalink" href="#Base.unsafe_copyto!(ctx::ZeContext,-dev::ZeDevice,-dst,-src,-N)" title="Permalink"></a></h3><p>Low-level memory copy operation on the GPU. Copies <code>N</code> elements from <code>src</code> to <code>dst</code> using the specified context and device. Both <code>src</code> and <code>dst</code> can be either host pointers (<code>Ptr</code>) or device pointers (<code>ZePtr</code>).</p><div class="admonition is-warning" id="Warning-9e1125668284fbd0"><header class="admonition-header">Warning<a class="admonition-anchor" href="#Warning-9e1125668284fbd0" title="Permalink"></a></header><div class="admonition-body"><p>This is a low-level function. No bounds checking is performed. For safe array copying, use <code>copyto!</code> on <code>oneArray</code> objects instead.</p></div></div><h3 id="unsafe_fill!(ctx::ZeContext,-dev::ZeDevice,-ptr,-pattern,-N)"><a class="docs-heading-anchor" href="#unsafe_fill!(ctx::ZeContext,-dev::ZeDevice,-ptr,-pattern,-N)"><code>unsafe_fill!(ctx::ZeContext, dev::ZeDevice, ptr, pattern, N)</code></a><a id="unsafe_fill!(ctx::ZeContext,-dev::ZeDevice,-ptr,-pattern,-N)-1"></a><a class="docs-heading-anchor-permalink" href="#unsafe_fill!(ctx::ZeContext,-dev::ZeDevice,-ptr,-pattern,-N)" title="Permalink"></a></h3><p>Low-level memory fill operation on the GPU. Fills <code>N</code> elements at <code>ptr</code> with the given pattern using the specified context and device.</p><div class="admonition is-warning" id="Warning-25bc5bff48e80d2f"><header class="admonition-header">Warning<a class="admonition-anchor" href="#Warning-25bc5bff48e80d2f" title="Permalink"></a></header><div class="admonition-body"><p>This is a low-level function. For safe array operations, use <code>fill!</code> on <code>oneArray</code> objects instead.</p></div></div><h2 id="Memory-Types"><a class="docs-heading-anchor" href="#Memory-Types">Memory Types</a><a id="Memory-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Types" title="Permalink"></a></h2><p>oneAPI supports three types of memory through Unified Shared Memory (USM):</p><h3 id="Device-Memory-(Default)"><a class="docs-heading-anchor" href="#Device-Memory-(Default)">Device Memory (Default)</a><a id="Device-Memory-(Default)-1"></a><a class="docs-heading-anchor-permalink" href="#Device-Memory-(Default)" title="Permalink"></a></h3><p>Fastest GPU access, not directly accessible from CPU.</p><pre><code class="language-julia hljs"># Create array in device memory (default)
+a = oneArray{Float32}(undef, 1000)
+@assert is_device(a)
+
+# Or explicitly specify
+b = oneArray{Float32,1,oneL0.DeviceBuffer}(undef, 1000)</code></pre><p><strong>Advantages:</strong></p><ul><li>Fastest GPU access</li><li>Best for compute-intensive operations</li></ul><p><strong>Disadvantages:</strong></p><ul><li>Cannot directly access from CPU</li><li>Requires explicit copy to/from CPU</li></ul><p><strong>Use when:</strong> Data stays on GPU for multiple operations</p><h3 id="Shared-Memory"><a class="docs-heading-anchor" href="#Shared-Memory">Shared Memory</a><a id="Shared-Memory-1"></a><a class="docs-heading-anchor-permalink" href="#Shared-Memory" title="Permalink"></a></h3><p>Accessible from both CPU and GPU with automatic migration.</p><pre><code class="language-julia hljs"># Create array in shared memory
+a = oneArray{Float32,1,oneL0.SharedBuffer}(undef, 1000)
+@assert is_shared(a)
+
+# Can access from CPU
+a[1] = 42.0f0  # Automatic migration to CPU
+println(a[1])  # Read from CPU
+
+# Can use in GPU kernels
+@oneapi groups=1 items=1000 kernel(a)  # Automatic migration to GPU</code></pre><p><strong>Advantages:</strong></p><ul><li>Accessible from both CPU and GPU</li><li>Unified virtual addressing</li><li>Automatic migration</li></ul><p><strong>Disadvantages:</strong></p><ul><li>Migration overhead</li><li>Slower than device memory for pure GPU work</li></ul><p><strong>Use when:</strong> Frequent CPU-GPU data exchange needed</p><h3 id="Host-Memory"><a class="docs-heading-anchor" href="#Host-Memory">Host Memory</a><a id="Host-Memory-1"></a><a class="docs-heading-anchor-permalink" href="#Host-Memory" title="Permalink"></a></h3><p>CPU memory that&#39;s pinned and visible to GPU.</p><pre><code class="language-julia hljs"># Create array in host memory
+a = oneArray{Float32,1,oneL0.HostBuffer}(undef, 1000)
+@assert is_host(a)
+
+# Direct CPU access
+a[1] = 42.0f0
+
+# Can be used by GPU (but slower than device memory)
+@oneapi groups=1 items=1000 kernel(a)</code></pre><p><strong>Advantages:</strong></p><ul><li>Direct CPU access</li><li>Pinned memory (faster PCIe transfers)</li><li>Good for staging</li></ul><p><strong>Disadvantages:</strong></p><ul><li>Slower GPU access than device memory</li><li>Uses pinned system memory (limited resource)</li></ul><p><strong>Use when:</strong> Staging data for transfer, or CPU needs to write while GPU reads</p><h2 id="Memory-Type-Comparison"><a class="docs-heading-anchor" href="#Memory-Type-Comparison">Memory Type Comparison</a><a id="Memory-Type-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Type-Comparison" title="Permalink"></a></h2><table><tr><th style="text-align: right">Feature</th><th style="text-align: right">Device</th><th style="text-align: right">Shared</th><th style="text-align: right">Host</th></tr><tr><td style="text-align: right">CPU Access</td><td style="text-align: right">❌ No</td><td style="text-align: right">✅ Yes</td><td style="text-align: right">✅ Yes</td></tr><tr><td style="text-align: right">GPU Performance</td><td style="text-align: right">⭐⭐⭐ Fastest</td><td style="text-align: right">⭐⭐ Good</td><td style="text-align: right">⭐ Slower</td></tr><tr><td style="text-align: right">Migration</td><td style="text-align: right">Manual</td><td style="text-align: right">Automatic</td><td style="text-align: right">Manual</td></tr><tr><td style="text-align: right">Use Case</td><td style="text-align: right">Pure GPU</td><td style="text-align: right">Mixed CPU/GPU</td><td style="text-align: right">Staging</td></tr></table><h2 id="Memory-Allocation-and-Deallocation"><a class="docs-heading-anchor" href="#Memory-Allocation-and-Deallocation">Memory Allocation and Deallocation</a><a id="Memory-Allocation-and-Deallocation-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Allocation-and-Deallocation" title="Permalink"></a></h2><h3 id="Automatic-Management"><a class="docs-heading-anchor" href="#Automatic-Management">Automatic Management</a><a id="Automatic-Management-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-Management" title="Permalink"></a></h3><p>Julia&#39;s garbage collector automatically manages <code>oneArray</code> memory:</p><pre><code class="language-julia hljs">function allocate_and_compute()
+    a = oneArray(rand(Float32, 1000))
+    b = oneArray(rand(Float32, 1000))
+    c = a .+ b
+    return Array(c)  # Only c is copied back
+    # a and b will be garbage collected
+end
+
+result = allocate_and_compute()
+# GPU memory for a and b is freed eventually</code></pre><h3 id="Manual-Garbage-Collection"><a class="docs-heading-anchor" href="#Manual-Garbage-Collection">Manual Garbage Collection</a><a id="Manual-Garbage-Collection-1"></a><a class="docs-heading-anchor-permalink" href="#Manual-Garbage-Collection" title="Permalink"></a></h3><p>Force garbage collection to free GPU memory:</p><pre><code class="language-julia hljs"># Allocate large arrays
+a = oneArray(rand(Float32, 10_000_000))
+b = oneArray(rand(Float32, 10_000_000))
+
+# Clear references
+a = nothing
+b = nothing
+
+# Force GC to reclaim GPU memory
+GC.gc()</code></pre><h3 id="Explicit-Freeing"><a class="docs-heading-anchor" href="#Explicit-Freeing">Explicit Freeing</a><a id="Explicit-Freeing-1"></a><a class="docs-heading-anchor-permalink" href="#Explicit-Freeing" title="Permalink"></a></h3><p>Immediately free GPU memory (use with caution):</p><pre><code class="language-julia hljs">a = oneArray(rand(Float32, 1000))
+# ... use a ...
+
+# Explicitly free (dangerous if still in use!)
+unsafe_free!(a)
+
+# a is now invalid - do not use!</code></pre><div class="admonition is-warning" id="Warning-18da0f3a749f1d65"><header class="admonition-header">Warning<a class="admonition-anchor" href="#Warning-18da0f3a749f1d65" title="Permalink"></a></header><div class="admonition-body"><p>Only use <code>unsafe_free!</code> when you&#39;re certain the array is no longer needed, including by any pending GPU operations. Prefer letting the GC handle cleanup.</p></div></div><h3 id="Do-Block-Pattern"><a class="docs-heading-anchor" href="#Do-Block-Pattern">Do-Block Pattern</a><a id="Do-Block-Pattern-1"></a><a class="docs-heading-anchor-permalink" href="#Do-Block-Pattern" title="Permalink"></a></h3><p>Use do-blocks for automatic cleanup:</p><pre><code class="language-julia hljs">result = oneArray{Float32}(1000) do temp
+    # temp is automatically freed when block exits
+    temp .= 1.0f0
+    sum(temp)  # Result is returned
+end</code></pre><h2 id="Memory-Pooling"><a class="docs-heading-anchor" href="#Memory-Pooling">Memory Pooling</a><a id="Memory-Pooling-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Pooling" title="Permalink"></a></h2><p>oneAPI.jl uses memory pooling to reduce allocation overhead:</p><pre><code class="language-julia hljs">using oneAPI
+
+# Allocations are pooled
+for i in 1:100
+    a = oneArray(rand(Float32, 1000))
+    # ... use a ...
+    # Memory is returned to pool, not freed
+end</code></pre><p>The pool automatically manages memory reuse, reducing allocation costs.</p><h2 id="Checking-Memory-Usage"><a class="docs-heading-anchor" href="#Checking-Memory-Usage">Checking Memory Usage</a><a id="Checking-Memory-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Checking-Memory-Usage" title="Permalink"></a></h2><p>Query GPU memory info:</p><pre><code class="language-julia hljs">using oneAPI.oneL0
+
+dev = device()
+props = memory_properties(dev)
+
+for prop in props
+    println(&quot;Memory size: &quot;, prop.totalSize ÷ (1024^3), &quot; GB&quot;)
+end</code></pre><h2 id="Out-of-Memory-Errors"><a class="docs-heading-anchor" href="#Out-of-Memory-Errors">Out of Memory Errors</a><a id="Out-of-Memory-Errors-1"></a><a class="docs-heading-anchor-permalink" href="#Out-of-Memory-Errors" title="Permalink"></a></h2><p>If you encounter out-of-memory errors:</p><h3 id="1.-Reduce-Batch-Size"><a class="docs-heading-anchor" href="#1.-Reduce-Batch-Size">1. Reduce Batch Size</a><a id="1.-Reduce-Batch-Size-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Reduce-Batch-Size" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Instead of processing all at once
+result = process(oneArray(huge_data))
+
+# Process in smaller batches
+for batch in batches(huge_data, size=1000)
+    result = process(oneArray(batch))
+    # Process result...
+end</code></pre><h3 id="2.-Free-Unused-Arrays"><a class="docs-heading-anchor" href="#2.-Free-Unused-Arrays">2. Free Unused Arrays</a><a id="2.-Free-Unused-Arrays-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Free-Unused-Arrays" title="Permalink"></a></h3><pre><code class="language-julia hljs">a = oneArray(rand(Float32, 1_000_000))
+b = compute(a)
+
+# If &#39;a&#39; is no longer needed
+unsafe_free!(a)
+
+# Continue with &#39;b&#39;
+result = process(b)</code></pre><h3 id="3.-Use-Shared-or-Host-Memory"><a class="docs-heading-anchor" href="#3.-Use-Shared-or-Host-Memory">3. Use Shared or Host Memory</a><a id="3.-Use-Shared-or-Host-Memory-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Use-Shared-or-Host-Memory" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Instead of device memory
+a = oneArray{Float32}(undef, huge_size)
+
+# Use shared memory (can swap to system RAM)
+a = oneArray{Float32,1,oneL0.SharedBuffer}(undef, huge_size)</code></pre><h3 id="4.-Force-Garbage-Collection"><a class="docs-heading-anchor" href="#4.-Force-Garbage-Collection">4. Force Garbage Collection</a><a id="4.-Force-Garbage-Collection-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Force-Garbage-Collection" title="Permalink"></a></h3><pre><code class="language-julia hljs"># After freeing references
+large_array = nothing
+GC.gc()  # Immediately reclaim GPU memory</code></pre><h3 id="5.-Use-Multiple-Devices"><a class="docs-heading-anchor" href="#5.-Use-Multiple-Devices">5. Use Multiple Devices</a><a id="5.-Use-Multiple-Devices-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Use-Multiple-Devices" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Distribute work across devices
+for (i, dev_id) in enumerate(1:length(devices()))
+    Threads.@spawn begin
+        device!(dev_id)
+        partition = data_partitions[i]
+        a = oneArray(partition)
+        result = compute(a)
+        # ...
+    end
+end</code></pre><h2 id="Low-Level-Memory-Operations"><a class="docs-heading-anchor" href="#Low-Level-Memory-Operations">Low-Level Memory Operations</a><a id="Low-Level-Memory-Operations-1"></a><a class="docs-heading-anchor-permalink" href="#Low-Level-Memory-Operations" title="Permalink"></a></h2><p>For advanced users, oneL0 provides direct memory management:</p><pre><code class="language-julia hljs">using oneAPI.oneL0
+
+ctx = context()
+dev = device()
+
+# Allocate device memory
+ptr = device_alloc(ctx, dev, 1024, 8)  # 1024 bytes, 8-byte aligned
+
+# Copy data
+data = rand(Float32, 256)
+GC.@preserve data begin
+    unsafe_copyto!(ctx, dev, ptr, pointer(data), 256)
+end
+
+# Free memory
+free(ctx, ptr)</code></pre><h2 id="Memory-Advise-and-Prefetch"><a class="docs-heading-anchor" href="#Memory-Advise-and-Prefetch">Memory Advise and Prefetch</a><a id="Memory-Advise-and-Prefetch-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Advise-and-Prefetch" title="Permalink"></a></h2><p>Hint to the runtime about memory usage (shared memory only):</p><pre><code class="language-julia hljs">using oneAPI.oneL0
+
+a = oneArray{Float32,1,oneL0.SharedBuffer}(undef, 1000)
+
+# Advise that this will be read-only on the device
+# (Implementation depends on Level Zero driver support)
+
+# Prefetch to device
+ctx = context()
+dev = device()
+queue = global_queue(ctx, dev)
+
+execute!(queue) do list
+    append_prefetch!(list, pointer(a), sizeof(a))
+end</code></pre><h2 id="Best-Practices"><a class="docs-heading-anchor" href="#Best-Practices">Best Practices</a><a id="Best-Practices-1"></a><a class="docs-heading-anchor-permalink" href="#Best-Practices" title="Permalink"></a></h2><ol><li><strong>Use device memory by default</strong> for best GPU performance</li><li><strong>Use shared memory</strong> when you need CPU access without explicit copies</li><li><strong>Use host memory</strong> for staging data or when CPU writes frequently</li><li><strong>Let GC handle cleanup</strong> unless you have specific memory pressure</li><li><strong>Reuse allocations</strong> within loops when possible</li><li><strong>Profile memory usage</strong> to identify bottlenecks</li><li><strong>Be cautious with <code>unsafe_free!</code></strong> - use only when you&#39;re certain it&#39;s safe</li></ol><h2 id="Example:-Efficient-Memory-Usage"><a class="docs-heading-anchor" href="#Example:-Efficient-Memory-Usage">Example: Efficient Memory Usage</a><a id="Example:-Efficient-Memory-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Example:-Efficient-Memory-Usage" title="Permalink"></a></h2><pre><code class="language-julia hljs">using oneAPI
+
+function efficient_pipeline(data_batches)
+    # Allocate output buffer once
+    result = oneArray{Float32}(undef, 1000)
+    results = Float32[]
+
+    for batch in data_batches
+        # Reuse input buffer by copying
+        input = oneArray(batch)
+
+        # Compute in-place when possible
+        @oneapi groups=4 items=250 process_kernel!(result, input)
+
+        # Copy result back
+        push!(results, Array(result)...)
+
+        # Input is freed when loop continues
+    end
+
+    return results
+end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../kernels/">« Kernel Programming</a><a class="docs-footer-nextpage" href="../compiler/">Compiler &amp; Reflection »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Tuesday 16 December 2025 09:57">Tuesday 16 December 2025</span>. Using Julia version 1.10.10.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
