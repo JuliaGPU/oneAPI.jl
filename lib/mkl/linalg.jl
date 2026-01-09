@@ -120,18 +120,6 @@ LinearAlgebra.generic_trimatdiv!(C::oneStridedVector{T}, uploc, isunitc, tfun::F
 # BLAS 3
 #
 
-if VERSION >= v"1.12-"
-    # Otherwise dispatches onto:
-    # https://github.com/JuliaLang/LinearAlgebra.jl/blob/4e7c3f40316a956119ac419a97c4b8aad7a17e6c/src/matmul.jl#L490
-    for blas_flag in (LinearAlgebra.BlasFlag.SyrkHerkGemm, LinearAlgebra.BlasFlag.SymmHemmGeneric)
-        @eval LinearAlgebra.generic_matmatmul_wrapper!(
-            C::oneStridedMatrix, tA::AbstractChar, tB::AbstractChar, A::oneStridedVecOrMat, B::oneStridedVecOrMat,
-            alpha::Number, beta::Number, ::$blas_flag
-        ) =
-            LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, alpha, beta)
-    end
-end
-
 LinearAlgebra.generic_matmatmul!(
     C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
     B::oneStridedVecOrMat, _add::MulAddMul,
