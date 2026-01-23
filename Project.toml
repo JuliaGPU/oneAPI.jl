@@ -1,7 +1,7 @@
 name = "oneAPI"
 uuid = "8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"
 authors = ["Tim Besard <tim.besard@gmail.com>", "Alexis Montoison", "Michel Schanen <michel.schanen@gmail.com>"]
-version = "2.6.0"
+version = "2.6.1"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -32,7 +32,7 @@ oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
 
 [compat]
 AbstractFFTs = "1.5.0"
-AcceleratedKernels = "0.3.1, 0.4"
+AcceleratedKernels = "0.4.3"
 Adapt = "4"
 CEnum = "0.4, 0.5"
 ExprTools = "0.1"
