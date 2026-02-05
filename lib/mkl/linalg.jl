@@ -98,9 +98,9 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
             if tA in ('N', 'T', 'C')
                 return gemv!(tA, alpha, A, B, beta, Y)
             elseif tA in ('S', 's')
-                return symv!(tA == 'S' ? 'U' : 'L', alpha, A, x, beta, y)
+                return symv!(tA == 'S' ? 'U' : 'L', alpha, A, B, beta, Y)
             elseif tA in ('H', 'h')
-                return hemv!(tA == 'H' ? 'U' : 'L', alpha, A, x, beta, y)
+                return hemv!(tA == 'H' ? 'U' : 'L', alpha, A, B, beta, Y)
             end
         end
     end
