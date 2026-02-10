@@ -6,7 +6,19 @@
 
 # Widen sub-word types to avoid shared memory corruption on Intel GPUs.
 # Writing 1/2-byte values to local memory can clobber adjacent bytes.
-@inline _widen_type(::Type{T}) where T = sizeof(T) < 4 ? Int32 : T
+# Only applies to integer/boolean types where `%` conversion is valid.
+@inline _widen_type(::Type{Bool}) = Int32
+@inline _widen_type(::Type{Int8}) = Int32
+@inline _widen_type(::Type{UInt8}) = Int32
+@inline _widen_type(::Type{Int16}) = Int32
+@inline _widen_type(::Type{UInt16}) = Int32
+@inline _widen_type(::Type{T}) where T = T
+
+# Dispatch-based conversions so the compiler never generates `%` for non-integer types
+@inline _to_wide(val, ::Type{W}) where W = val % W
+@inline _to_wide(val::T, ::Type{T}) where T = val
+@inline _from_wide(val, ::Type{T}) where T = val % T
+@inline _from_wide(val::T, ::Type{T}) where T = val
 
 # Reduce a value across a group, using local memory for communication
 @inline function reduce_group(op, val::T, neutral, ::Val{maxitems}) where {T, maxitems}
@@ -16,7 +28,7 @@
     # use a wider type for shared memory to avoid sub-word corruption
     W = _widen_type(T)
     shared = oneLocalArray(W, (maxitems,))
-    @inbounds shared[item] = val % W
+    @inbounds shared[item] = _to_wide(val, W)
 
     # perform a reduction
     d = 1
@@ -25,18 +37,18 @@
         index = 2 * d * (item-1) + 1
         @inbounds if index <= items
             other_val = if index + d <= items
-                shared[index+d] % T
+                _from_wide(shared[index+d], T)
             else
                 neutral
             end
-            shared[index] = op(shared[index] % T, other_val) % W
+            shared[index] = _to_wide(op(_from_wide(shared[index], T), other_val), W)
         end
         d *= 2
     end
 
     # load the final value on the first item
     if item == 1
-        val = @inbounds shared[item] % T
+        val = @inbounds _from_wide(shared[item], T)
     end
 
     return val
