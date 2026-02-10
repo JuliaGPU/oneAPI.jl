@@ -58,6 +58,10 @@ function syclQueueDestroy(obj)
     @ccall liboneapi_support.syclQueueDestroy(obj::syclQueue_t)::Cint
 end
 
+function syclQueueWait(obj)
+    @ccall liboneapi_support.syclQueueWait(obj::syclQueue_t)::Cint
+end
+
 mutable struct syclEvent_st end
 
 const syclEvent_t = Ptr{syclEvent_st}

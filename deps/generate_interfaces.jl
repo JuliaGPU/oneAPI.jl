@@ -444,20 +444,48 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
       variant = "column_major::"
     end
 
+    # Build catch clause: LAPACK functions also catch computation_error for info
+    lapack_catch = "catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }"
+    sycl_catch = "catch (const sycl::exception& e) { return -1; }"
+
     write(oneapi_cpp, "extern \"C\" $header {\n")
     if template
       type = version_types[version]
-      !occursin("scratchpad_size", name) && write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n   device_queue->val.wait_and_throw();\n")
-      occursin("scratchpad_size", name)  && write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n   device_queue->val.wait_and_throw();\n")
-      # !occursin("scratchpad_size", name) && write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n")
-      # occursin("scratchpad_size", name)  && write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n")
+      if !occursin("scratchpad_size", name)
+        catch_clause = library == "lapack" ? lapack_catch : sycl_catch
+        write(oneapi_cpp, "   try {\n")
+        write(oneapi_cpp, "      auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n")
+        write(oneapi_cpp, "      device_queue->val.wait_and_throw();\n")
+        write(oneapi_cpp, "   } $catch_clause\n")
+      end
+      if occursin("scratchpad_size", name)
+        write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n   device_queue->val.wait_and_throw();\n")
+      end
     else
       if !(name ∈ void_output)
-        write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
-        occursin("device_queue", parameters) && write(oneapi_cpp, "   device_queue->val.wait_and_throw();\n")
+        has_queue = occursin("device_queue", parameters)
+        is_scratchpad = occursin("scratchpad_size", name)
+        if has_queue && !is_scratchpad
+          catch_clause = library == "lapack" ? lapack_catch : sycl_catch
+          write(oneapi_cpp, "   try {\n")
+          write(oneapi_cpp, "      auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
+          write(oneapi_cpp, "      device_queue->val.wait_and_throw();\n")
+          write(oneapi_cpp, "   } $catch_clause\n")
+        else
+          write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
+          if has_queue
+            write(oneapi_cpp, "   device_queue->val.wait_and_throw();\n")
+          end
+        end
       else
-        write(oneapi_cpp, "   oneapi::mkl::$library::$variant$name($parameters);\n")
-        occursin("device_queue", parameters) && write(oneapi_cpp, "   device_queue->val.wait_and_throw();\n")
+        if occursin("device_queue", parameters)
+          write(oneapi_cpp, "   try {\n")
+          write(oneapi_cpp, "      oneapi::mkl::$library::$variant$name($parameters);\n")
+          write(oneapi_cpp, "      device_queue->val.wait_and_throw();\n")
+          write(oneapi_cpp, "   } $sycl_catch\n")
+        else
+          write(oneapi_cpp, "   oneapi::mkl::$library::$variant$name($parameters);\n")
+        end
       end
     end
     if occursin("scratchpad_size", name)

@@ -76,6 +76,11 @@ extern "C" int syclQueueDestroy(syclQueue_t obj) {
     return 0;
 }
 
+extern "C" int syclQueueWait(syclQueue_t obj) {
+    obj->val.wait();
+    return 0;
+}
+
 extern "C" int syclEventCreate(syclEvent_t *obj, syclContext_t context,
                                ze_event_handle_t event, int keep_ownership) {
     auto sycl_ownership =
