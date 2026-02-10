@@ -26,6 +26,7 @@ typedef struct syclQueue_st *syclQueue_t;
 int syclQueueCreate(syclQueue_t *obj, syclContext_t context, syclDevice_t device,
                     ze_command_queue_handle_t queue, int keep_ownership);
 int syclQueueDestroy(syclQueue_t obj);
+int syclQueueWait(syclQueue_t obj);
 
 typedef struct syclEvent_st *syclEvent_t;
 int syclEventCreate(syclEvent_t *obj, syclContext_t context,
