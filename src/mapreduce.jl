@@ -4,14 +4,19 @@
 # - serial version for lower latency
 # - group-stride loop to delay need for second kernel launch
 
+# Widen sub-word types to avoid shared memory corruption on Intel GPUs.
+# Writing 1/2-byte values to local memory can clobber adjacent bytes.
+@inline _widen_type(::Type{T}) where T = sizeof(T) < 4 ? Int32 : T
+
 # Reduce a value across a group, using local memory for communication
 @inline function reduce_group(op, val::T, neutral, ::Val{maxitems}) where {T, maxitems}
     items = get_local_size()
     item = get_local_id()
 
-    # local mem for a complete reduction
-    shared = oneLocalArray(T, (maxitems,))
-    @inbounds shared[item] = val
+    # use a wider type for shared memory to avoid sub-word corruption
+    W = _widen_type(T)
+    shared = oneLocalArray(W, (maxitems,))
+    @inbounds shared[item] = val % W
 
     # perform a reduction
     d = 1
@@ -20,18 +25,18 @@
         index = 2 * d * (item-1) + 1
         @inbounds if index <= items
             other_val = if index + d <= items
-                shared[index+d]
+                shared[index+d] % T
             else
                 neutral
             end
-            shared[index] = op(shared[index], other_val)
+            shared[index] = op(shared[index] % T, other_val) % W
         end
         d *= 2
     end
 
     # load the final value on the first item
     if item == 1
-        val = @inbounds shared[item]
+        val = @inbounds shared[item] % T
     end
 
     return val
@@ -135,8 +140,8 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # that's why each items also loops across their inputs, processing multiple values
     # so that we can span the entire reduction dimension using a single item group.
 
-    # group size is restricted by local memory
-    max_lmem_elements = compute_properties(device()).maxSharedLocalMemory ÷ sizeof(T)
+    # group size is restricted by local memory (use widened type for sub-word types)
+    max_lmem_elements = compute_properties(device()).maxSharedLocalMemory ÷ sizeof(_widen_type(T))
     max_items = min(compute_properties(device()).maxTotalGroupSize,
                     compute_items(max_lmem_elements ÷ 2))
     # TODO: dynamic local memory to avoid two compilations
