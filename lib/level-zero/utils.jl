@@ -6,7 +6,7 @@ isdebug(group) = Base.CoreLogging.current_logger_for_env(Base.CoreLogging.Debug,
 const _reclaim_callbacks = Function[]
 
 function register_reclaim_callback!(f::Function)
-    push!(_reclaim_callbacks, f)
+    return push!(_reclaim_callbacks, f)
 end
 
 function _run_reclaim_callbacks()
@@ -16,6 +16,7 @@ function _run_reclaim_callbacks()
         catch
         end
     end
+    return
 end
 
 function retry_reclaim(f, isfailed)

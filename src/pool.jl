@@ -17,7 +17,7 @@ function _maybe_gc(dev, bytes)
     allocated = _allocated_bytes[]
     allocated <= 0 && return
     total_mem = _get_total_mem(dev)
-    if allocated + bytes > total_mem * 0.8
+    return if allocated + bytes > total_mem * 0.8
         # Flush deferred resource releases (e.g., MKL sparse handles) from previous GC
         # cycles first — these are safe to release now because they were deferred earlier.
         # Do this BEFORE GC to avoid racing with new finalizers.

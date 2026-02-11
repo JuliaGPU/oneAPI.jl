@@ -7,7 +7,7 @@ const _deferred_sparse_handles = Vector{matrix_handle_t}()
 const _deferred_sparse_handles_lock = ReentrantLock()
 
 function sparse_release_matrix_handle(A::oneAbstractSparseMatrix)
-    if A.handle !== nothing
+    return if A.handle !== nothing
         lock(_deferred_sparse_handles_lock) do
             push!(_deferred_sparse_handles, A.handle)
         end
@@ -35,7 +35,7 @@ function flush_deferred_sparse_releases()
             @warn "Error releasing sparse matrix handle" exception = err
         end
     end
-    synchronize(queue)
+    return synchronize(queue)
 end
 
 for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int32),
