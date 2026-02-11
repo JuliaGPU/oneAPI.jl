@@ -1,16 +1,41 @@
+# Deferred release queue for sparse matrix handles.
+# Finalizers run on the GC thread, but onemklXsparse_release_matrix_handle submits
+# work to the SYCL queue. Using the same queue from the GC thread and the main thread
+# concurrently is not safe and causes ZE_RESULT_ERROR_DEVICE_LOST / ZE_RESULT_ERROR_UNKNOWN.
+# Instead, finalizers push handles here and they are released on the main thread.
+const _deferred_sparse_handles = Vector{matrix_handle_t}()
+const _deferred_sparse_handles_lock = ReentrantLock()
+
 function sparse_release_matrix_handle(A::oneAbstractSparseMatrix)
     return if A.handle !== nothing
+        lock(_deferred_sparse_handles_lock) do
+            push!(_deferred_sparse_handles, A.handle)
+        end
+    end
+end
+
+function flush_deferred_sparse_releases()
+    handles = lock(_deferred_sparse_handles_lock) do
+        if isempty(_deferred_sparse_handles)
+            return matrix_handle_t[]
+        end
+        h = copy(_deferred_sparse_handles)
+        empty!(_deferred_sparse_handles)
+        return h
+    end
+    isempty(handles) && return
+    dev = device()
+    ctx = context()
+    queue = global_queue(ctx, dev)
+    for handle in handles
         try
-            queue = global_queue(context(A.nzVal), device(A.nzVal))
-            handle_ptr = Ref{matrix_handle_t}(A.handle)
+            handle_ptr = Ref{matrix_handle_t}(handle)
             onemklXsparse_release_matrix_handle(sycl_queue(queue), handle_ptr)
-            # Only synchronize after successful release to ensure completion
-            synchronize(queue)
         catch err
-            # Don't let finalizer errors crash the program
             @warn "Error releasing sparse matrix handle" exception = err
         end
     end
+    return synchronize(queue)
 end
 
 for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int32),
@@ -27,6 +52,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
                 rowPtr::oneVector{$intty}, colVal::oneVector{$intty},
                 nzVal::oneVector{$elty}, dims::NTuple{2, Int}
             )
+            flush_deferred_sparse_releases()
             handle_ptr = Ref{matrix_handle_t}()
             onemklXsparse_init_matrix_handle(handle_ptr)
             m, n = dims
@@ -47,6 +73,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
                 colPtr::oneVector{$intty}, rowVal::oneVector{$intty},
                 nzVal::oneVector{$elty}, dims::NTuple{2, Int}
             )
+            flush_deferred_sparse_releases()
             queue = global_queue(context(nzVal), device(nzVal))
             handle_ptr = Ref{matrix_handle_t}()
             onemklXsparse_init_matrix_handle(handle_ptr)
@@ -106,6 +133,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_coo_data   , :Float32   , :Int3
                              (:onemklZsparse_set_coo_data_64, :ComplexF64, :Int64))
     @eval begin
         function oneSparseMatrixCOO(A::SparseMatrixCSC{$elty, $intty})
+            flush_deferred_sparse_releases()
             handle_ptr = Ref{matrix_handle_t}()
             onemklXsparse_init_matrix_handle(handle_ptr)
             m, n = size(A)
