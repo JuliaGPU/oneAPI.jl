@@ -31,6 +31,11 @@ include("linalg.jl")
 include("interfaces.jl")
 include("fft.jl")
 
+# Register deferred sparse handle flush as a memory reclaim callback so that OOM
+# recovery (retry_reclaim) and proactive GC (_maybe_gc) can free MKL internal buffers
+# associated with sparse matrix handles that were deferred from finalizer threads.
+oneL0.register_reclaim_callback!(flush_deferred_sparse_releases)
+
 function version()
     major = Ref{Int64}()
     minor = Ref{Int64}()

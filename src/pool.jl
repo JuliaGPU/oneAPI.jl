@@ -18,8 +18,11 @@ function _maybe_gc(dev, bytes)
     allocated <= 0 && return
     total_mem = _get_total_mem(dev)
     if allocated + bytes > total_mem * 0.8
+        # Flush deferred resource releases (e.g., MKL sparse handles) from previous GC
+        # cycles first — these are safe to release now because they were deferred earlier.
+        # Do this BEFORE GC to avoid racing with new finalizers.
+        oneL0._run_reclaim_callbacks()
         # Full GC to collect old-generation objects whose finalizers free GPU memory.
-        # GC.gc(false) only does minor collection which won't reclaim promoted objects.
         GC.gc(true)
     elseif allocated + bytes > total_mem * 0.4
         GC.gc(false)
