@@ -186,9 +186,20 @@ end
 @noinline function _compiler_config(dev; kernel=true, name=nothing, always_inline=false, kwargs...)
     supports_fp16 = oneL0.module_properties(device()).fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
     supports_fp64 = oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+    supports_bfloat16 = @static if isdefined(Core, :BFloat16)
+        haskey(oneL0.extension_properties(driver()),
+               oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME)
+    else
+        false
+    end
+
+    extensions = String[]
+    if supports_bfloat16
+        push!(extensions, "SPV_KHR_bfloat16")
+    end
 
     # create GPUCompiler objects
-    target = SPIRVCompilerTarget(; supports_fp16, supports_fp64, kwargs...)
+    target = SPIRVCompilerTarget(; extensions, supports_fp16, supports_fp64, supports_bfloat16, kwargs...)
     params = oneAPICompilerParams()
     CompilerConfig(target, params; kernel, name, always_inline)
 end

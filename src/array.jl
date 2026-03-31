@@ -39,6 +39,12 @@ function check_eltype(T)
       oneL0.ZE_DEVICE_MODULE_FLAG_FP64
     contains_eltype(T, Float64) && error("Float64 is not supported on this device")
   end
+  @static if isdefined(Core, :BFloat16)
+    if !haskey(oneL0.extension_properties(driver()),
+               oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME)
+      contains_eltype(T, Core.BFloat16) && error("BFloat16 is not supported on this device")
+    end
+  end
 end
 
 """

@@ -44,6 +44,16 @@ init_worker_code = quote
     if float64_supported
         append!(eltypes, [Float64, ComplexF64])
     end
+    @static if isdefined(Core, :BFloat16)
+        const bfloat16_supported = haskey(
+            oneL0.extension_properties(oneAPI.driver()),
+            oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME)
+        if bfloat16_supported
+            push!(eltypes, Core.BFloat16)
+        end
+    else
+        const bfloat16_supported = false
+    end
     TestSuite.supported_eltypes(::Type{<:oneArray}) = eltypes
 
 
