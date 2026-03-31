@@ -28,6 +28,22 @@ function contains_eltype(T, X)
     return false
 end
 
+function _device_supports_bfloat16()
+  # check the driver extension first
+  if haskey(oneL0.extension_properties(driver()),
+            oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME)
+      return true
+  end
+  # some drivers (e.g. older versions on PVC/Max) don't advertise the extension,
+  # but the hardware supports BFloat16 natively. fall back to checking device ID.
+  dev_id = oneL0.properties(device()).deviceId
+  # Intel Data Center GPU Max (Ponte Vecchio): device IDs 0x0BD0-0x0BDB
+  if 0x0BD0 <= dev_id <= 0x0BDB
+      return true
+  end
+  return false
+end
+
 function check_eltype(T)
   Base.allocatedinline(T) || error("oneArray only supports element types that are stored inline")
   Base.isbitsunion(T) && error("oneArray does not yet support isbits-union arrays")
@@ -40,8 +56,7 @@ function check_eltype(T)
     contains_eltype(T, Float64) && error("Float64 is not supported on this device")
   end
   @static if isdefined(Core, :BFloat16)
-    if !haskey(oneL0.extension_properties(driver()),
-               oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME)
+    if !_device_supports_bfloat16()
       contains_eltype(T, Core.BFloat16) && error("BFloat16 is not supported on this device")
     end
   end
