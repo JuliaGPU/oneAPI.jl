@@ -5,9 +5,7 @@ using oneAPI, Test
     exit()
 end
 
-bfloat16_supported = haskey(
-    oneL0.extension_properties(oneAPI.driver()),
-    oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME)
+bfloat16_supported = oneAPI._device_supports_bfloat16()
 
 @info "BFloat16 support: $bfloat16_supported"
 
