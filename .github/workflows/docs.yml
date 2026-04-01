@@ -24,6 +24,6 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: 'lts'
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@latest
       - run: julia --project=docs/ docs/make.jl
