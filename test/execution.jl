@@ -108,10 +108,10 @@ end
         export external_dummy
         external_dummy() = return
     end
-    import ...KernelModule
+    import .KernelModule
     @oneapi KernelModule.external_dummy()
     @eval begin
-        using ...KernelModule
+        using .KernelModule
         @oneapi external_dummy()
     end
 
