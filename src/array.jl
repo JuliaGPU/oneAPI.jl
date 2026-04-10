@@ -85,7 +85,7 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
   data::DataRef{B}
 
   maxsize::Int  # maximum data size; excluding any selector bytes
-  offset::Int   # offset of the data in the buffer, in number of elements
+  offset::Int   # offset of the data in the buffer, in bytes
   dims::Dims{N}
 
   function oneArray{T,N,B}(::UndefInitializer, dims::Dims{N}) where {T,N,B}
@@ -337,11 +337,11 @@ function Base.unsafe_convert(::Type{Ptr{T}}, x::oneArray{T}) where {T}
   if is_device(x)
     throw(ArgumentError("cannot take the CPU address of a $(typeof(x))"))
   end
-  convert(Ptr{T}, x.data[]) + x.offset*Base.elsize(x)
+  convert(Ptr{T}, x.data[]) + x.offset
 end
 
 function Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T}
-  convert(ZePtr{T}, x.data[]) + x.offset*Base.elsize(x)
+  convert(ZePtr{T}, x.data[]) + x.offset
 end
 
 
@@ -363,15 +363,19 @@ end
 
 function Base.unsafe_convert(::Type{oneDeviceArray{T,N,AS.CrossWorkgroup}}, a::oneArray{T,N}) where {T,N}
   oneDeviceArray{T,N,AS.CrossWorkgroup}(size(a), reinterpret(LLVMPtr{T,AS.CrossWorkgroup}, pointer(a)),
-                                a.maxsize - a.offset*Base.elsize(a))
+                                a.maxsize - a.offset)
 end
 
 
 ## memory copying
 
 typetagdata(a::Array, i=1) = ccall(:jl_array_typetagdata, Ptr{UInt8}, (Any,), a) + i - 1
-typetagdata(a::oneArray, i=1) =
-  convert(ZePtr{UInt8}, a.data[]) + a.maxsize + a.offset + i - 1
+function typetagdata(a::oneArray, i=1)
+  # for zero-size element types (e.g. singleton unions), the byte offset
+  # is always zero, so the corresponding element offset is also zero
+  elem_offset = iszero(Base.elsize(a)) ? 0 : a.offset ÷ Base.elsize(a)
+  return convert(ZePtr{UInt8}, a.data[]) + a.maxsize + elem_offset + i - 1
+end
 
 function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::Array{T}, soffs::Integer,
                       n::Integer) where T
@@ -536,12 +540,10 @@ end
 ## derived arrays
 
 function GPUArrays.derive(::Type{T}, a::oneArray, dims::Dims{N}, offset::Int) where {T,N}
-  offset = if sizeof(T) == 0
+  if sizeof(T) == 0
     Base.elsize(a) == 0 || error("Cannot derive a singleton array from non-singleton inputs")
-    offset
-  else
-    (a.offset * Base.elsize(a)) ÷ sizeof(T) + offset
   end
+  offset = a.offset + offset * sizeof(T)
   oneArray{T,N}(a.data, dims; a.maxsize, offset)
 end
 

@@ -43,6 +43,15 @@ end
   @test Array(xs) == [0,1,0]
 end
 
+@testset "reinterpret of view with non-aligned offset" begin
+  # reinterpreting a view to a larger element type where the byte offset
+  # is not a multiple of the new element size
+  a = oneArray(Int32[1,2,3,4,5,6,7,8,9])
+  v = view(a, 2:7)  # offset of 1 Int32 = 4 bytes
+  r = reinterpret(Int64, v)  # Int64 = 8 bytes; 4 is not a multiple of 8
+  @test Array(r) == reinterpret(Int64, @view Array(a)[2:7])
+end
+
 @testset "shared buffers & unsafe_wrap" begin
   a = oneVector{Int,oneL0.SharedBuffer}(undef, 2)
 
