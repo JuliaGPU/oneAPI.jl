@@ -98,7 +98,7 @@ function __init__()
 end
 
 function set_debug!(debug::Bool)
-    for jll in [oneL0.NEO_jll, oneL0.NEO_jll.libigc_jll]
+    for jll in [oneL0.NEO_jll, oneL0.NEO_jll.libigc_LTS_jll]
         Preferences.set_preferences!(jll, "debug" => string(debug); force=true)
     end
     @info "oneAPI debug mode $(debug ? "enabled" : "disabled"); please re-start Julia."

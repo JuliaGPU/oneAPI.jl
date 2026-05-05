@@ -141,8 +141,8 @@ struct omatadd_descr;
 typedef struct omatadd_descr *omatadd_descr_t;
 
 const int64_t ONEMKL_VERSION_MAJOR = 2025;
-const int64_t ONEMKL_VERSION_MINOR = 2;
-const int64_t ONEMKL_VERSION_PATCH = 0;
+const int64_t ONEMKL_VERSION_MINOR = 3;
+const int64_t ONEMKL_VERSION_PATCH = 1;
 void onemkl_version(int64_t *major, int64_t *minor, int64_t *patch);
 
 int onemklHgemm_batch(syclQueue_t device_queue, onemklTranspose transa,
@@ -2737,73 +2737,153 @@ int64_t onemklZunmqr_batch_scratchpad_size(syclQueue_t device_queue, onemklSide*
                                            group_count, int64_t* group_sizes);
 
 // SPARSE
-int onemklXsparse_init_matrix_handle(matrix_handle_t *p_spMat);
+int onemklXsparse_init_matrix_handle(matrix_handle_t *p_spmat);
 
-int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, matrix_handle_t *p_spMat);
+int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, matrix_handle_t *p_spmat);
 
-int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows,
-                               int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t
-                               *col_ind, float *values);
+int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows,
+                               int64_t ncols, int64_t nnz, onemklIndex index, int32_t *row_ptr,
+                               int32_t *col_ind, float *values);
 
-int onemklSsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
-                                  nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr,
-                                  int64_t *col_ind, float *values);
+int onemklSsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                                  nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
+                                  *row_ptr, int64_t *col_ind, float *values);
 
-int onemklDsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows,
-                               int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t
-                               *col_ind, double *values);
+int onemklDsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows,
+                               int64_t ncols, int64_t nnz, onemklIndex index, int32_t *row_ptr,
+                               int32_t *col_ind, double *values);
 
-int onemklDsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
-                                  nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr,
-                                  int64_t *col_ind, double *values);
+int onemklDsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                                  nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
+                                  *row_ptr, int64_t *col_ind, double *values);
 
-int onemklCsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows,
-                               int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t
-                               *col_ind, float _Complex *values);
+int onemklCsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows,
+                               int64_t ncols, int64_t nnz, onemklIndex index, int32_t *row_ptr,
+                               int32_t *col_ind, float _Complex *values);
 
-int onemklCsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
-                                  nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr,
-                                  int64_t *col_ind, float _Complex *values);
+int onemklCsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                                  nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
+                                  *row_ptr, int64_t *col_ind, float _Complex *values);
 
-int onemklZsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows,
-                               int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t
-                               *col_ind, double _Complex *values);
+int onemklZsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows,
+                               int64_t ncols, int64_t nnz, onemklIndex index, int32_t *row_ptr,
+                               int32_t *col_ind, double _Complex *values);
 
-int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
-                                  nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr,
-                                  int64_t *col_ind, double _Complex *values);
+int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                                  nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
+                                  *row_ptr, int64_t *col_ind, double _Complex *values);
 
-int onemklSsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows,
+int onemklSsparse_set_csc_data(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows,
+                               int64_t ncols, int64_t nnz, onemklIndex index, int32_t *col_ptr,
+                               int32_t *row_ind, float *values);
+
+int onemklSsparse_set_csc_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
+                                  nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
+                                  *col_ptr, int64_t *row_ind, float *values);
+
+int onemklDsparse_set_csc_data(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows,
+                               int64_t ncols, int64_t nnz, onemklIndex index, int32_t *col_ptr,
+                               int32_t *row_ind, double *values);
+
+int onemklDsparse_set_csc_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
+                                  nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
+                                  *col_ptr, int64_t *row_ind, double *values);
+
+int onemklCsparse_set_csc_data(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows,
+                               int64_t ncols, int64_t nnz, onemklIndex index, int32_t *col_ptr,
+                               int32_t *row_ind, float _Complex *values);
+
+int onemklCsparse_set_csc_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
+                                  nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
+                                  *col_ptr, int64_t *row_ind, float _Complex *values);
+
+int onemklZsparse_set_csc_data(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows,
+                               int64_t ncols, int64_t nnz, onemklIndex index, int32_t *col_ptr,
+                               int32_t *row_ind, double _Complex *values);
+
+int onemklZsparse_set_csc_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
+                                  nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
+                                  *col_ptr, int64_t *row_ind, double _Complex *values);
+
+int onemklSsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spmat, int32_t nrows,
                                int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind,
                                int32_t *col_ind, float *values);
 
-int onemklSsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
+int onemklSsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
                                   nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
                                   *row_ind, int64_t *col_ind, float *values);
 
-int onemklDsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows,
+int onemklDsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spmat, int32_t nrows,
                                int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind,
                                int32_t *col_ind, double *values);
 
-int onemklDsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
+int onemklDsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
                                   nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
                                   *row_ind, int64_t *col_ind, double *values);
 
-int onemklCsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows,
+int onemklCsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spmat, int32_t nrows,
                                int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind,
                                int32_t *col_ind, float _Complex *values);
 
-int onemklCsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
+int onemklCsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
                                   nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
                                   *row_ind, int64_t *col_ind, float _Complex *values);
 
-int onemklZsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows,
+int onemklZsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spmat, int32_t nrows,
                                int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind,
                                int32_t *col_ind, double _Complex *values);
 
-int onemklZsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t
+int onemklZsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
                                   nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t
                                   *row_ind, int64_t *col_ind, double _Complex *values);
+
+int onemklSsparse_set_bsr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                               blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t
+                               row_blk_size, int64_t col_blk_size, onemklLayout blk_layout,
+                               onemklIndex index, int32_t *bsr_row_ptr, int32_t *bsr_col_ind,
+                               float *bsr_values);
+
+int onemklSsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                                  blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t
+                                  row_blk_size, int64_t col_blk_size, onemklLayout blk_layout,
+                                  onemklIndex index, int64_t *bsr_row_ptr, int64_t
+                                  *bsr_col_ind, float *bsr_values);
+
+int onemklDsparse_set_bsr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                               blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t
+                               row_blk_size, int64_t col_blk_size, onemklLayout blk_layout,
+                               onemklIndex index, int32_t *bsr_row_ptr, int32_t *bsr_col_ind,
+                               double *bsr_values);
+
+int onemklDsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                                  blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t
+                                  row_blk_size, int64_t col_blk_size, onemklLayout blk_layout,
+                                  onemklIndex index, int64_t *bsr_row_ptr, int64_t
+                                  *bsr_col_ind, double *bsr_values);
+
+int onemklCsparse_set_bsr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                               blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t
+                               row_blk_size, int64_t col_blk_size, onemklLayout blk_layout,
+                               onemklIndex index, int32_t *bsr_row_ptr, int32_t *bsr_col_ind,
+                               float _Complex *bsr_values);
+
+int onemklCsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                                  blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t
+                                  row_blk_size, int64_t col_blk_size, onemklLayout blk_layout,
+                                  onemklIndex index, int64_t *bsr_row_ptr, int64_t
+                                  *bsr_col_ind, float _Complex *bsr_values);
+
+int onemklZsparse_set_bsr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                               blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t
+                               row_blk_size, int64_t col_blk_size, onemklLayout blk_layout,
+                               onemklIndex index, int32_t *bsr_row_ptr, int32_t *bsr_col_ind,
+                               double _Complex *bsr_values);
+
+int onemklZsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t
+                                  blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t
+                                  row_blk_size, int64_t col_blk_size, onemklLayout blk_layout,
+                                  onemklIndex index, int64_t *bsr_row_ptr, int64_t
+                                  *bsr_col_ind, double _Complex *bsr_values);
 
 int onemklXsparse_init_matmat_descr(matmat_descr_t *p_desc);
 

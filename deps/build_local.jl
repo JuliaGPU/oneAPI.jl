@@ -8,7 +8,8 @@ if haskey(ENV, "BUILDKITE")
     run(`buildkite-agent annotate 'Using a locally-built support library; A bump of oneAPI_Support_jll is required before releasing this packages.' --style 'warning' --context 'ctx-deps'`)
 end
 
-using Scratch, Preferences, CMake_jll, Ninja_jll, oneAPI_Level_Zero_Headers_jll
+using Scratch, Preferences, CMake_jll, Ninja_jll
+import oneAPI_Level_Zero_Headers_LTS_jll as oneAPI_Level_Zero_Headers_jll
 
 oneAPI = Base.UUID("8f75cd03-7ff8-4ecb-9b8f-daf728133b1b")
 
@@ -45,7 +46,7 @@ if !isfile(joinpath(conda_dir, "condarc-julia.yml"))
     touch(joinpath(conda_dir, "conda-meta", "history"))
 end
 Conda.add_channel("https://software.repos.intel.com/python/conda/", conda_dir)
-Conda.add(["dpcpp_linux-64=2025.2.0", "mkl-devel-dpcpp=2025.2.0"], conda_dir)
+Conda.add(["dpcpp_linux-64=2025.3.1", "mkl-devel-dpcpp=2025.3.1"], conda_dir)
 
 Conda.list(conda_dir)
 
