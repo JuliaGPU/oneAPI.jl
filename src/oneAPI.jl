@@ -88,6 +88,15 @@ function __init__()
         else
             # ensure that the OpenCL loader finds the ICD files from our artifacts
             ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
+
+            # ensure that libsycl's bundled ze_lib finds NEO's libze_intel_gpu via
+            # path-based driver discovery (it does not reuse the JLL-loaded module).
+            # Required when no system NEO is installed.
+            neo_libdir = dirname(oneL0.NEO_jll.libze_intel_gpu)
+            ld = get(ENV, "LD_LIBRARY_PATH", "")
+            if !occursin(neo_libdir, ld)
+                ENV["LD_LIBRARY_PATH"] = isempty(ld) ? neo_libdir : "$neo_libdir:$ld"
+            end
         end
 
         # XXX: work around an issue with SYCL/Level Zero interoperability
