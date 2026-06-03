@@ -427,14 +427,6 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
   end
-
-  # `src` is pageable (non-USM) host memory, which cannot be safely DMA'd
-  # asynchronously: the copy may still be in flight (and only partially
-  # applied) once we return, while `src` is no longer pinned/preserved.
-  # Synchronize so the copy is complete w.r.t. the host before returning,
-  # mirroring the device-to-host path.
-  synchronize(global_queue(ctx, dev))
-
   return dest
 end
 

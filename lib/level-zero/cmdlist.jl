@@ -47,8 +47,12 @@ function ZeCommandList(f::Base.Callable, args...; kwargs...)
     return list
 end
 
-execute!(queue::ZeCommandQueue, lists::Vector{ZeCommandList}, fence=nothing) =
+const _retained_lists = ZeCommandList[]  # XXX: temporary leak to confirm lifetime hypothesis
+function execute!(queue::ZeCommandQueue, lists::Vector{ZeCommandList}, fence=nothing)
     zeCommandQueueExecuteCommandLists(queue, length(lists), lists, something(fence, C_NULL))
+    append!(_retained_lists, lists)  # XXX: prevent finalizer from destroying in-flight lists
+    return
+end
 
 """
     execute!(queue::ZeCommandQueue, ...) do list
