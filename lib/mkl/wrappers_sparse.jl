@@ -60,7 +60,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             queue = global_queue(context(nzVal), device(nzVal))
             # Don't update handle if matrix is empty
             if m != 0 && n != 0
-                $fname(sycl_queue(queue), handle_ptr[], m, n, 'O', rowPtr, colVal, nzVal)
+                $fname(sycl_queue(queue), handle_ptr[], m, n, nnzA, 'O', rowPtr, colVal, nzVal)
                 dA = oneSparseMatrixCSR{$elty, $intty}(handle_ptr[], rowPtr, colVal, nzVal, (m, n), nnzA)
                 finalizer(sparse_release_matrix_handle, dA)
             else
@@ -81,7 +81,7 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
             nnzA = length(nzVal)
             # Don't update handle if matrix is empty
             if m != 0 && n != 0
-                $fname(sycl_queue(queue), handle_ptr[], n, m, 'O', colPtr, rowVal, nzVal)  # CSC of A is CSR of Aᵀ
+                $fname(sycl_queue(queue), handle_ptr[], n, m, nnzA, 'O', colPtr, rowVal, nzVal)  # CSC of A is CSR of Aᵀ
                 dA = oneSparseMatrixCSC{$elty, $intty}(handle_ptr[], colPtr, rowVal, nzVal, (m, n), nnzA)
                 finalizer(sparse_release_matrix_handle, dA)
             else

@@ -6442,10 +6442,10 @@ function onemklSsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, inde
     @ccall liboneapi_support.onemklSsparse_set_csr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
-                                                        nnz::Int64, index::ZePtr{Int32},
+                                                        nnz::Int64, index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
-                                                        col_ind::ZePtr{Cfloat},
-                                                        values::Ptr{Cfloat})::Cint
+                                                        col_ind::ZePtr{Int32},
+                                                        values::ZePtr{Cfloat})::Cint
 end
 
 function onemklSsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, index,
@@ -6453,10 +6453,10 @@ function onemklSsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, i
     @ccall liboneapi_support.onemklSsparse_set_csr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
-                                                           nnz::Int64, index::ZePtr{Int64},
+                                                           nnz::Int64, index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
-                                                           col_ind::ZePtr{Cfloat},
-                                                           values::Ptr{Cfloat})::Cint
+                                                           col_ind::ZePtr{Int64},
+                                                           values::ZePtr{Cfloat})::Cint
 end
 
 function onemklDsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, index, row_ptr,
@@ -6464,10 +6464,10 @@ function onemklDsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, inde
     @ccall liboneapi_support.onemklDsparse_set_csr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
-                                                        nnz::Int64, index::ZePtr{Int32},
+                                                        nnz::Int64, index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
-                                                        col_ind::ZePtr{Cdouble},
-                                                        values::Ptr{Cdouble})::Cint
+                                                        col_ind::ZePtr{Int32},
+                                                        values::ZePtr{Cdouble})::Cint
 end
 
 function onemklDsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, index,
@@ -6475,10 +6475,10 @@ function onemklDsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, i
     @ccall liboneapi_support.onemklDsparse_set_csr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
-                                                           nnz::Int64, index::ZePtr{Int64},
+                                                           nnz::Int64, index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
-                                                           col_ind::ZePtr{Cdouble},
-                                                           values::Ptr{Cdouble})::Cint
+                                                           col_ind::ZePtr{Int64},
+                                                           values::ZePtr{Cdouble})::Cint
 end
 
 function onemklCsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, index, row_ptr,
@@ -6486,10 +6486,10 @@ function onemklCsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, inde
     @ccall liboneapi_support.onemklCsparse_set_csr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
-                                                        nnz::Int64, index::ZePtr{Int32},
+                                                        nnz::Int64, index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
-                                                        col_ind::ZePtr{ComplexF32},
-                                                        values::Ptr{ComplexF32})::Cint
+                                                        col_ind::ZePtr{Int32},
+                                                        values::ZePtr{ComplexF32})::Cint
 end
 
 function onemklCsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, index,
@@ -6497,10 +6497,10 @@ function onemklCsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, i
     @ccall liboneapi_support.onemklCsparse_set_csr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
-                                                           nnz::Int64, index::ZePtr{Int64},
+                                                           nnz::Int64, index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
-                                                           col_ind::ZePtr{ComplexF32},
-                                                           values::Ptr{ComplexF32})::Cint
+                                                           col_ind::ZePtr{Int64},
+                                                           values::ZePtr{ComplexF32})::Cint
 end
 
 function onemklZsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, index, row_ptr,
@@ -6508,10 +6508,10 @@ function onemklZsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, inde
     @ccall liboneapi_support.onemklZsparse_set_csr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
-                                                        nnz::Int64, index::ZePtr{Int32},
+                                                        nnz::Int64, index::onemklIndex,
                                                         row_ptr::ZePtr{Int32},
-                                                        col_ind::ZePtr{ComplexF64},
-                                                        values::Ptr{ComplexF32})::Cint
+                                                        col_ind::ZePtr{Int32},
+                                                        values::ZePtr{ComplexF64})::Cint
 end
 
 function onemklZsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, index,
@@ -6519,10 +6519,10 @@ function onemklZsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, i
     @ccall liboneapi_support.onemklZsparse_set_csr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
-                                                           nnz::Int64, index::ZePtr{Int64},
+                                                           nnz::Int64, index::onemklIndex,
                                                            row_ptr::ZePtr{Int64},
-                                                           col_ind::ZePtr{ComplexF64},
-                                                           values::Ptr{ComplexF32})::Cint
+                                                           col_ind::ZePtr{Int64},
+                                                           values::ZePtr{ComplexF64})::Cint
 end
 
 function onemklSsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, index, col_ptr,
