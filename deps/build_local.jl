@@ -1,6 +1,18 @@
 # build liboneapi_support with C wrappers for C++ APIs
 
 using Pkg
+
+# Conda.jl fails to precompile when its root environment directory has been removed
+# (e.g., by depot clean-up) while its deps.jl still points to it. Pre-create the
+# directory so that precompilation succeeds; Conda lazily re-installs itself on use.
+let deps_jl = joinpath(first(DEPOT_PATH), "conda", "deps.jl")
+    if isfile(deps_jl)
+        mod = Module()
+        Base.include(mod, deps_jl)
+        isdefined(mod, :ROOTENV) && mkpath(mod.ROOTENV)
+    end
+end
+
 Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
@@ -38,6 +50,11 @@ if !isdir(Conda.ROOTENV)
     # Same as above
     Pkg.build("Conda")
 end
+
+# make sure the CA roots used by conda's Python are up-to-date, as outdated certificates
+# otherwise result in SSL verification errors when accessing Intel's package repository
+Conda.add(["ca-certificates", "certifi"], Conda.ROOTENV)
+
 if !isfile(joinpath(conda_dir, "condarc-julia.yml"))
     Conda.create(conda_dir)
     # conda#8850
