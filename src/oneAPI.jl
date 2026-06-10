@@ -77,9 +77,59 @@ include("sorting.jl")
 include("indexing.jl")
 export oneAPIBackend
 
+# Work around a deadlock in Pkg's parallel precompilation on Julia 1.10, where it does
+# not pass `loadable_exts` to `Base.compilecache` (the kwarg is accidentally commented
+# out in Pkg's precompilation.jl), so a worker precompiling an extension freely loads
+# other extensions. If such an extension is being precompiled concurrently by another
+# worker, loading it blocks on a pidfile lock held by the Pkg driver, which in turn
+# waits for our worker: a deadlock. This bites oneAPI in particular, as it triggers
+# extensions of its own dependencies (AtomixoneAPIExt, AcceleratedKernelsoneAPIExt)
+# that have identical trigger sets and are thus precompiled concurrently.
+#
+# Mimic what Pkg on 1.11+ does by disallowing extension loading when precompiling an
+# extension. This needs to happen from `__init__`, which runs in the worker process
+# right before loading of oneAPI completes and extension callbacks are processed.
+function prevent_extension_deadlock()
+    isdefined(Base, :loadable_extensions) || return
+    isdefined(Base, :precompilation_target) || return
+    Base.loadable_extensions === nothing || return  # Pkg already restricted loading
+    target = Base.precompilation_target
+    (target === nothing || target.uuid === nothing) && return
+
+    # determine whether the precompilation target is an extension, i.e., whether its
+    # entry-point lives in the `ext` directory of a parent package whose UUID also
+    # generates the extension's UUID (the scheme used by `Base.insert_extension_triggers`)
+    path = Base.locate_package(target)
+    path === nothing && return
+    dir = dirname(path)
+    if basename(dir) != "ext"
+        dir = dirname(dir)
+        basename(dir) == "ext" || return
+    end
+    parent_uuid = nothing
+    for proj in Base.project_names
+        project_file = joinpath(dirname(dir), proj)
+        if isfile(project_file)
+            d = Base.parsed_toml(project_file)
+            parent_uuid = get(d, "uuid", nothing)
+            break
+        end
+    end
+    parent_uuid isa String || return
+    target.uuid == Base.uuid5(Base.UUID(parent_uuid), target.name) || return
+
+    Base.loadable_extensions = Base.PkgId[]
+    return
+end
+
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
-    precompiling && return
+    if precompiling
+        @static if VERSION < v"1.11"
+            prevent_extension_deadlock()
+        end
+        return
+    end
 
     if oneL0.NEO_jll.is_available() && oneL0.functional[]
         if Sys.iswindows()
