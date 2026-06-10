@@ -224,8 +224,57 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
     # NOTE: dev purposefully does not default to context() or device() to stress that
     #       objects should track ownership, and not rely on implicit global state.
     get!(task_local_storage(), (:ZeCommandQueue, ctx, dev)) do
-        ZeCommandQueue(ctx, dev; flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
+        queue = ZeCommandQueue(ctx, dev; flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
+        # disable finalizers while mutating the registry: a GC-driven finalizer on this
+        # task could call back into `synchronize_all_queues` (the lock is reentrant) and
+        # observe/mutate the registry mid-update.
+        GC.enable_finalizers(false)
+        try
+            @lock queue_registry_lock begin
+                push!(get!(Vector{WeakRef}, queue_registry, (ctx, dev)), WeakRef(queue))
+            end
+        finally
+            GC.enable_finalizers(true)
+        end
+        queue
     end
+end
+
+# Registry of all queues created through `global_queue`, across tasks. Buffers can be
+# freed from any task (GC finalizers), so `release` needs to be able to find the queues
+# that may still have work in flight referencing the buffer; queues themselves are
+# cached task-locally and would otherwise be unreachable from the finalizing task.
+const queue_registry_lock = ReentrantLock()
+const queue_registry = Dict{Tuple{ZeContext,ZeDevice},Vector{WeakRef}}()
+
+# synchronize all known queues that target the given context (and device, if specified),
+# i.e., all queues whose in-flight work could possibly reference an allocation that is
+# about to be freed.
+function synchronize_all_queues(ctx::ZeContext, dev::Union{ZeDevice,Nothing})
+    queues = ZeCommandQueue[]
+    GC.enable_finalizers(false)
+    try
+        @lock queue_registry_lock begin
+            for ((qctx, qdev), refs) in queue_registry
+                qctx == ctx || continue
+                (dev === nothing || qdev == dev) || continue
+                filter!(refs) do ref
+                    queue = ref.value
+                    queue === nothing && return false
+                    push!(queues, queue)
+                    true
+                end
+            end
+        end
+    finally
+        GC.enable_finalizers(true)
+    end
+    # synchronize outside the lock: this can block for as long as a kernel runs,
+    # and finalizers running concurrently also need to take the lock.
+    for queue in queues
+        oneL0.synchronize(queue)
+    end
+    return
 end
 
 """
