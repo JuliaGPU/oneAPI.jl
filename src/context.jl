@@ -261,18 +261,21 @@ function synchronize_all_queues(ctx::ZeContext, dev::Union{ZeDevice,Nothing})
                 filter!(refs) do ref
                     queue = ref.value
                     queue === nothing && return false
+                    queue.handle == C_NULL && return false  # finalized, handle destroyed
                     push!(queues, queue)
                     true
                 end
             end
         end
+        # synchronize outside the lock: this can block for as long as a kernel runs,
+        # and finalizers running concurrently also need to take the lock. Keep
+        # finalizers disabled so none of the collected queues can be destroyed
+        # between collection and synchronization.
+        for queue in queues
+            oneL0.synchronize(queue)
+        end
     finally
         GC.enable_finalizers(true)
-    end
-    # synchronize outside the lock: this can block for as long as a kernel runs,
-    # and finalizers running concurrently also need to take the lock.
-    for queue in queues
-        oneL0.synchronize(queue)
     end
     return
 end
