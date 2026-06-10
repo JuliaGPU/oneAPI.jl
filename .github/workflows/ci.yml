@@ -12,23 +12,36 @@ on:
 
 jobs:
   self-runner:
-    continue-on-error: true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ZE_ENABLE_VALIDATION_LAYER: '1'
+      ZE_ENABLE_PARAMETER_VALIDATION: '1'
+      EnableDebugBreak: '0'
     runs-on: [self-hosted, linux, X64]
     strategy:
       matrix:
         os: [ubuntu-latest]
         julia-version: ['1']
         julia-arch: [x64]
-
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.julia-version }}
-      - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-buildpkg@latest
-        continue-on-error: true
-      - uses: julia-actions/julia-runtest@latest
-        continue-on-error: true
+      - name: Install debug libraries
+        run: |
+          julia --project=deps deps/build_ci.jl
+          julia --project -e '
+            # use debug JLLs, for asserts + better backtraces
+            using oneAPI
+            oneAPI.set_debug!(true)'
+      - name: Setup environment
+        run: |
+          julia --color=yes --project=./test -e '
+            using Pkg
+            Pkg.Registry.update()
+            Pkg.develop(path=".")
+            Pkg.instantiate()'
+      - name: Run tests
+        run: |
+          julia --project=test --color=no test/runtests.jl --jobs=8
