@@ -1,4 +1,16 @@
 using Pkg
+
+# Conda.jl fails to precompile when its root environment directory has been removed
+# (e.g., by depot clean-up) while its deps.jl still points to it. Pre-create the
+# directory so that precompilation succeeds; Conda lazily re-installs itself on use.
+let deps_jl = joinpath(first(DEPOT_PATH), "conda", "deps.jl")
+    if isfile(deps_jl)
+        mod = Module()
+        Base.include(mod, deps_jl)
+        isdefined(mod, :ROOTENV) && mkpath(mod.ROOTENV)
+    end
+end
+
 Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
