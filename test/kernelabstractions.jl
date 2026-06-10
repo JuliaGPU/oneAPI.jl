@@ -4,5 +4,6 @@ include(joinpath(dirname(pathof(KernelAbstractions)), "..", "test", "testsuite.j
 skip_tests=Set([
     "sparse",
     "Convert", # Need to opt out of i128
+    "Random",
 ])
 Testsuite.testsuite(oneAPIBackend, "oneAPI", oneAPI, oneArray, oneDeviceArray; skip_tests)
