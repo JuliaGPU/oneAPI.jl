@@ -15,6 +15,12 @@ jobs:
     continue-on-error: true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Pin each parallel test worker to a distinct GPU tile instead of
+      # oversubscribing device 0 (see test/runtests.jl).
+      ONEAPI_TEST_SPREAD_GPUS: '1'
+      # Synchronize after every command-list submission to work around the
+      # Aurora LTS NEO dropped-tail corruption (see lib/level-zero/cmdlist.jl).
+      ONEAPI_SYNC_EACH_SUBMISSION: '1'
     runs-on: [self-hosted, linux, X64]
     strategy:
       matrix:
