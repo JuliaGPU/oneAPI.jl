@@ -1,4 +1,4 @@
-using oneAPI_Support_Headers_jll
+import oneAPI_Support_Headers_LTS_jll as oneAPI_Support_Headers_jll
 
 include("generate_helpers.jl")
 
@@ -337,12 +337,34 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
     end
   end
 
+  # Dedup: when two signatures map to the same C function name (because MKL
+  # added an overload), keep the one with more parameters — typically the
+  # newer signature (e.g. set_csr_data gained an `nnz` arg in MKL 2025.3.1).
+  # Without this the generated onemkl.cpp has duplicate function definitions
+  # and won't compile.
+  _fn_name(h) = (pos = findfirst('(', h); strip(split(strip(h[1:pos-1]))[end]))
+  _param_cnt(h) = (pos = findfirst('(', h); ep = findnext(')', h, pos); count(==(','), h[pos+1:ep-1]) + 1)
+  keep_idx = Dict{String,Int}()
+  keep_pc  = Dict{String,Int}()
+  for (i, sig) in enumerate(signatures)
+    (sig[2] in blacklist) && continue
+    fn = _fn_name(sig[1])
+    pc = _param_cnt(sig[1])
+    if !haskey(keep_idx, fn) || pc > keep_pc[fn]
+      keep_idx[fn] = i
+      keep_pc[fn]  = pc
+    end
+  end
+  keep_set = Set(values(keep_idx))
+
   path_oneapi_headers = joinpath(@__DIR__, output)
   oneapi_headers = open(path_oneapi_headers, "w")
 
-  for (header, name_routine, version, type_routine, template) in signatures
+  for (i, (header, name_routine, version, type_routine, template)) in enumerate(signatures)
     # Blacklist
     (name_routine in blacklist) && continue
+    # Dedup
+    (i in keep_set) || continue
 
     # Pass scalars (e.g. alpha/beta inputs) as references instead of values
     for type in ("short", "float", "double", "float _Complex", "double _Complex")

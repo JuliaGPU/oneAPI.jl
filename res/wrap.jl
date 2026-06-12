@@ -108,7 +108,7 @@ end
 # Main application
 #
 
-using oneAPI_Level_Zero_Headers_jll
+import oneAPI_Level_Zero_Headers_LTS_jll as oneAPI_Level_Zero_Headers_jll
 
 function main()
     wrap("ze", oneAPI_Level_Zero_Headers_jll.ze_api)

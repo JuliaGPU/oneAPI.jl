@@ -55,7 +55,15 @@ end
 
 function allocate(::Type{oneL0.HostBuffer}, ctx, dev, bytes::Int, alignment::Int)
     bytes == 0 && return oneL0.HostBuffer(ZE_NULL, bytes, ctx)
-    host_alloc(ctx, bytes, alignment)
+    buf = host_alloc(ctx, bytes, alignment)
+    # Host USM must be made resident on the device, exactly like device/shared
+    # allocations. On the Aurora LTS NEO stack (25.18), a GPU kernel that reads a
+    # non-resident host buffer intermittently takes a NotPresent pagefault (banning the
+    # context), even though host USM is nominally accessible — see `repro_host_minimal.jl`
+    # (a kernel reading a host-backed array under GC churn faults; the same pattern with
+    # device/shared buffers, which are already made resident, does not).
+    make_resident(ctx, dev, buf)
+    return buf
 end
 
 function release(buf::oneL0.AbstractBuffer)
@@ -76,6 +84,15 @@ function release(buf::oneL0.AbstractBuffer)
     #    dev = oneL0.device(buf)
     #    evict(ctx, dev, buf)
     #end
+
+    # NEO (at least the 25.18 LTS release) does not honor the BLOCKING_FREE/DEFER_FREE
+    # policies of zeMemFreeExt: it advertises ZE_extension_memory_free_policies but
+    # unmaps the allocation immediately, even with work in flight that references it.
+    # That turns a GC-driven free of a dead array whose last kernel/copy hasn't retired
+    # into a GPU pagefault, which gets the kernel context banned and makes every later
+    # submission fail with ZE_RESULT_ERROR_UNKNOWN. Synchronize the queues that could
+    # reference this buffer before freeing.
+    synchronize_all_queues(oneL0.context(buf), oneL0.device(buf))
 
     free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE)
 

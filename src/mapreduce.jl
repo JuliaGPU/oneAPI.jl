@@ -105,6 +105,32 @@ function partial_mapreduce_device(f, op, neutral, maxitems, Rreduce, Rother, R, 
     return
 end
 
+# Coalesced reduction for when the contiguous leading dimension is NOT reduced (the reduced
+# axes are strided). One work-item per output slice (Rother element), grid-strided; each
+# serially reduces over Rreduce. Consecutive work-items map to consecutive output slices,
+# which are consecutive in memory, so global reads are coalesced across lanes — the access
+# pattern a `dims=1` reduction already uses. On the Aurora LTS stack the workgroup-per-slice
+# kernel above reads a *strided* reduced dimension non-coalesced, which silently corrupts
+# large reductions (e.g. `sum(A; dims=2)`); this path avoids that pattern entirely.
+function coalesced_mapreduce_device(f, op, neutral, Rreduce, Rother, R, As...)
+    iother = (get_group_id() - 1) * get_local_size() + get_local_id()
+    gstride = get_num_groups() * get_local_size()
+    @inbounds while iother <= length(Rother)
+        Iother = Rother[iother]
+        Iout = CartesianIndex(Tuple(Iother)..., 1)
+        neut = neutral === nothing ? R[Iout] : neutral
+        val = op(neut, neut)
+        for ireduce in 1:length(Rreduce)
+            Ireduce = Rreduce[ireduce]
+            J = max(Iother, Ireduce)
+            val = op(val, f(_map_getindex(As, J)...))
+        end
+        R[Iout] = val
+        iother += gstride
+    end
+    return
+end
+
 ## COV_EXCL_STOP
 
 function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
@@ -132,6 +158,20 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # this does not affect the actual location in memory of the final values,
     # but allows us to write a generalized kernel supporting partial reductions.
     R′ = reshape(R, (size(R)..., 1))
+
+    # Aurora LTS workaround: the workgroup-per-slice kernel below reads a *strided* reduced
+    # dimension non-coalesced, which silently corrupts reductions on this stack (regardless of
+    # output count — it depends on the reduction length, not the number of slices). Whenever
+    # the contiguous leading dimension is NOT reduced (`size(Rreduce, 1) == 1`), use the
+    # coalesced one-work-item-per-slice kernel, whose lanes read consecutive memory. Few-slice
+    # reductions get less parallelism but stay correct; the common many-slice case is also fast.
+    if size(Rreduce, 1) == 1
+        items = clamp(length(Rother), 1, 256)
+        groups = min(cld(length(Rother), items), 1024)
+        @oneapi items=items groups=groups coalesced_mapreduce_device(
+            f, op, init, Rreduce, Rother, R′, A)
+        return R
+    end
 
     # how many items do we want?
     #
