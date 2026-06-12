@@ -231,7 +231,8 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
         GC.enable_finalizers(false)
         try
             @lock queue_registry_lock begin
-                push!(get!(Vector{WeakRef}, queue_registry, (ctx, dev)), WeakRef(queue))
+                push!(get!(Vector{Tuple{WeakRef,ZeCommandQueue}}, queue_registry, (ctx, dev)),
+                      (WeakRef(current_task()), queue))
             end
         finally
             GC.enable_finalizers(true)
@@ -244,26 +245,37 @@ end
 # freed from any task (GC finalizers), so `release` needs to be able to find the queues
 # that may still have work in flight referencing the buffer; queues themselves are
 # cached task-locally and would otherwise be unreachable from the finalizing task.
+#
+# Entries reference the queue *strongly*: the GC clears WeakRefs to a dead queue in the
+# same cycle that queues its finalizer, i.e., before the finalizer runs, so a WeakRef
+# would hide the queue from `release` exactly when its in-flight work still references
+# buffers about to be freed. The owning task is tracked weakly instead: queues are
+# task-local, so once their task is dead no new work can reach them, and the entry can
+# be dropped (allowing the queue to be finalized) after a final synchronize.
 const queue_registry_lock = ReentrantLock()
-const queue_registry = Dict{Tuple{ZeContext,ZeDevice},Vector{WeakRef}}()
+const queue_registry = Dict{Tuple{ZeContext,ZeDevice},Vector{Tuple{WeakRef,ZeCommandQueue}}}()
 
 # synchronize all known queues that target the given context (and device, if specified),
 # i.e., all queues whose in-flight work could possibly reference an allocation that is
 # about to be freed.
 function synchronize_all_queues(ctx::ZeContext, dev::Union{ZeDevice,Nothing})
     queues = ZeCommandQueue[]
+    stale = Tuple{WeakRef,ZeCommandQueue}[]
     GC.enable_finalizers(false)
     try
         @lock queue_registry_lock begin
-            for ((qctx, qdev), refs) in queue_registry
+            for ((qctx, qdev), entries) in queue_registry
                 qctx == ctx || continue
                 (dev === nothing || qdev == dev) || continue
-                filter!(refs) do ref
-                    queue = ref.value
-                    queue === nothing && return false
-                    queue.handle == C_NULL && return false  # finalized, handle destroyed
+                for entry in entries
+                    (task, queue) = entry
+                    queue.handle == C_NULL && continue  # finalized, handle destroyed
                     push!(queues, queue)
-                    true
+                    # entries whose task was already dead at this point cannot
+                    # receive new work, so they are safe to retire after the sync
+                    if task.value === nothing || istaskdone(task.value::Task)
+                        push!(stale, entry)
+                    end
                 end
             end
         end
@@ -273,6 +285,18 @@ function synchronize_all_queues(ctx::ZeContext, dev::Union{ZeDevice,Nothing})
         # between collection and synchronization.
         for queue in queues
             oneL0.synchronize(queue)
+        end
+        # retire drained queues of dead tasks, allowing them to be finalized (the
+        # finalizer synchronizes once more before destroying the queue, in case
+        # the queue is dropped through other means).
+        if !isempty(stale)
+            @lock queue_registry_lock begin
+                for ((qctx, qdev), entries) in queue_registry
+                    qctx == ctx || continue
+                    (dev === nothing || qdev == dev) || continue
+                    filter!(entry -> !any(s -> s === entry, stale), entries)
+                end
+            end
         end
     finally
         GC.enable_finalizers(true)

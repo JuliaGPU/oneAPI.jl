@@ -20,6 +20,12 @@ mutable struct ZeCommandQueue
         zeCommandQueueCreate(ctx, dev, desc_ref, handle_ref)
         obj = new(handle_ref[], ctx, dev, ordinal)
         finalizer(obj) do obj
+            # the queue may still have work in flight (nothing requires a task to
+            # synchronize before dying), and zeCommandQueueDestroy does not wait for
+            # it: on the LTS NEO stack the still-running work then faults as soon as
+            # a referenced allocation is freed, getting the context banned. drain the
+            # queue first; unchecked, as sync on a banned context returns an error.
+            unchecked_zeCommandQueueSynchronize(obj, typemax(UInt64))
             zeCommandQueueDestroy(obj)
             # mark the queue as destroyed: it can still be weakly reachable (e.g. from
             # the queue registry used by `synchronize_all_queues`), and synchronizing a

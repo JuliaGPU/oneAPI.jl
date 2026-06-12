@@ -55,7 +55,15 @@ end
 
 function allocate(::Type{oneL0.HostBuffer}, ctx, dev, bytes::Int, alignment::Int)
     bytes == 0 && return oneL0.HostBuffer(ZE_NULL, bytes, ctx)
-    host_alloc(ctx, bytes, alignment)
+    buf = host_alloc(ctx, bytes, alignment)
+    # Host USM must be made resident on the device, exactly like device/shared
+    # allocations. On the Aurora LTS NEO stack (25.18), a GPU kernel that reads a
+    # non-resident host buffer intermittently takes a NotPresent pagefault (banning the
+    # context), even though host USM is nominally accessible — see `repro_host_minimal.jl`
+    # (a kernel reading a host-backed array under GC churn faults; the same pattern with
+    # device/shared buffers, which are already made resident, does not).
+    make_resident(ctx, dev, buf)
+    return buf
 end
 
 function release(buf::oneL0.AbstractBuffer)
