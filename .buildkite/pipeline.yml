@@ -15,8 +15,7 @@ steps:
                 - lib
                 - examples
         agents:
-          queue: "juliagpu"
-          intel: "*"
+          queue: "oneapi"
         commands: |
           julia --project=deps deps/build_ci.jl
         if: build.message !~ /\[skip tests\]/
@@ -61,8 +60,7 @@ steps:
           ZE_ENABLE_PARAMETER_VALIDATION: '1'
           EnableDebugBreak: '0'
         agents:
-          queue: "juliagpu"
-          intel: "*"
+          queue: "oneapi"
         if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
         timeout_in_minutes: 60
         soft_fail: true
