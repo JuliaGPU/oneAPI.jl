@@ -47,8 +47,21 @@ function ZeCommandList(f::Base.Callable, args...; kwargs...)
     return list
 end
 
-execute!(queue::ZeCommandQueue, lists::Vector{ZeCommandList}, fence=nothing) =
-    zeCommandQueueExecuteCommandLists(queue, length(lists), lists, something(fence, C_NULL))
+# Opt-in workaround for the Aurora LTS NEO stack (set ONEAPI_SYNC_EACH_SUBMISSION=1).
+# Under heavy multi-process oversubscription of a single tile, a whole-queue
+# `zeCommandQueueSynchronize` does not reliably retire the tail of an earlier,
+# separately-submitted command list — producing silent "dropped tail" corruption (the
+# last work-item of a kernel / last element of a copy is missing). See
+# ISSUE_dropped_tail.md. Synchronizing after *every* submission eliminates it, at a large
+# throughput cost (~3x), so it is off by default and only enabled when correctness under
+# oversubscription matters more than speed.
+const sync_each_submission = Ref{Bool}(false)
+
+function execute!(queue::ZeCommandQueue, lists::Vector{ZeCommandList}, fence=nothing)
+    r = zeCommandQueueExecuteCommandLists(queue, length(lists), lists, something(fence, C_NULL))
+    sync_each_submission[] && synchronize(queue)
+    return r
+end
 
 """
     execute!(queue::ZeCommandQueue, ...) do list

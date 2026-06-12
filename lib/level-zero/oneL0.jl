@@ -195,6 +195,7 @@ function __init__()
 
     validation_layer[] = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
     parameter_validation[] = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
+    sync_each_submission[] = lowercase(get(ENV, "ONEAPI_SYNC_EACH_SUBMISSION", "")) in ("1", "true", "yes")
 end
 
 end
