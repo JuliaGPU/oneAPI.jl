@@ -131,13 +131,15 @@ function __init__()
         return
     end
 
-    if oneL0.NEO_jll.is_available() && oneL0.functional[]
-        if Sys.iswindows()
+    if oneL0.functional[]
+        @static if Sys.iswindows()
             @warn """oneAPI.jl support for native Windows is experimental and incomplete.
                  For the time being, it is recommended to use WSL or Linux instead."""
         else
-            # ensure that the OpenCL loader finds the ICD files from our artifacts
-            ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
+            if oneL0.NEO_jll.is_available()
+                # ensure that the OpenCL loader finds the ICD files from our artifacts
+                ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
+            end
         end
 
         # XXX: work around an issue with SYCL/Level Zero interoperability
