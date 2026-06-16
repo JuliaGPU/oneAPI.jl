@@ -158,6 +158,12 @@ function __init__()
                       If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
             return
         end
+
+        # starting with v1.29, the Level Zero loader no longer probes for the default
+        # driver library name, so explicitly point it at the NEO driver from our artifacts.
+        if !haskey(ENV, "ZE_ENABLE_ALT_DRIVERS")
+            ENV["ZE_ENABLE_ALT_DRIVERS"] = NEO_jll.libze_intel_gpu
+        end
     end
 
     try
