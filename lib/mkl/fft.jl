@@ -93,9 +93,14 @@ function _create_descriptor(sz::NTuple{N,Int}, T::Type, complex::Bool) where {N}
     prec = T<:Float64 || T<:ComplexF64 ? ONEMKL_DFT_PRECISION_DOUBLE : ONEMKL_DFT_PRECISION_SINGLE
     dom = complex ? ONEMKL_DFT_DOMAIN_COMPLEX : ONEMKL_DFT_DOMAIN_REAL
     desc_ref = Ref{onemklDftDescriptor_t}()
-    # Create descriptor for the full array dimensions
+    # Create descriptor for the full array dimensions. `lengths` must stay rooted
+    # across the ccall: oneMKL copies the dimensions out of `pointer(lengths)`, and
+    # without GC.@preserve the array can be collected first, leaving the descriptor
+    # with garbage dimensions (commit then fails with FFT_INVALID_DESCRIPTOR).
     lengths = collect(Int64, sz)
-    st = length(lengths) == 1 ? onemklDftCreate1D(desc_ref, prec, dom, lengths[1]) : onemklDftCreateND(desc_ref, prec, dom, length(lengths), pointer(lengths))
+    st = GC.@preserve lengths (length(lengths) == 1 ?
+        onemklDftCreate1D(desc_ref, prec, dom, lengths[1]) :
+        onemklDftCreateND(desc_ref, prec, dom, length(lengths), pointer(lengths)))
     st == 0 || error("onemkl DFT create failed (status $st)")
     desc = desc_ref[]
     # Do not program descriptor scaling; we'll perform inverse normalization manually.
@@ -125,8 +130,10 @@ function plan_fft(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,Co
             strides[i+1] = prod
             prod *= size(X,i)
         end
-        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
-        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
+        GC.@preserve strides begin
+            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
+            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
+        end
     end
     stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
     return cMKLFFTPlan{T,MKLFFT_FORWARD,false,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)
@@ -144,8 +151,10 @@ function plan_bfft(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,C
         @inbounds for i in 1:N
             strides[i+1]=prod; prod*=size(X,i)
         end
-        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
-        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
+        GC.@preserve strides begin
+            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
+            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
+        end
     end
     stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
     return cMKLFFTPlan{T,MKLFFT_INVERSE,false,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)
@@ -165,8 +174,10 @@ function plan_fft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,C
         @inbounds for i in 1:N
             strides[i+1]=prod; prod*=size(X,i)
         end
-        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
-        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
+        GC.@preserve strides begin
+            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
+            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
+        end
     end
     stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
     cMKLFFTPlan{T,MKLFFT_FORWARD,true,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)
@@ -184,8 +195,10 @@ function plan_bfft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,
         @inbounds for i in 1:N
             strides[i+1]=prod; prod*=size(X,i)
         end
-        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
-        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
+        GC.@preserve strides begin
+            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
+            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
+        end
     end
     stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
     cMKLFFTPlan{T,MKLFFT_INVERSE,true,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)
