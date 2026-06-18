@@ -214,7 +214,13 @@ end
 ## Synchronization and Printing
 
 @device_override @inline function KA.__synchronize()
-    barrier(0)
+    # Fence both local and global memory across the workgroup barrier, matching CUDA
+    # `__syncthreads` semantics. `barrier(0)` lowers to `OpControlBarrier` with
+    # `SequentiallyConsistent` but WITHOUT any storage-class bit, which the SPIR-V spec
+    # treats as ordering *no* memory — so shared-local or global writes are not guaranteed
+    # visible to other work-items after the barrier. `LOCAL_MEM_FENCE | GLOBAL_MEM_FENCE`
+    # ORs in the WorkgroupMemory/CrossWorkgroupMemory fence bits.
+    barrier(SPIRVIntrinsics.LOCAL_MEM_FENCE | SPIRVIntrinsics.GLOBAL_MEM_FENCE)
 end
 
 @device_override @inline function KA.__print(args...)

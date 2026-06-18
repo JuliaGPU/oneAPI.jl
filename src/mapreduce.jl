@@ -33,7 +33,11 @@
     # perform a reduction
     d = 1
     while d < items
-        barrier(0)
+        # Fence local memory: `barrier(0)` lowers to an OpControlBarrier without the
+        # WorkgroupMemory storage-class bit, which does not order the shared-local tree
+        # accesses across the barrier. Fence local memory so each tree step sees the
+        # previous step's `shared[]` writes.
+        barrier(SPIRVIntrinsics.LOCAL_MEM_FENCE)
         index = 2 * d * (item-1) + 1
         @inbounds if index <= items
             other_val = if index + d <= items
