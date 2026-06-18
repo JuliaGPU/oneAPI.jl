@@ -526,9 +526,12 @@ function Base.fill!(A::oneDenseArray{T}, val) where T
   val = convert(T, val)
   sizeof(T) == 0 && return A
 
-  # execute! is async, so we need to allocate the pattern in USM memory
-  # and keep it alive until the operation completes.
+  # execute! is async, so we need to allocate the pattern in USM memory and keep it alive
+  # until the operation completes. The fill reads this host buffer on the GPU, so it must
+  # be made resident on the device like any other USM a kernel reads (see
+  # `allocate(::Type{oneL0.HostBuffer}, ...)`).
   buf = oneL0.host_alloc(context(A), sizeof(T), Base.datatype_alignment(T))
+  oneL0.make_resident(context(A), device(), buf)
   unsafe_store!(convert(Ptr{T}, buf), val)
   unsafe_fill!(context(A), device(), pointer(A), convert(ZePtr{T}, buf), length(A))
   synchronize(global_queue(context(A), device()))

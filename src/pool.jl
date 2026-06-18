@@ -55,7 +55,13 @@ end
 
 function allocate(::Type{oneL0.HostBuffer}, ctx, dev, bytes::Int, alignment::Int)
     bytes == 0 && return oneL0.HostBuffer(ZE_NULL, bytes, ctx)
-    host_alloc(ctx, bytes, alignment)
+    buf = host_alloc(ctx, bytes, alignment)
+    # Host USM must be made resident on the device, exactly like the device and shared
+    # allocations above. A GPU kernel that reads a non-resident host buffer can take a
+    # NotPresent pagefault under GC/allocation churn, even though host USM is nominally
+    # device-accessible.
+    make_resident(ctx, dev, buf)
+    return buf
 end
 
 function release(buf::oneL0.AbstractBuffer)
