@@ -79,4 +79,19 @@ end
         end
     end
 end
+
+@testset "shared queue lifetime across plans" begin
+    dX1 = gpu(rand(ComplexF32, 8))
+    p1 = AbstractFFTs.plan_fft(dX1)
+    dY1 = p1 * dX1
+    p1i = AbstractFFTs.plan_ifft(dX1)
+    p1i * dY1
+
+    GC.gc(true)  # run finalizers of any throwaway per-plan SYCL wrappers
+
+    X2 = rand(ComplexF32, 8, 32)
+    dX2 = gpu(X2)
+    p2 = AbstractFFTs.plan_fft(dX2)
+    cmp(p2 * dX2, fft(X2))
+end
 end
