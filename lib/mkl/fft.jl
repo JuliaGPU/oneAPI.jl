@@ -105,11 +105,13 @@ function _create_descriptor(sz::NTuple{N,Int}, T::Type, complex::Bool) where {N}
     desc = desc_ref[]
     # Do not program descriptor scaling; we'll perform inverse normalization manually.
     # Set placement explicitly based on plan type later
-    # Construct a SYCL queue from current Level Zero context/device (reuse global queue)
+    # Use the task-local cached SYCL queue wrapping the global Level Zero queue, like the
+    # other oneMKL wrappers do. Creating fresh syclContext/syclQueue objects per plan is
+    # unsound: once they become garbage their finalizers (syclQueueDestroy etc.) tear down
+    # SYCL runtime state for the still-in-use underlying queue, corrupting later DFT
+    # commits and crashing at process exit.
     ze_ctx = oneAPI.context(); ze_dev = oneAPI.device()
-    sycl_dev = SYCL.syclDevice(SYCL.syclPlatform(oneAPI.driver()), ze_dev)
-    sycl_ctx = SYCL.syclContext([sycl_dev], ze_ctx)
-    q = SYCL.syclQueue(sycl_ctx, sycl_dev, oneAPI.global_queue(ze_ctx, ze_dev))
+    q = oneAPI.sycl_queue(oneAPI.global_queue(ze_ctx, ze_dev))
     return desc, q
 end
 

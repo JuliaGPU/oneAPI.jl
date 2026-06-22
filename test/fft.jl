@@ -79,4 +79,27 @@ end
         end
     end
 end
+
+@testset "shared queue lifetime across plans" begin
+    # Plans must share the single cached task-local SYCL queue rather than each owning a
+    # throwaway one (whose finalizer would tear down shared SYCL/oneMKL state). Assert the
+    # shared handle deterministically, independent of whether a stale queue would crash.
+    cached_handle = Base.unsafe_convert(oneAPI.oneMKL.syclQueue_t,
+        oneAPI.sycl_queue(oneAPI.global_queue(oneAPI.context(), oneAPI.device())))
+
+    dX1 = gpu(rand(ComplexF32, 8))
+    p1 = AbstractFFTs.plan_fft(dX1)
+    @test p1.queue == cached_handle
+    dY1 = p1 * dX1
+    p1i = AbstractFFTs.plan_ifft(dX1)
+    p1i * dY1
+
+    GC.gc(true)  # run finalizers of any throwaway per-plan SYCL wrappers
+
+    X2 = rand(ComplexF32, 8, 32)
+    dX2 = gpu(X2)
+    p2 = AbstractFFTs.plan_fft(dX2)
+    @test p2.queue == cached_handle
+    cmp(p2 * dX2, fft(X2))
+end
 end
