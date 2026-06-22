@@ -325,7 +325,7 @@ function matmul_kernel(A, B, C)
     tile_A[local_i, local_j] = A[...]
     tile_B[local_i, local_j] = B[...]
 
-    barrier()  # Synchronize workgroup
+    barrier(oneAPI.LOCAL_MEM_FENCE)  # synchronize the workgroup, fencing local memory
 
     # Compute using local memory
     # ...
