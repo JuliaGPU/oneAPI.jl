@@ -29,19 +29,21 @@ function contains_eltype(T, X)
 end
 
 function _device_supports_bfloat16()
-  # check the driver extension first
-  if haskey(oneL0.extension_properties(driver()),
-            oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME)
-      return true
-  end
-  # some drivers (e.g. older versions on PVC/Max) don't advertise the extension,
-  # but the hardware supports BFloat16 natively. fall back to checking device ID.
-  dev_id = oneL0.properties(device()).deviceId
-  # Intel Data Center GPU Max (Ponte Vecchio): device IDs 0x0BD0-0x0BDB
-  if 0x0BD0 <= dev_id <= 0x0BDB
-      return true
-  end
-  return false
+    # check the driver extension first
+    if haskey(
+            oneL0.extension_properties(driver()),
+            oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME
+        )
+        return true
+    end
+    # some drivers (e.g. older versions on PVC/Max) don't advertise the extension,
+    # but the hardware supports BFloat16 natively. fall back to checking device ID.
+    dev_id = oneL0.properties(device()).deviceId
+    # Intel Data Center GPU Max (Ponte Vecchio): device IDs 0x0BD0-0x0BDB
+    if 0x0BD0 <= dev_id <= 0x0BDB
+        return true
+    end
+    return false
 end
 
 function check_eltype(T)
@@ -55,11 +57,11 @@ function check_eltype(T)
       oneL0.ZE_DEVICE_MODULE_FLAG_FP64
     contains_eltype(T, Float64) && error("Float64 is not supported on this device")
   end
-  @static if isdefined(Core, :BFloat16)
-    if !_device_supports_bfloat16()
-      contains_eltype(T, Core.BFloat16) && error("BFloat16 is not supported on this device")
+    return @static if isdefined(Core, :BFloat16)
+        if !_device_supports_bfloat16()
+            contains_eltype(T, Core.BFloat16) && error("BFloat16 is not supported on this device")
+        end
     end
-  end
 end
 
 """

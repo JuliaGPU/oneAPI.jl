@@ -39,7 +39,7 @@ a = float32_to_bf16.(rand(Float32, n))
 d_a = oneArray(a)
 d_out = oneArray{Core.BFloat16}(undef, n)
 
-@oneapi items=n scale_bf16(d_a, d_out)
+@oneapi items = n scale_bf16(d_a, d_out)
 result = Array(d_out)
 
 # Verify: each output should be 2x the input (in Float32 space)

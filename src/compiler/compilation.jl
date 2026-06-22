@@ -54,7 +54,7 @@ function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
     # SPV_KHR_bfloat16, lower all bfloat types to i16 so the translator can
     # handle the module without the extension.
     if @static(isdefined(Core, :BFloat16) && isdefined(LLVM, :BFloatType)) &&
-       _device_supports_bfloat16() && !_driver_supports_bfloat16_spirv()
+            _device_supports_bfloat16() && !_driver_supports_bfloat16_spirv()
         lower_bfloat_to_i16!(mod)
     end
 
@@ -248,8 +248,8 @@ function eliminate_bf16_bitcasts!(mod::LLVM.Module, T_bf16::LLVMType, T_i16::LLV
                         src_ty = value_type(src)
                         dst_ty = value_type(inst)
                         if (src_ty == T_i16 && dst_ty == T_bf16) ||
-                           (src_ty == T_bf16 && dst_ty == T_i16) ||
-                           (src_ty == dst_ty)
+                                (src_ty == T_bf16 && dst_ty == T_i16) ||
+                                (src_ty == dst_ty)
                             LLVM.replace_uses!(inst, src)
                             push!(to_delete, inst)
                             changed = true
@@ -262,6 +262,7 @@ function eliminate_bf16_bitcasts!(mod::LLVM.Module, T_bf16::LLVMType, T_i16::LLV
             end
         end
     end
+    return
 end
 
 
@@ -292,9 +293,11 @@ function compiler_config(dev; kwargs...)
 end
 # Whether the driver's SPIR-V runtime accepts the SPV_KHR_bfloat16 extension.
 function _driver_supports_bfloat16_spirv()
-    @static if isdefined(Core, :BFloat16)
-        haskey(oneL0.extension_properties(driver()),
-               oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME)
+    return @static if isdefined(Core, :BFloat16)
+        haskey(
+            oneL0.extension_properties(driver()),
+            oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME
+        )
     else
         false
     end
