@@ -15,6 +15,12 @@ jobs:
     continue-on-error: true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Pin each parallel test worker to a distinct GPU tile instead of
+      # oversubscribing device 0 (see test/runtests.jl).
+      ONEAPI_TEST_SPREAD_GPUS: '1'
+      # Synchronize after every command-list submission to work around the
+      # Aurora LTS NEO dropped-tail corruption (see lib/level-zero/cmdlist.jl).
+      ONEAPI_SYNC_EACH_SUBMISSION: '1'
     runs-on: [self-hosted, linux, X64]
     strategy:
       matrix:
@@ -30,5 +36,13 @@ jobs:
       - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@latest
         continue-on-error: true
-      - uses: julia-actions/julia-runtest@latest
+      # Disable AVX512-FP16 host codegen on the Aurora Sapphire Rapids nodes. Under concurrent
+      # oneMKL load the native AVX512-FP16 path silently miscomputes *host* Float16 (e.g. the
+      # GPUArrays `A .* B .+ c` broadcast reference), failing tests even though the GPU result
+      # is correct (single-process clean; MXCSR clean; only the native-FP16 path, not Float32).
+      # `-C native,-avx512fp16` routes Float16 through Float32 and propagates to the Pkg.test
+      # subprocess and its parallel workers via Base.julia_cmd(). `julia-runtest` cannot pass a
+      # cpu-target, so invoke Pkg.test() directly. See repro_bcast_mkl.jl.
+      - name: Run tests (AVX512-FP16 disabled)
         continue-on-error: true
+        run: julia -C "native,-avx512fp16" --color=yes --project=. -e 'import Pkg; Pkg.test()'
