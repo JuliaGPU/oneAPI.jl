@@ -158,7 +158,7 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
 
     # Aurora LTS workaround (see `_dense_reduce_input` above): materialize strided inputs to a
     # dense array first so every global read in the reduction kernel is coalesced.
-    if !_dense_reduce_input(A)
+    if oneL0.LTS[] && !_dense_reduce_input(A)
         Acontig = Broadcast.materialize(Broadcast.broadcasted(f, A))
         return GPUArrays.mapreducedim!(identity, op, R, Acontig; init=init)
     end
@@ -189,7 +189,7 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # the contiguous leading dimension is NOT reduced (`size(Rreduce, 1) == 1`), use the
     # coalesced one-work-item-per-slice kernel, whose lanes read consecutive memory. Few-slice
     # reductions get less parallelism but stay correct; the common many-slice case is also fast.
-    if size(Rreduce, 1) == 1
+    if oneL0.LTS[] && size(Rreduce, 1) == 1
         items = clamp(length(Rother), 1, 256)
         groups = min(cld(length(Rother), items), 1024)
         @oneapi items=items groups=groups coalesced_mapreduce_device(

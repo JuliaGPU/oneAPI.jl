@@ -89,8 +89,11 @@ function release(buf::oneL0.AbstractBuffer)
     # That turns a GC-driven free of a dead array whose last kernel/copy hasn't retired
     # into a GPU pagefault, which gets the kernel context banned and makes every later
     # submission fail with ZE_RESULT_ERROR_UNKNOWN. Synchronize the queues that could
-    # reference this buffer before freeing.
-    synchronize_all_queues(oneL0.context(buf), oneL0.device(buf))
+    # reference this buffer before freeing. (No-op on the rolling stack, which honors
+    # BLOCKING_FREE.)
+    if oneL0.LTS[]
+        synchronize_all_queues(oneL0.context(buf), oneL0.device(buf))
+    end
 
     free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE)
 
