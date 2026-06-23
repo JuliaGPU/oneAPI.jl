@@ -8,8 +8,8 @@ Ninja_jll = "76642167-d241-5cee-8c94-7a494e8cb7b7"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Scratch = "6c6a2e73-6563-6170-7368-637461726353"
-oneAPI_Level_Zero_Headers_jll = "f4bc562b-d309-54f8-9efb-476e56f0410d"
-oneAPI_Support_Headers_jll = "24f86df5-245d-5634-a4cc-32433d9800b3"
+oneAPI_Level_Zero_Headers_LTS_jll = "d79c0b2e-896c-561b-aab9-323701ec0314"
+oneAPI_Support_Headers_LTS_jll = "0e9de0da-c0b6-5d6c-9871-5c996d414ca7"
 
 [compat]
-oneAPI_Support_Headers_jll = "=2025.2.0"
+oneAPI_Support_Headers_LTS_jll = "=2025.3.1"

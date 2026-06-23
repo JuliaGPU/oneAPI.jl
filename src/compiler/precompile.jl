@@ -3,9 +3,9 @@ using PrecompileTools: @compile_workload
 # Warm up the GPUCompiler -> SPIR-V pipeline during precompilation so the first real
 # `zefunction` call is cheap. This doesn't need a GPU: SPIR-V codegen is device-independent
 # (the target only carries version/extension/capability knobs), and the workload never
-# launches anything. It is gated on the SPIR-V LLVM back-end being available so the package
+# launches anything. It is gated on the SPIR-V translator being available so the package
 # still precompiles on platforms/toolchains without it.
-if SPIRV_LLVM_Backend_jll.is_available()
+if SPIRV_LLVM_Translator_jll.is_available()
     @compile_workload begin
         let
             function _precompile_kernel(a)
@@ -16,8 +16,9 @@ if SPIRV_LLVM_Backend_jll.is_available()
             # Build a device-independent compiler config. `_compiler_config` normally derives
             # these knobs from the device; here we use conservative, portable defaults (the
             # workload only exercises the pipeline, it does not target a specific device).
-            target = SPIRVCompilerTarget(; extensions="", supports_fp16=true,
-                                          supports_fp64=true, supports_bfloat16=false)
+            target = SPIRVCompilerTarget(; backend=:khronos, extensions="",
+                                          supports_fp16=true, supports_fp64=true,
+                                          supports_bfloat16=false)
             params = oneAPICompilerParams()
             config = CompilerConfig(target, params; kernel=true, name=nothing,
                                     always_inline=false)
