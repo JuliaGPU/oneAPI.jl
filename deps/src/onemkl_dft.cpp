@@ -116,10 +116,8 @@ static inline config_param to_param(onemklDftConfigParam p) {
         case ONEMKL_DFT_PARAM_NUMBER_OF_TRANSFORMS: return config_param::NUMBER_OF_TRANSFORMS;
         case ONEMKL_DFT_PARAM_COMPLEX_STORAGE: return config_param::COMPLEX_STORAGE;
         case ONEMKL_DFT_PARAM_PLACEMENT: return config_param::PLACEMENT;
-        // oneMKL >= 2026.0 dropped the deprecated INPUT_STRIDES/OUTPUT_STRIDES;
-        // map the legacy parameters onto their FWD_STRIDES/BWD_STRIDES successors.
-        case ONEMKL_DFT_PARAM_INPUT_STRIDES: return config_param::FWD_STRIDES;
-        case ONEMKL_DFT_PARAM_OUTPUT_STRIDES: return config_param::BWD_STRIDES;
+        case ONEMKL_DFT_PARAM_INPUT_STRIDES: return config_param::INPUT_STRIDES;
+        case ONEMKL_DFT_PARAM_OUTPUT_STRIDES: return config_param::OUTPUT_STRIDES;
         case ONEMKL_DFT_PARAM_FWD_DISTANCE: return config_param::FWD_DISTANCE;
         case ONEMKL_DFT_PARAM_BWD_DISTANCE: return config_param::BWD_DISTANCE;
         case ONEMKL_DFT_PARAM_WORKSPACE: return config_param::WORKSPACE;
@@ -212,28 +210,7 @@ int onemklDftGetValueInt64(onemklDftDescriptor_t desc, onemklDftConfigParam para
 
 int onemklDftGetValueDouble(onemklDftDescriptor_t desc, onemklDftConfigParam param, double *value) {
     if (!desc || !value) return -2; if (!desc->ptr) return -3;
-    try {
-        config_param p = to_param(param);
-        // oneMKL >= 2026.0 requires a pointer to the descriptor's real scalar type
-        // (float for single precision, double for double); use a matching temporary
-        // and widen to double for the C interface.
-        if (desc->prec == precision::SINGLE) {
-            float tmp;
-            if (desc->dom == domain::REAL)
-                static_cast< descriptor<precision::SINGLE, domain::REAL>* >(desc->ptr)->get_value(p, &tmp);
-            else
-                static_cast< descriptor<precision::SINGLE, domain::COMPLEX>* >(desc->ptr)->get_value(p, &tmp);
-            *value = static_cast<double>(tmp);
-        } else {
-            double tmp;
-            if (desc->dom == domain::REAL)
-                static_cast< descriptor<precision::DOUBLE, domain::REAL>* >(desc->ptr)->get_value(p, &tmp);
-            else
-                static_cast< descriptor<precision::DOUBLE, domain::COMPLEX>* >(desc->ptr)->get_value(p, &tmp);
-            *value = tmp;
-        }
-        return 0;
-    } catch (...) { return -1; }
+    try { ONEMKL_DFT_DISPATCH_CFG(desc->ptr, d->get_value(to_param(param), value)); return 0; } catch (...) { return -1; }
 }
 
 int onemklDftGetValueInt64Array(onemklDftDescriptor_t desc, onemklDftConfigParam param, int64_t *values, int64_t *n) {
@@ -466,8 +443,8 @@ int onemklDftQueryParamIndices(int64_t *out, int64_t n) {
             config_param::NUMBER_OF_TRANSFORMS,
             config_param::COMPLEX_STORAGE,
             config_param::PLACEMENT,
-            config_param::FWD_STRIDES,  // was INPUT_STRIDES (removed in oneMKL 2026.0)
-            config_param::BWD_STRIDES,  // was OUTPUT_STRIDES (removed in oneMKL 2026.0)
+            config_param::INPUT_STRIDES,
+            config_param::OUTPUT_STRIDES,
             config_param::FWD_DISTANCE,
             config_param::BWD_DISTANCE,
             config_param::WORKSPACE,
