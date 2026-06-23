@@ -82,6 +82,14 @@ init_worker_code = quote
     if float64_supported
         append!(eltypes, [Float64, ComplexF64])
     end
+    @static if isdefined(Core, :BFloat16)
+        const bfloat16_supported = oneAPI._device_supports_bfloat16()
+        if bfloat16_supported
+            push!(eltypes, Core.BFloat16)
+        end
+    else
+        const bfloat16_supported = false
+    end
     TestSuite.supported_eltypes(::Type{<:oneArray}) = eltypes
 
 
