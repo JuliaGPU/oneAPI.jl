@@ -201,14 +201,22 @@ end
     supports_fp16 = properties.fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
     supports_fp64 = properties.fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
 
-    # The LTS NEO/IGC runtime only accepts SPIR-V from the Khronos translator and needs
-    # these extensions declared explicitly.
-    backend = :khronos
-    # TODO: emit printf format strings in constant memory
-    extensions = String[
-        "SPV_EXT_relaxed_printf_string_address_space",
-        "SPV_EXT_shader_atomic_float_add"
-    ]
+    # SPIR-V codegen path. The Aurora LTS NEO/IGC runtime only accepts SPIR-V from the
+    # Khronos translator and needs these extensions declared explicitly; the rolling stack
+    # uses the LLVM SPIR-V back-end (which handles the extensions itself). GPUCompiler picks
+    # the tool from the target's `backend` field and loads the JLL lazily, so both can be
+    # listed as deps and the choice is made here at compile time.
+    if oneL0.LTS[]
+        backend = :khronos
+        # TODO: emit printf format strings in constant memory
+        extensions = String[
+            "SPV_EXT_relaxed_printf_string_address_space",
+            "SPV_EXT_shader_atomic_float_add"
+        ]
+    else
+        backend = :llvm
+        extensions = String[]
+    end
     extensions_str = join(map(ext -> "+$ext", extensions), ",")
 
     # create GPUCompiler objects

@@ -225,17 +225,19 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
     #       objects should track ownership, and not rely on implicit global state.
     get!(task_local_storage(), (:ZeCommandQueue, ctx, dev)) do
         queue = ZeCommandQueue(ctx, dev; flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
-        # disable finalizers while mutating the registry: a GC-driven finalizer on this
-        # task could call back into `synchronize_all_queues` (the lock is reentrant) and
-        # observe/mutate the registry mid-update.
-        GC.enable_finalizers(false)
-        try
-            @lock queue_registry_lock begin
-                push!(get!(Vector{Tuple{WeakRef,ZeCommandQueue}}, queue_registry, (ctx, dev)),
-                      (WeakRef(current_task()), queue))
+        if oneL0.LTS[]
+            # disable finalizers while mutating the registry: a GC-driven finalizer on this
+            # task could call back into `synchronize_all_queues` (the lock is reentrant) and
+            # observe/mutate the registry mid-update.
+            GC.enable_finalizers(false)
+            try
+                @lock queue_registry_lock begin
+                    push!(get!(Vector{Tuple{WeakRef,ZeCommandQueue}}, queue_registry, (ctx, dev)),
+                          (WeakRef(current_task()), queue))
+                end
+            finally
+                GC.enable_finalizers(true)
             end
-        finally
-            GC.enable_finalizers(true)
         end
         queue
     end
@@ -259,6 +261,9 @@ const queue_registry = Dict{Tuple{ZeContext,ZeDevice},Vector{Tuple{WeakRef,ZeCom
 # i.e., all queues whose in-flight work could possibly reference an allocation that is
 # about to be freed.
 function synchronize_all_queues(ctx::ZeContext, dev::Union{ZeDevice,Nothing})
+    # only the LTS stack populates the queue registry (see `global_queue`); on the
+    # rolling stack this is a no-op and `release` frees directly.
+    oneL0.LTS[] || return
     queues = ZeCommandQueue[]
     stale = Tuple{WeakRef,ZeCommandQueue}[]
     GC.enable_finalizers(false)
