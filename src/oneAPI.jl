@@ -17,7 +17,7 @@ using LLVM
 using LLVM.Interop
 using Core: LLVMPtr
 
-using SPIRV_LLVM_Backend_jll, SPIRV_Tools_jll
+using SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll
 using oneAPI_Support_jll
 
 export oneL0
@@ -139,6 +139,15 @@ function __init__()
             if oneL0.NEO_jll.is_available()
                 # ensure that the OpenCL loader finds the ICD files from our artifacts
                 ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
+
+                # ensure that libsycl's bundled ze_lib finds NEO's libze_intel_gpu via
+                # path-based driver discovery (it does not reuse the JLL-loaded module).
+                # Required when no system NEO is installed.
+                neo_libdir = dirname(oneL0.NEO_jll.libze_intel_gpu)
+                ld = get(ENV, "LD_LIBRARY_PATH", "")
+                if !occursin(neo_libdir, ld)
+                    ENV["LD_LIBRARY_PATH"] = isempty(ld) ? neo_libdir : "$neo_libdir:$ld"
+                end
             end
         end
 
@@ -150,7 +159,7 @@ function __init__()
 end
 
 function set_debug!(debug::Bool)
-    for jll in [oneL0.NEO_jll, oneL0.NEO_jll.libigc_jll]
+    for jll in [oneL0.NEO_jll, oneL0.NEO_jll.libigc_LTS_jll]
         Preferences.set_preferences!(jll, "debug" => string(debug); force=true)
     end
     @info "oneAPI debug mode $(debug ? "enabled" : "disabled"); please re-start Julia."

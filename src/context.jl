@@ -224,8 +224,89 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
     # NOTE: dev purposefully does not default to context() or device() to stress that
     #       objects should track ownership, and not rely on implicit global state.
     get!(task_local_storage(), (:ZeCommandQueue, ctx, dev)) do
-        ZeCommandQueue(ctx, dev; flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
+        queue = ZeCommandQueue(ctx, dev; flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
+        if oneL0.LTS[]
+            # disable finalizers while mutating the registry: a GC-driven finalizer on this
+            # task could call back into `synchronize_all_queues` (the lock is reentrant) and
+            # observe/mutate the registry mid-update.
+            GC.enable_finalizers(false)
+            try
+                @lock queue_registry_lock begin
+                    push!(get!(Vector{Tuple{WeakRef,ZeCommandQueue}}, queue_registry, (ctx, dev)),
+                          (WeakRef(current_task()), queue))
+                end
+            finally
+                GC.enable_finalizers(true)
+            end
+        end
+        queue
     end
+end
+
+# Registry of all queues created through `global_queue`, across tasks. Buffers can be
+# freed from any task (GC finalizers), so `release` needs to be able to find the queues
+# that may still have work in flight referencing the buffer; queues themselves are
+# cached task-locally and would otherwise be unreachable from the finalizing task.
+#
+# Entries reference the queue *strongly*: the GC clears WeakRefs to a dead queue in the
+# same cycle that queues its finalizer, i.e., before the finalizer runs, so a WeakRef
+# would hide the queue from `release` exactly when its in-flight work still references
+# buffers about to be freed. The owning task is tracked weakly instead: queues are
+# task-local, so once their task is dead no new work can reach them, and the entry can
+# be dropped (allowing the queue to be finalized) after a final synchronize.
+const queue_registry_lock = ReentrantLock()
+const queue_registry = Dict{Tuple{ZeContext,ZeDevice},Vector{Tuple{WeakRef,ZeCommandQueue}}}()
+
+# synchronize all known queues that target the given context (and device, if specified),
+# i.e., all queues whose in-flight work could possibly reference an allocation that is
+# about to be freed.
+function synchronize_all_queues(ctx::ZeContext, dev::Union{ZeDevice,Nothing})
+    # only the LTS stack populates the queue registry (see `global_queue`); on the
+    # rolling stack this is a no-op and `release` frees directly.
+    oneL0.LTS[] || return
+    queues = ZeCommandQueue[]
+    stale = Tuple{WeakRef,ZeCommandQueue}[]
+    GC.enable_finalizers(false)
+    try
+        @lock queue_registry_lock begin
+            for ((qctx, qdev), entries) in queue_registry
+                qctx == ctx || continue
+                (dev === nothing || qdev == dev) || continue
+                for entry in entries
+                    (task, queue) = entry
+                    queue.handle == C_NULL && continue  # finalized, handle destroyed
+                    push!(queues, queue)
+                    # entries whose task was already dead at this point cannot
+                    # receive new work, so they are safe to retire after the sync
+                    if task.value === nothing || istaskdone(task.value::Task)
+                        push!(stale, entry)
+                    end
+                end
+            end
+        end
+        # synchronize outside the lock: this can block for as long as a kernel runs,
+        # and finalizers running concurrently also need to take the lock. Keep
+        # finalizers disabled so none of the collected queues can be destroyed
+        # between collection and synchronization.
+        for queue in queues
+            oneL0.synchronize(queue)
+        end
+        # retire drained queues of dead tasks, allowing them to be finalized (the
+        # finalizer synchronizes once more before destroying the queue, in case
+        # the queue is dropped through other means).
+        if !isempty(stale)
+            @lock queue_registry_lock begin
+                for ((qctx, qdev), entries) in queue_registry
+                    qctx == ctx || continue
+                    (dev === nothing || qdev == dev) || continue
+                    filter!(entry -> !any(s -> s === entry, stale), entries)
+                end
+            end
+        end
+    finally
+        GC.enable_finalizers(true)
+    end
+    return
 end
 
 """
