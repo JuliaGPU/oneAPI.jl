@@ -21,6 +21,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          token: ${{ github.token }}
+          ssh-strict: false
       - uses: julia-actions/setup-julia@latest
         with:
           version: 'lts'
