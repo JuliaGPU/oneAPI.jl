@@ -11,8 +11,10 @@ using Libdl
 if Sys.iswindows()
     const libze_loader = "ze_loader"
 else
-    using NEO_jll
-    using oneAPI_Level_Zero_Loader_jll
+    using NEO_LTS_jll
+    using oneAPI_Level_Zero_Loader_LTS_jll
+    const NEO_jll = NEO_LTS_jll
+    const oneAPI_Level_Zero_Loader_jll = oneAPI_Level_Zero_Loader_LTS_jll
 end
 
 include("utils.jl")
@@ -137,9 +139,25 @@ const functional = Ref{Bool}(false)
 const validation_layer = Ref{Bool}()
 const parameter_validation = Ref{Bool}()
 
+# Master switch for the Intel LTS-stack workarounds (driver/IGC quirks on the Aurora
+# LTS NEO 25.18 stack): the SPIR-V translator codegen path, strided-reduction
+# materialization, and command-queue drain-before-free. All such code paths are gated
+# on `LTS[]`, so with it disabled the package behaves exactly like the upstream rolling
+# stack. Default on for this branch (which pins the LTS toolchain); set `ONEAPI_LTS=0`
+# to exercise the rolling-stack paths. When merged upstream the default flips to false
+# and an LTS deployment opts in with `ONEAPI_LTS=1`.
+const LTS = Ref{Bool}(true)
+
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
+
+    # Resolve the LTS master switch up front, before the driver-availability early
+    # returns below: it gates codegen and behavior and must be set even on hosts
+    # without a functional GPU. Default on for this (LTS) branch; flip the "true"
+    # default to "false" when merged onto the rolling stack. ONEAPI_LTS=0 forces the
+    # rolling-stack code paths.
+    LTS[] = lowercase(get(ENV, "ONEAPI_LTS", "true")) in ("1", "true", "yes", "on")
 
     if Sys.iswindows()
         if Libdl.dlopen(libze_loader; throw_error=false) === nothing
@@ -199,6 +217,7 @@ function __init__()
 
     validation_layer[] = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
     parameter_validation[] = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
+    sync_each_submission[] = lowercase(get(ENV, "ONEAPI_SYNC_EACH_SUBMISSION", "")) in ("1", "true", "yes")
 end
 
 end

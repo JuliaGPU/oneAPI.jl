@@ -93,23 +93,22 @@ function _create_descriptor(sz::NTuple{N,Int}, T::Type, complex::Bool) where {N}
     prec = T<:Float64 || T<:ComplexF64 ? ONEMKL_DFT_PRECISION_DOUBLE : ONEMKL_DFT_PRECISION_SINGLE
     dom = complex ? ONEMKL_DFT_DOMAIN_COMPLEX : ONEMKL_DFT_DOMAIN_REAL
     desc_ref = Ref{onemklDftDescriptor_t}()
-    # Create descriptor for the full array dimensions. `lengths` must stay rooted
-    # across the ccall: oneMKL copies the dimensions out of `pointer(lengths)`, and
-    # without GC.@preserve the array can be collected first, leaving the descriptor
-    # with garbage dimensions (commit then fails with FFT_INVALID_DESCRIPTOR).
+    # Create descriptor for the full array dimensions
     lengths = collect(Int64, sz)
-    st = GC.@preserve lengths (length(lengths) == 1 ?
-        onemklDftCreate1D(desc_ref, prec, dom, lengths[1]) :
-        onemklDftCreateND(desc_ref, prec, dom, length(lengths), pointer(lengths)))
+    # NB: pass the arrays themselves to the ccall wrappers (NOT `pointer(...)`) so they
+    # are rooted for the duration of the call; passing a raw Ptr lets the GC collect the
+    # vector mid-call, which made MKL read garbage lengths/strides and fail `commit` with
+    # invalid_descriptor_exception or a SIGFPE, depending on heap reuse.
+    st = length(lengths) == 1 ? onemklDftCreate1D(desc_ref, prec, dom, lengths[1]) : onemklDftCreateND(desc_ref, prec, dom, length(lengths), lengths)
     st == 0 || error("onemkl DFT create failed (status $st)")
     desc = desc_ref[]
     # Do not program descriptor scaling; we'll perform inverse normalization manually.
     # Set placement explicitly based on plan type later
-    # Use the task-local cached SYCL queue wrapping the global Level Zero queue, like the
-    # other oneMKL wrappers do. Creating fresh syclContext/syclQueue objects per plan is
-    # unsound: once they become garbage their finalizers (syclQueueDestroy etc.) tear down
-    # SYCL runtime state for the still-in-use underlying queue, corrupting later DFT
-    # commits and crashing at process exit.
+    # Use the task-local cached SYCL queue wrapping the global Level Zero queue, like
+    # the other oneMKL wrappers do. Creating fresh syclContext/syclQueue objects per
+    # plan is unsound: once they become garbage their finalizers (syclQueueDestroy etc.)
+    # tear down SYCL runtime state for the still-in-use underlying queue, corrupting
+    # later DFT commits (SIGFPE) and crashing at process exit.
     ze_ctx = oneAPI.context(); ze_dev = oneAPI.device()
     q = oneAPI.sycl_queue(oneAPI.global_queue(ze_ctx, ze_dev))
     return desc, q
@@ -132,10 +131,8 @@ function plan_fft(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,Co
             strides[i+1] = prod
             prod *= size(X,i)
         end
-        GC.@preserve strides begin
-            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
-            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
-        end
+        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, strides, length(strides))
+        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, strides, length(strides))
     end
     stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
     return cMKLFFTPlan{T,MKLFFT_FORWARD,false,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)
@@ -153,10 +150,8 @@ function plan_bfft(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,C
         @inbounds for i in 1:N
             strides[i+1]=prod; prod*=size(X,i)
         end
-        GC.@preserve strides begin
-            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
-            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
-        end
+        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, strides, length(strides))
+        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, strides, length(strides))
     end
     stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
     return cMKLFFTPlan{T,MKLFFT_INVERSE,false,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)
@@ -176,10 +171,8 @@ function plan_fft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,C
         @inbounds for i in 1:N
             strides[i+1]=prod; prod*=size(X,i)
         end
-        GC.@preserve strides begin
-            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
-            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
-        end
+        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, strides, length(strides))
+        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, strides, length(strides))
     end
     stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
     cMKLFFTPlan{T,MKLFFT_FORWARD,true,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)
@@ -197,10 +190,8 @@ function plan_bfft!(X::oneAPI.oneArray{T,N}, region) where {T<:Union{ComplexF32,
         @inbounds for i in 1:N
             strides[i+1]=prod; prod*=size(X,i)
         end
-        GC.@preserve strides begin
-            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, pointer(strides), length(strides))
-            onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, pointer(strides), length(strides))
-        end
+        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_FWD_STRIDES, strides, length(strides))
+        onemklDftSetValueInt64Array(desc, ONEMKL_DFT_PARAM_BWD_STRIDES, strides, length(strides))
     end
     stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
     cMKLFFTPlan{T,MKLFFT_INVERSE,true,N,R,Nothing}(desc,q,size(X),size(X),false,reg,nothing,nothing)

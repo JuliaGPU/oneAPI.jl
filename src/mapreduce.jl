@@ -109,13 +109,59 @@ function partial_mapreduce_device(f, op, neutral, maxitems, Rreduce, Rother, R, 
     return
 end
 
+# Coalesced reduction for when the contiguous leading dimension is NOT reduced (the reduced
+# axes are strided). One work-item per output slice (Rother element), grid-strided; each
+# serially reduces over Rreduce. Consecutive work-items map to consecutive output slices,
+# which are consecutive in memory, so global reads are coalesced across lanes — the access
+# pattern a `dims=1` reduction already uses. On the Aurora LTS stack the workgroup-per-slice
+# kernel above reads a *strided* reduced dimension non-coalesced, which silently corrupts
+# large reductions (e.g. `sum(A; dims=2)`); this path avoids that pattern entirely.
+function coalesced_mapreduce_device(f, op, neutral, Rreduce, Rother, R, As...)
+    iother = (get_group_id() - 1) * get_local_size() + get_local_id()
+    gstride = get_num_groups() * get_local_size()
+    @inbounds while iother <= length(Rother)
+        Iother = Rother[iother]
+        Iout = CartesianIndex(Tuple(Iother)..., 1)
+        neut = neutral === nothing ? R[Iout] : neutral
+        val = op(neut, neut)
+        for ireduce in 1:length(Rreduce)
+            Ireduce = Rreduce[ireduce]
+            J = max(Iother, Ireduce)
+            val = op(val, f(_map_getindex(As, J)...))
+        end
+        R[Iout] = val
+        iother += gstride
+    end
+    return
+end
+
 ## COV_EXCL_STOP
+
+# Aurora LTS workaround: the NEO/IGC LTS stack miscompiles *strided* (non-coalesced) global
+# reads inside the reduction kernel, silently corrupting results whenever an input is read
+# along a non-contiguous axis (e.g. `a == transpose(b)`, `sum(transpose(x))`, `ishermitian`).
+# Elementwise copies are NOT affected. `_dense_reduce_input` returns false for any input that
+# reads non-contiguous memory (a transposed/permuted/strided view, or a broadcast containing
+# one), so such inputs get materialized to a dense `oneArray` before reducing. See
+# ISSUE_mapreduce_corruption.md and the `naive_transpose` (`a == transpose(b)`) failure.
+@inline _dense_reduce_input(::oneArray) = true
+@inline _dense_reduce_input(x::Base.ReshapedArray) = _dense_reduce_input(parent(x))
+@inline _dense_reduce_input(::AbstractArray) = false   # Transpose/Adjoint/PermutedDims/SubArray/…
+@inline _dense_reduce_input(::Any) = true              # scalars/Refs/tuples carried in a broadcast
+@inline _dense_reduce_input(bc::Broadcast.Broadcasted) = all(_dense_reduce_input, bc.args)
 
 function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
                                  A::Union{AbstractArray,Broadcast.Broadcasted};
                                  init=nothing) where {F, OP, T}
     Base.check_reducedims(R, A)
     length(A) == 0 && return R # isempty(::Broadcasted) iterates
+
+    # Aurora LTS workaround (see `_dense_reduce_input` above): materialize strided inputs to a
+    # dense array first so every global read in the reduction kernel is coalesced.
+    if oneL0.LTS[] && !_dense_reduce_input(A)
+        Acontig = Broadcast.materialize(Broadcast.broadcasted(f, A))
+        return GPUArrays.mapreducedim!(identity, op, R, Acontig; init=init)
+    end
 
     # add singleton dimensions to the output container, if needed
     if ndims(R) < ndims(A)
@@ -136,6 +182,20 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # this does not affect the actual location in memory of the final values,
     # but allows us to write a generalized kernel supporting partial reductions.
     R′ = reshape(R, (size(R)..., 1))
+
+    # Aurora LTS workaround: the workgroup-per-slice kernel below reads a *strided* reduced
+    # dimension non-coalesced, which silently corrupts reductions on this stack (regardless of
+    # output count — it depends on the reduction length, not the number of slices). Whenever
+    # the contiguous leading dimension is NOT reduced (`size(Rreduce, 1) == 1`), use the
+    # coalesced one-work-item-per-slice kernel, whose lanes read consecutive memory. Few-slice
+    # reductions get less parallelism but stay correct; the common many-slice case is also fast.
+    if oneL0.LTS[] && size(Rreduce, 1) == 1
+        items = clamp(length(Rother), 1, 256)
+        groups = min(cld(length(Rother), items), 1024)
+        @oneapi items=items groups=groups coalesced_mapreduce_device(
+            f, op, init, Rreduce, Rother, R′, A)
+        return R
+    end
 
     # how many items do we want?
     #
