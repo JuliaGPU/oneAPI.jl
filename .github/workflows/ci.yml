@@ -10,6 +10,9 @@ on:
   schedule:
     - cron: '0 0 * * 0'
 
+permissions:
+  contents: read
+
 jobs:
   self-runner:
     continue-on-error: true
@@ -24,6 +27,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          token: ${{ github.token }}
+          ssh-strict: false
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.julia-version }}
