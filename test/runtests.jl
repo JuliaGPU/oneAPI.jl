@@ -94,13 +94,16 @@ init_worker_code = quote
         append!(eltypes, [Float64, ComplexF64])
     end
     @static if isdefined(Core, :BFloat16)
-        # Exercising BFloat16 as a generic element type needs the testsuite's CPU
-        # reference path to work, which requires more host-side BFloat16 support than
-        # BFloat16s.jl currently implements (e.g. the div/rem family throws "rem not
-        # defined for BFloat16"). Probe the operations the testsuite relies on, so the
-        # element type enables itself automatically once BFloat16s.jl catches up.
-        # Device-side BFloat16 (oneMKL gemm/gemv, the bfloat16.jl example) is tested
-        # regardless.
+        # Exercising BFloat16 as a generic element type needs (1) hardware support,
+        # (2) a non-LTS stack — the Aurora LTS SPIR-V stack (Khronos translator +
+        # NEO/IGC) cannot codegen native `bfloat` in generic kernels: any kernel that
+        # keeps a bfloat value (e.g. clamp!) fails with InvalidIRError, and declaring
+        # SPV_KHR_bfloat16 crashes the LTS runtime — and (3) a working CPU reference
+        # path, which requires more host-side BFloat16 support than BFloat16s.jl
+        # currently implements (e.g. the div/rem family throws "rem not defined for
+        # BFloat16"). Probe the operations the testsuite relies on, so the element
+        # type enables itself automatically once BFloat16s.jl catches up. Device-side
+        # BFloat16 (oneMKL gemm/gemv, the bfloat16.jl example) is tested regardless.
         bfloat16_host_support() = try
             x, y = BFloat16(3), BFloat16(2)
             mod(x, y); fld(x, y); rand(BFloat16)
@@ -109,7 +112,7 @@ init_worker_code = quote
             false
         end
         const bfloat16_supported = oneAPI._device_supports_bfloat16() &&
-            bfloat16_host_support()
+            !oneL0.LTS[] && bfloat16_host_support()
         if bfloat16_supported
             push!(eltypes, Core.BFloat16)
         end
