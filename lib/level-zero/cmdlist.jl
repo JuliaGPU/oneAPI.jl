@@ -55,11 +55,48 @@ end
 # ISSUE_dropped_tail.md. Synchronizing after *every* submission eliminates it, at a large
 # throughput cost (~3x), so it is off by default and only enabled when correctness under
 # oversubscription matters more than speed.
-const sync_each_submission = Ref{Bool}(false)
+const SYNC_EACH_SUBMISSION = Ref{Bool}(false)
+
+"""
+    sync_each_submission() -> Bool
+
+Whether [`execute!`](@ref) follows every command-list submission with a full
+`zeCommandQueueSynchronize` (the Aurora LTS "dropped tail" workaround). See
+[`sync_each_submission!`](@ref).
+"""
+sync_each_submission() = SYNC_EACH_SUBMISSION[]
+
+"""
+    sync_each_submission!(enable::Bool) -> Bool
+
+Enable or disable synchronizing after every submission, returning the previous setting.
+Initialized from the `ONEAPI_SYNC_EACH_SUBMISSION` environment variable.
+"""
+function sync_each_submission!(enable::Bool)
+    old = SYNC_EACH_SUBMISSION[]
+    SYNC_EACH_SUBMISSION[] = enable
+    return old
+end
+
+"""
+    sync_each_submission(f, enable::Bool)
+
+Run `f()` with the workaround temporarily set to `enable`, restoring the previous setting
+afterwards. Use this for submit-then-signal patterns that would otherwise deadlock, where a
+synchronize is forced before the event gating the submitted work is signaled.
+"""
+function sync_each_submission(f::Base.Callable, enable::Bool)
+    old = sync_each_submission!(enable)
+    try
+        f()
+    finally
+        sync_each_submission!(old)
+    end
+end
 
 function execute!(queue::ZeCommandQueue, lists::Vector{ZeCommandList}, fence=nothing)
     r = zeCommandQueueExecuteCommandLists(queue, length(lists), lists, something(fence, C_NULL))
-    sync_each_submission[] && synchronize(queue)
+    sync_each_submission() && synchronize(queue)
     return r
 end
 
