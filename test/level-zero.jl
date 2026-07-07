@@ -210,14 +210,21 @@ pool = ZeEventPool(ctx, 2)
 signal_event = pool[1]
 wait_event = pool[2]
 
-execute!(queue) do list
-    append_launch!(list, kernel, 1, signal_event, wait_event)
-end
-@test !Base.isdone(signal_event)
+# This is a submit-then-signal pattern: the kernel is gated on `wait_event`, which is
+# only signaled *after* submission. The ONEAPI_SYNC_EACH_SUBMISSION=1 workaround (Aurora
+# LTS) makes `execute!` block in zeCommandQueueSynchronize right after submitting, which
+# would deadlock here since the kernel cannot retire before `wait_event` is signaled. No
+# production code path submits event-gated work, so disable the workaround just here.
+oneL0.sync_each_submission(false) do
+    execute!(queue) do list
+        append_launch!(list, kernel, 1, signal_event, wait_event)
+    end
+    @test !Base.isdone(signal_event)
 
-signal(wait_event)
-synchronize(queue)
-@test Base.isdone(signal_event)
+    signal(wait_event)
+    synchronize(queue)
+    @test Base.isdone(signal_event)
+end
 
 end
 
