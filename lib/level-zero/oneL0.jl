@@ -142,11 +142,12 @@ const parameter_validation = Ref{Bool}()
 # Master switch for the Intel LTS-stack workarounds (driver/IGC quirks on the Aurora
 # LTS NEO 25.18 stack): the SPIR-V translator codegen path, strided-reduction
 # materialization, and command-queue drain-before-free. All such code paths are gated
-# on `LTS[]`, so with it disabled the package behaves exactly like the upstream rolling
-# stack. Default on for this branch (which pins the LTS toolchain); set `ONEAPI_LTS=0`
-# to exercise the rolling-stack paths. When merged upstream the default flips to false
-# and an LTS deployment opts in with `ONEAPI_LTS=1`.
-const LTS = Ref{Bool}(true)
+# on `LTS[]`, so with it disabled the package behaves like the upstream rolling stack.
+# Default OFF (rolling stack), matching upstream: an LTS deployment opts in with
+# `ONEAPI_LTS=1`. On Aurora that variable is set in the environment, and the GitHub
+# Actions self-hosted (Aurora) runner sets it in ci.yml; the rolling-stack buildkite
+# runner gets the default and thus actually exercises the non-LTS (:llvm back-end) path.
+const LTS = Ref{Bool}(false)
 
 # Parse a boolean-valued environment variable, accepting the same spellings for every
 # oneAPI flag. Returns `default` when the variable is unset or empty. Warns (and returns
@@ -169,10 +170,9 @@ function __init__()
 
     # Resolve the LTS master switch up front, before the driver-availability early
     # returns below: it gates codegen and behavior and must be set even on hosts
-    # without a functional GPU. Default on for this (LTS) branch; flip the "true"
-    # default to "false" when merged onto the rolling stack. ONEAPI_LTS=0 forces the
-    # rolling-stack code paths.
-    LTS[] = parse_env_bool("ONEAPI_LTS", true)
+    # without a functional GPU. Default off (rolling stack); an LTS deployment such as
+    # Aurora opts in with ONEAPI_LTS=1.
+    LTS[] = parse_env_bool("ONEAPI_LTS", false)
 
     if Sys.iswindows()
         if Libdl.dlopen(libze_loader; throw_error=false) === nothing
