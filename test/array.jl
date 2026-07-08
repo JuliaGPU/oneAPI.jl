@@ -104,3 +104,24 @@ end
   resize!(b, 1)
   @test length(b) == 1
 end
+
+@testset "strided mixed reductions" begin
+  # The Aurora LTS IGC miscompiles a reduction kernel's global reads when the *innermost*
+  # reduced axis is strided (dim 1 kept, e.g. `dims=2`); mapreducedim! routes those to a
+  # coalesced kernel. Reductions that also reduce dim 1 (e.g. `dims=(1,3)`) keep a contiguous
+  # innermost axis and stay correct on the workgroup-per-slice kernel — including with a small
+  # leading dim, where the contiguous run is short. Use Int32 (exact, associative) so the
+  # check is immune to Float32 accumulation-order rounding. Regression for PR_REVIEW.md #7.
+  for (sz, dts) in (
+      ((2, 512, 64),    ((1, 3), (2,), (3,), (2, 3), (1, 2, 3), 1)),
+      ((3, 256, 48),    ((1, 3), (2,), (1, 2, 3))),
+      ((7, 300, 20),    ((1, 3), (2,), (3,))),
+      ((2, 128, 8, 32), ((1, 3), (1, 4), (2, 4), (1, 2, 4))),
+    )
+    A = rand(Int32(1):Int32(4), sz...)
+    dA = oneArray(A)
+    for dt in dts
+      @test Array(sum(dA; dims = dt)) == sum(A; dims = dt)
+    end
+  end
+end

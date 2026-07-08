@@ -199,13 +199,18 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # reductions get less parallelism but stay correct; the common many-slice case is also fast.
     #
     # `size(Rreduce, 1) == 1` (i.e. dim 1 kept) is the correct predicate, not just a special
-    # case: in `partial_mapreduce_device` consecutive work-item lanes step through consecutive
-    # `Rreduce` entries, whose *first* axis is dim 1. When dim 1 is among the reduced dims the
-    # innermost reduced axis is contiguous, so those lane reads coalesce and the result is
-    # correct even if a strided dim (e.g. dim 3) is *also* reduced — the miscompile only bites
-    # when the innermost reduced axis is itself strided (dim 1 kept). Empirically verified: a
-    # sweep of `dims=(1,3)`-style mixed reductions with small leading dims (n1 ∈ 2..7) matched
-    # the CPU exactly, so no extra materialization is needed for those (see PR_REVIEW.md #7).
+    # case. In `partial_mapreduce_device` adjacent work-item lanes step through adjacent
+    # `Rreduce` entries, whose *fastest* axis is array dim 1. The miscompile bites only when
+    # adjacent lanes land a *full stride* apart on every lane — i.e. when the innermost reduced
+    # axis is itself strided, which is exactly the dim-1-kept case routed to the coalesced
+    # kernel above. When dim 1 is among the reduced dims, adjacent lanes instead read
+    # consecutive memory (stride 1) within each length-n1 run, with only an occasional jump at
+    # a run boundary — not the every-lane full-stride pattern — so the reads stay well-formed
+    # even when a strided dim (e.g. dim 3) is *also* reduced. Verified with exact Int32
+    # reductions (immune to the accumulation-order rounding that makes >2^24-length Float32
+    # sums differ between GPU and CPU): `dims=(1,3)`, `(1,4)` and full `(1,2,3)` reductions at
+    # large strided sizes match the CPU exactly, so these need no extra materialization (see
+    # PR_REVIEW.md #7 and the "strided mixed reductions" regression test).
     if oneL0.LTS[] && size(Rreduce, 1) == 1
         # cap the group size at what this kernel actually supports on this device (queried
         # from the driver), rather than a hardcoded 256 that can exceed the kernel's max
