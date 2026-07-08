@@ -160,7 +160,15 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # dense array first so every global read in the reduction kernel is coalesced.
     if oneL0.LTS[] && !_dense_reduce_input(A)
         Acontig = Broadcast.materialize(Broadcast.broadcasted(f, A))
-        return GPUArrays.mapreducedim!(identity, op, R, Acontig; init=init)
+        # Only recurse if materialization actually produced a dense `oneArray`. A strided
+        # *device* view (Transpose/PermutedDims of a oneArray, or a broadcast over one)
+        # materializes to a oneArray, but a plain *host* AbstractArray materializes to
+        # another host array that is still not `_dense_reduce_input` — recursing on it would
+        # loop forever (StackOverflowError). Fall through instead so the normal path raises
+        # the usual kernel-conversion error for the unsupported host input.
+        if Acontig isa oneArray
+            return GPUArrays.mapreducedim!(identity, op, R, Acontig; init=init)
+        end
     end
 
     # add singleton dimensions to the output container, if needed
