@@ -197,6 +197,15 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # the contiguous leading dimension is NOT reduced (`size(Rreduce, 1) == 1`), use the
     # coalesced one-work-item-per-slice kernel, whose lanes read consecutive memory. Few-slice
     # reductions get less parallelism but stay correct; the common many-slice case is also fast.
+    #
+    # `size(Rreduce, 1) == 1` (i.e. dim 1 kept) is the correct predicate, not just a special
+    # case: in `partial_mapreduce_device` consecutive work-item lanes step through consecutive
+    # `Rreduce` entries, whose *first* axis is dim 1. When dim 1 is among the reduced dims the
+    # innermost reduced axis is contiguous, so those lane reads coalesce and the result is
+    # correct even if a strided dim (e.g. dim 3) is *also* reduced — the miscompile only bites
+    # when the innermost reduced axis is itself strided (dim 1 kept). Empirically verified: a
+    # sweep of `dims=(1,3)`-style mixed reductions with small leading dims (n1 ∈ 2..7) matched
+    # the CPU exactly, so no extra materialization is needed for those (see PR_REVIEW.md #7).
     if oneL0.LTS[] && size(Rreduce, 1) == 1
         items = clamp(length(Rother), 1, 256)
         groups = min(cld(length(Rother), items), 1024)
