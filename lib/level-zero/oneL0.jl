@@ -148,6 +148,21 @@ const parameter_validation = Ref{Bool}()
 # and an LTS deployment opts in with `ONEAPI_LTS=1`.
 const LTS = Ref{Bool}(true)
 
+# Parse a boolean-valued environment variable, accepting the same spellings for every
+# oneAPI flag. Returns `default` when the variable is unset or empty. Warns (and returns
+# `default`) on an unrecognized value, so a deployment that writes `ONEAPI_SYNC_EACH_SUBMISSION=on`
+# — valid for the sibling `ONEAPI_LTS` — no longer silently reads as off, and a typo like
+# `ONEAPI_LTS=treu` no longer silently disables the LTS path.
+function parse_env_bool(name::AbstractString, default::Bool)
+    haskey(ENV, name) || return default
+    val = lowercase(strip(ENV[name]))
+    isempty(val) && return default
+    val in ("1", "true", "yes", "on") && return true
+    val in ("0", "false", "no", "off") && return false
+    @warn "Ignoring unrecognized boolean value for $name; using default" value = ENV[name] default
+    return default
+end
+
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
@@ -157,7 +172,7 @@ function __init__()
     # without a functional GPU. Default on for this (LTS) branch; flip the "true"
     # default to "false" when merged onto the rolling stack. ONEAPI_LTS=0 forces the
     # rolling-stack code paths.
-    LTS[] = lowercase(get(ENV, "ONEAPI_LTS", "true")) in ("1", "true", "yes", "on")
+    LTS[] = parse_env_bool("ONEAPI_LTS", true)
 
     if Sys.iswindows()
         if Libdl.dlopen(libze_loader; throw_error=false) === nothing
@@ -217,7 +232,7 @@ function __init__()
 
     validation_layer[] = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
     parameter_validation[] = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
-    sync_each_submission!(lowercase(get(ENV, "ONEAPI_SYNC_EACH_SUBMISSION", "")) in ("1", "true", "yes"))
+    sync_each_submission!(parse_env_bool("ONEAPI_SYNC_EACH_SUBMISSION", false))
 end
 
 end
