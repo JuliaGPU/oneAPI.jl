@@ -207,7 +207,13 @@ function GPUArrays.mapreducedim!(f::F, op::OP, R::oneWrappedArray{T},
     # sweep of `dims=(1,3)`-style mixed reductions with small leading dims (n1 ∈ 2..7) matched
     # the CPU exactly, so no extra materialization is needed for those (see PR_REVIEW.md #7).
     if oneL0.LTS[] && size(Rreduce, 1) == 1
-        items = clamp(length(Rother), 1, 256)
+        # cap the group size at what this kernel actually supports on this device (queried
+        # from the driver), rather than a hardcoded 256 that can exceed the kernel's max
+        # work-group size on some devices and fail the launch.
+        cargs = (f, op, init, Rreduce, Rother, R′, A)
+        ckernel = zefunction(coalesced_mapreduce_device,
+                             Tuple{Core.Typeof.(kernel_convert.(cargs))...})
+        items = clamp(length(Rother), 1, launch_configuration(ckernel))
         groups = min(cld(length(Rother), items), 1024)
         @oneapi items=items groups=groups coalesced_mapreduce_device(
             f, op, init, Rreduce, Rother, R′, A)
