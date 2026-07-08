@@ -225,22 +225,32 @@ function global_queue(ctx::ZeContext, dev::ZeDevice)
     #       objects should track ownership, and not rely on implicit global state.
     get!(task_local_storage(), (:ZeCommandQueue, ctx, dev)) do
         queue = ZeCommandQueue(ctx, dev; flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
-        if oneL0.LTS[]
-            # disable finalizers while mutating the registry: a GC-driven finalizer on this
-            # task could call back into `synchronize_all_queues` (the lock is reentrant) and
-            # observe/mutate the registry mid-update.
-            GC.enable_finalizers(false)
-            try
-                @lock queue_registry_lock begin
-                    push!(get!(Vector{Tuple{WeakRef,ZeCommandQueue}}, queue_registry, (ctx, dev)),
-                          (WeakRef(current_task()), queue))
-                end
-            finally
-                GC.enable_finalizers(true)
-            end
-        end
-        queue
+        register_queue!(ctx, dev, queue)
     end
+end
+
+# Register `queue` as a queue targeting (ctx, dev) so `synchronize_all_queues`/`release`
+# can find and drain it before freeing buffers whose in-flight work it may still reference.
+# EVERY queue that becomes a task's active queue must go through here — not just the one
+# `global_queue` creates but also the replacement `KA.priority!` installs — or the
+# unregistered queue's in-flight work can outlive a freed buffer (a use-after-free that
+# faults and bans the context on the LTS NEO stack). Only the LTS stack maintains the
+# registry; on the rolling stack this is a no-op. Returns `queue`.
+function register_queue!(ctx::ZeContext, dev::ZeDevice, queue::ZeCommandQueue)
+    oneL0.LTS[] || return queue
+    # disable finalizers while mutating the registry: a GC-driven finalizer on this
+    # task could call back into `synchronize_all_queues` (the lock is reentrant) and
+    # observe/mutate the registry mid-update.
+    GC.enable_finalizers(false)
+    try
+        @lock queue_registry_lock begin
+            push!(get!(Vector{Tuple{WeakRef,ZeCommandQueue}}, queue_registry, (ctx, dev)),
+                  (WeakRef(current_task()), queue))
+        end
+    finally
+        GC.enable_finalizers(true)
+    end
+    return queue
 end
 
 # Registry of all queues created through `global_queue`, across tasks. Buffers can be
