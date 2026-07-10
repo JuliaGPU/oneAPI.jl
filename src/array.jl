@@ -28,17 +28,17 @@ function contains_eltype(T, X)
     return false
 end
 
-function _device_supports_bfloat16()
+function _device_supports_bfloat16(dev=device())
     # check the driver extension first
     if haskey(
-            oneL0.extension_properties(driver()),
+            oneL0.extension_properties(dev.driver),
             oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME
         )
         return true
     end
     # some drivers (e.g. older versions on PVC/Max) don't advertise the extension,
     # but the hardware supports BFloat16 natively. fall back to checking device ID.
-    dev_id = oneL0.properties(device()).deviceId
+    dev_id = oneL0.properties(dev).deviceId
     # Intel Data Center GPU Max (Ponte Vecchio): device IDs 0x0BD0-0x0BDB
     if 0x0BD0 <= dev_id <= 0x0BDB
         return true
