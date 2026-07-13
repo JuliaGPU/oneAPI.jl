@@ -3,9 +3,6 @@
 
 ## Julia library
 
-# reset the runtime cache from global scope, so that any change triggers recompilation
-GPUCompiler.reset_runtime()
-
 function signal_exception()
     return
 end

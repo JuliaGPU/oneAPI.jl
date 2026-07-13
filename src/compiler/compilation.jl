@@ -4,6 +4,30 @@ struct oneAPICompilerParams <: AbstractCompilerParams end
 const oneAPICompilerConfig = CompilerConfig{SPIRVCompilerTarget, oneAPICompilerParams}
 const oneAPICompilerJob = CompilerJob{SPIRVCompilerTarget,oneAPICompilerParams}
 
+"""
+    oneAPIResults
+
+Cached compilation results for a oneAPI kernel job, managed by
+`GPUCompiler.cached_results`. Fields are populated through the compile pipeline:
+`image` (SPIR-V bytes) + `entry` after codegen, and `kernels` after the session-local
+link onto a Level Zero module. The first two are session-portable (cached through
+precompilation); `kernels` is session-local and never populated during precompilation.
+`image === nothing` identifies a job that has not been compiled yet.
+
+`kernels` is a small linear cache of `(ZeContext, ZeDevice, ZeKernel)` tuples. The cache
+partition already covers everything that affects codegen via `GPUCompiler.cache_owner`, so
+the only runtime-visible dimensions left are the Level Zero context and device that own the
+linked `ZeKernel` (a `ZeModule` is built for a specific `(context, device)` pair). A linear
+scan with `===`/`==` is fastest in the common case (n=1) and stays cheap for the rare
+workload that bounces between a handful of contexts or devices.
+"""
+mutable struct oneAPIResults
+    image::Union{Nothing, Vector{UInt8}}                    # SPIR-V binary
+    entry::Union{Nothing, String}
+    kernels::Vector{Tuple{ZeContext, ZeDevice, ZeKernel}}   # session-local; linear-scanned
+    oneAPIResults() = new(nothing, nothing, Tuple{ZeContext, ZeDevice, ZeKernel}[])
+end
+
 GPUCompiler.runtime_module(::oneAPICompilerJob) = oneAPI
 
 GPUCompiler.method_table_view(job::oneAPICompilerJob) =
@@ -52,9 +76,13 @@ function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
 
     # When the device supports BFloat16 but the SPIR-V runtime doesn't accept
     # SPV_KHR_bfloat16, lower all bfloat types to i16 so the translator can
-    # handle the module without the extension.
+    # handle the module without the extension. Both conditions are read from the
+    # (device-independent) compiler config so this stays valid without a live
+    # device: `_compiler_config` sets `supports_bfloat16` from the device and adds
+    # the `SPV_KHR_bfloat16` extension iff the driver's SPIR-V runtime accepts it.
+    target = job.config.target
     if @static(isdefined(Core, :BFloat16) && isdefined(LLVM, :BFloatType)) &&
-            _device_supports_bfloat16() && !_driver_supports_bfloat16_spirv()
+            target.supports_bfloat16 && !occursin("SPV_KHR_bfloat16", target.extensions)
         lower_bfloat_to_i16!(mod)
     end
 
@@ -266,24 +294,13 @@ function eliminate_bf16_bitcasts!(mod::LLVM.Module, T_bf16::LLVMType, T_i16::LLV
 end
 
 
-## compiler implementation (cache, configure, compile, and link)
-
-# cache of compilation caches, per device
-const _compiler_caches = Dict{ZeDevice, Dict{Any, Any}}()
-function compiler_cache(dev::ZeDevice)
-    cache = get(_compiler_caches, dev, nothing)
-    if cache === nothing
-        cache = Dict{Any, Any}()
-        _compiler_caches[dev] = cache
-    end
-    return cache
-end
+## compiler implementation (configure, compile, and link)
 
 # cache of compiler configurations, per device (but additionally configurable via kwargs)
 const _toolchain = Ref{Any}()
 const _compiler_configs = Dict{UInt, oneAPICompilerConfig}()
 function compiler_config(dev; kwargs...)
-    h = hash(dev, hash(kwargs))
+    h = hash(dev.driver, hash(dev, hash(kwargs)))
     config = get(_compiler_configs, h, nothing)
     if config === nothing
         config = _compiler_config(dev; kwargs...)
@@ -292,10 +309,10 @@ function compiler_config(dev; kwargs...)
     return config
 end
 # Whether the driver's SPIR-V runtime accepts the SPV_KHR_bfloat16 extension.
-function _driver_supports_bfloat16_spirv()
+function _driver_supports_bfloat16_spirv(dev=device())
     return @static if isdefined(Core, :BFloat16)
         haskey(
-            oneL0.extension_properties(driver()),
+            oneL0.extension_properties(dev.driver),
             oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME
         )
     else
@@ -304,26 +321,29 @@ function _driver_supports_bfloat16_spirv()
 end
 
 @noinline function _compiler_config(dev; kernel=true, name=nothing, always_inline=false, kwargs...)
-    supports_fp16 = oneL0.module_properties(device()).fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
-    supports_fp64 = oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+    properties = oneL0.module_properties(dev)
+    supports_fp16 = properties.fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
+    supports_fp64 = properties.fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
     # Allow BFloat16 in IR if the device supports it (even if the SPIR-V runtime doesn't
     # advertise the extension). We lower bfloat→i16 in finish_ir! when needed.
-    supports_bfloat16 = _device_supports_bfloat16()
+    supports_bfloat16 = _device_supports_bfloat16(dev)
 
     extensions = String[]
     # Only add the SPIR-V extension if the runtime actually supports it
-    if _driver_supports_bfloat16_spirv()
+    if _driver_supports_bfloat16_spirv(dev)
         push!(extensions, "SPV_KHR_bfloat16")
     end
+    extensions_str = join(map(ext -> "+$ext", extensions), ",")
 
     # create GPUCompiler objects
-    target = SPIRVCompilerTarget(; extensions, supports_fp16, supports_fp64, supports_bfloat16, kwargs...)
+    target = SPIRVCompilerTarget(; extensions=extensions_str, supports_fp16, supports_fp64, supports_bfloat16, kwargs...)
     params = oneAPICompilerParams()
     CompilerConfig(target, params; kernel, name, always_inline)
 end
 
-# compile to executable machine code
-function compile(@nospecialize(job::CompilerJob))
+# run inference + LLVM codegen + SPIR-V emission. returns `(image, entry)`, both
+# session-portable so they survive precompilation when stored on a cached `CodeInstance`.
+function compile_to_obj(@nospecialize(job::CompilerJob))
     # TODO: on 1.9, this actually creates a context. cache those.
     asm, meta = JuliaContext() do ctx
         GPUCompiler.compile(:obj, job)
@@ -332,10 +352,8 @@ function compile(@nospecialize(job::CompilerJob))
     (image=asm, entry=LLVM.name(meta.entry))
 end
 
-# link into an executable kernel
-function link(@nospecialize(job::CompilerJob), compiled)
-    ctx = context()
-    dev = device()
-    mod = ZeModule(ctx, dev, compiled.image)
-    kernels(mod)[compiled.entry]
+# link the SPIR-V bytes into a session-local `ZeKernel` on the given context and device.
+function link_kernel(image::Vector{UInt8}, entry::String, ctx::ZeContext, dev::ZeDevice)
+    mod = ZeModule(ctx, dev, image)
+    kernels(mod)[entry]
 end

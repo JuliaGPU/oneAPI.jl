@@ -77,6 +77,9 @@ include("sorting.jl")
 include("indexing.jl")
 export oneAPIBackend
 
+# precompilation workload (warms up the SPIR-V compilation pipeline)
+include("compiler/precompile.jl")
+
 # Work around a deadlock in Pkg's parallel precompilation on Julia 1.10, where it does
 # not pass `loadable_exts` to `Base.compilecache` (the kwarg is accidentally commented
 # out in Pkg's precompilation.jl), so a worker precompiling an extension freely loads

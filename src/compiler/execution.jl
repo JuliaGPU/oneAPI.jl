@@ -241,26 +241,59 @@ end
 const zefunction_lock = ReentrantLock()
 
 function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
-    dev = device()
-
     Base.@lock zefunction_lock begin
-        # compile the function
-        cache = compiler_cache(dev)
-        source = methodinstance(F, tt)
+        ctx = context()
+        dev = device()
         config = compiler_config(dev; kwargs...)::oneAPICompilerConfig
-        fun = GPUCompiler.cached_compilation(cache, source, config, compile, link)
+        source = methodinstance(F, tt)
+        job = CompilerJob(source, config)
+
+        res = compile_or_lookup(job)::oneAPIResults
+
+        # Resolve the ZeKernel for the active context and device. Linear scan over the
+        # session-local cache; almost always n=1, so this is one `===`/`==` compare.
+        fun = nothing
+        @inbounds for (cached_ctx, cached_dev, cached_kernel) in res.kernels
+            if cached_ctx == ctx && cached_dev == dev
+                fun = cached_kernel
+                break
+            end
+        end
+        if fun === nothing
+            fun = link_kernel(res.image::Vector{UInt8}, res.entry::String, ctx, dev)
+            # Don't cache session-local kernel handles while precompiling: the results
+            # struct is serialized into the package image along with its CodeInstance,
+            # and the handles would come back dangling.
+            if ccall(:jl_generating_output, Cint, ()) != 1
+                push!(res.kernels, (ctx, dev, fun))
+            end
+        end
 
         # create a callable object that captures the function instance. we don't need to think
         # about world age here, as GPUCompiler already does and will return a different object
         h = hash(fun, hash(f, hash(tt)))
-        kernel = get(_kernel_instances, h, nothing)
-        if kernel === nothing
-            # create the kernel state object
-            kernel = HostKernel{F,tt}(f, fun)
-            _kernel_instances[h] = kernel
-        end
-        return kernel::HostKernel{F,tt}
+        get!(_kernel_instances, h) do
+            HostKernel{F,tt}(f, fun)
+        end::HostKernel{F,tt}
     end
+end
+
+# Look up cached compile artifacts for `job`, compiling on miss. Storage is managed
+# by `GPUCompiler.cached_results` (Julia's integrated code cache on 1.11+, which also
+# persists artifacts through precompilation; a session-local store on 1.10).
+#
+# `image === nothing` identifies a `oneAPIResults` that hasn't been compiled yet. The
+# `compile_hook` check additionally forces the compile path so reflection-style
+# consumers (`@device_code_*`) observe the compilation even on a cache hit.
+function compile_or_lookup(@nospecialize(job::CompilerJob))::oneAPIResults
+    res = GPUCompiler.cached_results(oneAPIResults, job)
+    if res === nothing || res.image === nothing || GPUCompiler.compile_hook[] !== nothing
+        compiled = compile_to_obj(job)
+        res = @something res GPUCompiler.cached_results(oneAPIResults, job)
+        res.image = compiled.image
+        res.entry = compiled.entry
+    end
+    return res
 end
 
 # cache of kernel instances
