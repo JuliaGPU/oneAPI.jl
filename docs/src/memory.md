@@ -49,3 +49,21 @@ oneAPI.unsafe_free!(a)
 
 **Warning**: Only use `unsafe_free!` if you are sure the array is no longer used, including by any pending GPU operations.
 
+## Memory Limit
+
+When multiple processes share one GPU, each process only tracks its own allocations,
+and garbage collection in one process cannot free memory held by another. To keep the
+processes from collectively exhausting the device, give each a budget with the
+`ONEAPI_MEMORY_LIMIT` environment variable, either as a byte count or as a percentage
+of device memory:
+
+```
+ONEAPI_MEMORY_LIMIT=50%          # this process budgets half the device
+ONEAPI_MEMORY_LIMIT=4000000000   # ... or an absolute byte count
+```
+
+This is a soft limit: it scales the thresholds at which oneAPI.jl proactively runs the
+garbage collector to free stale GPU buffers, before falling back to a full collection
+when an allocation actually fails. Allocations larger than the limit are still allowed
+to succeed. The test suite sets this automatically for its parallel workers.
+
