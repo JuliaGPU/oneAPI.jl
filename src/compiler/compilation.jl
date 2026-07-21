@@ -328,7 +328,14 @@ end
     # advertise the extension). We lower bfloat→i16 in finish_ir! when needed.
     supports_bfloat16 = _device_supports_bfloat16(dev)
 
-    extensions = String[]
+    # SPIR-V extensions the LLVM back-end may emit. Declaring them permits the
+    # corresponding instructions during translation: without
+    # SPV_EXT_shader_atomic_float_add, floating-point atomic operations fail to
+    # translate ("The atomic float instruction requires ... SPV_EXT_shader_atomic_float_add").
+    extensions = String[
+        "SPV_EXT_relaxed_printf_string_address_space",
+        "SPV_EXT_shader_atomic_float_add",
+    ]
     # Only add the SPIR-V extension if the runtime actually supports it
     if _driver_supports_bfloat16_spirv(dev)
         push!(extensions, "SPV_KHR_bfloat16")

@@ -56,3 +56,8 @@ oneAPI_Support_jll = "0.9.2"
 
 [extras]
 libigc_jll = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
+
+[sources]
+# Pin to a commit SHA, not the mutable `atomic-float-ops` branch head, so builds are
+# reproducible and a force-push upstream cannot silently change what users resolve.
+SPIRVIntrinsics = {url = "https://github.com/michel2323/OpenCL.jl", rev = "4257d4075162276d9985168923788490e4071e9e", subdir = "lib/intrinsics"}
