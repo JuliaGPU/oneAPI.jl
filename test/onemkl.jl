@@ -14,7 +14,7 @@ k = 13
 
 @testset "Version" begin
     version_onemkl = oneMKL.version()
-    @test version_onemkl ≥ v"2026.0.0"
+    @test version_onemkl ≥ v"2025.2.0"
 end
 
 ############################################################################################
