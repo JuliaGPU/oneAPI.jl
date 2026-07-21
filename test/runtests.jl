@@ -35,6 +35,13 @@ args = parse_args(ARGS)
 # contention/oversubscription bugs.
 const spread_gpus = lowercase(get(ENV, "ONEAPI_TEST_SPREAD_GPUS", "")) in ("1", "true", "yes")
 worker_env = Vector{Pair{String, String}}()
+
+# Workers share one device but cannot see each other's allocations, so give each an equal
+# share of device memory: the pool's proactive GC then kicks in before the workers
+# collectively exhaust the card (important on 8GB consumer GPUs).
+njobs = something(args.jobs, Some(ParallelTestRunner.default_njobs()))[]
+push!(worker_env, "ONEAPI_MEMORY_LIMIT" => "$(max(1, 100 ÷ njobs))%")
+
 device_claim_code = :()
 if spread_gpus
     ndev = length(oneAPI.devices())
@@ -64,6 +71,10 @@ end
 init_worker_code = quote
     $device_claim_code
     using oneAPI, Adapt
+    # BFloat16s.jl supplies the host-side numeric support (conversions, rand sampling)
+    # that Core.BFloat16 lacks on its own; the testsuite's CPU reference path needs it
+    # when BFloat16 is part of the tested element types.
+    using BFloat16s
 
     import GPUArrays
     include($gpuarrays_testsuite)
@@ -83,7 +94,22 @@ init_worker_code = quote
         append!(eltypes, [Float64, ComplexF64])
     end
     @static if isdefined(Core, :BFloat16)
-        const bfloat16_supported = oneAPI._device_supports_bfloat16()
+        # Exercising BFloat16 as a generic element type needs the testsuite's CPU
+        # reference path to work, which requires more host-side BFloat16 support than
+        # BFloat16s.jl currently implements (e.g. the div/rem family throws "rem not
+        # defined for BFloat16"). Probe the operations the testsuite relies on, so the
+        # element type enables itself automatically once BFloat16s.jl catches up.
+        # Device-side BFloat16 (oneMKL gemm/gemv, the bfloat16.jl example) is tested
+        # regardless.
+        bfloat16_host_support() = try
+            x, y = BFloat16(3), BFloat16(2)
+            mod(x, y); fld(x, y); rand(BFloat16)
+            true
+        catch
+            false
+        end
+        const bfloat16_supported = oneAPI._device_supports_bfloat16() &&
+            bfloat16_host_support()
         if bfloat16_supported
             push!(eltypes, Core.BFloat16)
         end
@@ -151,4 +177,14 @@ init_code = quote
            ..@grab_output, ..@on_device, ..sink
 end
 
-runtests(oneAPI, args; testsuite, init_code, init_worker_code, env = worker_env)
+# On memory-pressured GPUs (e.g. 8GB cards) a failing test can leave the worker — or even
+# the driver — in a state where every subsequent allocation fails, so recycle workers on
+# failure and give failed files one exclusive retry on an otherwise-idle device.
+failure_handling = if pkgversion(ParallelTestRunner) >= v"2.7.0"
+    (; recycle_on_failure = true, retries = 1)
+else
+    (;)
+end
+
+runtests(oneAPI, args; testsuite, init_code, init_worker_code, env = worker_env,
+         failure_handling...)
