@@ -346,7 +346,14 @@ end
         supports_bfloat16 = false
     else
         backend = :llvm
-        extensions = String[]
+        # SPIR-V extensions the LLVM back-end may emit. Declaring them permits the
+        # corresponding instructions during translation: without
+        # SPV_EXT_shader_atomic_float_add, floating-point atomic operations fail to
+        # translate ("The atomic float instruction requires ... SPV_EXT_shader_atomic_float_add").
+        extensions = String[
+            "SPV_EXT_relaxed_printf_string_address_space",
+            "SPV_EXT_shader_atomic_float_add",
+        ]
         # Allow BFloat16 in IR if the device supports it (even if the SPIR-V runtime doesn't
         # advertise the extension); finish_ir! lowers bfloat->i16 when the extension is absent.
         supports_bfloat16 = _device_supports_bfloat16(dev)
