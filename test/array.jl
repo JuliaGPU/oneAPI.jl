@@ -43,6 +43,41 @@ end
   @test Array(xs) == [0,1,0]
 end
 
+@testset "derived array lifetime" begin
+  parent = oneArray{UInt8}(undef, 1)
+
+  # Construct through an ephemeral derived array, whose finalizer shares the same
+  # reference-counted allocation with the returned view.
+  function ephemeral_derived_view(parent)
+    intermediate = @view parent[:]
+    @view intermediate[:]
+  end
+
+  derived = ephemeral_derived_view(parent)
+  @test derived isa oneArray{UInt8}
+
+  # Exercise finalization while deriving. Without preserving the immediate parent in
+  # GPUArrays.derive, its finalizer can mark the DataRef as freed before it is copied.
+  if Threads.nthreads() > 1
+    stop_gc = Threads.Atomic{Bool}(false)
+    gc_task = Threads.@spawn while !stop_gc[]
+      GC.gc(false)
+      yield()
+    end
+    try
+      Threads.@threads for _ in 1:min(Threads.nthreads(), 4)
+        for _ in 1:100
+          a = ephemeral_derived_view(parent)
+          oneAPI.unsafe_free!(a)
+        end
+      end
+    finally
+      stop_gc[] = true
+      wait(gc_task)
+    end
+  end
+end
+
 @testset "reinterpret of view with non-aligned offset" begin
   # reinterpreting a view to a larger element type where the byte offset
   # is not a multiple of the new element size
