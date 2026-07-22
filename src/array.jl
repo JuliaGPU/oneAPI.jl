@@ -570,7 +570,10 @@ function GPUArrays.derive(::Type{T}, a::oneArray, dims::Dims{N}, offset::Int) wh
     Base.elsize(a) == 0 || error("Cannot derive a singleton array from non-singleton inputs")
   end
   offset = a.offset + offset * sizeof(T)
-  oneArray{T,N}(a.data, dims; a.maxsize, offset)
+  # The derived array constructor copies `a.data`, but merely loading that field does not
+  # keep `a` alive. Without this preserve, `a` may be finalized between the field load and
+  # the DataRef copy, causing its finalizer to mark the reference as freed.
+  GC.@preserve a oneArray{T,N}(a.data, dims; a.maxsize, offset)
 end
 
 
