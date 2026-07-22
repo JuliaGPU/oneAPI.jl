@@ -11,10 +11,8 @@ using Libdl
 if Sys.iswindows()
     const libze_loader = "ze_loader"
 else
-    using NEO_LTS_jll
-    using oneAPI_Level_Zero_Loader_LTS_jll
-    const NEO_jll = NEO_LTS_jll
-    const oneAPI_Level_Zero_Loader_jll = oneAPI_Level_Zero_Loader_LTS_jll
+    using NEO_jll
+    using oneAPI_Level_Zero_Loader_jll
 end
 
 include("utils.jl")
