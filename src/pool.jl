@@ -13,10 +13,37 @@ function _get_total_mem(dev)
     return _total_mem_cache[]
 end
 
+# Per-process memory budget for the proactive-GC thresholds below. `_allocated_bytes`
+# only tracks this process, and GC in this process cannot free buffers held by another,
+# so when several processes share one device (e.g. parallel test workers) each must
+# budget against its share of the card, not the whole card — otherwise their combined
+# usage exceeds physical memory before any of them feels pressure. ONEAPI_MEMORY_LIMIT
+# accepts a byte count ("4000000000") or a percentage of device memory ("50%"); unset
+# means the full device.
+const _memory_limit_cache = Threads.Atomic{Int64}(-1)
+
+function _memory_limit(dev)
+    cached = _memory_limit_cache[]
+    cached >= 0 && return cached
+    total = _get_total_mem(dev)
+    str = get(ENV, "ONEAPI_MEMORY_LIMIT", "")
+    limit = if isempty(str)
+        total
+    elseif endswith(str, "%")
+        pct = parse(Int, chop(str))
+        0 < pct <= 100 || error("ONEAPI_MEMORY_LIMIT percentage must be in (0, 100]")
+        total * pct ÷ 100
+    else
+        parse(Int64, str)
+    end
+    Threads.atomic_cas!(_memory_limit_cache, Int64(-1), Int64(limit))
+    return _memory_limit_cache[]
+end
+
 function _maybe_gc(dev, bytes)
     allocated = _allocated_bytes[]
     allocated <= 0 && return
-    total_mem = _get_total_mem(dev)
+    total_mem = _memory_limit(dev)
     return if allocated + bytes > total_mem * 0.8
         # Flush deferred resource releases (e.g., MKL sparse handles) from previous GC
         # cycles first — these are safe to release now because they were deferred earlier.
