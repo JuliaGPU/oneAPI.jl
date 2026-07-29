@@ -139,3 +139,9 @@ end
   resize!(b, 1)
   @test length(b) == 1
 end
+
+@testset "mapreducedim! returning same type" begin
+  R = transpose(oneAPI.zeros(Float32, 2, 3))
+  A = oneArray(rand(Float32, 3, 2, 10))
+  @test @inferred(oneAPI.GPUArrays.mapreducedim!(identity, +, R, A)) === R
+end
