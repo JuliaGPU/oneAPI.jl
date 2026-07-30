@@ -43,6 +43,22 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/cache@v3
+      # Build liboneapi_support.so from deps/src rather than using the registered
+      # oneAPI_Support_jll artifact, which lags behind the wrappers in this branch.
+      # Writes LocalPreferences.toml (plus a copy in test/, for Pkg.jl#2500) pointing
+      # oneAPI_Support_jll at the locally-built library. Not continue-on-error: if this
+      # fails we would silently fall back to the JLL and test the wrong library.
+      - name: Build the oneAPI support library
+        timeout-minutes: 90
+        run: julia --color=yes --project=deps deps/build_local.jl
+      - name: Check the local support library is picked up
+        run: |
+          julia --color=yes --project=. -e '
+              using TOML, oneAPI_Support_jll
+              want = TOML.parsefile("LocalPreferences.toml")["oneAPI_Support_jll"]["liboneapi_support_path"]
+              got = oneAPI_Support_jll.liboneapi_support_path
+              @info "support library" want got
+              want == got || error("oneAPI_Support_jll is not using the locally-built library")'
       - uses: julia-actions/julia-buildpkg@latest
         continue-on-error: true
       # Disable AVX512-FP16 host codegen on the Aurora Sapphire Rapids nodes. Under concurrent
