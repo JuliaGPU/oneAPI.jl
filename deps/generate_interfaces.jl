@@ -1,14 +1,22 @@
-using oneAPI_Support_Headers_jll
+# The wrappers are generated from the oneMKL headers pinned in Project.toml (2025.3.1,
+# the oneAPI toolkit shared by the Intel GPU LTS stack and, API-wise, the 2026.x rolling
+# releases): the sparse setters use the wide ABI (64-bit dims, explicit nnz) introduced
+# there, so the generated sources require oneMKL 2025.3 or newer to build.
+import oneAPI_Support_Headers_jll
 
 include("generate_helpers.jl")
 
+function mkl_header_files(include_dir)
+  blas = [joinpath(include_dir, "oneapi", "mkl", "blas", "buffer_decls.hpp")]
+  lapack = [joinpath(include_dir, "oneapi", "mkl", "lapack", "lapack.hpp"),
+            joinpath(include_dir, "oneapi", "mkl", "lapack", "scratchpad.hpp")]
+  sparse = [joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_structures.hpp"),
+            joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_auxiliary.hpp"),
+            joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_operations.hpp")]
+  return Dict("blas" => blas, "lapack" => lapack, "sparse" => sparse)
+end
+
 include_dir = joinpath(oneAPI_Support_Headers_jll.artifact_dir, "include")
-blas = [joinpath(include_dir, "oneapi", "mkl", "blas", "buffer_decls.hpp")]
-lapack = [joinpath(include_dir, "oneapi", "mkl", "lapack", "lapack.hpp"),
-          joinpath(include_dir, "oneapi", "mkl", "lapack", "scratchpad.hpp")]
-sparse = [joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_structures.hpp"),
-          joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_auxiliary.hpp"),
-          joinpath(include_dir, "oneapi", "mkl", "spblas", "sparse_operations.hpp")]
 
 dict_version = Dict{Int, Char}(1 => 'S', 2 => 'D', 3 => 'C', 4 => 'Z')
 
@@ -27,7 +35,7 @@ comments = ["namespace", "#", "}", "/*", "*", "//", "[[", "ONEMKL_DECLARE_", "ON
 void_output = ["init_matrix_handle", "init_matmat_descr", "release_matmat_descr", "set_matmat_data",
                "get_matmat_data", "init_omatadd_descr", "init_omatconvert_descr"]
 
-function generate_headers(library::String, filename::Vector{String}, output::String; pattern::String="")
+function generate_headers(library::String, filename::Vector{String}; pattern::String="")
   routines = Dict{String,Int}()
   signatures = []
   signatures2 = []
@@ -37,6 +45,9 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
   end
   cpp_headers = replace(cpp_headers, "std::int32_t" => "int32_t")
   cpp_headers = replace(cpp_headers, "std::int64_t" => "int64_t")
+  # the sparse headers are inconsistent about the handle parameter name across versions
+  # (spMat/spmat); normalize so identical functions compare equal across header sets
+  cpp_headers = replace(cpp_headers, "spMat" => "spmat")
   cpp_headers = replace(cpp_headers, "; \\" => ";")
   cpp_headers = replace(cpp_headers, ")\n\n" => ");\n\n")
   cpp_headers = replace(cpp_headers, "\\\n" => "\n")
@@ -337,12 +348,31 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
     end
   end
 
-  path_oneapi_headers = joinpath(@__DIR__, output)
-  oneapi_headers = open(path_oneapi_headers, "w")
+  # Dedup: when two signatures map to the same C function name (because MKL
+  # added an overload), keep the one with more parameters — typically the
+  # newer signature (e.g. set_csr_data gained an `nnz` arg in MKL 2025.3.1).
+  # Without this the generated onemkl.cpp has duplicate function definitions
+  # and won't compile.
+  _fn_name(h) = (pos = findfirst('(', h); strip(split(strip(h[1:pos-1]))[end]))
+  _param_cnt(h) = (pos = findfirst('(', h); ep = findnext(')', h, pos); count(==(','), h[pos+1:ep-1]) + 1)
+  keep_idx = Dict{String,Int}()
+  keep_pc  = Dict{String,Int}()
+  for (i, sig) in enumerate(signatures)
+    (sig[2] in blacklist) && continue
+    fn = _fn_name(sig[1])
+    pc = _param_cnt(sig[1])
+    if !haskey(keep_idx, fn) || pc > keep_pc[fn]
+      keep_idx[fn] = i
+      keep_pc[fn]  = pc
+    end
+  end
+  keep_set = Set(values(keep_idx))
 
-  for (header, name_routine, version, type_routine, template) in signatures
+  for (i, (header, name_routine, version, type_routine, template)) in enumerate(signatures)
     # Blacklist
     (name_routine in blacklist) && continue
+    # Dedup
+    (i in keep_set) || continue
 
     # Pass scalars (e.g. alpha/beta inputs) as references instead of values
     for type in ("short", "float", "double", "float _Complex", "double _Complex")
@@ -351,35 +381,38 @@ function generate_headers(library::String, filename::Vector{String}, output::Str
     end
 
     push!(signatures2, (header, name_routine, version, type_routine, template))
-
-    pos = findfirst('(', header)
-    fun = split(header, " ")
-    len = 0
-    for (i, part) in enumerate(fun)
-      len += length(part)
-      if len ≤ 90
-        (i ≠ 1) && write(oneapi_headers, " ")
-        write(oneapi_headers, part)
-      else
-        write(oneapi_headers, "\n")
-        for i = 1:pos
-          write(oneapi_headers, " ")
-        end
-        write(oneapi_headers, part)
-        len = pos + length(part)
-      end
-    end
-    write(oneapi_headers, ";\n\n")
   end
-  close(oneapi_headers)
   return signatures2
 end
 
-function generate_cpp(library::String, filename::Vector{String}, output::String; pattern::String="")
-  signatures = generate_headers(library, filename, output; pattern)
-  path_oneapi_cpp = joinpath(@__DIR__, output)
-  oneapi_cpp = open(path_oneapi_cpp, "w")
-  for (header, name, version, type_routine, template) in signatures
+# Format a single-line C signature as a declaration wrapped at ~90 columns
+function format_decl(header)
+  io = IOBuffer()
+  pos = findfirst('(', header)
+  fun = split(header, " ")
+  len = 0
+  for (i, part) in enumerate(fun)
+    len += length(part)
+    if len ≤ 90
+      (i ≠ 1) && write(io, " ")
+      write(io, part)
+    else
+      write(io, "\n")
+      for i = 1:pos
+        write(io, " ")
+      end
+      write(io, part)
+      len = pos + length(part)
+    end
+  end
+  write(io, ";\n\n")
+  return String(take!(io))
+end
+
+# Turn one parsed signature into the C function signature and the implementation body
+# (the text between the braces), so the caller can compose plain or version-guarded
+# definitions.
+function cpp_wrapper(header, name, version, type_routine, template, library)
     parameters = split(header, "(")[2]
     parameters = split(parameters, ")")[1]
     parameters = replace(parameters, "syclQueue_t device_queue" => "device_queue->val")
@@ -448,18 +481,18 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
     lapack_catch = "catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }"
     sycl_catch = "catch (const sycl::exception& e) { return -1; }"
 
-    write(oneapi_cpp, "extern \"C\" $header {\n")
+    body = IOBuffer()
     if template
       type = version_types[version]
       if !occursin("scratchpad_size", name)
         catch_clause = library == "lapack" ? lapack_catch : sycl_catch
-        write(oneapi_cpp, "   try {\n")
-        write(oneapi_cpp, "      auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n")
-        write(oneapi_cpp, "      device_queue->val.wait_and_throw();\n")
-        write(oneapi_cpp, "   } $catch_clause\n")
+        write(body, "   try {\n")
+        write(body, "      auto status = oneapi::mkl::$library::$variant$name<$type>($parameters, {});\n")
+        write(body, "      device_queue->val.wait_and_throw();\n")
+        write(body, "   } $catch_clause\n")
       end
       if occursin("scratchpad_size", name)
-        write(oneapi_cpp, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n   device_queue->val.wait_and_throw();\n")
+        write(body, "   int64_t scratchpad_size = oneapi::mkl::$library::$variant$name<$type>($parameters);\n   device_queue->val.wait_and_throw();\n")
       end
     else
       if !(name ∈ void_output)
@@ -467,82 +500,73 @@ function generate_cpp(library::String, filename::Vector{String}, output::String;
         is_scratchpad = occursin("scratchpad_size", name)
         if has_queue && !is_scratchpad
           catch_clause = library == "lapack" ? lapack_catch : sycl_catch
-          write(oneapi_cpp, "   try {\n")
-          write(oneapi_cpp, "      auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
-          write(oneapi_cpp, "      device_queue->val.wait_and_throw();\n")
-          write(oneapi_cpp, "   } $catch_clause\n")
+          write(body, "   try {\n")
+          write(body, "      auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
+          write(body, "      device_queue->val.wait_and_throw();\n")
+          write(body, "   } $catch_clause\n")
         else
-          write(oneapi_cpp, "   auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
+          write(body, "   auto status = oneapi::mkl::$library::$variant$name($parameters, {});\n")
           if has_queue
-            write(oneapi_cpp, "   device_queue->val.wait_and_throw();\n")
+            write(body, "   device_queue->val.wait_and_throw();\n")
           end
         end
       else
         if occursin("device_queue", parameters)
-          write(oneapi_cpp, "   try {\n")
-          write(oneapi_cpp, "      oneapi::mkl::$library::$variant$name($parameters);\n")
-          write(oneapi_cpp, "      device_queue->val.wait_and_throw();\n")
-          write(oneapi_cpp, "   } $sycl_catch\n")
+          write(body, "   try {\n")
+          write(body, "      oneapi::mkl::$library::$variant$name($parameters);\n")
+          write(body, "      device_queue->val.wait_and_throw();\n")
+          write(body, "   } $sycl_catch\n")
         else
-          write(oneapi_cpp, "   oneapi::mkl::$library::$variant$name($parameters);\n")
+          write(body, "   oneapi::mkl::$library::$variant$name($parameters);\n")
         end
       end
     end
     if occursin("scratchpad_size", name)
-      write(oneapi_cpp, "   return scratchpad_size;\n")
+      write(body, "   return scratchpad_size;\n")
     else
-      write(oneapi_cpp, "   return 0;\n")
+      write(body, "   return 0;\n")
     end
-    write(oneapi_cpp, "}")
-    write(oneapi_cpp, "\n\n")
+    return header, String(take!(body))
+end
+
+# Parse one library and emit the C declarations and implementations
+function sources(library, files)
+  hsigs = generate_headers(library, files; pattern="*")
+  csigs = generate_headers(library, files; pattern="§")
+  @assert length(hsigs) == length(csigs)
+
+  decls = IOBuffer()
+  impls = IOBuffer()
+  for (hsig, csig) in zip(hsigs, csigs)
+    write(decls, format_decl(hsig[1]))
+    chdr, body = cpp_wrapper(csig..., library)
+    write(impls, "extern \"C\" $chdr {\n$body}\n\n")
   end
-  close(oneapi_cpp)
+  return String(take!(decls)), String(take!(impls))
+end
+
+files = mkl_header_files(include_dir)
+
+decls = Dict{String,String}()
+impls = Dict{String,String}()
+for library in ("blas", "lapack", "sparse")
+  decls[library], impls[library] = sources(library, files[library])
 end
 
 # Generate "src/onemkl.h"
-generate_headers("blas", blas, "onemkl_blas.h", pattern="*")
-generate_headers("lapack", lapack, "onemkl_lapack.h", pattern="*")
-generate_headers("sparse", sparse, "onemkl_sparse.h", pattern="*")
-
-io = open("src/onemkl.h", "w")
-headers_prologue = read("onemkl_prologue.h", String)
-write(io, headers_prologue)
-headers_blas = read("onemkl_blas.h", String)
-write(io, "// BLAS\n")
-write(io, headers_blas)
-headers_lapack = read("onemkl_lapack.h", String)
-write(io, "// LAPACK\n")
-write(io, headers_lapack)
-headers_sparse = read("onemkl_sparse.h", String)
-write(io, "// SPARSE\n")
-write(io, headers_sparse)
-headers_epilogue = read("onemkl_epilogue.h", String)
-write(io, headers_epilogue)
-close(io)
-
-# Add the version of oneMKL in src/onemkl.h
-headers_onemkl = read("src/onemkl.h", String)
-version_onemkl = pkgversion(oneAPI_Support_Headers_jll)
-headers_onemkl = replace(headers_onemkl, "void onemkl_version" => "const int64_t ONEMKL_VERSION_MAJOR = $(version_onemkl.major);\nconst int64_t ONEMKL_VERSION_MINOR = $(version_onemkl.minor);\nconst int64_t ONEMKL_VERSION_PATCH = $(version_onemkl.patch);\nvoid onemkl_version")
-write("src/onemkl.h", headers_onemkl)
+open(joinpath(@__DIR__, "src", "onemkl.h"), "w") do io
+  write(io, read(joinpath(@__DIR__, "onemkl_prologue.h"), String))
+  write(io, "// BLAS\n", decls["blas"])
+  write(io, "// LAPACK\n", decls["lapack"])
+  write(io, "// SPARSE\n", decls["sparse"])
+  write(io, read(joinpath(@__DIR__, "onemkl_epilogue.h"), String))
+end
 
 # Generate "src/onemkl.cpp"
-generate_cpp("blas", blas, "onemkl_blas.cpp", pattern="§")
-generate_cpp("lapack", lapack, "onemkl_lapack.cpp", pattern="§")
-generate_cpp("sparse", sparse, "onemkl_sparse.cpp", pattern="§")
-
-io = open("src/onemkl.cpp", "w")
-cpp_prologue = read("onemkl_prologue.cpp", String)
-write(io, cpp_prologue)
-cpp_blas = read("onemkl_blas.cpp", String)
-write(io, "// BLAS\n")
-write(io, cpp_blas)
-cpp_lapack = read("onemkl_lapack.cpp", String)
-write(io, "// LAPACK\n")
-write(io, cpp_lapack)
-cpp_sparse = read("onemkl_sparse.cpp", String)
-write(io, "// SPARSE\n")
-write(io, cpp_sparse)
-cpp_epilogue = read("onemkl_epilogue.cpp", String)
-write(io, cpp_epilogue)
-close(io)
+open(joinpath(@__DIR__, "src", "onemkl.cpp"), "w") do io
+  write(io, read(joinpath(@__DIR__, "onemkl_prologue.cpp"), String))
+  write(io, "// BLAS\n", impls["blas"])
+  write(io, "// LAPACK\n", impls["lapack"])
+  write(io, "// SPARSE\n", impls["sparse"])
+  write(io, read(joinpath(@__DIR__, "onemkl_epilogue.cpp"), String))
+end

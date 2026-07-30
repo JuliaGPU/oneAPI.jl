@@ -21,11 +21,16 @@ if haskey(ENV, "BUILDKITE")
 end
 
 using Scratch, Preferences, CMake_jll, Ninja_jll, oneAPI_Level_Zero_Headers_jll
+import oneAPI_Support_Headers_jll
 
 oneAPI = Base.UUID("8f75cd03-7ff8-4ecb-9b8f-daf728133b1b")
 
+# the Conda toolkit version tracks the headers JLL the wrappers were generated from
+headers_version = pkgversion(oneAPI_Support_Headers_jll)
+toolkit = "$(headers_version.major).$(headers_version.minor).$(headers_version.patch)"
+
 # get scratch directories
-conda_dir = get_scratch!(oneAPI, "conda")
+conda_dir = get_scratch!(oneAPI, "conda-$toolkit")
 install_dir = get_scratch!(oneAPI, "deps")
 rm(install_dir; recursive=true)
 
@@ -62,7 +67,7 @@ if !isfile(joinpath(conda_dir, "condarc-julia.yml"))
     touch(joinpath(conda_dir, "conda-meta", "history"))
 end
 Conda.add_channel("https://software.repos.intel.com/python/conda/", conda_dir)
-Conda.add(["dpcpp_linux-64=2026.0.0", "mkl-devel-dpcpp=2026.0.0"], conda_dir)
+Conda.add(["dpcpp_linux-64=$toolkit", "mkl-devel-dpcpp=$toolkit"], conda_dir)
 
 Conda.list(conda_dir)
 

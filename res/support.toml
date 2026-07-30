@@ -370,15 +370,17 @@ use_ccall_macro = true
 6 = "ZePtr{Float32}"
 8 = "Ref{Float32}"
 
+# Argument positions account for the `nnz` parameter (arg 5) and the
+# `index::onemklIndex` enum (arg 6); the device pointers are args 7-9.
 [api.onemklXsparse_set_csr_data.argtypes]
-6 = "ZePtr{Int32}"
 7 = "ZePtr{Int32}"
-8 = "ZePtr{T}"
+8 = "ZePtr{Int32}"
+9 = "ZePtr{T}"
 
 [api.onemklXsparse_set_csr_data_64.argtypes]
-6 = "ZePtr{Int64}"
 7 = "ZePtr{Int64}"
-8 = "ZePtr{T}"
+8 = "ZePtr{Int64}"
+9 = "ZePtr{T}"
 
 [api.onemklXsparse_set_coo_data.argtypes]
 7 = "ZePtr{Int32}"
