@@ -137,9 +137,39 @@ const functional = Ref{Bool}(false)
 const validation_layer = Ref{Bool}()
 const parameter_validation = Ref{Bool}()
 
+# Master switch for the Intel LTS-stack workarounds (driver/IGC quirks on the Aurora
+# LTS NEO 25.18 stack): the SPIR-V translator codegen path, strided-reduction
+# materialization, and command-queue drain-before-free. All such code paths are gated
+# on `LTS[]`, so with it disabled the package behaves like the upstream rolling stack.
+# Default OFF (rolling stack), matching upstream: an LTS deployment opts in with
+# `ONEAPI_LTS=1`. On Aurora that variable is set in the environment, and the GitHub
+# Actions self-hosted (Aurora) runner sets it in ci.yml; the rolling-stack buildkite
+# runner gets the default and thus actually exercises the non-LTS (:llvm back-end) path.
+const LTS = Ref{Bool}(false)
+
+# Parse a boolean-valued environment variable, accepting the same spellings for every
+# oneAPI flag. Returns `default` when the variable is unset or empty. Warns (and returns
+# `default`) on an unrecognized value, so a typo like `ONEAPI_LTS=treu` no longer silently
+# disables the LTS path.
+function parse_env_bool(name::AbstractString, default::Bool)
+    haskey(ENV, name) || return default
+    val = lowercase(strip(ENV[name]))
+    isempty(val) && return default
+    val in ("1", "true", "yes", "on") && return true
+    val in ("0", "false", "no", "off") && return false
+    @warn "Ignoring unrecognized boolean value for $name; using default" value = ENV[name] default
+    return default
+end
+
 function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
+
+    # Resolve the LTS master switch up front, before the driver-availability early
+    # returns below: it gates codegen and behavior and must be set even on hosts
+    # without a functional GPU. Default off (rolling stack); an LTS deployment such as
+    # Aurora opts in with ONEAPI_LTS=1.
+    LTS[] = parse_env_bool("ONEAPI_LTS", false)
 
     if Sys.iswindows()
         if Libdl.dlopen(libze_loader; throw_error=false) === nothing
