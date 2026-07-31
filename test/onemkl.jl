@@ -12,9 +12,16 @@ m = 20
 n = 35
 k = 13
 
+# CSC construction requires a support library built against oneMKL 2025.3+ (wide sparse ABI)
+csc_supported = oneMKL.csc_supported()
+csr_csc_matrices = csc_supported ? (oneSparseMatrixCSR, oneSparseMatrixCSC) :
+    (oneSparseMatrixCSR,)
+coo_csr_csc_matrices = csc_supported ? (oneSparseMatrixCOO, oneSparseMatrixCSR, oneSparseMatrixCSC) :
+    (oneSparseMatrixCOO, oneSparseMatrixCSR)
+
 @testset "Version" begin
     version_onemkl = oneMKL.version()
-    @test version_onemkl ≥ v"2026.0.0"
+    @test version_onemkl ≥ v"2025.2.0"
 end
 
 ############################################################################################
@@ -1098,6 +1105,7 @@ end
         end
 
             @testset "oneSparseMatrixCSC" begin
+                csc_supported || continue
                 (T isa Complex) && continue
                 for S in (Int32, Int64)
                     A = sprand(T, 20, 10, 0.5)
@@ -1123,7 +1131,7 @@ end
         end
 
         @testset "sparse gemv" begin
-                @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCOO, oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset  "$SparseMatrix" for SparseMatrix in coo_csr_csc_matrices
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                     A = sprand(T, 20, 10, 0.5)
                     x = transa == 'N' ? rand(T, 10) : rand(T, 20)
@@ -1143,7 +1151,7 @@ end
         end
 
         @testset "sparse gemm" begin
-                @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset  "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                         @testset "transb = $transb" for (transb, opb) in [('N', identity), ('T', transpose), ('C', adjoint)]
                             (transb == 'N') || continue
@@ -1168,7 +1176,7 @@ end
         end
 
         @testset "sparse symv" begin
-                @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset  "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     @testset "uplo = $uplo" for uplo in ('L', 'U')
                     A = sprand(T, 10, 10, 0.5)
                     A = A + transpose(A)
@@ -1188,7 +1196,7 @@ end
         end
 
             @testset "sparse trmv" begin
-                @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset  "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                         for (uplo, diag, wrapper) in [
                                 ('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
@@ -1223,7 +1231,7 @@ end
         end
 
             @testset "sparse trsv" begin
-                @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset  "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                     for (uplo, diag, wrapper) in [('L', 'N', LowerTriangular), ('L', 'U', UnitLowerTriangular),
                                 ('U', 'N', UpperTriangular), ('U', 'U', UnitUpperTriangular),
@@ -1257,7 +1265,7 @@ end
             end
 
             @testset "sparse trsm" begin
-                @testset  "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                @testset  "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
                         @testset "transx = $transx" for (transx, opx) in [('N', identity), ('T', transpose), ('C', adjoint)]
                             (transx != 'N') && continue

@@ -4,6 +4,7 @@
 #include <exception>
 #include <memory>
 #include <oneapi/mkl.hpp>
+#include <mkl_version.h>
 
 oneapi::mkl::transpose convert(onemklTranspose val) {
     switch (val) {
@@ -280,11 +281,13 @@ oneapi::mkl::sparse::omatadd_alg convert(onemklOmataddAlg val) {
     }
 }
 
-// version
+// version of the oneMKL toolkit this library was built against. The product minor is
+// __INTEL_MKL_UPDATE__ (e.g. INTEL_MKL_VERSION 20250300 is the 2025.3 product); the
+// packaging patch level (2025.3.1's ".1") is not exposed by the headers and reports as 0.
 extern "C" void onemkl_version(int64_t *major, int64_t *minor, int64_t *patch) {
-    *major = ONEMKL_VERSION_MAJOR;
-    *minor = ONEMKL_VERSION_MINOR;
-    *patch = ONEMKL_VERSION_PATCH;
+    *major = __INTEL_MKL__;
+    *minor = __INTEL_MKL_UPDATE__;
+    *patch = __INTEL_MKL_PATCH__;
     return;
 }
 
@@ -5471,142 +5474,270 @@ extern "C" int64_t onemklZunmqr_batch_scratchpad_size(syclQueue_t device_queue, 
 }
 
 // SPARSE
-extern "C" int onemklXsparse_init_matrix_handle(matrix_handle_t *p_spMat) {
-   oneapi::mkl::sparse::init_matrix_handle((oneapi::mkl::sparse::matrix_handle_t*) p_spMat);
+extern "C" int onemklXsparse_init_matrix_handle(matrix_handle_t *p_spmat) {
+   oneapi::mkl::sparse::init_matrix_handle((oneapi::mkl::sparse::matrix_handle_t*) p_spmat);
    return 0;
 }
 
-extern "C" int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, matrix_handle_t *p_spMat) {
+extern "C" int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, matrix_handle_t *p_spmat) {
    try {
-      auto status = oneapi::mkl::sparse::release_matrix_handle(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t*) p_spMat, {});
+      auto status = oneapi::mkl::sparse::release_matrix_handle(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t*) p_spmat, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float *values) {
+extern "C" int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, values, {});
+      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklSsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float *values) {
+extern "C" int onemklSsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, values, {});
+      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklDsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double *values) {
+extern "C" int onemklDsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, values, {});
+      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklDsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double *values) {
+extern "C" int onemklDsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, values, {});
+      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklCsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float _Complex *values) {
+extern "C" int onemklCsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, float _Complex *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
+      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklCsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float _Complex *values) {
+extern "C" int onemklCsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, float _Complex *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
+      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklZsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double _Complex *values) {
+extern "C" int onemklZsparse_set_csr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int32_t *row_ptr, int32_t *col_ind, double _Complex *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
+      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double _Complex *values) {
+extern "C" int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ptr, int64_t *col_ind, double _Complex *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
+      auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklSsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind, int32_t *col_ind, float *values) {
+extern "C" int onemklSsparse_set_csc_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int32_t *col_ptr, int32_t *row_ind, float *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
+      auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklSsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ind, int64_t *col_ind, float *values) {
+extern "C" int onemklSsparse_set_csc_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *col_ptr, int64_t *row_ind, float *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
+      auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklDsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind, int32_t *col_ind, double *values) {
+extern "C" int onemklDsparse_set_csc_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int32_t *col_ptr, int32_t *row_ind, double *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
+      auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklDsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ind, int64_t *col_ind, double *values) {
+extern "C" int onemklDsparse_set_csc_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *col_ptr, int64_t *row_ind, double *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
+      auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklCsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind, int32_t *col_ind, float _Complex *values) {
+extern "C" int onemklCsparse_set_csc_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int32_t *col_ptr, int32_t *row_ind, float _Complex *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
+      auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklCsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ind, int64_t *col_ind, float _Complex *values) {
+extern "C" int onemklCsparse_set_csc_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *col_ptr, int64_t *row_ind, float _Complex *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
+      auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklZsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spMat, int32_t nrows, int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind, int32_t *col_ind, double _Complex *values) {
+extern "C" int onemklZsparse_set_csc_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int32_t *col_ptr, int32_t *row_ind, double _Complex *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
+      auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklZsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spMat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ind, int64_t *col_ind, double _Complex *values) {
+extern "C" int onemklZsparse_set_csc_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *col_ptr, int64_t *row_ind, double _Complex *values) {
    try {
-      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
+      auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, reinterpret_cast<std::complex<double>*>(values), {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklSsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spmat, int32_t nrows, int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind, int32_t *col_ind, float *values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklSsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ind, int64_t *col_ind, float *values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklDsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spmat, int32_t nrows, int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind, int32_t *col_ind, double *values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklDsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ind, int64_t *col_ind, double *values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklCsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spmat, int32_t nrows, int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind, int32_t *col_ind, float _Complex *values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklCsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ind, int64_t *col_ind, float _Complex *values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklZsparse_set_coo_data(syclQueue_t device_queue, matrix_handle_t spmat, int32_t nrows, int32_t ncols, int32_t nnz, onemklIndex index, int32_t *row_ind, int32_t *col_ind, double _Complex *values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklZsparse_set_coo_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t nrows, int64_t ncols, int64_t nnz, onemklIndex index, int64_t *row_ind, int64_t *col_ind, double _Complex *values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklSsparse_set_bsr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t row_blk_size, int64_t col_blk_size, onemklLayout blk_layout, onemklIndex index, int32_t *bsr_row_ptr, int32_t *bsr_col_ind, float *bsr_values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, bsr_values, {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklSsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t row_blk_size, int64_t col_blk_size, onemklLayout blk_layout, onemklIndex index, int64_t *bsr_row_ptr, int64_t *bsr_col_ind, float *bsr_values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, bsr_values, {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklDsparse_set_bsr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t row_blk_size, int64_t col_blk_size, onemklLayout blk_layout, onemklIndex index, int32_t *bsr_row_ptr, int32_t *bsr_col_ind, double *bsr_values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, bsr_values, {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklDsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t row_blk_size, int64_t col_blk_size, onemklLayout blk_layout, onemklIndex index, int64_t *bsr_row_ptr, int64_t *bsr_col_ind, double *bsr_values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, bsr_values, {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklCsparse_set_bsr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t row_blk_size, int64_t col_blk_size, onemklLayout blk_layout, onemklIndex index, int32_t *bsr_row_ptr, int32_t *bsr_col_ind, float _Complex *bsr_values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, reinterpret_cast<std::complex<float>*>(bsr_values), {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklCsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t row_blk_size, int64_t col_blk_size, onemklLayout blk_layout, onemklIndex index, int64_t *bsr_row_ptr, int64_t *bsr_col_ind, float _Complex *bsr_values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, reinterpret_cast<std::complex<float>*>(bsr_values), {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklZsparse_set_bsr_data(syclQueue_t device_queue, matrix_handle_t spmat, int64_t blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t row_blk_size, int64_t col_blk_size, onemklLayout blk_layout, onemklIndex index, int32_t *bsr_row_ptr, int32_t *bsr_col_ind, double _Complex *bsr_values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, reinterpret_cast<std::complex<double>*>(bsr_values), {});
+      device_queue->val.wait_and_throw();
+   } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklZsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_handle_t spmat, int64_t blk_nrows, int64_t blk_ncols, int64_t blk_nnz, int64_t row_blk_size, int64_t col_blk_size, onemklLayout blk_layout, onemklIndex index, int64_t *bsr_row_ptr, int64_t *bsr_col_ind, double _Complex *bsr_values) {
+   try {
+      auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, reinterpret_cast<std::complex<double>*>(bsr_values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
@@ -5654,49 +5785,49 @@ extern "C" int onemklXsparse_release_omatadd_descr(syclQueue_t device_queue, oma
    return 0;
 }
 
-extern "C" int onemklXsparse_omatcopy(syclQueue_t device_queue, onemklTranspose transpose_val, matrix_handle_t spMat_in, matrix_handle_t spMat_out) {
+extern "C" int onemklXsparse_omatcopy(syclQueue_t device_queue, onemklTranspose transpose_val, matrix_handle_t spmat_in, matrix_handle_t spmat_out) {
    try {
-      auto status = oneapi::mkl::sparse::omatcopy(device_queue->val, convert(transpose_val), (oneapi::mkl::sparse::matrix_handle_t) spMat_in, (oneapi::mkl::sparse::matrix_handle_t) spMat_out, {});
+      auto status = oneapi::mkl::sparse::omatcopy(device_queue->val, convert(transpose_val), (oneapi::mkl::sparse::matrix_handle_t) spmat_in, (oneapi::mkl::sparse::matrix_handle_t) spmat_out, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklXsparse_sort_matrix(syclQueue_t device_queue, matrix_handle_t spMat) {
+extern "C" int onemklXsparse_sort_matrix(syclQueue_t device_queue, matrix_handle_t spmat) {
    try {
-      auto status = oneapi::mkl::sparse::sort_matrix(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, {});
+      auto status = oneapi::mkl::sparse::sort_matrix(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklSsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spMat, int64_t length, float *new_diag_values) {
+extern "C" int onemklSsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spmat, int64_t length, float *new_diag_values) {
    try {
-      auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, length, new_diag_values, {});
+      auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, length, new_diag_values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklDsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spMat, int64_t length, double *new_diag_values) {
+extern "C" int onemklDsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spmat, int64_t length, double *new_diag_values) {
    try {
-      auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, length, new_diag_values, {});
+      auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, length, new_diag_values, {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklCsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spMat, int64_t length, float _Complex *new_diag_values) {
+extern "C" int onemklCsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spmat, int64_t length, float _Complex *new_diag_values) {
    try {
-      auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, length, reinterpret_cast<std::complex<float>*>(new_diag_values), {});
+      auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, length, reinterpret_cast<std::complex<float>*>(new_diag_values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;
 }
 
-extern "C" int onemklZsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spMat, int64_t length, double _Complex *new_diag_values) {
+extern "C" int onemklZsparse_update_diagonal_values(syclQueue_t device_queue, matrix_handle_t spmat, int64_t length, double _Complex *new_diag_values) {
    try {
-      auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spMat, length, reinterpret_cast<std::complex<double>*>(new_diag_values), {});
+      auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, length, reinterpret_cast<std::complex<double>*>(new_diag_values), {});
       device_queue->val.wait_and_throw();
    } catch (const sycl::exception& e) { return -1; }
    return 0;

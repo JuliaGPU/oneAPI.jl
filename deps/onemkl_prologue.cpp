@@ -4,6 +4,7 @@
 #include <exception>
 #include <memory>
 #include <oneapi/mkl.hpp>
+#include <mkl_version.h>
 
 oneapi::mkl::transpose convert(onemklTranspose val) {
     switch (val) {
@@ -280,11 +281,13 @@ oneapi::mkl::sparse::omatadd_alg convert(onemklOmataddAlg val) {
     }
 }
 
-// version
+// version of the oneMKL toolkit this library was built against. The product minor is
+// __INTEL_MKL_UPDATE__ (e.g. INTEL_MKL_VERSION 20250300 is the 2025.3 product); the
+// packaging patch level (2025.3.1's ".1") is not exposed by the headers and reports as 0.
 extern "C" void onemkl_version(int64_t *major, int64_t *minor, int64_t *patch) {
-    *major = ONEMKL_VERSION_MAJOR;
-    *minor = ONEMKL_VERSION_MINOR;
-    *patch = ONEMKL_VERSION_PATCH;
+    *major = __INTEL_MKL__;
+    *minor = __INTEL_MKL_UPDATE__;
+    *patch = __INTEL_MKL_PATCH__;
     return;
 }
 
