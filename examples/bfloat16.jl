@@ -14,6 +14,15 @@ if !bfloat16_supported
     exit()
 end
 
+# _device_supports_bfloat16() reflects hardware conversion support, but the Aurora LTS
+# SPIR-V stack (Khronos translator + NEO/IGC) cannot translate the `bfloat` LLVM type at
+# all: even a load/store forces SPV_KHR_bfloat16, which the LTS runtime rejects. So bf16
+# kernels can't be compiled there regardless of device support.
+if oneAPI.oneL0.LTS[]
+    @info "BFloat16 kernels are unsupported on the Aurora LTS SPIR-V stack, skipping."
+    exit()
+end
+
 # Conversions: Core.BFloat16 in Julia 1.12 may not have Float32 constructors yet
 float32_to_bf16(x::Float32) = reinterpret(Core.BFloat16, (reinterpret(UInt32, x) >> 16) % UInt16)
 bf16_to_float32(x::Core.BFloat16) = reinterpret(Float32, UInt32(reinterpret(UInt16, x)) << 16)
