@@ -15,9 +15,15 @@ permissions:
 
 jobs:
   self-runner:
-    continue-on-error: true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Pin each parallel test worker to a distinct GPU tile instead of
+      # oversubscribing device 0 (see test/runtests.jl).
+      ONEAPI_TEST_SPREAD_GPUS: '1'
+      ONEAPI_LTS: '1'
+      # Synchronize after every command-list submission to work around the
+      # Aurora LTS NEO dropped-tail corruption (see lib/level-zero/cmdlist.jl).
+      ONEAPI_SYNC_EACH_SUBMISSION: '1'
     runs-on: [self-hosted, linux, X64]
     strategy:
       matrix:
@@ -36,7 +42,33 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/cache@v3
+      # Build liboneapi_support.so from deps/src rather than using the registered
+      # oneAPI_Support_jll artifact, which lags behind the wrappers in this branch.
+      # Writes LocalPreferences.toml (plus a copy in test/, for Pkg.jl#2500) pointing
+      # oneAPI_Support_jll at the locally-built library. Not continue-on-error: if this
+      # fails we would silently fall back to the JLL and test the wrong library.
+      - name: Build the oneAPI support library
+        timeout-minutes: 90
+        run: julia --color=yes --project=deps deps/build_local.jl
       - uses: julia-actions/julia-buildpkg@latest
         continue-on-error: true
-      - uses: julia-actions/julia-runtest@latest
-        continue-on-error: true
+      # Must run after julia-buildpkg: Manifest.toml is gitignored, so the top-level
+      # project is not instantiated until then and `using oneAPI_Support_jll` would
+      # fail with "required but does not seem to be installed".
+      - name: Check the local support library is picked up
+        run: |
+          julia --color=yes --project=. -e '
+              using TOML, oneAPI_Support_jll
+              want = TOML.parsefile("LocalPreferences.toml")["oneAPI_Support_jll"]["liboneapi_support_path"]
+              got = oneAPI_Support_jll.liboneapi_support_path
+              @info "support library" want got
+              want == got || error("oneAPI_Support_jll is not using the locally-built library")'
+      # Disable AVX512-FP16 host codegen on the Aurora Sapphire Rapids nodes. Under concurrent
+      # oneMKL load the native AVX512-FP16 path silently miscomputes *host* Float16 (e.g. the
+      # GPUArrays `A .* B .+ c` broadcast reference), failing tests even though the GPU result
+      # is correct (single-process clean; MXCSR clean; only the native-FP16 path, not Float32).
+      # `-C native,-avx512fp16` routes Float16 through Float32 and propagates to the Pkg.test
+      # subprocess and its parallel workers via Base.julia_cmd(). `julia-runtest` cannot pass a
+      # cpu-target, so invoke Pkg.test() directly.
+      - name: Run tests (AVX512-FP16 disabled)
+        run: julia -C "native,-avx512fp16" --color=yes --project=. -e 'import Pkg; Pkg.test()'
