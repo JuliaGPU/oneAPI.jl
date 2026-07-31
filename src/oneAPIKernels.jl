@@ -264,6 +264,12 @@ function KA.priority!(::oneAPIBackend, prio::Symbol)
         priority = priority_enum
     )
 
+    # Register the replacement queue so `synchronize_all_queues`/`release` can drain it
+    # before freeing a buffer whose in-flight work it references; otherwise all work after
+    # `priority!` runs on an unregistered queue and a freed buffer can be reused while its
+    # kernel is still running (use-after-free → banned context on the LTS NEO stack).
+    oneAPI.register_queue!(ctx, dev, new_queue)
+
     task_local_storage((:ZeCommandQueue, ctx, dev), new_queue)
 
     return nothing
