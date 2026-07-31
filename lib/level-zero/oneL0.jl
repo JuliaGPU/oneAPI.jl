@@ -149,8 +149,9 @@ const LTS = Ref{Bool}(false)
 
 # Parse a boolean-valued environment variable, accepting the same spellings for every
 # oneAPI flag. Returns `default` when the variable is unset or empty. Warns (and returns
-# `default`) on an unrecognized value, so a typo like `ONEAPI_LTS=treu` no longer silently
-# disables the LTS path.
+# `default`) on an unrecognized value, so a deployment that writes `ONEAPI_SYNC_EACH_SUBMISSION=on`
+# — valid for the sibling `ONEAPI_LTS` — no longer silently reads as off, and a typo like
+# `ONEAPI_LTS=treu` no longer silently disables the LTS path.
 function parse_env_bool(name::AbstractString, default::Bool)
     haskey(ENV, name) || return default
     val = lowercase(strip(ENV[name]))
@@ -229,6 +230,7 @@ function __init__()
 
     validation_layer[] = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
     parameter_validation[] = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
+    return sync_each_submission!(parse_env_bool("ONEAPI_SYNC_EACH_SUBMISSION", false))
 end
 
 end
