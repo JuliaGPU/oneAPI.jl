@@ -56,8 +56,3 @@ oneAPI_Support_jll = "0.10.0"
 
 [extras]
 libigc_jll = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
-
-[sources]
-# Pin to a commit SHA, not the mutable `atomic-float-ops` branch head, so builds are
-# reproducible and a force-push upstream cannot silently change what users resolve.
-SPIRVIntrinsics = {url = "https://github.com/JuliaGPU/OpenCL.jl", rev = "main", subdir = "lib/intrinsics"}
