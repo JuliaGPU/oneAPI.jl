@@ -1,21 +1,26 @@
 # Device Intrinsics
 
-When writing custom kernels, you have access to a set of device intrinsics that map to underlying hardware instructions.
+When writing custom kernels, you have access to a set of device intrinsics that map to underlying hardware instructions. These are provided by [SPIRVIntrinsics.jl](https://github.com/JuliaGPU/SPIRVIntrinsics.jl) and re-exported by oneAPI.jl.
 
 ## Indexing
 
 These functions allow you to determine the current thread's position in the execution grid.
 
-- `get_global_id(dim=0)`: Global index of the work item.
-- `get_local_id(dim=0)`: Local index of the work item within the workgroup.
-- `get_group_id(dim=0)`: Index of the workgroup.
-- `get_global_size(dim=0)`: Global size of the ND-range.
-- `get_local_size(dim=0)`: Size of the workgroup.
-- `get_num_groups(dim=0)`: Number of workgroups.
+- `get_global_id(dim=1)`: Global index of the work item.
+- `get_local_id(dim=1)`: Local index of the work item within the workgroup.
+- `get_group_id(dim=1)`: Index of the workgroup.
+- `get_global_size(dim=1)`: Global size of the ND-range.
+- `get_local_size(dim=1)`: Size of the workgroup.
+- `get_num_groups(dim=1)`: Number of workgroups.
+
+Unlike their OpenCL counterparts, both the dimension argument and the returned indices are
+1-based, so the result can be used to index a Julia array directly.
 
 ## Synchronization
 
-- `barrier(flags=0)`: Synchronizes all work items in a workgroup.
+- `barrier(flags)`: Synchronizes all work items in a workgroup. The `flags` argument selects
+  which memory operations are fenced: `oneAPI.LOCAL_MEM_FENCE`, `oneAPI.GLOBAL_MEM_FENCE`, or
+  their bitwise or. There is no default; a value must be passed.
 
 ## Atomics
 

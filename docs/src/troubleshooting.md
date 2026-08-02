@@ -33,6 +33,8 @@ Some Intel GPUs (especially integrated graphics) lack native hardware support fo
 - Trigger garbage collection: `GC.gc()`.
 - Manually free unused arrays: `oneAPI.unsafe_free!(array)`.
 - Check if you are exceeding the device's memory capacity.
+- When several processes share one GPU, give each a budget with `ONEAPI_MEMORY_LIMIT`; see
+  [Memory Management](memory.md).
 
 ## Debugging
 
@@ -43,6 +45,7 @@ Enable the Level Zero validation layer to catch API misuse:
 ```bash
 export ZE_ENABLE_VALIDATION_LAYER=1
 export ZE_ENABLE_PARAMETER_VALIDATION=1
+export EnableDebugBreak=0  # works around intel/compute-runtime#639
 ```
 
 ### Debug Mode

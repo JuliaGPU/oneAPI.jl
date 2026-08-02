@@ -55,7 +55,10 @@ Inside a kernel, you can use various intrinsics to interact with the hardware:
 - `get_global_id()`: Get the global thread ID.
 - `get_local_id()`: Get the local thread ID within a workgroup.
 - `get_group_id()`: Get the workgroup ID.
-- `barrier()`: Synchronize threads within a workgroup.
+- `barrier(flags)`: Synchronize threads within a workgroup.
 
-These correspond to standard OpenCL/Level Zero intrinsics.
+These are provided by [SPIRVIntrinsics.jl](https://github.com/JuliaGPU/SPIRVIntrinsics.jl)
+and correspond to the standard OpenCL built-in functions. Note that the indices they return
+are 1-based, so they can be used to index Julia arrays directly. See
+[Device Intrinsics](device.md) for the full list.
 
