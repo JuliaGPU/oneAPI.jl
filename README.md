@@ -28,15 +28,18 @@ Windows support is experimental.
 
 ## Status
 
-**oneAPI.jl is looking for contributors and/or a maintainer. Reach out if you can help!**
+oneAPI.jl is actively maintained and contributions are welcome — see the issue tracker for
+open work.
 
-The current version of oneAPI.jl supports most of the oneAPI Level Zero interface, has
-good kernel programming capabilties, and as a demonstration of that it fully implements
-the GPUArrays.jl array interfaces. This results in a full-featured GPU array type.
+The current version of oneAPI.jl supports most of the oneAPI Level Zero interface, has good
+kernel programming capabilities, and as a demonstration of that it fully implements the
+GPUArrays.jl array interfaces. This results in a full-featured GPU array type. On top of
+that, the package integrates with vendor libraries through oneMKL, covering dense BLAS and
+LAPACK, sparse linear algebra, and FFTs, and it provides a KernelAbstractions.jl backend
+(`oneAPIBackend`) so portable kernels run unmodified on Intel GPUs.
 
-However, the package has not been extensively tested, and performance issues might be
-present. The integration with vendor libraries like oneMKL has been extended with support
-for sparse linear algebra operations. Some operations may still be unavailable or slow.
+The package has not been as extensively tested as more mature back-ends, and performance
+issues might be present. Some operations may still be unavailable or slow.
 
 
 ## Quick start
@@ -66,40 +69,47 @@ julia> using oneAPI
 
 julia> oneAPI.versioninfo()
 Binary dependencies:
-- NEO: 25.35.35096
-- libigc: 1.0.17193+0
-- gmmlib: 22.3.20+0
-- SPIRV_LLVM_Translator: 21
-- SPIRV_Tools: 2025.4.0
-- oneAPI_Support: 0.9.2 (oneMKL v2025.2.0)
+- NEO: 26.18.38308+0
+- libigc: 2.34.4+1
+- gmmlib: 22.10.0+0
+- SPIRV_LLVM_Backend: 22.1.8+1
+- SPIRV_Tools: 2025.4.0+0
+- oneAPI_Support: 0.10.0+0 (oneMKL v2025.3.0)
 
 Toolchain:
-- Julia: 1.11.5
-- LLVM: 16.0.6
+- Julia: 1.12.6
+- LLVM: 18.1.7
+
+Julia packages:
+- oneAPI.jl: 2.7.2
+- GPUArrays: 11.5.8
+- GPUCompiler: 2.1.1
+- KernelAbstractions: 0.9.42
+- LLVM: 9.11.0
+- SPIRVIntrinsics: 1.1.0
 
 1 driver:
-- 00000000-0000-0000-173d-d94201036013 (v1.3.24595, API v1.3.0)
+- 00000000-0000-0000-18c7-da2e010395a4 (v1.3.38308, API v1.15.0)
 
-2 devices:
-- Intel(R) Graphics [0x56a0]
-- Intel(R) HD Graphics P630 [0x591d]
+1 device:
+- Intel(R) Arc(TM) A750 Graphics
 ```
 
-If you have multiple compatible drivers or devices, use the `driver!` and `device!`
-functions to configure which one to use in the current task:
+The drivers and devices that oneAPI.jl found are listed at the end of that output. You can
+also query them directly:
 
 ```julia
 julia> devices()
-ZeDevice iterator for 2 devices:
-1. Intel(R) Graphics [0x56a0]
-2. Intel(R) HD Graphics P630 [0x591d]
+ZeDevice iterator for 1 devices:
+1. Intel(R) Arc(TM) A750 Graphics
 
 julia> device()
-ZeDevice(GPU, vendor 0x8086, device 0x56a0): Intel(R) Graphics [0x56a0]
-
-julia> device!(2)
-ZeDevice(GPU, vendor 0x8086, device 0x591d): Intel(R) HD Graphics P630 [0x591d]
+ZeDevice(GPU, vendor 0x8086, device 0x56a1)
 ```
+
+If more than one compatible driver or device is listed, use the `driver!` and `device!`
+functions to configure which one to use in the current task, e.g. `device!(2)` to switch to
+the second device.
 
 To ensure other functionality works as expected, you can run the test suite from the package
 manager REPL mode. Note that this will pull and run the test suite for
@@ -107,13 +117,6 @@ manager REPL mode. Note that this will pull and run the test suite for
 
 ```
 pkg> test oneAPI
-...
-Testing finished in 16 minutes, 27 seconds, 506 milliseconds
-
-Test Summary: | Pass  Total  Time
-  Overall     | 4945   4945
-    SUCCESS
-     Testing oneAPI tests passed
 ```
 
 
@@ -136,10 +139,10 @@ julia> drv = first(drivers());
 julia> ctx = ZeContext(drv);
 
 julia> dev = first(devices(drv))
-ZeDevice(GPU, vendor 0x8086, device 0x1912): Intel(R) Gen9
+ZeDevice(GPU, vendor 0x8086, device 0x56a1)
 
 julia> compute_properties(dev)
-(maxTotalGroupSize = 256, maxGroupSizeX = 256, maxGroupSizeY = 256, maxGroupSizeZ = 256, maxGroupCountX = 4294967295, maxGroupCountY = 4294967295, maxGroupCountZ = 4294967295, maxSharedLocalMemory = 65536, subGroupSizes = (8, 16, 32))
+(maxTotalGroupSize = 1024, maxGroupSizeX = 1024, maxGroupSizeY = 1024, maxGroupSizeZ = 1024, maxGroupCountX = 4294967295, maxGroupCountY = 4294967295, maxGroupCountZ = 4294967295, maxSharedLocalMemory = 65536, subGroupSizes = (8, 16, 32))
 
 julia> queue = ZeCommandQueue(ctx, dev);
 
@@ -149,8 +152,9 @@ julia> execute!(queue) do list
 ```
 
 Built on top of that, are kernel programming capabilities for executing Julia code on oneAPI
-accelerators. For now, we reuse OpenCL intrinsics, and compile to SPIR-V using [Khronos'
-translator](https://github.com/KhronosGroup/SPIRV-LLVM-Translator):
+accelerators. Device-side intrinsics are provided by
+[SPIRVIntrinsics.jl](https://github.com/JuliaGPU/SPIRVIntrinsics.jl), and code is compiled to
+SPIR-V using [LLVM's SPIR-V back-end](https://llvm.org/docs/SPIRVUsage.html):
 
 ```julia
 julia> function kernel()
@@ -168,15 +172,19 @@ julia> @device_code_llvm @oneapi items=1 kernel()
 ```
 
 ```llvm
-;  @ REPL[18]:1 within `kernel'
-define dso_local spir_kernel void @_Z17julia_kernel_3053() local_unnamed_addr {
-top:
-;  @ REPL[18]:2 within `kernel'
-; ┌ @ oneAPI.jl/src/device/opencl/synchronization.jl:9 within `barrier' @ oneAPI.jl/src/device/opencl/synchronization.jl:9
-; │┌ @ oneAPI.jl/src/device/opencl/utils.jl:34 within `macro expansion'
-    call void @_Z7barrierj(i32 0)
-; └└
-;  @ REPL[18]:3 within `kernel'
+;  @ REPL[2]:1 within `kernel`
+define spir_kernel void @_Z6kernel() local_unnamed_addr {
+conversion:
+  br label %top
+
+top:                                              ; preds = %conversion
+;  @ REPL[2]:2 within `kernel`
+; ┌ @ SPIRVIntrinsics/src/synchronization.jl:162 within `barrier`
+; │┌ @ SPIRVIntrinsics/src/synchronization.jl:154 within `work_group_barrier`
+; ││┌ @ SPIRVIntrinsics/src/synchronization.jl:54 within `control_barrier`
+     call void @_Z22__spirv_ControlBarrierjjj(i32 2, i32 2, i32 16)
+; └└└
+;  @ REPL[2]:3 within `kernel`
   ret void
 }
 ```
@@ -187,28 +195,32 @@ julia> @device_code_spirv @oneapi items=1 kernel()
 
 ```spirv
 ; SPIR-V
-; Version: 1.0
-; Generator: Khronos LLVM/SPIR-V Translator; 14
-; Bound: 9
+; Version: 1.4
+; Generator: LLVM LLVM SPIR-V Backend; 22
+; Bound: 22
 ; Schema: 0
-               OpCapability Addresses
                OpCapability Kernel
+               OpCapability Addresses
           %1 = OpExtInstImport "OpenCL.std"
                OpMemoryModel Physical64 OpenCL
-               OpEntryPoint Kernel %4 "_Z17julia_kernel_3067"
+               OpEntryPoint Kernel %_Z6kernel "_Z6kernel"
+               OpExecutionMode %_Z6kernel ContractionOff
                OpSource OpenCL_C 200000
+               OpName %_Z6kernel "_Z6kernel"
+               OpName %conversion "conversion"
                OpName %top "top"
-       %uint = OpTypeInt 32 0
-     %uint_2 = OpConstant %uint 2
-     %uint_0 = OpConstant %uint 0
        %void = OpTypeVoid
-          %3 = OpTypeFunction %void
-          %4 = OpFunction %void None %3
+          %5 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+    %uint_16 = OpConstant %uint 16
+     %uint_2 = OpConstant %uint 2
+  %_Z6kernel = OpFunction %void None %5
+ %conversion = OpLabel
+               OpBranch %top
         %top = OpLabel
-               OpControlBarrier %uint_2 %uint_2 %uint_0
+               OpControlBarrier %uint_2 %uint_2 %uint_16
                OpReturn
                OpFunctionEnd
-
 ```
 
 Finally, the `oneArray` type makes it possible to use your oneAPI accelerator without the
@@ -216,26 +228,49 @@ need to write custom kernels, thanks to Julia's high-level array abstractions:
 
 ```julia
 julia> a = oneArray(rand(Float32, 2,2))
-2×2 oneArray{Float32,2}:
- 0.592979  0.996154
- 0.874364  0.232854
+2×2 oneArray{Float32, 2, oneAPI.oneL0.DeviceBuffer}:
+ 0.879687  0.990588
+ 0.421241  0.157232
 
 julia> a .+ 1
-2×2 oneArray{Float32,2}:
- 1.59298  1.99615
- 1.87436  1.23285
+2×2 oneArray{Float32, 2, oneAPI.oneL0.DeviceBuffer}:
+ 1.87969  1.99059
+ 1.42124  1.15723
 ```
 
-The oneMKL integration provides extended support for linear algebra operations, including sparse
-matrix operations that integrate with Julia's standard LinearAlgebra interface:
+The oneMKL integration provides extended support for linear algebra operations, including
+sparse matrix operations that integrate with Julia's standard LinearAlgebra interface:
 
 ```julia
 julia> using oneAPI, oneAPI.oneMKL, SparseArrays, LinearAlgebra
-julia> A = sprand(100, 100, 0.1)
-julia> dA = oneMKL.oneSparseMatrixCSC(A)
-julia> x = oneArray(rand(100))
-julia> y = dA * x  # Matrix-vector multiplication via LinearAlgebra
+
+julia> A = sprand(Float32, 100, 100, 0.1);
+
+julia> dA = oneMKL.oneSparseMatrixCSR(A);
+
+julia> x = oneArray(rand(Float32, 100));
+
+julia> y = dA * x;  # matrix-vector multiplication via LinearAlgebra
 ```
+
+Sparse matrices are also available in CSC (`oneSparseMatrixCSC`) and COO
+(`oneSparseMatrixCOO`) formats. Note that oneMKL's sparse back-end is CSR-based, so some
+operations — notably the triangular solves and multiplications — are unavailable for CSC
+matrices and will throw an `ArgumentError`.
+
+### Writing portable code
+
+While oneAPI.jl provides Intel-specific functionality, it is recommended to write
+backend-agnostic code where possible, so that it runs on other GPU back-ends without
+modification:
+
+- [GPUArrays.jl](https://github.com/JuliaGPU/GPUArrays.jl) for high-level array abstractions
+- [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl) for kernels that
+  compile for CPU, CUDA, ROCm, Metal and oneAPI devices. oneAPI.jl provides the
+  `oneAPIBackend` back-end for this.
+
+Reach for `oneAPI`-specific macros (like `@oneapi`) and types (like `oneArray`) when you need
+optimizations or features that the generic abstractions do not cover.
 
 ### `Float64` support
 
@@ -265,7 +300,24 @@ To work on oneAPI.jl, you just need to `dev` the package. In addition, you may n
 **build the binary support library** that's used to interface with oneMKL and other C++
 vendor libraries. This library is normally provided by the oneAPI_Support_jll.jl package,
 however, we only guarantee to update this package when releasing oneAPI.jl. You can build
-this library yourself by simply executing `deps/build_local.jl`.
+this library yourself by executing:
+
+```
+$ julia --project=deps deps/build_local.jl
+```
+
+This installs a Conda environment with Intel DPC++ and MKL, builds the library, and writes a
+`LocalPreferences.toml` that points oneAPI.jl at the result.
+
+Most of the oneMKL bindings are generated from the oneMKL C++ headers. After changing the
+generator or updating oneMKL, regenerate them with:
+
+```
+$ julia --project=deps deps/generate_interfaces.jl
+```
+
+Pull requests are checked with [Runic.jl](https://github.com/fredrikekre/Runic.jl); format
+your changes with `git runic main` before submitting.
 
 To facilitate development, there are other things you may want to configure:
 
