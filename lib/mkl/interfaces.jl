@@ -18,7 +18,8 @@ function LinearAlgebra.generic_matvecmul!(C::oneVector{T}, tA::AbstractChar, A::
 end
 
 function LinearAlgebra.generic_matvecmul!(C::oneVector{T}, tA::AbstractChar, A::oneSparseMatrixCSC{T}, B::oneVector{T}, alpha::Number, beta::Number) where {T <: BlasReal}
-    tA = tA in ('S', 's', 'H', 'h') ? 'T' : flip_trans(tA)
+    # sparse_gemv! already maps op(A) onto the transposed CSR handle, so tA is passed through
+    tA = tA in ('S', 's', 'H', 'h') ? 'N' : tA
     return sparse_gemv!(tA, alpha, A, B, beta, C)
 end
 
@@ -29,7 +30,8 @@ function LinearAlgebra.generic_matmatmul!(C::oneMatrix{T}, tA, tB, A::oneSparseM
 end
 
 function LinearAlgebra.generic_matmatmul!(C::oneMatrix{T}, tA, tB, A::oneSparseMatrixCSC{T}, B::oneMatrix{T}, alpha::Number, beta::Number) where {T <: BlasReal}
-    tA = tA in ('S', 's', 'H', 'h') ? 'T' : flip_trans(tA)
+    # sparse_gemm! already maps op(A) onto the transposed CSR handle, so tA is passed through
+    tA = tA in ('S', 's', 'H', 'h') ? 'N' : tA
     tB = tB in ('S', 's', 'H', 'h') ? 'N' : tB
     return sparse_gemm!(tA, tB, alpha, A, B, beta, C)
 end

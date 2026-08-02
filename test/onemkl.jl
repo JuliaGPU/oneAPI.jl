@@ -1175,6 +1175,35 @@ end
             end
         end
 
+            # `*` and `mul!` reach oneMKL through generic_matvecmul!/generic_matmatmul!, which is
+            # a separate mapping from the sparse_gemv!/sparse_gemm! calls exercised above
+            @testset "sparse LinearAlgebra mul" begin
+                @testset "$SparseMatrix" for SparseMatrix in csr_csc_matrices
+                    # the CSC methods are restricted to real element types
+                    (SparseMatrix == oneSparseMatrixCSC && T <: Complex) && continue
+
+                    A = sprand(T, 10, 10, 0.5)
+                    x = rand(T, 10)
+                    y = rand(T, 10)
+                    B = rand(T, 10, 2)
+                    C = rand(T, 10, 2)
+
+                    dA = SparseMatrix(A)
+                    dx = oneVector{T}(x)
+                    dB = oneMatrix{T}(B)
+
+                    @test A * x ≈ collect(dA * dx)
+                    @test A * B ≈ collect(dA * dB)
+                    @test transpose(A) * x ≈ collect(transpose(dA) * dx)
+                    @test transpose(A) * B ≈ collect(transpose(dA) * dB)
+
+                    alpha = rand(T)
+                    beta = rand(T)
+                    @test alpha * A * x + beta * y ≈ collect(mul!(oneVector{T}(y), dA, dx, alpha, beta))
+                    @test alpha * A * B + beta * C ≈ collect(mul!(oneMatrix{T}(C), dA, dB, alpha, beta))
+                end
+            end
+
         @testset "sparse symv" begin
                 @testset  "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     @testset "uplo = $uplo" for uplo in ('L', 'U')
