@@ -13,7 +13,7 @@ makedocs(
     sitename = "oneAPI.jl",
     format = Documenter.HTML(
         prettyurls = Base.get(ENV, "CI", nothing) == "true",
-        canonical = "https://exanauts.github.io/ExaPF.jl/stable/",
+        canonical = "https://juliagpu.github.io/oneAPI.jl/stable/",
         mathengine = Documenter.KaTeX(),
     ),
     modules = [oneAPI],
