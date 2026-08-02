@@ -1179,9 +1179,6 @@ end
             # a separate mapping from the sparse_gemv!/sparse_gemm! calls exercised above
             @testset "sparse LinearAlgebra mul" begin
                 @testset "$SparseMatrix" for SparseMatrix in csr_csc_matrices
-                    # the CSC methods are restricted to real element types
-                    (SparseMatrix == oneSparseMatrixCSC && T <: Complex) && continue
-
                     A = sprand(T, 10, 10, 0.5)
                     x = rand(T, 10)
                     y = rand(T, 10)
@@ -1192,10 +1189,10 @@ end
                     dx = oneVector{T}(x)
                     dB = oneMatrix{T}(B)
 
-                    @test A * x ≈ collect(dA * dx)
-                    @test A * B ≈ collect(dA * dB)
-                    @test transpose(A) * x ≈ collect(transpose(dA) * dx)
-                    @test transpose(A) * B ≈ collect(transpose(dA) * dB)
+                    @testset "opa = $(nameof(opa))" for opa in (identity, transpose, adjoint)
+                        @test opa(A) * x ≈ collect(opa(dA) * dx)
+                        @test opa(A) * B ≈ collect(opa(dA) * dB)
+                    end
 
                     alpha = rand(T)
                     beta = rand(T)
