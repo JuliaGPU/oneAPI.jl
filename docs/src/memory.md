@@ -17,14 +17,21 @@ oneAPI uses Unified Shared Memory, which allows for pointers that can be accessi
 You can perform low-level memory allocation using the `oneL0` submodule if needed, though `oneArray` handles this automatically.
 
 ```julia
-using oneAPI.oneL0
+using oneAPI, oneAPI.oneL0
 
-# Allocate device memory
-ptr = oneL0.zeMemAllocDevice(context(), device(), 1024, 1)
+drv = first(drivers())
+ctx = ZeContext(drv)
+dev = first(devices(drv))
+
+# Allocate 1024 bytes of device memory, aligned to 8 bytes
+buf = device_alloc(ctx, dev, 1024, 8)
 
 # Free memory
-oneL0.zeMemFree(context(), ptr)
+free(buf)
 ```
+
+`host_alloc` and `shared_alloc` allocate host and shared USM memory respectively, using the
+same signature.
 
 ## Garbage Collection
 

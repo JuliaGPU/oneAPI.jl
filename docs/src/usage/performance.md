@@ -116,7 +116,7 @@ function optimized_reduction!(result, input)
     # Load global → local (coalesced)
     global_id = get_global_id()
     @inbounds local_mem[local_id] = input[global_id]
-    barrier()
+    barrier(oneAPI.LOCAL_MEM_FENCE)
 
     # Reduce in local memory (much faster)
     stride = local_size ÷ 2
@@ -124,7 +124,7 @@ function optimized_reduction!(result, input)
         if local_id <= stride
             @inbounds local_mem[local_id] += local_mem[local_id + stride]
         end
-        barrier()
+        barrier(oneAPI.LOCAL_MEM_FENCE)
         stride ÷= 2
     end
 
@@ -145,9 +145,9 @@ Barriers have overhead:
 function wasteful_kernel!(a)
     i = get_local_id()
     a[i] += 1
-    barrier()  # Not needed if no data sharing
+    barrier(oneAPI.LOCAL_MEM_FENCE)  # Not needed if no data sharing
     a[i] *= 2
-    barrier()  # Not needed
+    barrier(oneAPI.LOCAL_MEM_FENCE)  # Not needed
     return
 end
 
@@ -157,7 +157,7 @@ function efficient_kernel!(a, shared)
 
     # Load to shared memory
     shared[i] = a[i]
-    barrier()  # Needed: ensure all loads complete
+    barrier(oneAPI.LOCAL_MEM_FENCE)  # Needed: ensure all loads complete
 
     # Use shared data
     result = shared[i] + shared[i+1]

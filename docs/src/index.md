@@ -16,14 +16,18 @@ Direct use of `oneAPI`-specific macros (like `@oneapi`) and types (like `oneArra
 ## Features
 
 - **High-level Array Abstractions**: `oneArray` type fully implementing the `GPUArrays.jl` interface.
-- **Kernel Programming**: Execute custom kernels written in Julia on Intel GPUs.
+- **Kernel Programming**: Execute custom kernels written in Julia on Intel GPUs, compiled to
+  SPIR-V through LLVM's SPIR-V back-end.
+- **KernelAbstractions.jl Backend**: The `oneAPIBackend` back-end runs portable kernels on
+  Intel GPUs unmodified.
 - **Level Zero Integration**: Low-level access to the Level Zero API via the `oneL0` submodule.
-- **oneMKL Support**: Integration with Intel oneMKL for BLAS, LAPACK, and sparse operations.
+- **oneMKL Support**: Integration with Intel oneMKL for BLAS, LAPACK, sparse and FFT operations.
 - **SYCL Integration**: Interoperability with SYCL (on Linux).
 
 ## Requirements
 
 - **Julia**: 1.10 or higher
-- **OS**: Linux
-- **Hardware**: Intel Gen9 graphics or newer (including Intel Arc A-Series)
+- **OS**: Linux. Windows is experimental, via WSL2.
+- **Hardware**: Intel Gen9 graphics or newer. Intel Arc GPUs (A580, A750, A770, etc) require
+  Linux 6.2 or newer.
 

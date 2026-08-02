@@ -27,26 +27,30 @@ oneAPI.jl supports sparse matrix operations via oneMKL's sparse BLAS functionali
 using oneAPI, oneAPI.oneMKL, SparseArrays, LinearAlgebra
 
 # Create a sparse matrix on CPU
-A = sprand(100, 100, 0.1)
+A = sprand(Float32, 100, 100, 0.1)
 
 # Move to GPU (converts to oneMKL format)
-dA = oneMKL.oneSparseMatrixCSC(A)
+dA = oneMKL.oneSparseMatrixCSR(A)
 
 # Create a dense vector
-x = oneArray(rand(100))
+x = oneArray(rand(Float32, 100))
 
 # Sparse matrix-vector multiplication
 y = dA * x
 ```
 
-Note that `oneSparseMatrixCSC` is available for Compressed Sparse Column format, which is the standard in Julia.
+Three storage formats are available: `oneSparseMatrixCSR`, `oneSparseMatrixCSC` and
+`oneSparseMatrixCOO`. oneMKL's sparse back-end is CSR-based, and a `oneSparseMatrixCSC` is
+therefore stored as the CSR representation of its transpose. As a consequence the triangular
+operations (`sparse_trmv!`, `sparse_trsv!`, `sparse_trsm!`) cannot be expressed for CSC
+matrices and throw an `ArgumentError`. Prefer CSR when you have the choice.
 
 ## FFTs
 
-Fast Fourier Transforms are supported through `AbstractFFTs.jl` interface integration with oneMKL DFTs.
+Fast Fourier Transforms are supported through `AbstractFFTs.jl` interface integration with oneMKL DFTs. oneAPI.jl depends on AbstractFFTs.jl, so no separate FFT package is required.
 
 ```julia
-using oneAPI, FFTW
+using oneAPI, AbstractFFTs
 
 a = oneArray(rand(ComplexF32, 1024))
 
