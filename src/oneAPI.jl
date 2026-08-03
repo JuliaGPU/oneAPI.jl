@@ -17,7 +17,13 @@ using LLVM
 using LLVM.Interop
 using Core: LLVMPtr
 
-using SPIRV_LLVM_Backend_jll, SPIRV_Tools_jll
+import Libdl
+
+# Load both SPIR-V codegen back-ends: GPUCompiler resolves the tool from the target's
+# `backend` field (`:khronos` -> translator, `:llvm` -> LLVM back-end) via a LazyModule that
+# looks the JLL up in `Base.loaded_modules`, so both must be loaded for either path to work.
+# The LTS stack uses the translator; the rolling stack (ONEAPI_LTS=0) uses the LLVM back-end.
+using SPIRV_LLVM_Translator_jll, SPIRV_LLVM_Backend_jll, SPIRV_Tools_jll
 using oneAPI_Support_jll
 
 export oneL0
@@ -142,6 +148,26 @@ function __init__()
             if oneL0.NEO_jll.is_available()
                 # ensure that the OpenCL loader finds the ICD files from our artifacts
                 ENV["OCL_ICD_FILENAMES"] = oneL0.NEO_jll.libigdrcl
+
+                # libsycl (loaded later for oneMKL) carries its own bundled Level Zero loader
+                # that rediscovers the NEO driver by dlopen'ing it by soname rather than
+                # reusing our JLL-loaded module. dlopen NEO here by full path so it is already
+                # resident in this process before libsycl loads: a later
+                # dlopen("libze_intel_gpu.so.1") then resolves to this module by soname without
+                # needing a search path. Required when no system NEO is installed.
+                Libdl.dlopen(oneL0.NEO_jll.libze_intel_gpu; throw_error = false)
+
+                # Extend LD_LIBRARY_PATH with the NEO directory as well. NOTE: this does NOT
+                # affect the running process's own dlopen search — glibc captures
+                # LD_LIBRARY_PATH once at startup — so it serves only *child* processes (e.g.
+                # the multi-worker test suite) that inherit the environment and do their own
+                # path-based driver discovery. In-process discovery is handled by the dlopen
+                # above (and by ZE_ENABLE_ALT_DRIVERS, set in oneL0's __init__).
+                neo_libdir = dirname(oneL0.NEO_jll.libze_intel_gpu)
+                ld = get(ENV, "LD_LIBRARY_PATH", "")
+                if !occursin(neo_libdir, ld)
+                    ENV["LD_LIBRARY_PATH"] = isempty(ld) ? neo_libdir : "$neo_libdir:$ld"
+                end
             end
         end
 

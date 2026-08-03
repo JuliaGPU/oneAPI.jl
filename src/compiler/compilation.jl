@@ -75,11 +75,14 @@ function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
     flatten_nested_insertvalue!(mod)
 
     # When the device supports BFloat16 but the SPIR-V runtime doesn't accept
-    # SPV_KHR_bfloat16, lower all bfloat types to i16 so the translator can
+    # SPV_KHR_bfloat16, lower all bfloat types to i16 so the back-end/translator can
     # handle the module without the extension. Both conditions are read from the
     # (device-independent) compiler config so this stays valid without a live
     # device: `_compiler_config` sets `supports_bfloat16` from the device and adds
     # the `SPV_KHR_bfloat16` extension iff the driver's SPIR-V runtime accepts it.
+    # Rolling stack only: bf16 is forced off on the LTS stack
+    # (`supports_bfloat16 = false`, see `_compiler_config`), so this pass never
+    # runs there.
     target = job.config.target
     if @static(isdefined(Core, :BFloat16) && isdefined(LLVM, :BFloatType)) &&
             target.supports_bfloat16 && !occursin("SPV_KHR_bfloat16", target.extensions)
@@ -324,26 +327,39 @@ end
     properties = oneL0.module_properties(dev)
     supports_fp16 = properties.fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
     supports_fp64 = properties.fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
-    # Allow BFloat16 in IR if the device supports it (even if the SPIR-V runtime doesn't
-    # advertise the extension). We lower bfloat→i16 in finish_ir! when needed.
-    supports_bfloat16 = _device_supports_bfloat16(dev)
 
-    # SPIR-V extensions the LLVM back-end may emit. Declaring them permits the
-    # corresponding instructions during translation: without
-    # SPV_EXT_shader_atomic_float_add, floating-point atomic operations fail to
-    # translate ("The atomic float instruction requires ... SPV_EXT_shader_atomic_float_add").
+    # SPIR-V codegen path. The Aurora LTS NEO/IGC runtime only accepts SPIR-V from the
+    # Khronos translator; the rolling stack uses the LLVM SPIR-V back-end. GPUCompiler picks
+    # the tool from the target's `backend` field and loads the JLL lazily, so both can be
+    # listed as deps and the choice is made here at compile time. Either way the extensions
+    # below have to be declared explicitly: without SPV_EXT_shader_atomic_float_add,
+    # floating-point atomic operations fail to translate ("The atomic float instruction
+    # requires ... SPV_EXT_shader_atomic_float_add").
+    # TODO: emit printf format strings in constant memory
     extensions = String[
         "SPV_EXT_relaxed_printf_string_address_space",
         "SPV_EXT_shader_atomic_float_add",
     ]
-    # Only add the SPIR-V extension if the runtime actually supports it
-    if _driver_supports_bfloat16_spirv(dev)
-        push!(extensions, "SPV_KHR_bfloat16")
+    if oneL0.LTS[]
+        backend = :khronos
+        # The LTS SPIR-V stack cannot codegen native bfloat in generic kernels (clamp! ->
+        # InvalidIRError, and SPV_KHR_bfloat16 segfaults NEO), so keep bf16 off entirely on
+        # this path; the test suite gates bf16 eltypes on `!oneL0.LTS[]` to match.
+        supports_bfloat16 = false
+    else
+        backend = :llvm
+        # Allow BFloat16 in IR if the device supports it (even if the SPIR-V runtime doesn't
+        # advertise the extension); finish_ir! lowers bfloat->i16 when the extension is absent.
+        supports_bfloat16 = _device_supports_bfloat16(dev)
+        # Only declare the SPIR-V extension when the runtime actually accepts it.
+        if _driver_supports_bfloat16_spirv(dev)
+            push!(extensions, "SPV_KHR_bfloat16")
+        end
     end
     extensions_str = join(map(ext -> "+$ext", extensions), ",")
 
     # create GPUCompiler objects
-    target = SPIRVCompilerTarget(; extensions=extensions_str, supports_fp16, supports_fp64, supports_bfloat16, kwargs...)
+    target = SPIRVCompilerTarget(; backend, extensions = extensions_str, supports_fp16, supports_fp64, supports_bfloat16, kwargs...)
     params = oneAPICompilerParams()
     CompilerConfig(target, params; kernel, name, always_inline)
 end

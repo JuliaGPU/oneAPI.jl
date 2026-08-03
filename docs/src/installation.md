@@ -45,6 +45,21 @@ julia> devices()
 julia> device!(1) # Select the first available device
 ```
 
+## Intel LTS Driver Stack
+
+Large deployments (for example Aurora) run Intel's long-term-servicing branch of the
+Compute Runtime rather than a rolling release. That branch needs a number of workarounds,
+which oneAPI.jl provides behind an opt-in switch:
+
+```bash
+export ONEAPI_LTS=1
+```
+
+Among other things this compiles kernels with the Khronos SPIR-V translator instead of
+LLVM's SPIR-V back-end. See [Intel LTS Driver Stack](lts.md) for what else changes and what
+it costs. The switch does not install an LTS driver — combine it with the system-library
+configuration below.
+
 ## Using System Libraries (Advanced)
 
 !!! warning

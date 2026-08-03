@@ -36,6 +36,36 @@ Some Intel GPUs (especially integrated graphics) lack native hardware support fo
 - When several processes share one GPU, give each a budget with `ONEAPI_MEMORY_LIMIT`; see
   [Memory Management](memory.md).
 
+### Silently wrong results, or every submission failing
+
+**Symptom**: on a system running Intel's long-term-servicing (LTS) Compute Runtime — such
+as Aurora — reductions over transposed or otherwise strided arrays return wrong values
+without raising an error, kernels drop their last work-items, or every submission starts
+failing with `ZE_RESULT_ERROR_UNKNOWN` after a garbage collection.
+
+**Solution**:
+Enable the LTS workarounds and restart Julia:
+
+```bash
+export ONEAPI_LTS=1
+```
+
+See [Intel LTS Driver Stack](lts.md) for the individual defects, the additional
+`ONEAPI_SYNC_EACH_SUBMISSION=1` switch for oversubscribed tiles, and the performance
+trade-offs involved. Do not enable these on a rolling-release driver, which does not need
+them.
+
+### "InvalidIRError" for a BFloat16 kernel
+
+**Symptom**: a kernel using `BFloat16` fails to compile even though the device reports
+BFloat16 support.
+
+**Solution**:
+The LTS SPIR-V stack cannot translate the LLVM `bfloat` type in generic kernels; the
+device-level check (`oneAPI._device_supports_bfloat16()`) reports hardware capability and
+does not capture this. Use `Float16` or `Float32` on that stack — see
+[Intel LTS Driver Stack](lts.md).
+
 ## Debugging
 
 ### Validation Layer

@@ -2,6 +2,12 @@
 
 export ZeCommandQueue, synchronize
 
+# Bound on how long the LTS drain-before-destroy finalizer waits for in-flight work before
+# giving up and leaking the queue (see the finalizer below). 10 s comfortably covers any
+# kernel still legitimately running at finalization while keeping a never-signaled event
+# from hanging GC or process exit forever.
+const FINALIZER_SYNC_TIMEOUT_NS = UInt64(10_000_000_000)
+
 mutable struct ZeCommandQueue
     handle::ze_command_queue_handle_t
 
@@ -20,7 +26,30 @@ mutable struct ZeCommandQueue
         zeCommandQueueCreate(ctx, dev, desc_ref, handle_ref)
         obj = new(handle_ref[], ctx, dev, ordinal)
         finalizer(obj) do obj
+            if LTS[]
+                # the queue may still have work in flight (nothing requires a task to
+                # synchronize before dying), and zeCommandQueueDestroy does not wait for
+                # it: on the LTS NEO stack the still-running work then faults as soon as
+                # a referenced allocation is freed, getting the context banned. drain the
+                # queue first; unchecked, as sync on a banned context returns an error.
+                #
+                # Bounded wait, not typemax(UInt64): event-gated work whose event is never
+                # signaled (a task that submits work with a wait event and dies before
+                # signaling it) would make an infinite wait hang the finalizer forever, and
+                # with it GC and process exit. On timeout, leak the queue deliberately —
+                # destroying it now would trigger the very fault+ban this drain prevents.
+                if unchecked_zeCommandQueueSynchronize(obj, FINALIZER_SYNC_TIMEOUT_NS) == RESULT_NOT_READY
+                    @warn "Leaking a command queue still busy after $(FINALIZER_SYNC_TIMEOUT_NS ÷ 1_000_000_000)s to avoid blocking finalization (event-gated work whose event was never signaled?)" maxlog = 1
+                    return
+                end
+            end
             zeCommandQueueDestroy(obj)
+            if LTS[]
+                # mark the queue as destroyed: it can still be weakly reachable (e.g. from
+                # the queue registry used by `synchronize_all_queues`), and synchronizing a
+                # destroyed handle crashes in the driver.
+                obj.handle = ze_command_queue_handle_t(C_NULL)
+            end
         end
         obj
     end

@@ -27,6 +27,7 @@ makedocs(
             "Memory Management" => "memory.md",
             "Device Intrinsics" => "device.md",
             "Performance Guide" => "usage/performance.md",
+            "Intel LTS Driver Stack" => "lts.md",
         ],
         "API Reference" => [
             "Overview" => "api.md",
