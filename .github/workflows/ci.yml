@@ -15,6 +15,12 @@ permissions:
 
 jobs:
   self-runner:
+    # Spelled out so the PR checks box says which driver stack this exercises: this job is
+    # the LTS stack (ONEAPI_LTS=1, self-hosted Aurora runner), while buildkite covers the
+    # rolling stack. Without an explicit name GitHub derives one from the matrix
+    # ("self-runner (ubuntu-latest, 1, x64)"), which says nothing about the stack and
+    # misreports the runner as ubuntu-latest — `os` is unused, `runs-on` is self-hosted.
+    name: LTS stack (self-hosted, Julia ${{ matrix.julia-version }})
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Pin each parallel test worker to a distinct GPU tile instead of
