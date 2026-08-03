@@ -17,7 +17,8 @@ Direct use of `oneAPI`-specific macros (like `@oneapi`) and types (like `oneArra
 
 - **High-level Array Abstractions**: `oneArray` type fully implementing the `GPUArrays.jl` interface.
 - **Kernel Programming**: Execute custom kernels written in Julia on Intel GPUs, compiled to
-  SPIR-V through LLVM's SPIR-V back-end.
+  SPIR-V through LLVM's SPIR-V back-end (or the Khronos SPIR-V translator on Intel's
+  [LTS driver stack](lts.md)).
 - **KernelAbstractions.jl Backend**: The `oneAPIBackend` back-end runs portable kernels on
   Intel GPUs unmodified.
 - **Level Zero Integration**: Low-level access to the Level Zero API via the `oneL0` submodule.

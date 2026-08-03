@@ -73,6 +73,7 @@ Binary dependencies:
 - libigc: 2.34.4+1
 - gmmlib: 22.10.0+0
 - SPIRV_LLVM_Backend: 22.1.8+1
+- SPIRV_LLVM_Translator: 21.1.1+0
 - SPIRV_Tools: 2025.4.0+0
 - oneAPI_Support: 0.10.0+0 (oneMKL v2025.3.0)
 
@@ -154,7 +155,10 @@ julia> execute!(queue) do list
 Built on top of that, are kernel programming capabilities for executing Julia code on oneAPI
 accelerators. Device-side intrinsics are provided by
 [SPIRVIntrinsics.jl](https://github.com/JuliaGPU/SPIRVIntrinsics.jl), and code is compiled to
-SPIR-V using [LLVM's SPIR-V back-end](https://llvm.org/docs/SPIRVUsage.html):
+SPIR-V using [LLVM's SPIR-V back-end](https://llvm.org/docs/SPIRVUsage.html) — or, on Intel's
+LTS driver stack, the [Khronos SPIR-V
+translator](https://github.com/KhronosGroup/SPIRV-LLVM-Translator) (see [Intel's LTS driver
+stack](#intels-lts-driver-stack) below):
 
 ```julia
 julia> function kernel()
@@ -292,6 +296,38 @@ julia> oneArray([1.]) .+ 1
 │ error: Double type is not supported on this platform.
 ```
 
+### Intel's LTS driver stack
+
+Intel ships the Compute Runtime both as rolling releases and as a long-term-servicing (LTS)
+branch that large deployments — Aurora, for instance — stay on for years. oneAPI.jl targets
+the rolling stack by default. The LTS branch predates a number of driver and compiler fixes,
+some of which silently corrupt results rather than raise an error, so the package carries a
+set of workarounds behind an opt-in switch:
+
+```bash
+export ONEAPI_LTS=1
+```
+
+With it enabled, oneAPI.jl:
+
+- compiles kernels to SPIR-V with the [Khronos SPIR-V
+  translator](https://github.com/KhronosGroup/SPIRV-LLVM-Translator) instead of LLVM's
+  SPIR-V back-end, which the LTS NEO/IGC runtime does not accept;
+- disables `BFloat16`, which that SPIR-V stack cannot translate in generic kernels;
+- materializes strided inputs and uses a coalesced reduction kernel, working around an IGC
+  miscompile of non-coalesced reads that silently corrupts e.g. `sum(transpose(x))`;
+- drains command queues before freeing their buffers, since LTS NEO ignores the Level Zero
+  `BLOCKING_FREE` policy and would otherwise fault and ban the context.
+
+A separate switch, `ONEAPI_SYNC_EACH_SUBMISSION=1`, additionally synchronizes after every
+command-list submission. That works around a "dropped tail" corruption seen when several
+processes oversubscribe a single tile, at roughly a 3× throughput cost.
+
+Neither switch installs an LTS driver — they tell oneAPI.jl how to behave against one, and
+are typically combined with the local-toolchain configuration described below. Leave both
+unset on a rolling-release driver: the workarounds trade performance for correctness, and
+none of them are needed there. See the
+[documentation](https://juliagpu.github.io/oneAPI.jl/dev/lts/) for the full details.
 
 
 ## Development

@@ -52,7 +52,7 @@ end
 # `zeCommandQueueSynchronize` does not reliably retire the tail of an earlier,
 # separately-submitted command list — producing silent "dropped tail" corruption (the
 # last work-item of a kernel / last element of a copy is missing). See
-# ISSUE_dropped_tail.md. Synchronizing after *every* submission eliminates it, at a large
+# docs/src/lts.md. Synchronizing after *every* submission eliminates it, at a large
 # throughput cost (~3x), so it is off by default and only enabled when correctness under
 # oversubscription matters more than speed.
 const SYNC_EACH_SUBMISSION = Ref{Bool}(false)
