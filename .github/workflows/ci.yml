@@ -77,4 +77,21 @@ jobs:
       # subprocess and its parallel workers via Base.julia_cmd(). `julia-runtest` cannot pass a
       # cpu-target, so invoke Pkg.test() directly.
       - name: Run tests (AVX512-FP16 disabled)
-        run: julia -C "native,-avx512fp16" --color=yes --project=. -e 'import Pkg; Pkg.test()'
+        run: julia -C "native,-avx512fp16" --color=yes --project=. -e 'import Pkg; Pkg.test(coverage=true)'
+      # Report coverage from this job too, not just from buildkite. Every LTS-gated branch
+      # (the queue registry, the coalesced reduction path, the :khronos codegen selection,
+      # the drain-before-free) is unreachable on the rolling stack, so without this upload
+      # Codecov counts all of it as uncovered. `--code-coverage` propagates to the Pkg.test
+      # subprocess and its parallel workers through Base.julia_cmd(), as the cpu-target
+      # above does. Directories match the buildkite julia-coverage plugin's.
+      - uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: src,lib,examples
+      - uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # Coverage reporting must not be able to fail the build: this job is the only
+          # signal for the LTS stack, and a Codecov outage or a missing token is not a
+          # test failure.
+          fail_ci_if_error: false
