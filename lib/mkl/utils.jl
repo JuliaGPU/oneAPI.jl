@@ -108,6 +108,18 @@ function Base.convert(::Type{onemklRangev}, range::Char)
     end
 end
 
+# Allocate a one-element buffer for a scalar oneMKL output (nrm2, dot, asum, iamax,
+# iamin). These are written by the device but consumed on the host, so we place them in
+# host USM: oneMKL writes straight into host-visible memory and we read the value with a
+# plain load, instead of allocating a device buffer and copying it back. The C wrappers
+# synchronize the queue before returning, so the result is readable as soon as the
+# `ccall` does.
+function scalar_result(::Type{T}) where {T}
+    res = oneArray{T, 1, oneL0.HostBuffer}(undef, 1)
+    res[1] = zero(T)
+    return res
+end
+
 # create a batch of pointers in device memory from a batch of device arrays
 @inline function unsafe_batch(batch::Vector{<:oneArray{T}}) where {T}
     ptrs = pointer.(batch)

@@ -587,10 +587,9 @@ for (fname, elty, ret_type) in
     @eval begin
         function nrm2(n::Integer, x::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
-            result = oneArray{$ret_type}([0]);
+            result = scalar_result($ret_type)
             $fname(sycl_queue(queue), n, x, stride(x,1), result)
-            res = Array(result)
-            return res[1]
+            return result[1]
         end
     end
 end
@@ -617,10 +616,9 @@ for (jname, fname, elty) in
                          x::oneStridedArray{$elty},
                          y::oneStridedArray{$elty})
             queue = global_queue(context(x), device(x))
-            result = oneArray{$elty}([0]);
+            result = scalar_result($elty)
             $fname(sycl_queue(queue), n, x, stride(x,1), y, stride(y,1), result)
-            res = Array(result)
-            return res[1]
+            return result[1]
         end
     end
 end
@@ -806,11 +804,10 @@ for (fname, elty, ret_type) in
     @eval begin
         function asum(n::Integer,
                       x::oneStridedArray{$elty})
-            result = oneArray{$ret_type}([0])
+            result = scalar_result($ret_type)
             queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue), n, x, stride(x, 1), result)
-            res = Array(result)
-            return res[1]
+            return result[1]
         end
     end
 end
@@ -825,9 +822,9 @@ for (fname, elty) in
         function iamax(x::oneStridedArray{$elty})
             n = length(x)
             queue = global_queue(context(x), device(x))
-            result = oneArray{Int64}([0]);
+            result = scalar_result(Int64)
             $fname(sycl_queue(queue), n, x, stride(x, 1), result, 'O')
-            return Array(result)[1]
+            return result[1]
         end
     end
 end
@@ -841,10 +838,10 @@ for (fname, elty) in
     @eval begin
         function iamin(x::StridedArray{$elty})
             n = length(x)
-            result = oneArray{Int64}([0]);
+            result = scalar_result(Int64)
             queue = global_queue(context(x), device(x))
             $fname(sycl_queue(queue),n, x, stride(x, 1), result, 'O')
-            return Array(result)[1]
+            return result[1]
         end
     end
 end
