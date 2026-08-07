@@ -166,6 +166,10 @@ function __init__()
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
 
+    # Driver handles are process-local, so nothing keyed on one may survive into another
+    # process through a precompiled image.
+    empty!(extension_properties_cache)
+
     # Resolve the LTS master switch up front, before the driver-availability early
     # returns below: it gates codegen and behavior and must be set even on hosts
     # without a functional GPU. Default off (rolling stack); an LTS deployment such as
