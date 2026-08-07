@@ -22,10 +22,10 @@ properties(drv)
 ipc_properties(drv)
 extension_properties(drv)
 
-# the extension list is memoized: it is answered from the cache, and that answer is the
-# one the driver gives
-@test extension_properties(drv) === extension_properties(drv)
-@test extension_properties(drv) == oneL0._extension_properties(drv)
+    # the extension list is memoized: it is answered from the cache, and that answer is the
+    # one the driver gives
+    @test extension_properties(drv) === extension_properties(drv)
+    @test extension_properties(drv) == oneL0._extension_properties(drv)
 
 end
 

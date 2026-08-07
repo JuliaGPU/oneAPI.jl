@@ -236,12 +236,14 @@ function properties(kernel::ZeKernel)
     props_ref = Ref(ze_kernel_properties_t())
     preferred_group_size_props_ref = Ref(ze_kernel_preferred_group_size_properties_t())
     max_group_size_props_ref =
-        if haskey(oneL0.extension_properties(kernel.mod.context.driver),
-                  "ZE_extension_kernel_max_group_size_properties")
-            Ref(ze_kernel_max_group_size_properties_ext_t())
-        else
-            nothing
-        end
+    if haskey(
+            oneL0.extension_properties(kernel.mod.context.driver),
+            "ZE_extension_kernel_max_group_size_properties"
+        )
+        Ref(ze_kernel_max_group_size_properties_ext_t())
+    else
+        nothing
+    end
 
     # `link_extensions` chains these together with raw interior pointers stored into each
     # other's `pNext` field, which the GC cannot see: only `props_ref` is passed to the

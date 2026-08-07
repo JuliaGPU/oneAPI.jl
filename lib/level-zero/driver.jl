@@ -114,7 +114,7 @@ end
 # be inherited from the process that generated a precompiled image.
 #
 # The returned `Dict` is the cached object itself; callers must treat it as read-only.
-const extension_properties_cache = Dict{ZeDriver,Dict{String,VersionNumber}}()
+const extension_properties_cache = Dict{ZeDriver, Dict{String, VersionNumber}}()
 const extension_properties_lock = ReentrantLock()
 
 function extension_properties(drv::ZeDriver)
