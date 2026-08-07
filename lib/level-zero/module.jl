@@ -235,15 +235,25 @@ export properties
 function properties(kernel::ZeKernel)
     props_ref = Ref(ze_kernel_properties_t())
     preferred_group_size_props_ref = Ref(ze_kernel_preferred_group_size_properties_t())
-    link_extensions(props_ref, preferred_group_size_props_ref)
-    if haskey(oneL0.extension_properties(kernel.mod.context.driver),
-              "ZE_extension_kernel_max_group_size_properties")
-        max_group_size_props_ref = Ref(ze_kernel_max_group_size_properties_ext_t())
-        link_extensions(preferred_group_size_props_ref, max_group_size_props_ref)
-    else
-        max_group_size_props_ref = nothing
+    max_group_size_props_ref =
+        if haskey(oneL0.extension_properties(kernel.mod.context.driver),
+                  "ZE_extension_kernel_max_group_size_properties")
+            Ref(ze_kernel_max_group_size_properties_ext_t())
+        else
+            nothing
+        end
+
+    # `link_extensions` chains these together with raw interior pointers stored into each
+    # other's `pNext` field, which the GC cannot see: only `props_ref` is passed to the
+    # query, and the driver reaches the rest by following those pointers. Hold them across
+    # the call, as `device_alloc` does for its relaxed-allocation extension.
+    GC.@preserve props_ref preferred_group_size_props_ref max_group_size_props_ref begin
+        link_extensions(props_ref, preferred_group_size_props_ref)
+        if max_group_size_props_ref !== nothing
+            link_extensions(preferred_group_size_props_ref, max_group_size_props_ref)
+        end
+        zeKernelGetProperties(kernel, props_ref)
     end
-    zeKernelGetProperties(kernel, props_ref)
 
     props = props_ref[]
     return (
