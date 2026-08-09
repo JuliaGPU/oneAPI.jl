@@ -159,7 +159,8 @@ function LinearAlgebra.generic_matmatmul!(
 
     T = eltype(C)
 
-    if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
+    if T <: Union{onemklFloat, onemklComplex, onemklHalf} &&
+            alpha isa Union{Bool,T} && beta isa Union{Bool,T}
         # TODO: should the gemm part above be included in this branch?
         α, β = T(alpha), T(beta)
         if (
