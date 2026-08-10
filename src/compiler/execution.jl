@@ -209,6 +209,18 @@ struct HostKernel{F,TT} <: AbstractKernel{F,TT}
     fun::ZeKernel
 end
 
+# Upper bound on the spill (scratch) memory a single work-group may require, in bytes.
+#
+# The driver allocates `spillMemSize * group_size` of scratch per work-group. `maxGroupSize`
+# does not account for spill, so a heavily spilling kernel is reported as launchable at a
+# group size whose scratch demand is enormous: on a Data Center GPU Max 1550, a kernel
+# spilling 3648 B/thread is reported launchable at 1024 items/group, i.e. ~3.7 MB of scratch
+# for one work-group.
+#
+# Level Zero exposes no scratch-space query, so the budget is a conservative constant rather
+# than a derived one.
+const MAX_GROUP_SCRATCH = 1024 * 1024
+
 function launch_configuration(kernel::HostKernel{F,TT}) where {F,TT}
     # Level Zero's zeKernelSuggestGroupSize provides a launch configuration
     # that exactly cover the input size. This can result in very awkward
@@ -228,6 +240,16 @@ function launch_configuration(kernel::HostKernel{F,TT}) where {F,TT}
         ## extensions that landed _after_ MAX_GROUP_SIZE, so don't bother)
         ## the groupsize should be halved
         group_size = max_size ÷ 2
+    end
+
+    # keep a spilling kernel's per-group scratch within budget. CUDA.jl gets this for free
+    # from an occupancy API that is register-pressure aware; Level Zero reports the spill
+    # size but does not fold it into `maxGroupSize`, so account for it here. Rounded down to
+    # a power of two, both because group sizes want to be anyway and to stay clear of the
+    # limit rather than right at it.
+    spill = kernel_props.spillMemSize
+    if spill > 0 && group_size * spill > MAX_GROUP_SCRATCH
+        group_size = max(1, prevpow(2, max(1, MAX_GROUP_SCRATCH ÷ spill)))
     end
 
     # TODO: align the group size based on preferredGroupSize

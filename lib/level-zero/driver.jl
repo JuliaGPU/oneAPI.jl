@@ -100,7 +100,34 @@ function ipc_properties(drv::ZeDriver)
     )
 end
 
+# Memoized, because this lands on the per-launch path: `properties(::ZeKernel)` consults it
+# to decide whether to link the max-group-size extension struct, and KernelAbstractions
+# reaches that from `launch_configuration` on every dispatch of a kernel whose
+# workgroupsize is dynamic. Answering it is not cheap -- two driver round-trips, a copy of
+# the property vector, and a `String` allocation plus a `Dict` insertion per extension --
+# and on a Data Center GPU Max 1550, whose driver advertises many extensions, it measured
+# ~90 us per call and accounted for 90% of the host time of a launch-bound GPU callback.
+#
+# Safe to remember: a driver reports a fixed set of extensions, and Level Zero has no
+# driver-destroy entry point, so a `ZeDriver` handle stays valid and keeps its meaning for
+# the lifetime of the process. The cache is emptied in `__init__` so that entries can never
+# be inherited from the process that generated a precompiled image.
+#
+# The returned `Dict` is the cached object itself; callers must treat it as read-only.
+const extension_properties_cache = Dict{ZeDriver, Dict{String, VersionNumber}}()
+const extension_properties_lock = ReentrantLock()
+
 function extension_properties(drv::ZeDriver)
+    Base.@lock extension_properties_lock begin
+        cached = get(extension_properties_cache, drv, nothing)
+        cached === nothing || return cached
+        extensions = _extension_properties(drv)
+        extension_properties_cache[drv] = extensions
+        return extensions
+    end
+end
+
+function _extension_properties(drv::ZeDriver)
     count_ref = Ref{UInt32}(0)
     zeDriverGetExtensionProperties(drv, count_ref, C_NULL)
 
