@@ -621,3 +621,72 @@ end
 end
 
 ############################################################################################
+
+# A chain of N live accumulators forces the register allocator to spill once N exceeds
+# the register file (256 spills on both PVC and DG2); the reversed index in the update
+# keeps every element live across the chain, and everything is unrolled through Val so
+# no value is boxed. Top-level definitions: inside the testset the self-recursion of
+# `hedge_rounds` becomes a boxed closure capture, which is not a bitstype.
+hedge_step(acc::NTuple{N, T}) where {N, T} =
+    ntuple(j -> muladd(acc[j], T(1.0000001), acc[N - j + 1]), Val(N))
+hedge_rounds(acc, ::Val{0}) = acc
+hedge_rounds(acc, ::Val{R}) where {R} = hedge_rounds(hedge_step(acc), Val(R - 1))
+function hedge_spill_kernel(out, a, ::Val{N}, ::Val{R}) where {N, R}
+    i = get_global_id()
+    acc = hedge_rounds(ntuple(j -> a[i] + Float32(j), Val(N)), Val(R))
+    s = 0.0f0
+    @inbounds for j = 1:N
+        s += acc[j]
+    end
+    @inbounds out[i] = s
+    return
+end
+
+@testset "scratch hedge" begin
+    a = oneAPI.ones(Float32, 256)
+    out = oneAPI.zeros(Float32, 256)
+    synchronize()
+
+    k = @oneapi launch=false hedge_spill_kernel(out, a, Val(256), Val(2))
+    spill = oneL0.spill_mem_size(k.fun)
+
+    if spill == 0
+        # the hedge only acts on spilling kernels; nothing to observe on this device
+        @test_skip "kernel did not spill on this device/compiler"
+    else
+        # queues are task-local, so a fresh task gets a fresh queue with a zero
+        # high-water mark; observe there, assert on the test task
+        observed = fetch(@async begin
+            q = global_queue(context(), device())
+            hwm0 = q.scratch_hwm
+            c0 = oneL0.SCRATCH_HEDGE_COUNT[]
+            @oneapi items=64 groups=4 hedge_spill_kernel(out, a, Val(256), Val(2))
+            c1 = oneL0.SCRATCH_HEDGE_COUNT[]
+            # same spill tier: must not fire again
+            @oneapi items=64 groups=4 hedge_spill_kernel(out, a, Val(256), Val(2))
+            c2 = oneL0.SCRATCH_HEDGE_COUNT[]
+            # a storm of no-spill kernels must not fire the hedge either
+            for _ in 1:32
+                @oneapi dummy()
+            end
+            c3 = oneL0.SCRATCH_HEDGE_COUNT[]
+            (hwm0, q.scratch_hwm, c1 - c0, c2 - c1, c3 - c2)
+        end)
+        @test observed == (0, spill, 1, 0, 0)
+
+        # with the hedge disabled the high-water mark is still maintained
+        old = oneL0.SCRATCH_HEDGE[]
+        oneL0.SCRATCH_HEDGE[] = false
+        try
+            observed = fetch(@async begin
+                q = global_queue(context(), device())
+                c0 = oneL0.SCRATCH_HEDGE_COUNT[]
+                @oneapi items=64 groups=4 hedge_spill_kernel(out, a, Val(256), Val(2))
+                (oneL0.SCRATCH_HEDGE_COUNT[] - c0, q.scratch_hwm)
+            end)
+            @test observed == (0, spill)
+        finally
+            oneL0.SCRATCH_HEDGE[] = old
+        end
+    end
+end

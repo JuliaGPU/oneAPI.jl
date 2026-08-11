@@ -15,6 +15,10 @@ mutable struct ZeCommandQueue
     device::ZeDevice
     ordinal::Int
 
+    # high-water mark of per-thread spill (bytes) among kernels submitted to this queue,
+    # maintained by the scratch hedge (see `scratch_hedge!` in src/compiler/execution.jl)
+    scratch_hwm::Int
+
     function ZeCommandQueue(ctx::ZeContext, dev::ZeDevice, ordinal=1, index=1;
                             flags=0,
                             mode::ze_command_queue_mode_t=ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -24,7 +28,7 @@ mutable struct ZeCommandQueue
         ))
         handle_ref = Ref{ze_command_queue_handle_t}()
         zeCommandQueueCreate(ctx, dev, desc_ref, handle_ref)
-        obj = new(handle_ref[], ctx, dev, ordinal)
+        obj = new(handle_ref[], ctx, dev, ordinal, 0)
         finalizer(obj) do obj
             if LTS[]
                 # the queue may still have work in flight (nothing requires a task to

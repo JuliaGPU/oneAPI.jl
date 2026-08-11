@@ -329,10 +329,34 @@ const _kernel_instances = Dict{UInt, Any}()
         end
 
         groupsize!(kernel, items)
+
+        # NEO allocates a queue's scratch buffer at the first submission of a kernel whose
+        # spill exceeds what is already allocated, and that allocation aborts the process on
+        # failure (no null check). Cross each new spill high-water mark deliberately, at the
+        # cleanest reachable moment, instead of at a GC-lottery-determined one.
+        spill = oneL0.spill_mem_size(kernel)
+        spill > queue.scratch_hwm && scratch_hedge!(queue, spill)
+
         execute!(queue) do list
             append_launch!(list, kernel, groups)
         end
     end
+end
+
+# Slow path of the scratch hedge, firing once per (queue, spill tier): retire in-flight
+# work, flush deferred releases, and run finalizers so dead driver objects and arrays are
+# destroyed before NEO performs its null-check-free scratch allocation. Opt out with
+# ONEAPI_SCRATCH_HEDGE=0; the high-water mark is maintained regardless, so the toggle
+# only skips the drain.
+@noinline function scratch_hedge!(queue::ZeCommandQueue, spill::Int)
+    if oneL0.SCRATCH_HEDGE[]
+        oneL0.synchronize(queue)
+        oneL0._run_reclaim_callbacks()
+        GC.gc(false)
+        Threads.atomic_add!(oneL0.SCRATCH_HEDGE_COUNT, 1)
+    end
+    queue.scratch_hwm = spill
+    return
 end
 
 function (kernel::HostKernel)(args...; kwargs...)

@@ -234,6 +234,7 @@ function __init__()
 
     validation_layer[] = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
     parameter_validation[] = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
+    SCRATCH_HEDGE[] = parse_env_bool("ONEAPI_SCRATCH_HEDGE", true)
     return sync_each_submission!(parse_env_bool("ONEAPI_SYNC_EACH_SUBMISSION", false))
 end
 
