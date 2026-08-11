@@ -321,6 +321,58 @@ end
 end
 
 
+@testset "immediate command list" begin
+
+# probe rather than version-gate: the reported API version is a floor, not a feature
+# inventory (the Aurora LTS driver reports 1.6 while implementing these)
+ilist = try
+    ZeImmediateCommandList(ctx, dev, group.ordinal;
+                           flags=oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+                           mode=oneL0.ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS)
+catch err
+    err isa oneL0.ZeError || rethrow()
+    nothing
+end
+if ilist === nothing
+    @test_skip "driver rejects in-order immediate command lists"
+else
+    # NOTE: no zeCommandListIsImmediate sanity check here — that entrypoint is spec 1.9
+    # and missing from older loaders (Aurora LTS reports 1.6), where the ccall would
+    # fail on symbol lookup rather than with a ZeError. Immediacy is proven
+    # functionally: the appends below execute without any close/execute step.
+
+    let src = rand(Int, 1024)
+        chk = zeros(Int, length(src))
+        dst = device_alloc(ctx, dev, sizeof(src))
+
+        # appends submit immediately and execute in order; host-synchronize to observe
+        append_copy!(ilist, pointer(dst), pointer(src), sizeof(src))
+        append_copy!(ilist, pointer(chk), pointer(dst), sizeof(src))
+        synchronize(ilist)
+        @test chk == src
+
+        free(dst)
+    end
+
+    ret = execute!(ilist) do list
+        @test list isa ZeImmediateCommandList
+        42
+    end
+    @test ret == 42
+
+    # events and barriers work on immediate lists
+    pool = ZeEventPool(ctx, 1; flags=oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    event = pool[1]
+    append_barrier!(ilist, event)
+    wait(event, 10_000_000_000)  # bounded: a hang here should fail, not stall the suite
+    @test Base.isdone(event)
+
+    synchronize(ilist)
+end
+
+end
+
+
 
 @testset "residency" begin
 

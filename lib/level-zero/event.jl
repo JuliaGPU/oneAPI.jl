@@ -54,15 +54,15 @@ Base.:(==)(a::ZeEvent, b::ZeEvent) = a.handle == b.handle
 Base.hash(e::ZeEvent, h::UInt) = hash(e.handle, h)
 
 signal(event::ZeEvent) = zeEventHostSignal(event)
-append_signal!(list::ZeCommandList, event::ZeEvent) = zeCommandListAppendSignalEvent(list, event)
+append_signal!(list::AbstractZeCommandList, event::ZeEvent) = zeCommandListAppendSignalEvent(list, event)
 
 Base.wait(event::ZeEvent, timeout::Number=typemax(UInt64)) =
     zeEventHostSynchronize(event, timeout)
-append_wait!(list::ZeCommandList, events::ZeEvent...) =
+append_wait!(list::AbstractZeCommandList, events::ZeEvent...) =
     zeCommandListAppendWaitOnEvents(list, length(events), [events...])
 
 Base.reset(event::ZeEvent) = zeEventHostReset(event)
-append_reset!(list::ZeCommandList, event::ZeEvent) = zeCommandListAppendEventReset(list, event)
+append_reset!(list::AbstractZeCommandList, event::ZeEvent) = zeCommandListAppendEventReset(list, event)
 
 function Base.isdone(event::ZeEvent)
     res = unchecked_zeEventQueryStatus(event)

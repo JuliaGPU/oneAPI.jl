@@ -1,8 +1,10 @@
 # list
 
-export ZeCommandList, execute!
+export ZeCommandList, ZeImmediateCommandList, AbstractZeCommandList, execute!
 
-mutable struct ZeCommandList
+abstract type AbstractZeCommandList end
+
+mutable struct ZeCommandList <: AbstractZeCommandList
     handle::ze_command_list_handle_t
 
     context::ZeContext
@@ -22,10 +24,10 @@ mutable struct ZeCommandList
     end
 end
 
-Base.unsafe_convert(::Type{ze_command_list_handle_t}, list::ZeCommandList) = list.handle
+Base.unsafe_convert(::Type{ze_command_list_handle_t}, list::AbstractZeCommandList) = list.handle
 
-Base.:(==)(a::ZeCommandList, b::ZeCommandList) = a.handle == b.handle
-Base.hash(e::ZeCommandList, h::UInt) = hash(e.handle, h)
+Base.:(==)(a::AbstractZeCommandList, b::AbstractZeCommandList) = a.handle == b.handle
+Base.hash(e::AbstractZeCommandList, h::UInt) = hash(e.handle, h)
 
 Base.close(list::ZeCommandList) = zeCommandListClose(list)
 
@@ -46,6 +48,62 @@ function ZeCommandList(f::Base.Callable, args...; kwargs...)
     close(list)
     return list
 end
+
+"""
+    ZeImmediateCommandList(ctx::ZeContext, dev::ZeDevice, ordinal=1, index=1;
+                           flags=0, mode=ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                           priority=ZE_COMMAND_QUEUE_PRIORITY_NORMAL)
+
+Create an immediate command list: appended commands are submitted to the device as they
+are appended, with no separate close/execute step and no per-submission list object.
+The descriptor is a command *queue* descriptor; pass
+`flags=ZE_COMMAND_QUEUE_FLAG_IN_ORDER` and `mode=ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS`
+for an asynchronous stream with in-order semantics (requires Level Zero >= 1.9).
+Synchronize with [`synchronize`](@ref).
+"""
+mutable struct ZeImmediateCommandList <: AbstractZeCommandList
+    handle::ze_command_list_handle_t
+
+    context::ZeContext
+    device::ZeDevice
+    ordinal::Int
+
+    function ZeImmediateCommandList(ctx::ZeContext, dev::ZeDevice, ordinal=1, index=1;
+                                    flags=0,
+                                    mode::ze_command_queue_mode_t=ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                                    priority::ze_command_queue_priority_t=ZE_COMMAND_QUEUE_PRIORITY_NORMAL)
+        desc_ref = Ref(ze_command_queue_desc_t(;
+            ordinal=ordinal-1, index=index-1, flags, mode, priority
+        ))
+        handle_ref = Ref{ze_command_list_handle_t}()
+        zeCommandListCreateImmediate(ctx, dev, desc_ref, handle_ref)
+        obj = new(handle_ref[], ctx, dev, ordinal)
+        finalizer(obj) do obj
+            # unlike a regular list, an immediate list can have work in flight at
+            # finalization on any stack, and destroying it then is illegal. Bounded
+            # unchecked drain, leaking the list on timeout — same rationale as the
+            # queue finalizer in cmdqueue.jl: an infinite wait on event-gated work
+            # whose event is never signaled would hang GC and process exit.
+            if unchecked_zeCommandListHostSynchronize(obj, FINALIZER_SYNC_TIMEOUT_NS) == RESULT_NOT_READY
+                @warn "Leaking an immediate command list still busy after $(FINALIZER_SYNC_TIMEOUT_NS ÷ 1_000_000_000)s to avoid blocking finalization" maxlog = 1
+                return
+            end
+            zeCommandListDestroy(obj)
+            # mark destroyed: the stream registry can still reach this list, and
+            # synchronizing a destroyed handle crashes in the driver
+            obj.handle = ze_command_list_handle_t(C_NULL)
+        end
+        obj
+    end
+end
+
+"""
+    synchronize(list::ZeImmediateCommandList, timeout=typemax(UInt64))
+
+Block the host until all commands appended to the immediate command list have completed.
+"""
+synchronize(list::ZeImmediateCommandList, timeout::Number=typemax(UInt64)) =
+    zeCommandListHostSynchronize(list, timeout)
 
 # Opt-in workaround for the Aurora LTS NEO stack (set ONEAPI_SYNC_EACH_SUBMISSION=1).
 # Under heavy multi-process oversubscription of a single tile, a whole-queue
@@ -111,4 +169,19 @@ operations. The list is then closed and executed on the queue.
 function execute!(f::Base.Callable, queue::ZeCommandQueue, fence=nothing; kwargs...)
     list = ZeCommandList(f, queue.context, queue.device, queue.ordinal; kwargs...)
     execute!(queue, [list], fence)
+end
+
+"""
+    execute!(list::ZeImmediateCommandList) do list
+        append_...!(list)
+    end
+
+Append operations to an immediate command list. Each append is submitted to the device
+as it happens, so there is no separate close/execute step; the return value is that of
+the do block.
+"""
+function execute!(f::Base.Callable, list::ZeImmediateCommandList)
+    ret = f(list)
+    sync_each_submission() && synchronize(list)
+    return ret
 end

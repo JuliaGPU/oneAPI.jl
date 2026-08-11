@@ -86,3 +86,16 @@ Enable debug mode in oneAPI.jl to use debug builds of underlying toolchains (if 
 oneAPI.set_debug!(true)
 ```
 
+
+### Scratch hedge
+
+Before the first submission of a kernel whose register spill exceeds the stream's
+high-water mark, oneAPI.jl drains the stream and runs finalizers: the driver performs its
+scratch-buffer allocation at that moment, and (at least through NEO 26.x) aborts the
+process instead of erroring when it fails. Making the allocation happen at a clean moment
+removes that failure mode for workloads under memory pressure. The drain costs one
+synchronization per (stream, spill tier) — once per workload in practice. Disable it with:
+
+```bash
+export ONEAPI_SCRATCH_HEDGE=0
+```

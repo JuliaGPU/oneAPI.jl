@@ -449,7 +449,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
     unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
 
     # Keep pageable host memory alive until the queued copy completes.
-    synchronize(global_queue(ctx, dev))
+    synchronize(global_stream(ctx, dev))
   end
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -468,7 +468,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
   end
 
   # copies to the host are synchronizing
-  synchronize(global_queue(context(src), device()))
+  synchronize(global_stream(context(src), device()))
 
   return dest
 end
@@ -488,7 +488,7 @@ end
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, doffs, src::Array{T}, soffs, n) where T
   # maintain queue-ordered semantics
-  synchronize(global_queue(ctx, dev))
+  synchronize(global_stream(ctx, dev))
 
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -509,7 +509,7 @@ end
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::Array{T}, doffs, src::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, soffs, n) where T
   # maintain queue-ordered semantics
-  synchronize(global_queue(ctx, dev))
+  synchronize(global_stream(ctx, dev))
 
   if Base.isbitsunion(T)
     # copy selector bytes

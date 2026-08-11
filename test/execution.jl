@@ -657,8 +657,8 @@ end
         # queues are task-local, so a fresh task gets a fresh queue with a zero
         # high-water mark; observe there, assert on the test task
         observed = fetch(@async begin
-            q = global_queue(context(), device())
-            hwm0 = q.scratch_hwm
+            s = global_stream(context(), device())
+            hwm0 = s.scratch_hwm
             c0 = oneL0.SCRATCH_HEDGE_COUNT[]
             @oneapi items=64 groups=4 hedge_spill_kernel(out, a, Val(256), Val(2))
             c1 = oneL0.SCRATCH_HEDGE_COUNT[]
@@ -670,7 +670,7 @@ end
                 @oneapi dummy()
             end
             c3 = oneL0.SCRATCH_HEDGE_COUNT[]
-            (hwm0, q.scratch_hwm, c1 - c0, c2 - c1, c3 - c2)
+            (hwm0, s.scratch_hwm, c1 - c0, c2 - c1, c3 - c2)
         end)
         @test observed == (0, spill, 1, 0, 0)
 
@@ -679,14 +679,66 @@ end
         oneL0.SCRATCH_HEDGE[] = false
         try
             observed = fetch(@async begin
-                q = global_queue(context(), device())
+                s = global_stream(context(), device())
                 c0 = oneL0.SCRATCH_HEDGE_COUNT[]
                 @oneapi items=64 groups=4 hedge_spill_kernel(out, a, Val(256), Val(2))
-                (oneL0.SCRATCH_HEDGE_COUNT[] - c0, q.scratch_hwm)
+                (oneL0.SCRATCH_HEDGE_COUNT[] - c0, s.scratch_hwm)
             end)
             @test observed == (0, spill)
         finally
             oneL0.SCRATCH_HEDGE[] = old
         end
     end
+end
+
+# ordering probe for the immediate submission stream
+function stream_iota_kernel(a, off)
+    i = get_global_id()
+    @inbounds a[i] = i + off
+    return
+end
+
+@testset "immediate submission stream" begin
+    n = 1024
+    a = oneAPI.zeros(Int32, n)
+    host = zeros(Int32, n)
+    expected = zeros(Int32, n)
+
+    # in-order: kernel write then synchronizing D2H readback, iterated
+    ok = true
+    for iter in 1:100
+        @oneapi items=256 groups=4 stream_iota_kernel(a, Int32(iter))
+        copyto!(host, a)               # copies to the host synchronize the stream
+        expected .= Int32.(1:n) .+ Int32(iter)
+        ok &= host == expected
+    end
+    @test ok
+
+    # a raw command queue is still accepted as an explicit submission target
+    queue = oneL0.ZeCommandQueue(context(), device();
+                                 flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
+    k = @oneapi launch=false stream_iota_kernel(a, Int32(0))
+    k(a, Int32(0); items=256, groups=4, queue)
+    oneL0.synchronize(queue)
+    @test Array(a) == Int32.(1:n)
+
+    # the LTS sync-each-submission knob applies to immediate lists
+    oneL0.sync_each_submission(true) do
+        @oneapi items=256 groups=4 stream_iota_kernel(a, Int32(41))
+    end
+    @test Array(a) == Int32.(1:n) .+ Int32(41)
+
+    # concurrent tasks each get their own stream; alloc/free churn while launching
+    # exercises the cross-task drain-before-free path on the LTS stack
+    results = map(fetch, [@async begin
+        b = oneAPI.ones(Float32, 4096)
+        acc = true
+        for i in 1:50
+            c = b .* Float32(i)
+            acc &= isapprox(sum(c), Float32(4096 * i); rtol=1e-4)
+            oneAPI.unsafe_free!(c)
+        end
+        acc
+    end for _ in 1:2])
+    @test all(results)
 end

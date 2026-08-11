@@ -93,9 +93,10 @@ references it. A garbage-collected free of a dead array whose last kernel has no
 then faults on the GPU, which bans the kernel context — after which *every* later submission
 fails with `ZE_RESULT_ERROR_UNKNOWN`.
 
-On LTS, oneAPI.jl keeps a registry of the command queues in use and drains those that could
-reference a buffer before freeing it. Command queues are likewise drained before being
-destroyed; a queue still busy after 10 s is deliberately leaked, since destroying it would
+On LTS, oneAPI.jl keeps a registry of the streams in use — each task's immediate command
+list plus its companion command queue for oneMKL work — and drains those that could
+reference a buffer before freeing it. Lists and queues are likewise drained before being
+destroyed; one still busy after 10 s is deliberately leaked, since destroying it would
 trigger the very fault the drain prevents. The visible cost is that a GC-driven free can
 block until outstanding work completes.
 
@@ -107,7 +108,10 @@ earlier, separately submitted command list. The result is a silent *dropped tail
 work-items of a kernel, or the last elements of a copy, never land.
 
 Synchronizing after every submission eliminates it, at roughly a 3× throughput cost. It is
-off by default and enabled with:
+off by default and enabled with the setting below. With the current immediate-command-list
+submission path it host-synchronizes the stream after every append; the dropped-tail
+failure was only ever observed on the earlier queue-submission path, so this workaround may
+no longer be needed — it is kept until that is re-established under oversubscription.
 
 ```bash
 export ONEAPI_SYNC_EACH_SUBMISSION=1

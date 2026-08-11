@@ -250,27 +250,22 @@ function KA.priority!(::oneAPIBackend, prio::Symbol)
     ctx = oneAPI.context()
     dev = oneAPI.device()
 
-    # Update the cached queue
-    # We synchronize the current queue first to ensure safety
-    current_queue = oneAPI.global_queue(ctx, dev)
-    oneAPI.oneL0.synchronize(current_queue)
+    # drain the task's current stream before swapping it out, so operations submitted
+    # to the new stream cannot overtake in-flight work on the old one
+    oneAPI.oneL0.synchronize(oneAPI.global_stream(ctx, dev))
 
-    # Replace the queue in task_local_storage
-    # The key used by global_queue is (:ZeCommandQueue, ctx, dev)
+    # Replace the stream in task_local_storage. `create_stream` registers the
+    # replacement so `synchronize_all_streams`/`release` can drain it before freeing a
+    # buffer whose in-flight work it references; otherwise all work after `priority!`
+    # runs on an unregistered stream and a freed buffer can be reused while its kernel
+    # is still running (use-after-free → banned context on the LTS NEO stack). The old
+    # stream stays registered until its task dies, like replaced queues before it.
+    new_stream = oneAPI.create_stream(ctx, dev, priority_enum)
+    task_local_storage((:oneStream, ctx, dev), new_stream)
 
-    new_queue = oneAPI.oneL0.ZeCommandQueue(
-        ctx, dev;
-        flags = oneAPI.oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-        priority = priority_enum
-    )
-
-    # Register the replacement queue so `synchronize_all_queues`/`release` can drain it
-    # before freeing a buffer whose in-flight work it references; otherwise all work after
-    # `priority!` runs on an unregistered queue and a freed buffer can be reused while its
-    # kernel is still running (use-after-free → banned context on the LTS NEO stack).
-    oneAPI.register_queue!(ctx, dev, new_queue)
-
-    task_local_storage((:ZeCommandQueue, ctx, dev), new_queue)
+    # the cached SYCL queue wraps the old stream's companion queue; drop it so the next
+    # oneMKL call recreates it against the new stream (the old one was just drained)
+    delete!(task_local_storage(), (:SYCLQueue, ctx, dev))
 
     return nothing
 end

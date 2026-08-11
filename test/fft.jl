@@ -153,4 +153,16 @@ end
     @test p2.queue == cached_handle
     cmp(p2 * dX2, fft(X2))
 end
+
+@testset "stream interleave" begin
+    # FFT plans capture their SYCL queue at construction and execute through _exec!,
+    # which must apply the Julia → MKL ordering boundary itself. Broadcast → fft →
+    # broadcast with no intermediate synchronization.
+    X = gpu(rand(ComplexF32, 256))
+    hX = Array(X)
+    X .= X .* 2f0
+    Y = fft(X)
+    Z = abs.(Y)
+    cmp(Z, abs.(fft(hX .* 2f0)))
+end
 end

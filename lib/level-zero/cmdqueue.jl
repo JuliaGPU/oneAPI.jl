@@ -50,7 +50,7 @@ mutable struct ZeCommandQueue
             zeCommandQueueDestroy(obj)
             if LTS[]
                 # mark the queue as destroyed: it can still be weakly reachable (e.g. from
-                # the queue registry used by `synchronize_all_queues`), and synchronizing a
+                # the stream registry used by `synchronize_all_streams`), and synchronizing a
                 # destroyed handle crashes in the driver.
                 obj.handle = ze_command_queue_handle_t(C_NULL)
             end
