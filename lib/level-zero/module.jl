@@ -79,6 +79,7 @@ export ZeKernel
 mutable struct ZeKernel
     mod::ZeModule
     handle::ze_kernel_handle_t
+    lock::ReentrantLock
 
     function ZeKernel(mod, name)
         GC.@preserve name begin
@@ -86,7 +87,7 @@ mutable struct ZeKernel
             handle_ref = Ref{ze_kernel_handle_t}()
             zeKernelCreate(mod, desc_ref, handle_ref)
         end
-        obj = new(mod, handle_ref[])
+        obj = new(mod, handle_ref[], ReentrantLock())
 
         finalizer(obj) do obj
             zeKernelDestroy(obj)
@@ -94,6 +95,10 @@ mutable struct ZeKernel
         obj
     end
 end
+
+Base.lock(kernel::ZeKernel) = lock(getfield(kernel, :lock))
+Base.lock(f::Function, kernel::ZeKernel) = lock(f, getfield(kernel, :lock))
+Base.unlock(kernel::ZeKernel) = unlock(getfield(kernel, :lock))
 
 Base.unsafe_convert(::Type{ze_kernel_handle_t}, kernel::ZeKernel) = kernel.handle
 
