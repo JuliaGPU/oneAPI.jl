@@ -146,6 +146,7 @@ function is_integrated(dev::ZeDevice=device())
 end
 
 const global_contexts = Dict{ZeDriver,ZeContext}()
+const global_contexts_lock = ReentrantLock()
 
 """
     context() -> ZeContext
@@ -166,8 +167,11 @@ See also: [`context!`](@ref), [`driver`](@ref)
 """
 function context()
     get!(task_local_storage(), :ZeContext) do
-        get!(global_contexts, driver()) do
-            ZeContext(driver())
+        drv = driver()
+        Base.@lock global_contexts_lock begin
+            get!(global_contexts, drv) do
+                ZeContext(drv)
+            end
         end
     end
 end

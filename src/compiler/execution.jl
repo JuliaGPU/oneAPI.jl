@@ -323,13 +323,15 @@ const _kernel_instances = Dict{UInt, Any}()
 
 @inline function onecall(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
                          queue::ZeCommandQueue=global_queue(context(), device()))
-    for (i, arg) in enumerate(args)
-        oneL0.arguments(kernel)[i] = arg
-    end
+    Base.@lock kernel begin
+        for (i, arg) in enumerate(args)
+            oneL0.arguments(kernel)[i] = arg
+        end
 
-    groupsize!(kernel, items)
-    execute!(queue) do list
-        append_launch!(list, kernel, groups)
+        groupsize!(kernel, items)
+        execute!(queue) do list
+            append_launch!(list, kernel, groups)
+        end
     end
 end
 
