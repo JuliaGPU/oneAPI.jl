@@ -1,0 +1,101 @@
+# ALCF GitLab CI: LTS-stack tests on Aurora.
+#
+# This file only does something on the ALCF GitLab mirror
+# (https://gitlab-ci.alcf.anl.gov/mschanen/oneAPI-jl), which pull-mirrors this repository
+# and runs pipelines on mirrored branches. GitHub's .github/workflows/alcf.yml bridges the
+# result back to PRs as a check. GitHub.com itself ignores this file.
+#
+# Layout: the Aurora PBS `debug` queue caps walltime at 1 h (the only 1-node queue), so
+# everything that doesn't need a GPU — the support-library build and package
+# instantiation/precompilation — runs on the login-node shell runner into a persistent
+# depot on flare, and only the test run itself goes through PBS.
+
+include:
+  - project: 'anl/ci-resources/defaults'
+    ref: main
+    file: ['/runners.yml']
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
+
+default:
+  interruptible: true  # force-pushes cancel stale runs instead of queueing behind them
+
+variables:
+  # Global (not per-script) for two reasons: the ~/.bashrc julia module load warns on
+  # stdout when JULIA_DEPOT_PATH is unset, corrupting the PBS job ID that Jacamar parses
+  # from qsub; and the CPU target must be identical in every job or the batch job rebuilds
+  # the package images the build job precompiled (icelake = login nodes, sapphirerapids =
+  # compute nodes, -avx512fp16 = host Float16 miscompile workaround, see ci.yml).
+  JULIA_DEPOT_PATH: /lus/flare/projects/Julia/mschanen/ci/julia_depot
+  JULIA_CPU_TARGET: "generic;icelake-server;sapphirerapids,-avx512fp16"
+  # Single-target variant for the runtime JIT (-C): multi-target strings are image-only
+  # syntax and are rejected at runtime. Must subtract the same avx512fp16 feature as the
+  # image targets above (see ci.yml for the miscompile this works around).
+  JULIA_JIT_TARGET: "native,-avx512fp16"
+
+stages: [build, test]
+
+.aurora-env:
+  script:
+    # Site profile supplies julia 1.12, ONEAPI_LTS=1 and the ZE_* settings. errexit off
+    # across it — profile.d scripts reference unset variables and return non-zero freely.
+    - set +eu; source /etc/profile >/dev/null 2>&1; module load julia >/dev/null 2>&1; set -eu
+    - command -v julia || { echo "ERROR no julia on PATH after site profile" >&2; exit 1; }
+    - julia --version; echo "depot=$JULIA_DEPOT_PATH"
+
+# Build the support library from deps/src rather than using the registered
+# oneAPI_Support_jll artifact (parity with ci.yml). build_local.jl installs into the
+# depot's scratch space, so with the depot on flare the products persist across jobs at a
+# stable absolute path; the LocalPreferences.toml files it writes into the checkout just
+# point there and travel to the test job as artifacts.
+build:support:
+  stage: build
+  extends: .aurora-shell-runner
+  timeout: 3h
+  resource_group: aurora-ci-depot  # pipelines share the depot; serialize against test:lts
+  script:
+    - !reference [.aurora-env, script]
+    - julia --color=yes --project=deps deps/build_local.jl
+    # Instantiate (and thereby precompile) both environments here so the 1 h batch job
+    # spends its walltime on tests, not on Pkg. Manifests are gitignored, so the test
+    # env must be resolved here with oneAPI dev'ed at the checkout (path "..") — a plain
+    # instantiate would silently test the registry release instead — and the resulting
+    # test/Manifest.toml travels to test:lts as an artifact.
+    - julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
+    - julia --color=yes --project=test -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+    # Guard against silently falling back to the JLL and testing the wrong library
+    # (same check as ci.yml).
+    - julia --color=yes --project=. -e '
+          using TOML, oneAPI_Support_jll;
+          want = TOML.parsefile("LocalPreferences.toml")["oneAPI_Support_jll"]["liboneapi_support_path"];
+          got = oneAPI_Support_jll.liboneapi_support_path;
+          @info "support library" want got;
+          want == got || error("oneAPI_Support_jll is not using the locally-built library")'
+  artifacts:
+    paths:
+      - LocalPreferences.toml
+      - test/LocalPreferences.toml
+      - test/Manifest.toml
+    expire_in: 1 week
+
+test:lts:
+  stage: test
+  extends: .aurora-batch-runner
+  timeout: 5h  # must cover PBS queue wait, not just the 1 h walltime
+  resource_group: aurora-ci-depot
+  variables:
+    ANL_AURORA_SCHEDULER_PARAMETERS: "-A Julia -q debug -l select=1,walltime=01:00:00,filesystems=home:flare,place=scatter"
+  script:
+    - !reference [.aurora-env, script]
+    # Each tile of a Max 1550 is its own device; the test runner spreads workers over
+    # them (ONEAPI_TEST_SPREAD_GPUS, see test/runtests.jl). ONEAPI_SYNC_EACH_SUBMISSION
+    # works around the Aurora LTS NEO dropped-tail corruption (lib/level-zero/cmdlist.jl).
+    - export ZE_FLAT_DEVICE_HIERARCHY=FLAT ONEAPI_LTS=1 ONEAPI_TEST_SPREAD_GPUS=1 ONEAPI_SYNC_EACH_SUBMISSION=1
+    # -C on the command line, not just the JULIA_CPU_TARGET variable: the variable
+    # selects pkgimages but does not constrain the runtime JIT, and the AVX512-FP16
+    # host-Float16 miscompile (broadcast Float16 reference failure, see ci.yml) needs
+    # the JIT constrained too. Propagates to the parallel test workers via
+    # Base.julia_cmd().
+    - julia -C "$JULIA_JIT_TARGET" --color=yes --project=test test/runtests.jl --jobs=4 --quickfail

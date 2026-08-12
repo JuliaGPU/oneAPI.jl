@@ -1,0 +1,109 @@
+name: ALCF CI
+
+# Bridges GitHub to ALCF GitLab CI (https://gitlab-ci.alcf.anl.gov/mschanen/oneAPI-jl),
+# which pull-mirrors this repository and runs the LTS-stack test suite on Aurora (see
+# .gitlab-ci.yml). This workflow makes the GitLab pipeline show up as a PR check:
+#
+#  - push to main / same-repo PRs: the mirror already carries the branch; force a mirror
+#    sync (instead of waiting for the ~30 min schedule), then poll the pipeline for the
+#    head SHA and adopt its result.
+#  - fork PRs: never run automatically — GitLab CI jobs execute as an ALCF user on
+#    Aurora, so running fork code is opt-in. A maintainer applies the 'alcf-ci' label,
+#    which pushes the PR head to GitLab as branch gh-pr-<N> and triggers a pipeline.
+#    Re-apply the label to re-run after new pushes. This workflow only moves refs; it
+#    never checks out or executes PR code.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  pull_request_target:
+    types: [labeled]
+
+concurrency:
+  group: alcf-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  aurora:
+    name: LTS stack (ALCF GitLab CI, Aurora)
+    runs-on: ubuntu-latest
+    # PBS queue wait + 1 h walltime + build stage; generous but below the 6 h runner cap
+    timeout-minutes: 330
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.label.name == 'alcf-ci' &&
+       github.event.pull_request.head.repo.full_name != github.repository)
+    env:
+      GITLAB_HOST: gitlab-ci.alcf.anl.gov
+      GITLAB_PROJECT: mschanen/oneAPI-jl
+      API: https://gitlab-ci.alcf.anl.gov/api/v4/projects/238
+      GITLAB_TOKEN: ${{ secrets.ALCF_GITLAB_TOKEN }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Push fork PR head to GitLab (label-gated)
+        if: github.event_name == 'pull_request_target'
+        env:
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          git init -q head && cd head
+          git fetch -q --depth=1 "https://github.com/$GITHUB_REPOSITORY" "pull/$PR/head"
+          if [ "$(git rev-parse FETCH_HEAD)" != "$HEAD_SHA" ]; then
+            echo "::error::PR head moved since labeling; re-apply the label"
+            exit 1
+          fi
+          git push -q -f "https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOST}/${GITLAB_PROJECT}.git" \
+            "FETCH_HEAD:refs/heads/gh-pr-$PR"
+
+      - name: Force mirror sync
+        if: github.event_name != 'pull_request_target'
+        run: |
+          # Best-effort: if this fails, the scheduled mirror sync still triggers the
+          # pipeline, just later; the polling step below tolerates the delay.
+          curl -sS -X POST -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "$API/mirror/pull" \
+            || echo "::warning::mirror sync request failed; relying on scheduled sync"
+
+      - name: Wait for pipeline and adopt its result
+        run: |
+          # Transient API failures (network, rate limiting) must not fail the check:
+          # api() degrades to empty output, and the loops treat that as "try again".
+          api() { curl -sS --max-time 30 -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "$@" || true; }
+
+          echo "waiting for a GitLab pipeline for $HEAD_SHA"
+          ID=""
+          for i in $(seq 1 80); do   # up to 40 min for mirror sync + pipeline creation
+            ID=$(api "$API/pipelines?sha=$HEAD_SHA&order_by=id&sort=desc&per_page=1" \
+              | jq -r '.[0].id // empty' 2>/dev/null || true)
+            if [ -n "$ID" ]; then break; fi
+            sleep 30
+          done
+          if [ -z "$ID" ]; then
+            echo "::error::no GitLab pipeline appeared for $HEAD_SHA within 40 min (mirror not synced, or ref filtered by workflow rules)"
+            exit 1
+          fi
+          URL="https://${GITLAB_HOST}/${GITLAB_PROJECT}/-/pipelines/$ID"
+          echo "pipeline: $URL"
+          echo "[ALCF GitLab pipeline $ID]($URL)" >> "$GITHUB_STEP_SUMMARY"
+          prev=""
+          while true; do
+            STATUS=$(api "$API/pipelines/$ID" | jq -r '.status // empty' 2>/dev/null || true)
+            if [ -n "$STATUS" ] && [ "$STATUS" != "$prev" ]; then echo "status: $STATUS"; prev="$STATUS"; fi
+            case "$STATUS" in
+              success)
+                exit 0 ;;
+              failed|canceled|skipped)
+                echo "failed jobs:"
+                api "$API/pipelines/$ID/jobs?per_page=100" \
+                  | jq -r '.[] | select(.status=="failed") | "  \(.name): \(.web_url)"' 2>/dev/null \
+                  | tee -a "$GITHUB_STEP_SUMMARY" || true
+                echo "::error::GitLab pipeline $STATUS: $URL"
+                exit 1 ;;
+            esac
+            sleep 60
+          done
