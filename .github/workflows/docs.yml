@@ -18,7 +18,7 @@ jobs:
       DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       JULIA_DEBUG: Documenter
-    runs-on: [self-hosted, linux, X64]
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
