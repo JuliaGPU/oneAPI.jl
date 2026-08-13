@@ -89,6 +89,7 @@ jobs:
           fi
           URL="https://${GITLAB_HOST}/${GITLAB_PROJECT}/-/pipelines/$ID"
           echo "pipeline: $URL"
+          echo "PIPELINE_ID=$ID" >> "$GITHUB_ENV"
           echo "[ALCF GitLab pipeline $ID]($URL)" >> "$GITHUB_STEP_SUMMARY"
           prev=""
           while true; do
@@ -107,3 +108,18 @@ jobs:
             esac
             sleep 60
           done
+
+      # The GitLab instance requires an ALCF login, so mirror the job logs into this
+      # run where any contributor can read them.
+      - name: Publish GitLab job logs
+        if: always() && env.PIPELINE_ID != ''
+        run: |
+          api() { curl -sS --max-time 60 -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "$@" || true; }
+          api "$API/pipelines/$PIPELINE_ID/jobs?per_page=100" \
+            | jq -r '.[] | "\(.id)|\(.name)|\(.status)"' \
+            | while IFS='|' read -r jid jname jstatus; do
+                echo "::group::${jname} — ${jstatus}"
+                api "$API/jobs/$jid/trace"
+                echo ""
+                echo "::endgroup::"
+              done
