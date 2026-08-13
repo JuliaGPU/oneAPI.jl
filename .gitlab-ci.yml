@@ -35,7 +35,7 @@ variables:
   # image targets above (see ci.yml for the miscompile this works around).
   JULIA_JIT_TARGET: "native,-avx512fp16"
 
-stages: [build, test]
+stages: [build, test, coverage]
 
 .aurora-env:
   script:
@@ -65,6 +65,9 @@ build:support:
     # test/Manifest.toml travels to test:lts as an artifact.
     - julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
     - julia --color=yes --project=test -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+    # Coverage tooling into a depot-shared env here, where the network is available;
+    # test:lts only loads it.
+    - julia --color=yes --project=$JULIA_DEPOT_PATH/environments/coverage -e 'using Pkg; Pkg.add("CoverageTools")'
     # Guard against silently falling back to the JLL and testing the wrong library
     # (same check as ci.yml).
     - julia --color=yes --project=. -e '
@@ -98,4 +101,31 @@ test:lts:
     # host-Float16 miscompile (broadcast Float16 reference failure, see ci.yml) needs
     # the JIT constrained too. Propagates to the parallel test workers via
     # Base.julia_cmd().
-    - julia -C "$JULIA_JIT_TARGET" --color=yes --project=test test/runtests.jl --jobs=4 --quickfail
+    # --code-coverage propagates to the parallel workers via Base.julia_cmd(), as the
+    # cpu-target does (see ci.yml). Every LTS-gated branch is unreachable on the rolling
+    # stack, so this job is the only coverage signal for those paths.
+    - julia -C "$JULIA_JIT_TARGET" --code-coverage=user --color=yes --project=test test/runtests.jl --jobs=4 --quickfail
+    # Collapse the per-file .cov output into lcov.info for the upload job; directories
+    # match the buildkite julia-coverage plugin's.
+    - julia --color=yes --project=$JULIA_DEPOT_PATH/environments/coverage -e '
+          using CoverageTools;
+          cov = mapreduce(process_folder, vcat, ["src", "lib", "examples"]);
+          LCOV.writefile("lcov.info", cov)'
+  artifacts:
+    paths: [lcov.info]
+    expire_in: 1 week
+
+# Coverage reporting must not be able to fail the build (parity with ci.yml). Only
+# created when the CODECOV_TOKEN CI/CD variable is set on the GitLab project.
+coverage:upload:
+  stage: coverage
+  extends: .aurora-shell-runner
+  timeout: 30m
+  needs: [test:lts]
+  rules:
+    - if: $CODECOV_TOKEN
+  allow_failure: true
+  script:
+    - curl -sSf -o codecov https://cli.codecov.io/latest/linux/codecov && chmod +x codecov
+    - ./codecov upload-process -t "$CODECOV_TOKEN" --git-service github
+        --slug JuliaGPU/oneAPI.jl --commit-sha "$CI_COMMIT_SHA" -f lcov.info

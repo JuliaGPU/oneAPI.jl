@@ -7,7 +7,13 @@ using Documenter
 using Documenter.Remotes
 using oneAPI
 
-oneAPI.versioninfo()
+# Informational only; the docs build runs on GPU-less hosted runners, where loading
+# oneAPI works but querying the driver does not.
+try
+    oneAPI.versioninfo()
+catch err
+    @warn "oneAPI not functional on this host; skipping versioninfo" exception = err
+end
 
 makedocs(
     sitename = "oneAPI.jl",
