@@ -80,6 +80,57 @@ end
     end
 end
 
+    @testset "partial regions" begin
+        for (dim, regions) in [
+                ((8, 32), [(1,), (2,), 1:2]),
+                ((9, 6), [(1,), (2,)]),
+                ((8, 32, 64), [(1,), (2,), (3,), (1, 2), (2, 3)]),
+            ]
+            @testset "$(length(dim))D region=$region" for region in regions
+                regdims = collect(region)
+                batchlen = prod(dim[regdims])
+
+                # complex transforms
+                X = rand(ComplexF32, dim)
+                dX = gpu(X)
+                cmp(AbstractFFTs.fft(dX, region), FFTW.fft(X, region))
+                p = AbstractFFTs.plan_fft(dX, region)
+                Y = FFTW.fft(X, region)
+                dY = p * dX
+                cmp(dY, Y)
+                cmp(AbstractFFTs.plan_ifft(dX, region) * dY, X)
+                cmp(AbstractFFTs.plan_bfft(dX, region) * dY, X .* batchlen)
+
+                # in-place complex transforms
+                dXc = copy(dX)
+                AbstractFFTs.plan_fft!(dXc, region) * dXc
+                cmp(dXc, Y)
+                AbstractFFTs.plan_bfft!(dXc, region) * dXc
+                cmp(dXc, X .* batchlen)
+
+                # real forward and inverse transforms
+                Xr = rand(Float32, dim)
+                dXr = gpu(Xr)
+                Yr = FFTW.rfft(Xr, region)
+                cmp(AbstractFFTs.rfft(dXr, region), Yr)
+                d1 = dim[first(regdims)]
+                cmp(AbstractFFTs.irfft(gpu(Yr), d1, region), FFTW.irfft(Yr, d1, region))
+            end
+        end
+
+        # multidimensional irfft over all dimensions (uses the conjugate-symmetric
+        # reconstruction path rather than the 1D real descriptor)
+        @testset "full-region ND irfft $(dim)" for dim in [(8, 32), (9, 6), (8, 32, 64)]
+            Xr = rand(Float32, dim)
+            Yr = FFTW.rfft(Xr)
+            cmp(AbstractFFTs.irfft(gpu(Yr), dim[1]), FFTW.irfft(Yr, dim[1]))
+            cmp(AbstractFFTs.brfft(gpu(Yr), dim[1]), FFTW.brfft(Yr, dim[1]))
+        end
+
+        # non-contiguous regions cannot be expressed as a single oneMKL descriptor
+        @test_throws ErrorException AbstractFFTs.plan_fft(gpu(rand(ComplexF32, 4, 4, 4)), (1, 3))
+    end
+
 @testset "shared queue lifetime across plans" begin
     # Plans must share the single cached task-local SYCL queue rather than each owning a
     # throwaway one (whose finalizer would tear down shared SYCL/oneMKL state). Assert the
