@@ -18,7 +18,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
-          ref: ${{github.event.pull_request.head.ref}}
+          # Checking out fork code in a pull_request_target workflow requires an explicit
+          # opt-in since checkout v7. Safe here: the PR code is only parsed by Runic,
+          # never executed, and we drop the credentials and pin the event's head SHA.
+          allow-unsafe-pr-checkout: true
+          persist-credentials: false
+          ref: ${{github.event.pull_request.head.sha}}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
 
