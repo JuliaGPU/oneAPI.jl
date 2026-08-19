@@ -182,4 +182,5 @@ end
 
 # Retry test failures once to give a chance to memory-pressure related failures to pass
 runtests(oneAPI, args; testsuite, init_code, init_worker_code, env = worker_env,
-                       recycle_on_failure = true, retries = 1)
+    recycle_on_failure = true, retries = 1
+)
