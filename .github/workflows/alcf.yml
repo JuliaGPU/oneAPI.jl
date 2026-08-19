@@ -53,7 +53,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           git init -q head && cd head
-          git fetch -q --depth=1 "https://github.com/$GITHUB_REPOSITORY" "pull/$PR/head"
+          git fetch -q "https://github.com/$GITHUB_REPOSITORY" "pull/$PR/head"
           if [ "$(git rev-parse FETCH_HEAD)" != "$HEAD_SHA" ]; then
             echo "::error::PR head moved since labeling; re-apply the label"
             exit 1
