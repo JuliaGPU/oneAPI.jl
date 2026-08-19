@@ -12,6 +12,12 @@ name: ALCF CI
 #    which pushes the PR head to GitLab as branch gh-pr-<N> and triggers a pipeline.
 #    Re-apply the label to re-run after new pushes. This workflow only moves refs; it
 #    never checks out or executes PR code.
+#
+# The push uses ci.skip and the pipeline is created through a pipeline trigger token
+# (ALCF_GITLAB_TRIGGER_TOKEN secret) instead: ALCF_GITLAB_TOKEN is a project access
+# token, i.e. a bot user, and ALCF's Jacamar runners refuse bot-attributed pipelines
+# ("bot account token used for job, unsupported by runner"). Trigger-token pipelines
+# run as the user who created the token, which Jacamar accepts.
 
 on:
   push:
@@ -45,6 +51,7 @@ jobs:
       GITLAB_PROJECT: mschanen/oneAPI-jl
       API: https://gitlab-ci.alcf.anl.gov/api/v4/projects/238
       GITLAB_TOKEN: ${{ secrets.ALCF_GITLAB_TOKEN }}
+      GITLAB_TRIGGER_TOKEN: ${{ secrets.ALCF_GITLAB_TRIGGER_TOKEN }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Push fork PR head to GitLab (label-gated)
@@ -52,14 +59,28 @@ jobs:
         env:
           PR: ${{ github.event.pull_request.number }}
         run: |
+          if [ -z "$GITLAB_TRIGGER_TOKEN" ]; then
+            echo "::error::ALCF_GITLAB_TRIGGER_TOKEN secret not set (create a pipeline trigger token in the GitLab project settings)"
+            exit 1
+          fi
           git init -q head && cd head
           git fetch -q "https://github.com/$GITHUB_REPOSITORY" "pull/$PR/head"
           if [ "$(git rev-parse FETCH_HEAD)" != "$HEAD_SHA" ]; then
             echo "::error::PR head moved since labeling; re-apply the label"
             exit 1
           fi
-          git push -q -f "https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOST}/${GITLAB_PROJECT}.git" \
+          # ci.skip: a push pipeline would be attributed to the project access token's
+          # bot user, which the Jacamar runners refuse (see header comment). Move the
+          # ref only, then create the pipeline via the trigger token below.
+          git push -q -f -o ci.skip \
+            "https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOST}/${GITLAB_PROJECT}.git" \
             "FETCH_HEAD:refs/heads/gh-pr-$PR"
+          RESP=$(curl -sS -X POST "$API/trigger/pipeline" \
+            -F "token=${GITLAB_TRIGGER_TOKEN}" -F "ref=gh-pr-$PR")
+          if ! echo "$RESP" | jq -e '.id' >/dev/null 2>&1; then
+            echo "::error::failed to trigger GitLab pipeline: $RESP"
+            exit 1
+          fi
 
       - name: Force mirror sync
         if: github.event_name != 'pull_request_target'
