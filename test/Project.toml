@@ -26,4 +26,4 @@ oneAPI = "8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"
 oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
 
 [compat]
-ParallelTestRunner = "2.2"
+ParallelTestRunner = "2.8"
