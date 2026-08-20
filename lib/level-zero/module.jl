@@ -81,13 +81,17 @@ mutable struct ZeKernel
     handle::ze_kernel_handle_t
     lock::ReentrantLock
 
+    # cached spillMemSize in bytes/thread, seeded by `properties`; -1 while unqueried.
+    # Read on every launch by the scratch hedge, so it must not cost an API call.
+    spill::Int
+
     function ZeKernel(mod, name)
         GC.@preserve name begin
             desc_ref = Ref(ze_kernel_desc_t(; pKernelName=pointer(name)))
             handle_ref = Ref{ze_kernel_handle_t}()
             zeKernelCreate(mod, desc_ref, handle_ref)
         end
-        obj = new(mod, handle_ref[], ReentrantLock())
+        obj = new(mod, handle_ref[], ReentrantLock(), -1)
 
         finalizer(obj) do obj
             zeKernelDestroy(obj)
@@ -263,6 +267,7 @@ function properties(kernel::ZeKernel)
     end
 
     props = props_ref[]
+    kernel.spill = Int(props.spillMemSize)
     return (
         numKernelArgs=Int(props.numKernelArgs),
         requiredGroupSize=ZeDim3(props.requiredGroupSizeX,
@@ -281,6 +286,13 @@ function properties(kernel::ZeKernel)
         maxGroupSize=max_group_size_props_ref === nothing ? missing :
             Int(max_group_size_props_ref[].maxGroupSize)
     )
+end
+
+# Cached access to a kernel's spill (scratch) size for the launch path: one Int load
+# after the first query. `properties` seeds the cache.
+function spill_mem_size(kernel::ZeKernel)
+    s = kernel.spill
+    return s >= 0 ? s : Int(properties(kernel).spillMemSize)
 end
 
 

@@ -1,5 +1,14 @@
 isdebug(group) = Base.CoreLogging.current_logger_for_env(Base.CoreLogging.Debug, group, oneL0) !== nothing
 
+# Opt-out knob for the scratch hedge (`scratch_hedge!` in src/compiler/execution.jl):
+# NEO's scratch-buffer allocation has no error path — on failure the process aborts —
+# so the hedge drains garbage right before the first submission that triggers it.
+# Initialized from ONEAPI_SCRATCH_HEDGE in `__init__`; default on.
+const SCRATCH_HEDGE = Ref{Bool}(true)
+
+# number of times the hedge actually drained; observable for tests
+const SCRATCH_HEDGE_COUNT = Threads.Atomic{Int}(0)
+
 # Registered callbacks invoked during memory reclamation (e.g., flushing deferred MKL
 # sparse handle releases).  Extensions like oneMKL can register cleanup functions here
 # so they run when Level Zero reports OOM or when proactive GC fires.
