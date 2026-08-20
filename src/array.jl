@@ -445,11 +445,17 @@ Base.copyto!(dest::oneDenseArray{T}, src::oneDenseArray{T}) where {T} =
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T}, doffs, src::Array{T}, soffs, n) where T
-  GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
+  GC.@preserve src dest begin
+    unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
+
+    # Keep pageable host memory alive until the queued copy completes.
+    synchronize(global_queue(ctx, dev))
+  end
   if Base.isbitsunion(T)
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
   end
+
   return dest
 end
 
