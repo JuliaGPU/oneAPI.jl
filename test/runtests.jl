@@ -180,17 +180,7 @@ init_code = quote
            ..@grab_output, ..@on_device, ..sink
 end
 
-# On memory-pressured GPUs (e.g. 8GB cards) a failing test can leave the worker — or even
-# the driver — in a state where every subsequent allocation fails, so recycle workers on
-# failure and give failed files one exclusive retry on an otherwise-idle device.
-# These options are not available in every ParallelTestRunner release, so detect them
-# rather than gating on a version number.
-runtests_kwargs = Set(Iterators.flatten(Base.kwarg_decl.(methods(ParallelTestRunner.runtests))))
-failure_handling = if :recycle_on_failure in runtests_kwargs
-    (; recycle_on_failure = true, retries = 1)
-else
-    (;)
-end
-
+# Retry test failures once to give a chance to memory-pressure related failures to pass
 runtests(oneAPI, args; testsuite, init_code, init_worker_code, env = worker_env,
-         failure_handling...)
+    recycle_on_failure = true, retries = 1
+)
