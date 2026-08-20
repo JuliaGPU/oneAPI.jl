@@ -17,7 +17,10 @@ include:
 
 workflow:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
+    # "trigger" covers fork-PR pipelines, created via a pipeline trigger token by
+    # .github/workflows/alcf.yml so they run as a real user instead of the mirror
+    # project's bot (which the Jacamar runners refuse).
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "trigger"
 
 default:
   interruptible: true  # force-pushes cancel stale runs instead of queueing behind them
