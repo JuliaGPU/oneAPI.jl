@@ -29,6 +29,23 @@ end
 @device_override @noinline Core.throw_inexacterror(f::Symbol, ::Type{T}, val) where {T} =
     @print_and_throw "Inexact conversion"
 
+# Base also constructs these exceptions directly, without a throw helper that could be
+# overridden: `Int32(::Float32)` and `round(Int, ::Float64)` (float.jl), `x^y` for `Complex`
+# (`_cpow`), and the local `throw1`/`throw2` closures of `exponent` (math.jl) that
+# `sqrt(::Complex)` reaches through `ssqs`. Without a device `malloc` the allocation of the
+# exception object fails compilation whenever the optimizer does not elide it (GPUCompiler
+# 2.2.2 stopped doing so for `exponent`). An exception object only exists to be thrown, so
+# replacing the constructors covers every such site at once, at the cost of the specific
+# message. Unlike Base's `@nospecialize`d inner constructors these are specialized and
+# inlined: a `@noinline` callee taking `Any` would have to box its (e.g. `Float32`) argument,
+# which is itself an allocation.
+@device_override @inline Core.InexactError(f::Symbol, args...) =
+    @print_and_throw "Inexact conversion"
+@device_override @inline Core.DomainError(val) =
+    @print_and_throw "Argument outside the domain of the function"
+@device_override @inline Core.DomainError(val, msg::AbstractString) =
+    @print_and_throw "Argument outside the domain of the function"
+
 # abstractarray.jl
 @device_override @noinline Base.throw_boundserror(A, I) =
     @print_and_throw "Out-of-bounds array access"
