@@ -1,17 +1,12 @@
 # Compile-only coverage of Base/Math functions on the oneAPI target.
 #
-# oneAPI.jl has no device `malloc`, so any heap allocation that survives optimization — in
-# practice an exception object on a throw path that `src/device/quirks.jl` does not cover —
-# fails compilation with
-#
-#     InvalidIRError: unsupported call to an unknown function (call to gpu_malloc)
-#
-# Which throw paths survive depends on what the optimizer happens to delete, so a routine
-# Julia/GPUCompiler/LLVM bump can silently change the answer (GPUCompiler 2.2.2 did, for
-# `sqrt(::Complex)` via `exponent`). This grid compiles each (function, eltype) cell through
-# the real pipeline — the same target, method table and validation a launch uses — without
-# launching anything, so a regression names its cell instead of failing three layers deep in
-# a GPUArrays test.
+# Whether a Base function compiles for the device depends on which of its throw paths survive
+# optimization and whether the device runtime can serve them, so a routine Julia/GPUCompiler/
+# LLVM bump can silently change the answer (GPUCompiler 2.2.2 did, for `sqrt(::Complex)` via
+# `exponent`, back when oneAPI.jl had no device `malloc`). This grid compiles each (function,
+# eltype) cell through the real pipeline — the same target, method table and validation a
+# launch uses — without launching anything, so a regression names its cell instead of failing
+# three layers deep in a GPUArrays test.
 #
 # Cells known to fail are listed in `BROKEN` with the reason; a cell that starts passing is
 # reported as an unexpected pass, which is the signal to remove it from the list.

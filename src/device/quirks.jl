@@ -32,13 +32,12 @@ end
 # Base also constructs these exceptions directly, without a throw helper that could be
 # overridden: `Int32(::Float32)` and `round(Int, ::Float64)` (float.jl), `x^y` for `Complex`
 # (`_cpow`), and the local `throw1`/`throw2` closures of `exponent` (math.jl) that
-# `sqrt(::Complex)` reaches through `ssqs`. Without a device `malloc` the allocation of the
-# exception object fails compilation whenever the optimizer does not elide it (GPUCompiler
-# 2.2.2 stopped doing so for `exponent`). An exception object only exists to be thrown, so
-# replacing the constructors covers every such site at once, at the cost of the specific
-# message. Unlike Base's `@nospecialize`d inner constructors these are specialized and
-# inlined: a `@noinline` callee taking `Any` would have to box its (e.g. `Float32`) argument,
-# which is itself an allocation.
+# `sqrt(::Complex)` reaches through `ssqs`. Left alone, such a throw allocates the exception
+# object on the device heap and signals the host without printing anything; replacing the
+# constructors covers every such site at once with a printed reason (at the cost of its
+# specificity) and keeps the heap out of it. Unlike Base's `@nospecialize`d inner
+# constructors these are specialized and inlined: a `@noinline` callee taking `Any` would
+# have to box its (e.g. `Float32`) argument, which is itself an allocation.
 @device_override @inline Core.InexactError(f::Symbol, args...) =
     @print_and_throw "Inexact conversion"
 @device_override @inline Core.DomainError(val) =
@@ -55,7 +54,8 @@ end
     @print_and_throw "sincos(x) is only defined for finite x."
 
 # diagonal.jl
-# XXX: remove when we have malloc
+# Base's version throws an ArgumentError built from a string; this one prints and keeps the
+# device heap out of the hot path.
 import LinearAlgebra
 @device_override function Base.setindex!(D::LinearAlgebra.Diagonal, v, i::Int, j::Int)
     @boundscheck checkbounds(D, i, j)
@@ -68,7 +68,7 @@ import LinearAlgebra
 end
 
 # number.jl
-# XXX: remove when we have malloc
+# Base's version throws a BoundsError; same reasoning as above.
 @device_override @inline function Base.getindex(x::Number, I::Integer...)
     @boundscheck all(isone, I) ||
         @print_and_throw "Out-of-bounds access of scalar value"
