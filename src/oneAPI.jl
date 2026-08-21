@@ -51,6 +51,7 @@ include("context.jl")
 include("memory.jl")
 include("pool.jl")
 include("array.jl")
+include("exceptions.jl")
 
 # compiler implementation
 include("compiler/compilation.jl")
