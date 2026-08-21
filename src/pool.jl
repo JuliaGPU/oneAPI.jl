@@ -119,7 +119,7 @@ function release(buf::oneL0.AbstractBuffer)
     # reference this buffer before freeing. (No-op on the rolling stack, which honors
     # BLOCKING_FREE.)
     if oneL0.LTS[]
-        synchronize_all_queues(oneL0.context(buf), oneL0.device(buf))
+        synchronize_all_streams(oneL0.context(buf), oneL0.device(buf))
     end
 
     free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE)

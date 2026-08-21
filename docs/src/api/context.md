@@ -10,7 +10,7 @@ work with different drivers, devices, or contexts without interfering with each 
 The typical hierarchy is:
 - **Driver**: Represents a Level Zero driver (usually one per GPU vendor/installation)
 - **Device**: Represents a physical GPU device
-- **Context**: Manages resources like memory allocations and command queues
+- **Context**: Manages resources like memory allocations and streams
 
 ## Driver Management
 
@@ -52,23 +52,35 @@ the current driver.
 
 Get the current Level Zero context for the calling task. If no context has been explicitly
 set with `context!`, returns a global context for the current driver. Contexts manage the
-lifetime of resources like memory allocations and command queues.
+lifetime of resources like memory allocations and streams.
 
 ### `context!(ctx::ZeContext)`
 
 Set the current Level Zero context for the calling task.
 
-## Command Queues
+## Streams
+
+### `global_stream(ctx::ZeContext, dev::ZeDevice) -> oneStream`
+
+Get the stream all oneAPI.jl operations of the calling task target for the given context
+and device. A stream holds an in-order asynchronous immediate command list, to which kernel
+launches, copies and fills are appended and submitted as they happen, plus a lazily-created
+companion command queue used only for SYCL/oneMKL interop. Streams are cached per task and
+(context, device) pair.
 
 ### `global_queue(ctx::ZeContext, dev::ZeDevice) -> ZeCommandQueue`
 
-Get the global command queue for the given context and device. This queue is used as the
-default queue for executing operations. The queue is created with in-order execution flags.
+Get the calling task's companion command queue for the given context and device — the
+queue oneMKL work is enqueued on through SYCL interop. Julia-side kernels, copies and fills
+do not use it, so synchronizing this queue does not wait for them; use `synchronize()` or
+`synchronize(global_stream(ctx, dev))` for that.
 
 ### `synchronize()`
 
-Block the host thread until all operations on the global command queue for the current
-context and device have completed.
+Block the host thread until all operations on the global stream for the current context
+and device have completed: both the immediate command list and, if one has been created,
+the companion command queue. `synchronize(stream::oneStream)` does the same for an
+explicit stream.
 
 
 ## Example Workflow

@@ -316,8 +316,9 @@ With it enabled, oneAPI.jl:
 - disables `BFloat16`, which that SPIR-V stack cannot translate in generic kernels;
 - materializes strided inputs and uses a coalesced reduction kernel, working around an IGC
   miscompile of non-coalesced reads that silently corrupts e.g. `sum(transpose(x))`;
-- drains command queues before freeing their buffers, since LTS NEO ignores the Level Zero
-  `BLOCKING_FREE` policy and would otherwise fault and ban the context.
+- drains streams (immediate command lists and their companion queues) before freeing their
+  buffers, since LTS NEO ignores the Level Zero `BLOCKING_FREE` policy and would otherwise
+  fault and ban the context.
 
 A separate switch, `ONEAPI_SYNC_EACH_SUBMISSION=1`, additionally synchronizes after every
 command-list submission. That works around a "dropped tail" corruption seen when several

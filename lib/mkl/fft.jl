@@ -514,7 +514,12 @@ end
 # Execution helpers
 _rawptr(a::oneAPI.oneArray{T}) where T = reinterpret(Ptr{Cvoid}, pointer(a))
 
+# NOTE: plans capture their SYCL queue at construction and thus bypass `sycl_queue` —
+# the usual Julia → MKL ordering boundary — at execution time, so every _exec! method
+# must run `mkl_boundary!` itself before handing work to oneMKL.
+
 function _exec!(p::cMKLFFTPlan{T, K, true}, X::oneAPI.oneArray{T}) where {T, K}
+    oneAPI.mkl_boundary!()
     compute = K == MKLFFT_FORWARD ? onemklDftComputeForward : onemklDftComputeBackward
     for t in 0:(p.nloop - 1)
         off = t * p.loopstride * sizeof(T)
@@ -523,6 +528,7 @@ function _exec!(p::cMKLFFTPlan{T, K, true}, X::oneAPI.oneArray{T}) where {T, K}
     return X
 end
 function _exec!(p::cMKLFFTPlan{T,K,false}, X::oneAPI.oneArray{T}, Y::oneAPI.oneArray{T}) where {T,K}
+    oneAPI.mkl_boundary!()
     compute = K == MKLFFT_FORWARD ? onemklDftComputeForwardOutOfPlace : onemklDftComputeBackwardOutOfPlace
     for t in 0:(p.nloop - 1)
         off = t * p.loopstride * sizeof(T)
@@ -533,10 +539,12 @@ end
 
 # Real forward
 function _exec!(p::rMKLFFTPlan{T,MKLFFT_FORWARD,false}, X::oneAPI.oneArray{T}, Y::oneAPI.oneArray{Complex{T}}) where T
+    oneAPI.mkl_boundary!()
     st = onemklDftComputeForwardOutOfPlace(p.handle, _rawptr(X), _rawptr(Y)); st==0 || error("rfft failed ($st)"); Y
 end
 # Real inverse (complex -> real)
 function _exec!(p::rMKLFFTPlan{T,MKLFFT_INVERSE,false}, X::oneAPI.oneArray{T}, Y::oneAPI.oneArray{R}) where {R,T<:Complex{R}}
+    oneAPI.mkl_boundary!()
     st = onemklDftComputeBackwardOutOfPlace(p.handle, _rawptr(X), _rawptr(Y)); st==0 || error("brfft failed ($st)"); Y
 end
 

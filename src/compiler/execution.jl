@@ -29,7 +29,9 @@ launches the kernel on the GPU.
 ## Launch Keywords (runtime)
 - `groups`: Number of workgroups (required). Can be an integer or tuple.
 - `items`: Number of work-items per workgroup (required). Can be an integer or tuple.
-- `queue::ZeCommandQueue=global_queue(...)`: Command queue to submit to.
+- `queue=global_stream(...)`: Submission target — the task's `oneStream` by default. An
+  explicit `ZeCommandQueue` is also accepted and submits through a per-dispatch command
+  list.
 
 # Examples
 
@@ -322,40 +324,55 @@ end
 const _kernel_instances = Dict{UInt, Any}()
 
 @inline function onecall(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
-                         queue::ZeCommandQueue=global_queue(context(), device()))
+                         queue::Union{oneStream, ZeCommandQueue}=global_stream(context(), device()))
     Base.@lock kernel begin
         for (i, arg) in enumerate(args)
             oneL0.arguments(kernel)[i] = arg
         end
 
         groupsize!(kernel, items)
-
-        # NEO allocates a queue's scratch buffer at the first submission of a kernel whose
-        # spill exceeds what is already allocated, and that allocation aborts the process on
-        # failure (no null check). Cross each new spill high-water mark deliberately, at the
-        # cleanest reachable moment, instead of at a GC-lottery-determined one.
-        spill = oneL0.spill_mem_size(kernel)
-        spill > queue.scratch_hwm && scratch_hedge!(queue, spill)
-
-        execute!(queue) do list
-            append_launch!(list, kernel, groups)
-        end
+        launch!(queue, kernel, groups)
     end
 end
 
-# Slow path of the scratch hedge, firing once per (queue, spill tier): retire in-flight
+@inline function launch!(s::oneStream, kernel::ZeKernel, groups::ZeDim)
+    mkl_wait!(s)
+
+    # NEO allocates a stream's scratch buffer at the first submission of a kernel whose
+    # spill exceeds what is already allocated, and that allocation aborts the process on
+    # failure (no null check). Cross each new spill high-water mark deliberately, at the
+    # cleanest reachable moment, instead of at a GC-lottery-determined one.
+    spill = oneL0.spill_mem_size(kernel)
+    spill > s.scratch_hwm && scratch_hedge!(s, spill)
+
+    append_launch!(s.list, kernel, groups)
+    oneL0.sync_each_submission() && oneL0.synchronize(s.list)
+    return
+end
+
+# explicit-queue compatibility: `@oneapi queue=...` submits through a per-dispatch
+# command list, as it always has
+@inline function launch!(queue::ZeCommandQueue, kernel::ZeKernel, groups::ZeDim)
+    spill = oneL0.spill_mem_size(kernel)
+    spill > queue.scratch_hwm && scratch_hedge!(queue, spill)
+    execute!(queue) do list
+        append_launch!(list, kernel, groups)
+    end
+end
+
+# Slow path of the scratch hedge, firing once per (stream, spill tier): retire in-flight
 # work, flush deferred releases, and run finalizers so dead driver objects and arrays are
 # destroyed before NEO performs its null-check-free scratch allocation. Opt out with
 # ONEAPI_SCRATCH_HEDGE=0; the high-water mark is maintained regardless, so the toggle
 # only skips the drain.
-@noinline function scratch_hedge!(queue::ZeCommandQueue, spill::Int)
+@noinline function scratch_hedge!(target::Union{oneStream, ZeCommandQueue}, spill::Int)
     if oneL0.SCRATCH_HEDGE[]
-        oneL0.synchronize(queue)
+        oneL0.synchronize(target)
         oneL0._run_reclaim_callbacks()
         GC.gc(false)
         Threads.atomic_add!(oneL0.SCRATCH_HEDGE_COUNT, 1)
     end
-    queue.scratch_hwm = spill
+    target.scratch_hwm = spill
     return
 end
 

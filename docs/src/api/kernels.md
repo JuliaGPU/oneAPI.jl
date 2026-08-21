@@ -24,7 +24,9 @@ launches the kernel on the GPU.
 **Launch Keywords (runtime):**
 - `groups`: Number of workgroups (required). Can be an integer or tuple.
 - `items`: Number of work-items per workgroup (required). Can be an integer or tuple.
-- `queue::ZeCommandQueue`: Command queue to submit to (defaults to global queue).
+- `queue::Union{oneStream,ZeCommandQueue}`: Submission target (defaults to the task's
+  `global_stream`). An explicit `ZeCommandQueue` submits through a per-dispatch command
+  list and is not ordered with respect to the task's stream.
 
 ### `zefunction(f, tt; kwargs...)`
 

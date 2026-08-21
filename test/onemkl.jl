@@ -1561,4 +1561,43 @@ end
     end
 end
 
+@testset "stream interleave" begin
+    # Julia kernels run on the task's immediate command list, oneMKL work on the
+    # companion queue; the boundary in `sycl_queue`/`mkl_wait!` must order the two.
+    # Broadcast → gemm → broadcast, iterated with no intermediate synchronization.
+    T = Float32
+    interleave_n = 64
+    A0 = rand(T, interleave_n, interleave_n)
+    B0 = rand(T, interleave_n, interleave_n)
+    A = oneArray(A0)
+    B = oneArray(B0)
+    C = oneAPI.zeros(T, interleave_n, interleave_n)
+    hA = copy(A0)
+    hC = zeros(T, interleave_n, interleave_n)
+    for i in 1:100
+        A .= A .+ T(1 / i)
+        mul!(C, A, B)
+        C .= C .+ T(1)
+
+        hA .= hA .+ T(1 / i)
+        hC .= hA * B0 .+ T(1)
+    end
+    @test Array(C) ≈ hC rtol=1e-4
+
+    # the dirty flag makes the next Julia-side submission wait on oneMKL work
+    s = oneAPI.global_stream(oneAPI.context(), oneAPI.device())
+    mul!(C, A, B)
+    @test s.mkl_dirty
+    oneAPI.oneL0.synchronize()
+    @test !s.mkl_dirty
+
+    # scalar-result path (synchronizes inside the support library) between kernels
+    x = oneArray(rand(T, 1000))
+    y = oneArray(rand(T, 1000))
+    x .= x .+ T(1)
+    d = dot(x, y)
+    z = x .* y
+    @test d ≈ sum(Array(z)) rtol=1e-3
+end
+
 end # oneMKL tests

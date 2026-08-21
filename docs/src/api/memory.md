@@ -314,9 +314,10 @@ a = oneArray{Float32,1,oneL0.SharedBuffer}(undef, 1000)
 # Prefetch to device
 ctx = context()
 dev = device()
-queue = global_queue(ctx, dev)
+stream = global_stream(ctx, dev)
 
-execute!(queue) do list
+# appended to the task's stream, in order with its kernels and copies
+execute!(stream) do list
     append_prefetch!(list, pointer(a), sizeof(a))
 end
 ```
