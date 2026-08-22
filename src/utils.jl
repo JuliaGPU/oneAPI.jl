@@ -27,11 +27,19 @@ function versioninfo(io::IO=stdout)
     println(io, "- LLVM: $(LLVM.version())")
     println(io)
 
+
+    get_module(name::Symbol) = (name, getfield(OpenCL, name))
+    function get_module(pkg::Tuple{String, String})
+        id = Base.PkgId(Base.UUID(pkg[1]), pkg[2])
+        (pkg[2], get(Base.loaded_modules, id, nothing))
+    end
+
     println(io, "Julia packages:")
     println(io, "- oneAPI.jl: $(Base.pkgversion(oneAPI))")
-    for name in [:GPUArrays, :GPUCompiler, :KernelAbstractions, :LLVM, :SPIRVIntrinsics]
-        mod = getfield(oneAPI, name)
-        println(io, "- $(name): $(Base.pkgversion(mod))")
+    for pkg in [:GPUArrays, :GPUCompiler, ("63c18a36-062a-441e-b654-da1e3ab1ce7c", "KernelAbstractions"),
+                 :KernelInterface, :LLVM, :SPIRVIntrinsics]
+        name, mod = get_module(pkg)
+        isnothing(mod) || println(io, "- $(name): $(Base.pkgversion(mod))")
     end
     println(io)
 

@@ -12,6 +12,7 @@ using SpecialFunctions
 import Preferences
 
 import KernelAbstractions: KernelAbstractions
+import KernelInterface
 
 using LLVM
 using LLVM.Interop
@@ -76,12 +77,18 @@ include("gpuarrays.jl")
 include("random.jl")
 include("utils.jl")
 
-include("oneAPIKernels.jl")
+# KernelAbstractions
+include("oneAPIKernelsold.jl")
 import .oneAPIKernels: oneAPIBackend
+export oneAPIBackend
+
+# KernelInterface
+include("oneAPIKernels.jl")
+import .oneAPIInterface
+
 include("accumulate.jl")
 include("sorting.jl")
 include("indexing.jl")
-export oneAPIBackend
 
 # precompilation workload (warms up the SPIR-V compilation pipeline)
 include("compiler/precompile.jl")
