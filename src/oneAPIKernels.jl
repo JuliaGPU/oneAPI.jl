@@ -90,7 +90,8 @@ function KA.launch_config(kernel::KA.Kernel{oneAPIBackend}, ndrange, workgroupsi
     iterspace, dynamic = if KA.workgroupsize(kernel) <: KA.DynamicSize &&
         workgroupsize === nothing
         # use ndrange as preliminary workgroupsize for autotuning
-        KA.partition(kernel, ndrange, ndrange)
+        # (clamped to 1, since an empty ndrange cannot serve as a workgroup size)
+        KA.partition(kernel, ndrange, max.(ndrange, 1))
     else
         KA.partition(kernel, ndrange, workgroupsize)
     end
@@ -101,7 +102,7 @@ end
 function threads_to_workgroupsize(threads, ndrange)
     total = 1
     return map(ndrange) do n
-        x = min(div(threads, total), n)
+        x = max(1, min(div(threads, total), n))
         total *= x
         return x
     end
