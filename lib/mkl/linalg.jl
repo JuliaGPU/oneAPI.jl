@@ -83,15 +83,13 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
         throw(DimensionMismatch("first dimension of A, $mA, does not match length of Y, $(length(Y))"))
     end
 
-    if mA == 0
-        return Y
-    end
-
-    if nA == 0
-        return rmul!(Y, 0)
-    end
-
     T = eltype(Y)
+
+    # an empty inner dimension still needs to apply beta: Y := b*Y
+    if mA == 0 || nA == 0
+        return iszero(b) ? fill!(Y, zero(T)) : rmul!(Y, b)
+    end
+
     alpha, beta = promote(a, b, zero(T))
     if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
         if T <: onemklFloat && eltype(A) == eltype(B) == T
@@ -148,16 +146,15 @@ function LinearAlgebra.generic_matmatmul!(
         )
     )
 
+    # an empty inner dimension still needs to apply beta: C := beta*C
     if mA == 0 || nA == 0 || nB == 0
         size(C) != (mA, nB) && throw(
             DimensionMismatch(
                 "C has dimensions $(size(C)), should have ($mA,$nB)"
             )
         )
-        return LinearAlgebra.rmul!(C, 0)
+        return iszero(beta) ? fill!(C, zero(T)) : rmul!(C, beta)
     end
-
-    T = eltype(C)
 
     if T <: Union{onemklFloat, onemklComplex, onemklHalf} &&
             alpha isa Union{Bool,T} && beta isa Union{Bool,T}
