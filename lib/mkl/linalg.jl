@@ -70,9 +70,7 @@ end
 #
 # BLAS 2
 
-LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul) =
-    LinearAlgebra.generic_matvecmul!(Y, tA, A, B, _add.alpha, _add.beta)
-function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, a::Number, b::Number)
+function LinearAlgebra.mul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, a::Number, b::Number)
     mA, nA = tA == 'N' ? size(A) : reverse(size(A))
 
     if nA != length(B)
@@ -96,8 +94,8 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
             if tA in ('N', 'T', 'C')
                 return gemv!(tA, alpha, A, B, beta, Y)
             elseif tA in ('S', 's') && T <: Real
-                # complex symv! is not wrapped; fall through to generic_matmatmul!,
-                # which can use symm! instead
+                # complex symv! is not wrapped; fall through to the matrix-matrix
+                # `mul!`, which can use symm! instead
                 return symv!(tA == 'S' ? 'U' : 'L', alpha, A, B, beta, Y)
             elseif tA in ('H', 'h')
                 # hemv! only supports complex eltypes, but a real Hermitian matrix
@@ -107,7 +105,7 @@ function LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::one
             end
         end
     end
-    return LinearAlgebra.generic_matmatmul!(Y, tA, 'N', A, B, alpha, beta)
+    return LinearAlgebra.mul!(Y, tA, 'N', A, B, alpha, beta)
 end
 
 # triangular
@@ -123,11 +121,7 @@ LinearAlgebra.generic_trimatdiv!(C::oneStridedVector{T}, uploc, isunitc, tfun::F
 # BLAS 3
 #
 
-LinearAlgebra.generic_matmatmul!(
-    C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
-    B::oneStridedVecOrMat, _add::MulAddMul,
-) = LinearAlgebra.generic_matmatmul!(C, tA, tB, A, B, _add.alpha, _add.beta)
-function LinearAlgebra.generic_matmatmul!(
+function LinearAlgebra.mul!(
         C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat,
         B::oneStridedVecOrMat, alpha::Number, beta::Number,
     )
@@ -183,6 +177,21 @@ function LinearAlgebra.generic_matmatmul!(
     end
 
     GPUArrays.generic_matmatmul!(C, wrap(A, tA), wrap(B, tB), alpha, beta)
+end
+
+# Julia < 1.13 dispatches on the non-public `generic_matvecmul!` and `generic_matmatmul!`,
+# which JuliaLang/LinearAlgebra.jl#1671 superseded by the `mul!` methods above. Forward from
+# the old names, both the alpha/beta variants (1.12) and the ones taking a final MulAddMul
+# (1.10 and 1.11).
+@static if VERSION < v"1.13.0-rc4"
+    LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, alpha::Number, beta::Number) =
+        LinearAlgebra.mul!(Y, tA, A, B, alpha, beta)
+    LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul) =
+        LinearAlgebra.mul!(Y, tA, A, B, _add.alpha, _add.beta)
+    LinearAlgebra.generic_matmatmul!(C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, alpha::Number, beta::Number) =
+        LinearAlgebra.mul!(C, tA, tB, A, B, alpha, beta)
+    LinearAlgebra.generic_matmatmul!(C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, _add::MulAddMul) =
+        LinearAlgebra.mul!(C, tA, tB, A, B, _add.alpha, _add.beta)
 end
 
 # triangular
