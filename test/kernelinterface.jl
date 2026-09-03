@@ -1,5 +1,4 @@
 import KernelInterface
-using oneAPI.oneAPIInterface
 
 include(joinpath(dirname(pathof(KernelInterface)), "..", "test", "testsuite.jl"))
 
@@ -8,4 +7,4 @@ skip_tests = Set{String}()
 # observable when every submission synchronizes (the Aurora LTS workaround)
 oneAPI.oneL0.sync_each_submission() && push!(skip_tests, "Events")
 
-Testsuite.testsuite(oneAPIInterface.oneAPIBackend, "oneAPI", oneAPI, oneArray, oneAPI.oneDeviceArray; skip_tests)
+Testsuite.testsuite(oneAPIBackend, "oneAPI", oneAPI, oneArray, oneAPI.oneDeviceArray; skip_tests)

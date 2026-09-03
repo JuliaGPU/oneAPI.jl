@@ -1,4 +1,4 @@
-module oneAPIInterface
+module oneAPIKernels
 
 using ..oneAPI
 using ..oneAPI: @device_override, SPIRVIntrinsics, method_table, kernel_convert, zefunction
@@ -6,6 +6,8 @@ using ..oneAPI: @device_override, SPIRVIntrinsics, method_table, kernel_convert,
 import KernelInterface as KI
 
 import StaticArrays
+
+import Adapt
 
 ## Back-end Definition
 
@@ -32,9 +34,15 @@ KI.supports_unified(::oneAPIBackend) = true
 
 KI.functional(::oneAPIBackend) = oneAPI.functional()
 
+Adapt.adapt_storage(::oneAPIBackend, a::AbstractArray) = Adapt.adapt(oneArray, a)
+Adapt.adapt_storage(::oneAPIBackend, a::oneArray) = a
+
 # sparse arrays (oneMKL is only available on Linux)
 @static if Sys.islinux()
+    import GPUArrays
     KI.get_backend(::oneAPI.oneMKL.oneAbstractSparseMatrix) = oneAPIBackend()
+    # without this, `adapt_storage(::oneAPIBackend, ::AbstractArray)` would densify sparse arrays
+    Adapt.adapt_storage(::oneAPIBackend, a::GPUArrays.AbstractGPUSparseArray) = a
 end
 
 
