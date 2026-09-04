@@ -1,7 +1,7 @@
 module KernelAbstractionsExt
 
-using ..oneAPI
-using ..oneAPI: @device_override, SPIRVIntrinsics, method_table
+using oneAPI
+using oneAPI: @device_override, SPIRVIntrinsics, method_table
 
 import KernelAbstractions as KA
 
