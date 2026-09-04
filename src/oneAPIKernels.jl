@@ -1,4 +1,4 @@
-module oneAPIInterface
+module oneAPIKernels
 
 using ..oneAPI
 using ..oneAPI: @device_override, SPIRVIntrinsics, method_table, kernel_convert, zefunction
