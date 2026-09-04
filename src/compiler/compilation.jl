@@ -1,6 +1,9 @@
 ## gpucompiler interface implementation
 
-struct oneAPICompilerParams <: AbstractCompilerParams end
+Base.@kwdef struct oneAPICompilerParams <: AbstractCompilerParams
+    sub_group_size::Union{Nothing,Int} = nothing
+end
+
 const oneAPICompilerConfig = CompilerConfig{SPIRVCompilerTarget, oneAPICompilerParams}
 const oneAPICompilerJob = CompilerJob{SPIRVCompilerTarget,oneAPICompilerParams}
 
@@ -47,6 +50,11 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module,
     entry = invoke(GPUCompiler.finish_module!,
                    Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod), typeof(entry)},
                    job, mod, entry)
+
+    # Set the subgroup size
+    if job.config.params.sub_group_size !== nothing
+        metadata(entry)["intel_reqd_sub_group_size"] = MDNode([ConstantInt(Int32(job.config.params.sub_group_size))])
+    end
 
     # OpenCL 2.0
     push!(metadata(mod)["opencl.ocl.version"],
@@ -323,10 +331,15 @@ function _driver_supports_bfloat16_spirv(dev=device())
     end
 end
 
-@noinline function _compiler_config(dev; kernel=true, name=nothing, always_inline=false, kwargs...)
+@noinline function _compiler_config(dev; kernel=true, name=nothing, always_inline=false, sub_group_size=32, kwargs...)
     properties = oneL0.module_properties(dev)
     supports_fp16 = properties.fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
     supports_fp64 = properties.fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+
+    if sub_group_size ∉ oneL0.compute_properties(dev).subGroupSizes
+        @error("$sub_group_size is not a valid sub-group size for this device.")
+    end
+
 
     # SPIR-V codegen path. The Aurora LTS NEO/IGC runtime only accepts SPIR-V from the
     # Khronos translator; the rolling stack uses the LLVM SPIR-V back-end. GPUCompiler picks
@@ -360,7 +373,7 @@ end
 
     # create GPUCompiler objects
     target = SPIRVCompilerTarget(; backend, extensions = extensions_str, supports_fp16, supports_fp64, supports_bfloat16, kwargs...)
-    params = oneAPICompilerParams()
+    params = oneAPICompilerParams(; sub_group_size)
     CompilerConfig(target, params; kernel, name, always_inline)
 end
 
