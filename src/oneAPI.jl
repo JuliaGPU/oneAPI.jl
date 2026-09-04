@@ -77,14 +77,10 @@ include("gpuarrays.jl")
 include("random.jl")
 include("utils.jl")
 
-# KernelAbstractions
-include("oneAPIKernelsOld.jl")
-import .oneAPIKernels: oneAPIBackend
-export oneAPIBackend
-
 # KernelInterface
 include("oneAPIKernels.jl")
-import .oneAPIInterface
+import .oneAPIKernels: oneAPIBackend
+export oneAPIBackend
 
 include("accumulate.jl")
 include("sorting.jl")
