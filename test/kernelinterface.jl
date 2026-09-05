@@ -1,5 +1,4 @@
 import KernelInterface
-using oneAPI.oneAPIKernels
 
 include(joinpath(dirname(pathof(KernelInterface)), "..", "test", "testsuite.jl"))
 
