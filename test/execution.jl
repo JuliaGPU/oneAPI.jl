@@ -781,11 +781,18 @@ end
     @oneapi items = 256 groups = n ÷ 256 ref_kernel(a)
     @test Array(a) == Float32.(2:(n + 1))
 
-    # objects stay valid across later allocations by the same work-item
+    # objects stay valid across later allocations by the same work-item. Selected with
+    # branches rather than indexed from a tuple: under `--check-bounds=yes` the bounds check
+    # of a dynamic tuple index reads the field count through a host pointer, which cannot
+    # work on the device.
     function select_kernel(a, idx)
         i = get_global_id()
-        refs = ntuple(j -> Ref(a[i] * j), Val(4))
-        @inbounds a[i] = heap_consume(refs[idx])
+        r1 = Ref(a[i] * 1)
+        r2 = Ref(a[i] * 2)
+        r3 = Ref(a[i] * 3)
+        r4 = Ref(a[i] * 4)
+        r = idx == 1 ? r1 : idx == 2 ? r2 : idx == 3 ? r3 : r4
+        @inbounds a[i] = heap_consume(r)
         return
     end
     a = oneArray(Float32[1, 2, 3, 4])
