@@ -405,6 +405,10 @@ function oneL0.synchronize(s::oneStream)
         oneL0.synchronize(q)
         s.mkl_dirty = false
     end
+    # every user-facing synchronization funnels through here, so this is where a device
+    # exception surfaces (src/exceptions.jl); `synchronize_all_streams` deliberately does
+    # not check, it runs from finalizers
+    check_exceptions(s.ctx, s.dev)
     return
 end
 

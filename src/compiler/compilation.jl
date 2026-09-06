@@ -30,6 +30,10 @@ end
 
 GPUCompiler.runtime_module(::oneAPICompilerJob) = oneAPI
 
+# hidden first kernel argument carrying the exception flag and the private heap; see
+# src/device/runtime.jl, src/exceptions.jl and `add_private_heap!` below
+GPUCompiler.kernel_state_type(::oneAPICompilerJob) = KernelState
+
 GPUCompiler.method_table_view(job::oneAPICompilerJob) =
     GPUCompiler.StackedMethodTable(job.world, method_table, SPIRVIntrinsics.method_table)
 
@@ -64,6 +68,9 @@ end
 # finish_ir! runs later in the pipeline, after optimizations that create nested insertvalue
 function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
                                 entry::LLVM.Function)
+    # before the kernel state is turned into a by-reference argument below
+    job.config.kernel && add_private_heap!(mod, entry)
+
     entry = invoke(GPUCompiler.finish_ir!,
                    Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod), typeof(entry)},
                    job, mod, entry)
@@ -90,6 +97,39 @@ function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
     end
 
     return entry
+end
+
+# Give the kernel a private heap for `malloc` (src/device/runtime.jl): allocate the arena in
+# the entry block of the kernel, initialize its cursor, and thread the pointer into the kernel
+# state that the entry passes on to every device function. Runs after the kernel-state passes,
+# so the state is the entry's first (by-value) parameter; only kernels whose code reaches
+# `gpu_malloc` pay for the arena.
+function add_private_heap!(mod::LLVM.Module, entry::LLVM.Function)
+    haskey(functions(mod), "gpu_malloc") || return false
+    T_state = convert(LLVMType, KernelState)
+    params = parameters(entry)
+    (isempty(params) || value_type(params[1]) != T_state) && return false
+    state = params[1]
+    isempty(uses(state)) && return false
+
+    users = LLVM.Value[user(use) for use in uses(state)]
+    @dispose builder = IRBuilder() begin
+        position!(builder, first(instructions(first(blocks(entry)))))
+        T_i8 = LLVM.Int8Type()
+        T_i32 = LLVM.Int32Type()
+        arena = alloca!(builder, LLVM.ArrayType(T_i8, HEAP_HEADER + PRIVATE_HEAP_SIZE), "private_heap")
+        alignment!(arena, 16)
+        store!(builder, ConstantInt(T_i32, 0), arena)
+        heap_field = findfirst(==(:heap), fieldnames(KernelState)) - 1
+        new_state = insert_value!(builder, state, arena, heap_field, "state_with_heap")
+        for u in users
+            ops = operands(u)
+            for i in 1:length(ops)
+                ops[i] == state && (ops[i] = new_state)
+            end
+        end
+    end
+    return true
 end
 
 # Flatten nested insertvalue instructions

@@ -62,3 +62,31 @@ and correspond to the standard OpenCL built-in functions. Note that the indices 
 are 1-based, so they can be used to index Julia arrays directly. See
 [Device Intrinsics](device.md) for the full list.
 
+
+## Exceptions and Dynamic Allocation
+
+Kernels can throw. An exception on the device aborts the work-item that threw it and is
+reported on the host as a `KernelException` at the next synchronization — `synchronize()`,
+`oneAPI.@sync`, or copying data back with `Array` — after the reason was printed by the
+device:
+
+```julia
+julia> function kernel(a)
+           a[2] = 1f0     # bounds-checked
+           return
+       end;
+
+julia> @oneapi kernel(oneArray(Float32[0]));
+
+julia> synchronize()
+ERROR: Out-of-bounds array access.
+ERROR: KernelException: exception thrown during kernel execution on device Intel(R) Data Center GPU Max 1550
+```
+
+Exception objects that survive optimization, and any other Julia object that has to be
+heap-allocated inside a kernel (for example a `Ref` passed to a `@noinline` function), are
+allocated from a small per-work-item heap in private memory; objects never outlive the
+work-item that created them and are never freed. The heap is limited to
+`oneAPI.PRIVATE_HEAP_SIZE` bytes per work-item, and exhausting it is reported as a
+`KernelException` as well, rather than failing silently. Code on a hot path should not
+allocate.

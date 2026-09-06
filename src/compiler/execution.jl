@@ -195,6 +195,12 @@ abstract type AbstractKernel{F,TT} end
         end
     end
 
+    # the kernel state is the hidden first argument of every compiled kernel (see
+    # `GPUCompiler.kernel_state_type`); `onecall` itself stays agnostic so that it can
+    # also launch kernels that were not compiled by us
+    pushfirst!(call_t, KernelState)
+    pushfirst!(call_args, :(kernel.state))
+
     # finalize types
     call_tt = Base.to_tuple_type(call_t)
 
@@ -209,6 +215,8 @@ end
 struct HostKernel{F,TT} <: AbstractKernel{F,TT}
     f::F
     fun::ZeKernel
+    # for the context and device `fun` was linked against
+    state::KernelState
 end
 
 # Upper bound on the spill (scratch) memory a single work-group may require, in bytes.
@@ -297,7 +305,7 @@ function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
         # about world age here, as GPUCompiler already does and will return a different object
         h = hash(fun, hash(f, hash(tt)))
         get!(_kernel_instances, h) do
-            HostKernel{F,tt}(f, fun)
+            HostKernel{F, tt}(f, fun, kernel_state(ctx, dev))
         end::HostKernel{F,tt}
     end
 end
@@ -346,7 +354,10 @@ end
     spill > s.scratch_hwm && scratch_hedge!(s, spill)
 
     append_launch!(s.list, kernel, groups)
-    oneL0.sync_each_submission() && oneL0.synchronize(s.list)
+    if oneL0.sync_each_submission()
+        oneL0.synchronize(s.list)
+        check_exceptions(s.ctx, s.dev)
+    end
     return
 end
 
@@ -358,6 +369,8 @@ end
     execute!(queue) do list
         append_launch!(list, kernel, groups)
     end
+    oneL0.sync_each_submission() && check_exceptions(queue.context, queue.device)
+    return
 end
 
 # Slow path of the scratch hedge, firing once per (stream, spill tier): retire in-flight

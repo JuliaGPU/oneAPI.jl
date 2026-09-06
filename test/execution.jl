@@ -742,3 +742,99 @@ end
     end for _ in 1:2])
     @test all(results)
 end
+
+############################################################################################
+
+# Device exceptions reach the host through the kernel state (src/exceptions.jl), and the
+# per-work-item private heap behind `malloc` (src/device/runtime.jl) serves the allocations
+# that survive optimization. Top-level definitions: a closure capture would not be a bitstype.
+
+struct ExceptionTestError <: Exception
+    val::Any
+end
+# the exception object survives lowering: its `Any` field boxes the Float32 (the
+# `DomainError(x, msg)` shape), so it is allocated on the device heap before the throw
+@noinline exception_test_thrower(x::Float32) = throw(ExceptionTestError(x))
+@noinline exception_test_consume(r::Base.RefValue{Float32}) = r[] + 1.0f0
+
+@testset "device exceptions" begin
+    # a quirked throw prints the reason and signals; no allocation involved
+    function boundserror_kernel(a)
+        a[2] = 1.0f0
+        return
+    end
+    a = oneArray(Float32[0])
+    _, out = @grab_output begin
+        @oneapi boundserror_kernel(a)
+        @test_throws KernelException synchronize()
+    end
+    @test occursin("Out-of-bounds array access", out)
+    # reported once: the flag is cleared
+    synchronize()
+
+    # an un-quirked throw whose exception object lives on the device heap
+    function alloc_throw_kernel(a)
+        x = a[1]
+        x == 0 && exception_test_thrower(x)
+        a[1] = 2
+        return
+    end
+    a = oneArray(Float32[0])
+    @oneapi alloc_throw_kernel(a)
+    @test_throws KernelException synchronize()
+    a = oneArray(Float32[1])
+    @oneapi alloc_throw_kernel(a)
+    @test Array(a) == [2]
+
+    # every user-facing synchronization surfaces it
+    a = oneArray(Float32[0])
+    @test_throws KernelException oneAPI.@sync @oneapi alloc_throw_kernel(a)
+    a = oneArray(Float32[0])
+    @oneapi alloc_throw_kernel(a)
+    @test_throws KernelException Array(a)
+end
+
+@testset "device heap" begin
+    # a box handed to a @noinline callee round-trips through the work-item's private heap
+    function boxing_kernel(a)
+        i = get_global_id()
+        a[i] = exception_test_consume(Ref(a[i]))
+        return
+    end
+    a = oneArray(Float32[41])
+    @oneapi boxing_kernel(a)
+    @test Array(a) == [42]
+    n = 4096
+    a = oneArray(Float32.(1:n))
+    @oneapi items = 256 groups = n ÷ 256 boxing_kernel(a)
+    @test Array(a) == Float32.(2:(n + 1))
+
+    # nothing is freed: allocating more than PRIVATE_HEAP_SIZE bytes in one work-item is a
+    # KernelException that reports the exhaustion, not a silent failure
+    function boxing_loop_kernel(a, n)
+        i = get_global_id()
+        x = a[i]
+        for _ in 1:n
+            x = exception_test_consume(Ref(x))
+        end
+        a[i] = x
+        return
+    end
+    fits = oneAPI.PRIVATE_HEAP_SIZE ÷ 16 - 1
+    a = oneArray(Float32.(1:256))
+    @oneapi items = 256 boxing_loop_kernel(a, fits)
+    @test Array(a) == Float32.(1:256) .+ fits
+    a = oneArray(Float32.(1:256))
+    @oneapi items = 256 boxing_loop_kernel(a, 2 * fits)
+    err = try
+        synchronize()
+        nothing
+    catch e
+        e
+    end
+    @test err isa KernelException && err.oom
+    # the next launch starts from a fresh heap
+    a = oneArray(Float32[41])
+    @oneapi boxing_kernel(a)
+    @test Array(a) == [42]
+end
