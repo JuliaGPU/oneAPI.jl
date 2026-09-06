@@ -62,3 +62,23 @@ and correspond to the standard OpenCL built-in functions. Note that the indices 
 are 1-based, so they can be used to index Julia arrays directly. See
 [Device Intrinsics](device.md) for the full list.
 
+
+## Dynamic Memory Allocation
+
+Kernels can allocate Julia objects, such as a `Ref` passed to a `@noinline` function or a
+boxed value in an `Any` field. Allocations that survive optimization use a 1 KiB heap
+private to each work-item. Each allocation is rounded up to 16 bytes, and memory is only
+reclaimed when the work-item exits. Allocated objects must not be shared with other
+work-items or retained across kernel launches.
+
+When the heap is exhausted, the work-item prints an error and exits without completing
+its work. This does not raise a host-side exception, and kernel output may be incomplete:
+
+```
+ERROR: Out of dynamic GPU memory (trying to allocate 4 bytes)
+```
+
+Kernels without remaining allocations do not reserve an arena. The device compiler may
+optimize away some heap storage, but allocations can increase private-memory use and
+reduce performance. Avoid repeated allocations in loops: even short-lived objects consume
+heap space until the work-item exits.
