@@ -195,6 +195,10 @@ abstract type AbstractKernel{F,TT} end
         end
     end
 
+    # Match GPUCompiler's hidden state argument. Keep onecall usable for foreign kernels.
+    pushfirst!(call_t, KernelState)
+    pushfirst!(call_args, :(KernelState()))
+
     # finalize types
     call_tt = Base.to_tuple_type(call_t)
 
