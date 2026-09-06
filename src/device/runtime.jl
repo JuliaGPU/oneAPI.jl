@@ -46,7 +46,9 @@ function malloc(sz::Csize_t)
     bytes > capacity - cursor && return C_NULL      # gc_pool_alloc reports exhaustion
 
     unsafe_store!(header, cursor + bytes, 1, Val(sizeof(Csize_t)))
-    return reinterpret(Ptr{Cvoid}, heap + HEAP_HEADER + cursor)
+    # `cursor` fits an `Int` (it is below the capacity); reinterpret rather than convert,
+    # as the checked conversion would drag an `InexactError` throw path into every kernel
+    return reinterpret(Ptr{Cvoid}, heap + HEAP_HEADER + (cursor % Int))
 end
 
 function report_oom(sz)
