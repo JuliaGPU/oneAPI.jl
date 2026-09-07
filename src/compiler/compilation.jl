@@ -30,6 +30,8 @@ end
 
 GPUCompiler.runtime_module(::oneAPICompilerJob) = oneAPI
 
+GPUCompiler.kernel_state_type(::oneAPICompilerJob) = KernelState
+
 GPUCompiler.method_table_view(job::oneAPICompilerJob) =
     GPUCompiler.StackedMethodTable(job.world, method_table, SPIRVIntrinsics.method_table)
 
@@ -64,6 +66,9 @@ end
 # finish_ir! runs later in the pipeline, after optimizations that create nested insertvalue
 function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
                                 entry::LLVM.Function)
+    # Initialize the heap before SPIR-V lowering converts the state to a reference.
+    job.config.kernel && add_heap!(mod, entry)
+
     entry = invoke(GPUCompiler.finish_ir!,
                    Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod), typeof(entry)},
                    job, mod, entry)
@@ -90,6 +95,55 @@ function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
     end
 
     return entry
+end
+
+# Reserve a private arena only when device code reads the heap pointer. At this point,
+# GPUCompiler has threaded the state through callees as a leading by-value argument.
+function add_heap!(mod::LLVM.Module, entry::LLVM.Function)
+    T_state = convert(LLVMType, KernelState)
+    heap_field = Base.fieldindex(KernelState, :heap) - 1
+    uses_heap(mod, T_state, heap_field) || return false
+
+    params = parameters(entry)
+    if isempty(params) || value_type(params[1]) != T_state
+        error("kernel `$(LLVM.name(entry))` allocates but has no kernel state to hold the heap")
+    end
+    state = params[1]
+    users = LLVM.Value[user(use) for use in uses(state)]
+
+    T_size = convert(LLVMType, Csize_t)
+    T_heap = LLVM.StructType([T_size, T_size, LLVM.ArrayType(LLVM.Int8Type(), HEAP_SIZE)])
+    T_ptr = convert(LLVMType, fieldtype(KernelState, :heap))
+    @dispose builder = IRBuilder() begin
+        position!(builder, first(instructions(first(blocks(entry)))))
+
+        heap = alloca!(builder, T_heap, "heap")
+        alignment!(heap, HEAP_ALIGNMENT)
+        store!(builder, ConstantInt(T_size, 0), struct_gep!(builder, T_heap, heap, 0))
+        store!(builder, ConstantInt(T_size, HEAP_SIZE), struct_gep!(builder, T_heap, heap, 1))
+
+        # Replace the original uses, excluding the insertvalue that constructs the state.
+        ptr = pointercast!(builder, heap, T_ptr)
+        new_state = insert_value!(builder, state, ptr, heap_field, "state")
+        for u in users
+            ops = operands(u)
+            for i in 1:length(ops)
+                ops[i] == state && (ops[i] = new_state)
+            end
+        end
+    end
+
+    return true
+end
+
+# Inspect field reads rather than calls to malloc, which may already have been inlined.
+function uses_heap(mod::LLVM.Module, T_state::LLVMType, heap_field::Integer)
+    for f in functions(mod), bb in blocks(f), inst in instructions(bb)
+        inst isa LLVM.ExtractValueInst || continue
+        value_type(operands(inst)[1]) == T_state || continue
+        unsafe_load(LLVM.API.LLVMGetIndices(inst)) == heap_field && return true
+    end
+    return false
 end
 
 # Flatten nested insertvalue instructions

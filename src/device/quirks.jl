@@ -38,7 +38,7 @@ end
     @print_and_throw "sincos(x) is only defined for finite x."
 
 # diagonal.jl
-# XXX: remove when we have malloc
+# Base's version throws an ArgumentError; this one prints the reason
 import LinearAlgebra
 @device_override function Base.setindex!(D::LinearAlgebra.Diagonal, v, i::Int, j::Int)
     @boundscheck checkbounds(D, i, j)
@@ -51,7 +51,7 @@ import LinearAlgebra
 end
 
 # number.jl
-# XXX: remove when we have malloc
+# Base's version throws a BoundsError; this one prints the reason
 @device_override @inline function Base.getindex(x::Number, I::Integer...)
     @boundscheck all(isone, I) ||
         @print_and_throw "Out-of-bounds access of scalar value"

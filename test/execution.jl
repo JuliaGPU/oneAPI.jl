@@ -742,3 +742,127 @@ end
     end for _ in 1:2])
     @test all(results)
 end
+
+############################################################################################
+
+# Keep allocation consumers at top level so kernels do not capture test state.
+
+@noinline heap_consume(r::Base.RefValue{Float32}) = r[] + 1.0f0
+
+struct HeapAnyBox
+    x::Any
+end
+@noinline heap_consume(b::HeapAnyBox) = (b.x::Float32) * 2.0f0
+
+@testset "device heap" begin
+    # Keep objects alive across a call so allocation survives Julia/LLVM optimization.
+    function ref_kernel(a)
+        i = get_global_id()
+        @inbounds a[i] = heap_consume(Ref(a[i]))
+        return
+    end
+    a = oneArray(Float32[41])
+    @oneapi ref_kernel(a)
+    @test Array(a) == [42]
+
+    # so is a struct whose `Any` field boxes its value
+    function anybox_kernel(a)
+        i = get_global_id()
+        @inbounds a[i] = heap_consume(HeapAnyBox(a[i]))
+        return
+    end
+    a = oneArray(Float32[21])
+    @oneapi anybox_kernel(a)
+    @test Array(a) == [42]
+
+    # every work-item has its own heap
+    n = 4096
+    a = oneArray(Float32.(1:n))
+    @oneapi items = 256 groups = n ÷ 256 ref_kernel(a)
+    @test Array(a) == Float32.(2:(n + 1))
+
+    # objects stay valid across later allocations by the same work-item. Selected with
+    # branches rather than indexed from a tuple: under `--check-bounds=yes` the bounds check
+    # of a dynamic tuple index reads the field count through a host pointer, which cannot
+    # work on the device.
+    function select_kernel(a, idx)
+        i = get_global_id()
+        r1 = Ref(a[i] * 1)
+        r2 = Ref(a[i] * 2)
+        r3 = Ref(a[i] * 3)
+        r4 = Ref(a[i] * 4)
+        r = idx == 1 ? r1 : idx == 2 ? r2 : idx == 3 ? r3 : r4
+        @inbounds a[i] = heap_consume(r)
+        return
+    end
+    a = oneArray(Float32[1, 2, 3, 4])
+    @oneapi items = 4 select_kernel(a, 3)
+    @test Array(a) == Float32[4, 7, 10, 13]
+
+    # nothing is freed: a work-item that allocates more than the heap holds runs out of
+    # memory, which is reported, and exits without writing its result
+    function loop_kernel(a, n)
+        i = get_global_id()
+        @inbounds x = a[i]
+        for _ in 1:n
+            x = heap_consume(Ref(x))
+        end
+        @inbounds a[i] = x
+        return
+    end
+    fits = oneAPI.HEAP_SIZE ÷ oneAPI.HEAP_ALIGNMENT
+    a = oneArray(Float32.(1:256))
+    @oneapi items = 256 loop_kernel(a, fits)
+    @test Array(a) == Float32.(1:256) .+ fits
+    # A later launch starts with an empty heap, even after using the entire arena.
+    @oneapi items = 256 loop_kernel(a, fits)
+    @test Array(a) == Float32.(1:256) .+ 2 * fits
+    a = oneArray(Float32[1])
+    _, out = @grab_output begin
+        @oneapi loop_kernel(a, fits + 1)
+        synchronize()
+    end
+    @test occursin("Out of dynamic GPU memory", out)
+    @test Array(a) == [1]
+
+    # Failed requests must not consume space. Exercise the size arithmetic directly,
+    # including overflow when rounding up and allocations with different sizes.
+    function allocation_kernel(out, sizes)
+        for i in eachindex(sizes)
+            ptr = oneAPI.malloc(sizes[i])
+            out[i] = UInt(ptr)
+        end
+        return
+    end
+    sizes = oneArray(
+        Csize_t[
+            typemax(Csize_t), oneAPI.HEAP_SIZE + 1, 1, 17,
+            oneAPI.HEAP_SIZE - 3 * oneAPI.HEAP_ALIGNMENT, 1,
+        ]
+    )
+    out = oneAPI.zeros(UInt, length(sizes))
+    @oneapi allocation_kernel(out, sizes)
+    ptrs = Array(out)
+    @test ptrs[[1, 2, 6]] == [0, 0, 0]
+    @test all(!iszero, ptrs[3:5])
+    @test all(p -> p % oneAPI.HEAP_ALIGNMENT == 0, ptrs[3:5])
+    @test ptrs[4] - ptrs[3] == oneAPI.HEAP_ALIGNMENT
+    @test ptrs[5] - ptrs[4] == 2 * oneAPI.HEAP_ALIGNMENT
+
+    # These valid inputs must compile even if exception paths retain boxed arguments
+    # (GPUCompiler.jl#906, exposed by preserving inferred invoke specializations).
+    powers = Float32[1, 2, 4, 8]
+    @test Array(exponent.(oneArray(powers))) == exponent.(powers)
+    z = ComplexF32[1 + 2im, -3 + 4im, 0, 2 - 3im]
+    @test Array(sqrt.(oneArray(z))) ≈ sqrt.(z)
+
+    # only kernels that allocate carry a heap
+    function plain_kernel(a)
+        i = get_global_id()
+        @inbounds a[i] += 1.0f0
+        return
+    end
+    T = Tuple{oneDeviceVector{Float32, oneAPI.AS.CrossWorkgroup}}
+    @test occursin(r"%heap\d* = alloca", sprint(io -> oneAPI.code_llvm(io, ref_kernel, T; kernel = true)))
+    @test !occursin(r"%heap\d* = alloca", sprint(io -> oneAPI.code_llvm(io, plain_kernel, T; kernel = true)))
+end
