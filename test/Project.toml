@@ -28,8 +28,5 @@ libigc_jll = "94295238-5935-5bd7-bb0f-b00942e9bdd5"
 oneAPI = "8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"
 oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
 
-[source]
-KernelAbstractions = {rev = "main", url = "https://github.com/JuliaGPU/KernelAbstractions.jl"}
-
 [compat]
 ParallelTestRunner = "2.8"

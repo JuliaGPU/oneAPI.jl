@@ -18,6 +18,7 @@ steps:
           queue: "oneapi"
         commands: |
           julia --project=deps deps/build_ci.jl
+          julia --project=. -e 'using Pkg; Pkg.develop("KernelAbstractions")'
         if: build.message !~ /\[skip tests\]/
         timeout_in_minutes: 120
         matrix:
