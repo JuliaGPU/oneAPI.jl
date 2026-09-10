@@ -32,9 +32,6 @@ oneAPI_Level_Zero_Headers_jll = "f4bc562b-d309-54f8-9efb-476e56f0410d"
 oneAPI_Level_Zero_Loader_jll = "13eca655-d68d-5b81-8367-6d99d727ab01"
 oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
 
-[sources]
-GPUCompiler = {url = "https://github.com/JuliaGPU/GPUCompiler.jl", rev = "tb/jll-libraries"}
-
 [compat]
 AbstractFFTs = "1.5.0"
 AcceleratedKernels = "0.3.1, 0.4"
