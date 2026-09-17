@@ -99,6 +99,12 @@ test:lts:
     # them (ONEAPI_TEST_SPREAD_GPUS, see test/runtests.jl). ONEAPI_SYNC_EACH_SUBMISSION
     # works around the Aurora LTS NEO dropped-tail corruption (lib/level-zero/cmdlist.jl).
     - export ZE_FLAT_DEVICE_HIERARCHY=FLAT ONEAPI_LTS=1 ONEAPI_TEST_SPREAD_GPUS=1 ONEAPI_SYNC_EACH_SUBMISSION=1
+    # The support library's RUNPATH points at the Conda toolkit it was built with, but
+    # LD_LIBRARY_PATH wins over RUNPATH, so the site oneAPI module would substitute its
+    # own libur_adapter_level_zero/libumf (same sonames across releases) underneath the
+    # Conda libsycl. Any version mismatch between the two aborts in
+    # sycl::platform::get_platforms; drop the site oneAPI entries so SYCL is pure Conda.
+    - export LD_LIBRARY_PATH="$(echo "${LD_LIBRARY_PATH:-}" | tr ':' '\n' | grep -v '^/opt/aurora/[^/]*/oneapi/' | paste -sd:)"
     # -C on the command line, not just the JULIA_CPU_TARGET variable: the variable
     # selects pkgimages but does not constrain the runtime JIT, and the AVX512-FP16
     # host-Float16 miscompile (broadcast Float16 reference failure, see ci.yml) needs
