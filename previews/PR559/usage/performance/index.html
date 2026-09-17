@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Performance Guide · oneAPI.jl</title><meta name="title" content="Performance Guide · oneAPI.jl"/><meta property="og:title" content="Performance Guide · oneAPI.jl"/><meta property="twitter:title" content="Performance Guide · oneAPI.jl"/><meta name="description" content="Documentation for oneAPI.jl."/><meta property="og:description" content="Documentation for oneAPI.jl."/><meta property="twitter:description" content="Documentation for oneAPI.jl."/><meta property="og:url" content="https://exanauts.github.io/ExaPF.jl/stable/usage/performance/"/><meta property="twitter:url" content="https://exanauts.github.io/ExaPF.jl/stable/usage/performance/"/><link rel="canonical" href="https://exanauts.github.io/ExaPF.jl/stable/usage/performance/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">oneAPI.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><span class="tocitem">Usage</span><ul><li><a class="tocitem" href="../../arrays/">Array Programming</a></li><li><a class="tocitem" href="../../kernels/">Kernel Programming</a></li><li><a class="tocitem" href="../../memory/">Memory Management</a></li><li><a class="tocitem" href="../../device/">Device Intrinsics</a></li><li class="is-active"><a class="tocitem" href>Performance Guide</a><ul class="internal"><li><a class="tocitem" href="#Quick-Wins"><span>Quick Wins</span></a></li><li><a class="tocitem" href="#Kernel-Optimization"><span>Kernel Optimization</span></a></li><li><a class="tocitem" href="#Type-Stability"><span>Type Stability</span></a></li><li><a class="tocitem" href="#Algorithmic-Optimization"><span>Algorithmic Optimization</span></a></li><li><a class="tocitem" href="#Benchmarking"><span>Benchmarking</span></a></li><li><a class="tocitem" href="#Memory-Bandwidth"><span>Memory Bandwidth</span></a></li><li><a class="tocitem" href="#Common-Performance-Issues"><span>Common Performance Issues</span></a></li><li><a class="tocitem" href="#Performance-Checklist"><span>Performance Checklist</span></a></li><li><a class="tocitem" href="#Hardware-Specific-Tuning"><span>Hardware-Specific Tuning</span></a></li><li><a class="tocitem" href="#Advanced:-Async-Operations"><span>Advanced: Async Operations</span></a></li><li><a class="tocitem" href="#Further-Resources"><span>Further Resources</span></a></li></ul></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/">Overview</a></li><li><a class="tocitem" href="../../api/context/">Context &amp; Device Management</a></li><li><a class="tocitem" href="../../api/arrays/">Array Operations</a></li><li><a class="tocitem" href="../../api/kernels/">Kernel Programming</a></li><li><a class="tocitem" href="../../api/memory/">Memory Management</a></li><li><a class="tocitem" href="../../api/compiler/">Compiler &amp; Reflection</a></li><li><a class="tocitem" href="../../level_zero/">Level Zero (oneL0)</a></li><li><a class="tocitem" href="../../onemkl/">oneMKL</a></li></ul></li><li><a class="tocitem" href="../../troubleshooting/">Troubleshooting</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Usage</a></li><li class="is-active"><a href>Performance Guide</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Performance Guide</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaGPU/oneAPI.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/JuliaGPU/oneAPI.jl/blob/master/docs/src/usage/performance.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Performance-Guide"><a class="docs-heading-anchor" href="#Performance-Guide">Performance Guide</a><a id="Performance-Guide-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Guide" title="Permalink"></a></h1><p>This guide provides tips and techniques for optimizing oneAPI.jl applications.</p><h2 id="Quick-Wins"><a class="docs-heading-anchor" href="#Quick-Wins">Quick Wins</a><a id="Quick-Wins-1"></a><a class="docs-heading-anchor-permalink" href="#Quick-Wins" title="Permalink"></a></h2><h3 id="1.-Use-Device-Memory"><a class="docs-heading-anchor" href="#1.-Use-Device-Memory">1. Use Device Memory</a><a id="1.-Use-Device-Memory-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Use-Device-Memory" title="Permalink"></a></h3><p>Device memory is fastest for GPU operations:</p><pre><code class="language-julia hljs"># ✅ Good: Device memory (default)
+a = oneArray{Float32}(undef, 1000)
+
+# ❌ Slower: Shared memory (unless CPU access is needed)
+a = oneArray{Float32,1,oneL0.SharedBuffer}(undef, 1000)</code></pre><h3 id="2.-Minimize-Data-Transfers"><a class="docs-heading-anchor" href="#2.-Minimize-Data-Transfers">2. Minimize Data Transfers</a><a id="2.-Minimize-Data-Transfers-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Minimize-Data-Transfers" title="Permalink"></a></h3><p>Keep data on GPU between operations:</p><pre><code class="language-julia hljs"># ❌ Bad: Unnecessary transfers
+for i in 1:100
+    cpu_data = Array(gpu_array)  # GPU → CPU
+    cpu_data .+= 1
+    gpu_array = oneArray(cpu_data)  # CPU → GPU
+end
+
+# ✅ Good: Keep data on GPU
+for i in 1:100
+    gpu_array .+= 1  # All on GPU
+end</code></pre><h3 id="3.-Use-Fused-Operations"><a class="docs-heading-anchor" href="#3.-Use-Fused-Operations">3. Use Fused Operations</a><a id="3.-Use-Fused-Operations-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Use-Fused-Operations" title="Permalink"></a></h3><p>Broadcasting automatically fuses operations:</p><pre><code class="language-julia hljs"># ❌ Slower: Multiple kernel launches
+a = oneArray(rand(Float32, 1000))
+b = sin.(a)
+c = b .+ 1.0f0
+d = c .* 2.0f0
+
+# ✅ Faster: Single fused kernel
+d = 2.0f0 .* (sin.(a) .+ 1.0f0)</code></pre><h3 id="4.-Specify-Float32"><a class="docs-heading-anchor" href="#4.-Specify-Float32">4. Specify Float32</a><a id="4.-Specify-Float32-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Specify-Float32" title="Permalink"></a></h3><p>GPUs are typically optimized for single precision:</p><pre><code class="language-julia hljs"># ❌ Slower: Float64 (if not needed)
+a = oneArray(rand(Float64, 1000))
+
+# ✅ Faster: Float32
+a = oneArray(rand(Float32, 1000))</code></pre><h2 id="Kernel-Optimization"><a class="docs-heading-anchor" href="#Kernel-Optimization">Kernel Optimization</a><a id="Kernel-Optimization-1"></a><a class="docs-heading-anchor-permalink" href="#Kernel-Optimization" title="Permalink"></a></h2><h3 id="Launch-Configuration"><a class="docs-heading-anchor" href="#Launch-Configuration">Launch Configuration</a><a id="Launch-Configuration-1"></a><a class="docs-heading-anchor-permalink" href="#Launch-Configuration" title="Permalink"></a></h3><p>Choose appropriate workgroup sizes:</p><pre><code class="language-julia hljs"># Typical good workgroup sizes
+items = 256   # Common choice, adjust based on hardware
+items = 128   # Try smaller if using lots of local memory
+items = 512   # Try larger for simple kernels
+
+# Calculate groups
+N = length(array)
+groups = cld(N, items)  # Ceiling division
+
+@oneapi groups=groups items=items kernel(array)</code></pre><h3 id="Memory-Access-Patterns"><a class="docs-heading-anchor" href="#Memory-Access-Patterns">Memory Access Patterns</a><a id="Memory-Access-Patterns-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Access-Patterns" title="Permalink"></a></h3><p>Coalesced memory access is crucial for performance:</p><pre><code class="language-julia hljs"># ✅ Good: Coalesced access (consecutive threads access consecutive memory)
+function good_kernel!(output, input)
+    i = get_global_id()
+    @inbounds output[i] = input[i] + 1.0f0
+    return
+end
+
+# ❌ Bad: Strided access (cache inefficient)
+function bad_kernel!(output, input, stride)
+    i = get_global_id()
+    @inbounds output[i] = input[i * stride] + 1.0f0
+    return
+end</code></pre><h3 id="Use-Local-Memory"><a class="docs-heading-anchor" href="#Use-Local-Memory">Use Local Memory</a><a id="Use-Local-Memory-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Local-Memory" title="Permalink"></a></h3><p>Local memory is faster than global memory for data reuse:</p><pre><code class="language-julia hljs">function optimized_reduction!(result, input)
+    local_id = get_local_id()
+    local_size = get_local_size()
+    group_id = get_group_id()
+
+    # Allocate local memory
+    local_mem = oneLocalArray(Float32, 256)
+
+    # Load global → local (coalesced)
+    global_id = get_global_id()
+    @inbounds local_mem[local_id] = input[global_id]
+    barrier()
+
+    # Reduce in local memory (much faster)
+    stride = local_size ÷ 2
+    while stride &gt; 0
+        if local_id &lt;= stride
+            @inbounds local_mem[local_id] += local_mem[local_id + stride]
+        end
+        barrier()
+        stride ÷= 2
+    end
+
+    # Write result
+    if local_id == 1
+        @inbounds result[group_id] = local_mem[1]
+    end
+    return
+end</code></pre><h3 id="Minimize-Barriers"><a class="docs-heading-anchor" href="#Minimize-Barriers">Minimize Barriers</a><a id="Minimize-Barriers-1"></a><a class="docs-heading-anchor-permalink" href="#Minimize-Barriers" title="Permalink"></a></h3><p>Barriers have overhead:</p><pre><code class="language-julia hljs"># ❌ Bad: Unnecessary barriers
+function wasteful_kernel!(a)
+    i = get_local_id()
+    a[i] += 1
+    barrier()  # Not needed if no data sharing
+    a[i] *= 2
+    barrier()  # Not needed
+    return
+end
+
+# ✅ Good: Barriers only when needed
+function efficient_kernel!(a, shared)
+    i = get_local_id()
+
+    # Load to shared memory
+    shared[i] = a[i]
+    barrier()  # Needed: ensure all loads complete
+
+    # Use shared data
+    result = shared[i] + shared[i+1]
+    a[i] = result
+    return
+end</code></pre><h3 id="Avoid-Divergence"><a class="docs-heading-anchor" href="#Avoid-Divergence">Avoid Divergence</a><a id="Avoid-Divergence-1"></a><a class="docs-heading-anchor-permalink" href="#Avoid-Divergence" title="Permalink"></a></h3><p>Minimize thread divergence (different execution paths):</p><pre><code class="language-julia hljs"># ❌ Bad: High divergence
+function divergent_kernel!(a)
+    i = get_global_id()
+    if i % 32 == 0
+        # Only 1 in 32 threads executes this
+        @inbounds a[i] = expensive_computation(a[i])
+    else
+        @inbounds a[i] += 1.0f0
+    end
+    return
+end
+
+# ✅ Better: Separate into different kernels
+function uniform_kernel!(a)
+    i = get_global_id()
+    @inbounds a[i] += 1.0f0
+    return
+end
+
+function sparse_kernel!(a, indices)
+    i = get_global_id()
+    if i &lt;= length(indices)
+        idx = indices[i]
+        @inbounds a[idx] = expensive_computation(a[idx])
+    end
+    return
+end</code></pre><h2 id="Type-Stability"><a class="docs-heading-anchor" href="#Type-Stability">Type Stability</a><a id="Type-Stability-1"></a><a class="docs-heading-anchor-permalink" href="#Type-Stability" title="Permalink"></a></h2><p>Type instability severely hurts performance:</p><pre><code class="language-julia hljs"># ❌ Bad: Type unstable
+function unstable_kernel!(output, input, flag)
+    i = get_global_id()
+    if flag
+        value = input[i]  # Float32
+    else
+        value = 0         # Int
+    end
+    output[i] = value * 2  # Type uncertain!
+    return
+end
+
+# ✅ Good: Type stable
+function stable_kernel!(output, input, flag)
+    i = get_global_id()
+    if flag
+        value = input[i]  # Float32
+    else
+        value = 0.0f0     # Float32
+    end
+    output[i] = value * 2.0f0  # All Float32!
+    return
+end
+
+# Check type stability
+@device_code_warntype @oneapi groups=1 items=10 stable_kernel!(output, input, true)</code></pre><h2 id="Algorithmic-Optimization"><a class="docs-heading-anchor" href="#Algorithmic-Optimization">Algorithmic Optimization</a><a id="Algorithmic-Optimization-1"></a><a class="docs-heading-anchor-permalink" href="#Algorithmic-Optimization" title="Permalink"></a></h2><h3 id="Use-Library-Functions"><a class="docs-heading-anchor" href="#Use-Library-Functions">Use Library Functions</a><a id="Use-Library-Functions-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Library-Functions" title="Permalink"></a></h3><p>Leverage optimized library implementations:</p><pre><code class="language-julia hljs">using oneAPI, LinearAlgebra
+
+# ✅ Good: Use oneMKL through LinearAlgebra
+A = oneArray(rand(Float32, 1000, 1000))
+B = oneArray(rand(Float32, 1000, 1000))
+C = A * B  # Uses optimized oneMKL
+
+# ❌ Bad: Write your own matrix multiplication
+# (unless you have a very specific use case)</code></pre><h3 id="Choose-Right-Algorithm"><a class="docs-heading-anchor" href="#Choose-Right-Algorithm">Choose Right Algorithm</a><a id="Choose-Right-Algorithm-1"></a><a class="docs-heading-anchor-permalink" href="#Choose-Right-Algorithm" title="Permalink"></a></h3><p>Some algorithms parallelize better than others:</p><pre><code class="language-julia hljs"># ❌ Sequential algorithm
+function sequential_sum(arr)
+    sum = 0.0f0
+    for x in arr
+        sum += x
+    end
+    return sum
+end
+
+# ✅ Parallel reduction
+result = sum(oneArray(data))  # Optimized parallel reduction</code></pre><h2 id="Benchmarking"><a class="docs-heading-anchor" href="#Benchmarking">Benchmarking</a><a id="Benchmarking-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmarking" title="Permalink"></a></h2><h3 id="Basic-Timing"><a class="docs-heading-anchor" href="#Basic-Timing">Basic Timing</a><a id="Basic-Timing-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-Timing" title="Permalink"></a></h3><pre><code class="language-julia hljs">using BenchmarkTools, oneAPI
+
+a = oneArray(rand(Float32, 1000))
+b = oneArray(rand(Float32, 1000))
+
+# Warmup
+c = a .+ b
+synchronize()
+
+# Benchmark
+@benchmark begin
+    c = $a .+ $b
+    synchronize()
+end</code></pre><h3 id="Accurate-GPU-Timing"><a class="docs-heading-anchor" href="#Accurate-GPU-Timing">Accurate GPU Timing</a><a id="Accurate-GPU-Timing-1"></a><a class="docs-heading-anchor-permalink" href="#Accurate-GPU-Timing" title="Permalink"></a></h3><p>Always synchronize before timing:</p><pre><code class="language-julia hljs">using oneAPI
+
+a = oneArray(rand(Float32, 1_000_000))
+
+# ❌ Wrong: Doesn&#39;t wait for GPU
+@time a .+= 1  # Only measures kernel launch overhead
+
+# ✅ Correct: Wait for GPU to finish
+@time begin
+    a .+= 1
+    synchronize()
+end</code></pre><h3 id="Profiling-with-Time"><a class="docs-heading-anchor" href="#Profiling-with-Time">Profiling with Time</a><a id="Profiling-with-Time-1"></a><a class="docs-heading-anchor-permalink" href="#Profiling-with-Time" title="Permalink"></a></h3><pre><code class="language-julia hljs">function profile_operation(a, b)
+    # Warmup
+    c = a .+ b
+    synchronize()
+
+    # Time kernel launch
+    t1 = time()
+    c = a .+ b
+    t2 = time()
+    launch_time = t2 - t1
+
+    # Time including synchronization
+    synchronize()
+    t3 = time()
+    total_time = t3 - t1
+
+    println(&quot;Launch: &quot;, launch_time * 1000, &quot; ms&quot;)
+    println(&quot;Total:  &quot;, total_time * 1000, &quot; ms&quot;)
+    println(&quot;Actual: &quot;, (total_time - launch_time) * 1000, &quot; ms&quot;)
+end
+
+a = oneArray(rand(Float32, 10_000_000))
+b = oneArray(rand(Float32, 10_000_000))
+profile_operation(a, b)</code></pre><h2 id="Memory-Bandwidth"><a class="docs-heading-anchor" href="#Memory-Bandwidth">Memory Bandwidth</a><a id="Memory-Bandwidth-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Bandwidth" title="Permalink"></a></h2><h3 id="Theoretical-Peak"><a class="docs-heading-anchor" href="#Theoretical-Peak">Theoretical Peak</a><a id="Theoretical-Peak-1"></a><a class="docs-heading-anchor-permalink" href="#Theoretical-Peak" title="Permalink"></a></h3><p>Calculate theoretical bandwidth:</p><pre><code class="language-julia hljs"># Example: Intel Iris Xe Graphics
+# 96 execution units, 1.35 GHz
+# Memory bandwidth: ~68 GB/s
+
+# Your kernel processes N Float32 values
+N = 10_000_000
+bytes_transferred = N * sizeof(Float32) * 2  # Read + Write
+
+# Measure time
+t = @elapsed begin
+    a .+= b
+    synchronize()
+end
+
+bandwidth_achieved = bytes_transferred / t / 1e9  # GB/s
+println(&quot;Bandwidth: &quot;, bandwidth_achieved, &quot; GB/s&quot;)</code></pre><h3 id="Improving-Bandwidth-Utilization"><a class="docs-heading-anchor" href="#Improving-Bandwidth-Utilization">Improving Bandwidth Utilization</a><a id="Improving-Bandwidth-Utilization-1"></a><a class="docs-heading-anchor-permalink" href="#Improving-Bandwidth-Utilization" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ✅ Good: Single pass with fusion
+result = @. a + b * c - d / e  # One pass over data
+
+# ❌ Bad: Multiple passes
+result = a .+ b
+result = result .* c
+result = result .- d
+result = result ./ e
+# Four separate passes over data!</code></pre><h2 id="Common-Performance-Issues"><a class="docs-heading-anchor" href="#Common-Performance-Issues">Common Performance Issues</a><a id="Common-Performance-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Common-Performance-Issues" title="Permalink"></a></h2><h3 id="Issue-1:-Too-Many-Small-Kernels"><a class="docs-heading-anchor" href="#Issue-1:-Too-Many-Small-Kernels">Issue 1: Too Many Small Kernels</a><a id="Issue-1:-Too-Many-Small-Kernels-1"></a><a class="docs-heading-anchor-permalink" href="#Issue-1:-Too-Many-Small-Kernels" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ❌ Bad: Many small kernel launches
+for i in 1:100
+    a .+= 1  # 100 kernel launches!
+end
+
+# ✅ Good: Single kernel or batching
+a .+= 100  # Single operation</code></pre><h3 id="Issue-2:-Unnecessary-Allocations"><a class="docs-heading-anchor" href="#Issue-2:-Unnecessary-Allocations">Issue 2: Unnecessary Allocations</a><a id="Issue-2:-Unnecessary-Allocations-1"></a><a class="docs-heading-anchor-permalink" href="#Issue-2:-Unnecessary-Allocations" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ❌ Bad: Allocates temporary
+c = a .+ b  # Allocates new array
+
+# ✅ Good: In-place operation
+c = similar(a)
+c .= a .+ b  # Uses pre-allocated array</code></pre><h3 id="Issue-3:-Wrong-Number-Type"><a class="docs-heading-anchor" href="#Issue-3:-Wrong-Number-Type">Issue 3: Wrong Number Type</a><a id="Issue-3:-Wrong-Number-Type-1"></a><a class="docs-heading-anchor-permalink" href="#Issue-3:-Wrong-Number-Type" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ❌ Bad: Mixed types
+a = oneArray(rand(Float32, 1000))
+b = a .+ 1.0  # Float64 constant!
+
+# ✅ Good: Matching types
+b = a .+ 1.0f0  # Float32 constant</code></pre><h2 id="Performance-Checklist"><a class="docs-heading-anchor" href="#Performance-Checklist">Performance Checklist</a><a id="Performance-Checklist-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Checklist" title="Permalink"></a></h2><ul><li>[ ] Using device memory (not shared unless necessary)</li><li>[ ] Minimizing CPU-GPU transfers</li><li>[ ] Using Float32 (unless Float64 required)</li><li>[ ] Fusing operations with broadcasting</li><li>[ ] Type-stable kernels (<code>@device_code_warntype</code>)</li><li>[ ] Appropriate workgroup sizes</li><li>[ ] Coalesced memory access</li><li>[ ] Minimal thread divergence</li><li>[ ] Leveraging local memory for reuse</li><li>[ ] Using library functions when available</li><li>[ ] Synchronizing before timing</li><li>[ ] Avoiding unnecessary allocations</li></ul><h2 id="Hardware-Specific-Tuning"><a class="docs-heading-anchor" href="#Hardware-Specific-Tuning">Hardware-Specific Tuning</a><a id="Hardware-Specific-Tuning-1"></a><a class="docs-heading-anchor-permalink" href="#Hardware-Specific-Tuning" title="Permalink"></a></h2><p>Different Intel GPUs have different characteristics:</p><pre><code class="language-julia hljs">using oneAPI.oneL0
+
+dev = device()
+props = properties(dev)
+compute_props = compute_properties(dev)
+
+println(&quot;Device: &quot;, props.name)
+println(&quot;EU count: &quot;, compute_props.numEUsPerSubslice *
+                       compute_props.numSubslicesPerSlice *
+                       compute_props.numSlices)
+println(&quot;Max workgroup size: &quot;, compute_props.maxTotalGroupSize)
+println(&quot;Max local memory: &quot;, compute_props.maxSharedLocalMemory, &quot; bytes&quot;)
+
+# Adjust your code based on these properties</code></pre><h2 id="Advanced:-Async-Operations"><a class="docs-heading-anchor" href="#Advanced:-Async-Operations">Advanced: Async Operations</a><a id="Advanced:-Async-Operations-1"></a><a class="docs-heading-anchor-permalink" href="#Advanced:-Async-Operations" title="Permalink"></a></h2><p>For overlapping compute and transfers (advanced users):</p><pre><code class="language-julia hljs">using oneAPI.oneL0
+
+ctx = context()
+dev = device()
+
+# Create multiple queues for async operations
+queue1 = ZeCommandQueue(ctx, dev)
+queue2 = ZeCommandQueue(ctx, dev)
+
+# Launch kernel on queue1
+execute!(queue1) do list
+    # ... kernel launch ...
+end
+
+# Overlap with transfer on queue2
+execute!(queue2) do list
+    append_copy!(list, dst, src, size)
+end
+
+# Synchronize both
+synchronize(queue1)
+synchronize(queue2)</code></pre><h2 id="Further-Resources"><a class="docs-heading-anchor" href="#Further-Resources">Further Resources</a><a id="Further-Resources-1"></a><a class="docs-heading-anchor-permalink" href="#Further-Resources" title="Permalink"></a></h2><ul><li><a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-gpu-architecture.html">Intel GPU Architecture</a></li><li><a href="https://www.intel.com/content/www/us/en/developer/tools/oneapi/programming-guide.html">oneAPI Programming Guide</a></li><li><a href="https://spec.oneapi.io/level-zero/latest/index.html">Level Zero Specification</a></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../device/">« Device Intrinsics</a><a class="docs-footer-nextpage" href="../../api/">Overview »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Tuesday 16 December 2025 09:57">Tuesday 16 December 2025</span>. Using Julia version 1.10.10.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
