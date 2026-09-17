@@ -1198,6 +1198,24 @@ int onemklSgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64
 int onemklZgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda,
                  double _Complex *tau, double _Complex *scratchpad, int64_t scratchpad_size);
 
+int onemklCgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a,
+                               int64_t lda, int64_t stride_a, float _Complex *tau, int64_t
+                               stride_tau, int64_t batch_size, float _Complex *scratchpad,
+                               int64_t scratchpad_size);
+
+int onemklDgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t
+                               lda, int64_t stride_a, double *tau, int64_t stride_tau, int64_t
+                               batch_size, double *scratchpad, int64_t scratchpad_size);
+
+int onemklSgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t
+                               lda, int64_t stride_a, float *tau, int64_t stride_tau, int64_t
+                               batch_size, float *scratchpad, int64_t scratchpad_size);
+
+int onemklZgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a,
+                               int64_t lda, int64_t stride_a, double _Complex *tau, int64_t
+                               stride_tau, int64_t batch_size, double _Complex *scratchpad,
+                               int64_t scratchpad_size);
+
 int onemklCgesvd(syclQueue_t device_queue, onemklJobsvd jobu, onemklJobsvd jobvt, int64_t m,
                  int64_t n, float _Complex *a, int64_t lda, float *s, float _Complex *u, int64_t ldu,
                  float _Complex *vt, int64_t ldvt, float _Complex *scratchpad, int64_t
@@ -1887,24 +1905,6 @@ int onemklZpotrs_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_
                                double _Complex *a, int64_t lda, int64_t stride_a, double _Complex
                                *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double
                                _Complex *scratchpad, int64_t scratchpad_size);
-
-int onemklSgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t
-                               lda, int64_t stride_a, float *tau, int64_t stride_tau, int64_t
-                               batch_size, float *scratchpad, int64_t scratchpad_size);
-
-int onemklDgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t
-                               lda, int64_t stride_a, double *tau, int64_t stride_tau, int64_t
-                               batch_size, double *scratchpad, int64_t scratchpad_size);
-
-int onemklCgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a,
-                               int64_t lda, int64_t stride_a, float _Complex *tau, int64_t
-                               stride_tau, int64_t batch_size, float _Complex *scratchpad,
-                               int64_t scratchpad_size);
-
-int onemklZgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a,
-                               int64_t lda, int64_t stride_a, double _Complex *tau, int64_t
-                               stride_tau, int64_t batch_size, double _Complex *scratchpad,
-                               int64_t scratchpad_size);
 
 int onemklSorgqr_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, int64_t k, float *a,
                                int64_t lda, int64_t stride_a, float *tau, int64_t stride_tau,
