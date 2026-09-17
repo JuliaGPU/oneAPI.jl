@@ -1,7 +1,8 @@
-# The wrappers are generated from the oneMKL headers pinned in Project.toml (2025.3.1,
-# the oneAPI toolkit shared by the Intel GPU LTS stack and, API-wise, the 2026.x rolling
-# releases): the sparse setters use the wide ABI (64-bit dims, explicit nnz) introduced
-# there, so the generated sources require oneMKL 2025.3 or newer to build.
+# The wrappers are generated from the oneMKL headers pinned in Project.toml (2026.1.0).
+# The generated C interface is identical to the one produced from the 2025.3.1 headers
+# (the toolkit of the Intel GPU LTS stack): the sparse setters use the wide ABI (64-bit
+# dims, explicit nnz) introduced in 2025.3, so the generated sources require oneMKL 2025.3
+# or newer to build.
 import oneAPI_Support_Headers_jll
 
 include("generate_helpers.jl")
@@ -86,9 +87,9 @@ function generate_headers(library::String, filename::Vector{String}; pattern::St
     # Check if the routine is a template
     template = occursin("template", header)
     if template
-      header = replace(header, "template <typename fp, oneapi::mkl::lapack::internal::is_floating_point<fp> = nullptr>         " => "")
-      header = replace(header, "template <typename fp, oneapi::mkl::lapack::internal::is_real_floating_point<fp> = nullptr>    " => "")
-      header = replace(header, "template <typename fp, oneapi::mkl::lapack::internal::is_complex_floating_point<fp> = nullptr> " => "")
+      # oneMKL <= 2025.3 spells the constraint `is_*floating_point<fp> = nullptr`,
+      # oneMKL >= 2026.0 spells it `typename = is_*floating_point<fp>`
+      header = replace(header, r"template <typename fp, (typename = )?oneapi::mkl::lapack::internal::is_(real_|complex_)?floating_point<fp>( = nullptr)?> *" => "")
 
       header = replace(header, "template <typename data_t, oneapi::mkl::lapack::internal::is_floating_point<data_t> = nullptr>" => "")
       header = replace(header, "template <typename data_t, oneapi::mkl::lapack::internal::is_real_floating_point<data_t> = nullptr>" => "")
@@ -207,6 +208,8 @@ function generate_headers(library::String, filename::Vector{String}; pattern::St
     header = replace(header, " sycl::event" => "sycl::event")
     header = replace(header, "* const* " => "**")
     header = replace(header, "int64_t**" => "int64_t **")
+    # a trailing space after the previous declaration's ';' leaves a leading space here
+    header = String(strip(header))
 
     ind1 = findfirst(' ', header)
     ind2 = findfirst('(', header)

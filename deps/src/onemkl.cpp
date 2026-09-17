@@ -2757,6 +2757,38 @@ extern "C" int onemklZgeqrf(syclQueue_t device_queue, int64_t m, int64_t n, doub
    return 0;
 }
 
+extern "C" int onemklCgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *tau, int64_t stride_tau, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
+   try {
+      auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, reinterpret_cast<std::complex<float>*>(tau), stride_tau, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
+      device_queue->val.wait_and_throw();
+   } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklDgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, int64_t stride_a, double *tau, int64_t stride_tau, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
+   try {
+      auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, a, lda, stride_a, tau, stride_tau, batch_size, scratchpad, scratchpad_size, {});
+      device_queue->val.wait_and_throw();
+   } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklSgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, int64_t stride_a, float *tau, int64_t stride_tau, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
+   try {
+      auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, a, lda, stride_a, tau, stride_tau, batch_size, scratchpad, scratchpad_size, {});
+      device_queue->val.wait_and_throw();
+   } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
+extern "C" int onemklZgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *tau, int64_t stride_tau, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
+   try {
+      auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, reinterpret_cast<std::complex<double>*>(tau), stride_tau, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
+      device_queue->val.wait_and_throw();
+   } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
+   return 0;
+}
+
 extern "C" int onemklCgesvd(syclQueue_t device_queue, onemklJobsvd jobu, onemklJobsvd jobvt, int64_t m, int64_t n, float _Complex *a, int64_t lda, float *s, float _Complex *u, int64_t ldu, float _Complex *vt, int64_t ldvt, float _Complex *scratchpad, int64_t scratchpad_size) {
    try {
       auto status = oneapi::mkl::lapack::gesvd(device_queue->val, convert(jobu), convert(jobvt), m, n, reinterpret_cast<std::complex<float>*>(a), lda, s, reinterpret_cast<std::complex<float>*>(u), ldu, reinterpret_cast<std::complex<float>*>(vt), ldvt, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
@@ -4080,38 +4112,6 @@ extern "C" int onemklCpotrs_batch_strided(syclQueue_t device_queue, onemklUplo u
 extern "C" int onemklZpotrs_batch_strided(syclQueue_t device_queue, onemklUplo uplo, int64_t n, int64_t nrhs, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *b, int64_t ldb, int64_t stride_b, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
    try {
       auto status = oneapi::mkl::lapack::potrs_batch(device_queue->val, convert(uplo), n, nrhs, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, reinterpret_cast<std::complex<double>*>(b), ldb, stride_b, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
-      device_queue->val.wait_and_throw();
-   } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
-   return 0;
-}
-
-extern "C" int onemklSgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float *a, int64_t lda, int64_t stride_a, float *tau, int64_t stride_tau, int64_t batch_size, float *scratchpad, int64_t scratchpad_size) {
-   try {
-      auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, a, lda, stride_a, tau, stride_tau, batch_size, scratchpad, scratchpad_size, {});
-      device_queue->val.wait_and_throw();
-   } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
-   return 0;
-}
-
-extern "C" int onemklDgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double *a, int64_t lda, int64_t stride_a, double *tau, int64_t stride_tau, int64_t batch_size, double *scratchpad, int64_t scratchpad_size) {
-   try {
-      auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, a, lda, stride_a, tau, stride_tau, batch_size, scratchpad, scratchpad_size, {});
-      device_queue->val.wait_and_throw();
-   } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
-   return 0;
-}
-
-extern "C" int onemklCgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, float _Complex *a, int64_t lda, int64_t stride_a, float _Complex *tau, int64_t stride_tau, int64_t batch_size, float _Complex *scratchpad, int64_t scratchpad_size) {
-   try {
-      auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<float>*>(a), lda, stride_a, reinterpret_cast<std::complex<float>*>(tau), stride_tau, batch_size, reinterpret_cast<std::complex<float>*>(scratchpad), scratchpad_size, {});
-      device_queue->val.wait_and_throw();
-   } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
-   return 0;
-}
-
-extern "C" int onemklZgeqrf_batch_strided(syclQueue_t device_queue, int64_t m, int64_t n, double _Complex *a, int64_t lda, int64_t stride_a, double _Complex *tau, int64_t stride_tau, int64_t batch_size, double _Complex *scratchpad, int64_t scratchpad_size) {
-   try {
-      auto status = oneapi::mkl::lapack::geqrf_batch(device_queue->val, m, n, reinterpret_cast<std::complex<double>*>(a), lda, stride_a, reinterpret_cast<std::complex<double>*>(tau), stride_tau, batch_size, reinterpret_cast<std::complex<double>*>(scratchpad), scratchpad_size, {});
       device_queue->val.wait_and_throw();
    } catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }
    return 0;
