@@ -160,6 +160,50 @@ end
     oneDeviceArray(Dims, ptr)
 end
 
+## Events
+
+# Level Zero has no reusable timeline/shared events, so every `record_event` creates a
+# fresh one-shot event in its own pool. The pool is created without a device list,
+# which makes the event visible to every device of the context (= driver), i.e. every
+# device `KI.device!` can select from the same task. Signal/wait scopes are `HOST`, the
+# broadest: the signal flushes caches far enough for the host *and* other devices.
+function KI.record_event(::oneAPIBackend)
+    ctx = oneAPI.context()
+    dev = oneAPI.device()
+    pool = oneAPI.oneL0.ZeEventPool(ctx, 1;
+                                    flags = oneAPI.oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    ev = oneAPI.oneL0.ZeEvent(pool, 1;
+                              signal = oneAPI.oneL0.ZE_EVENT_SCOPE_FLAG_HOST,
+                              wait = oneAPI.oneL0.ZE_EVENT_SCOPE_FLAG_HOST)
+
+    # the task's stream is an in-order immediate command list, so the signal fires once
+    # everything appended before it has completed. `execute!` first drains any pending
+    # oneMKL work on the companion queue (`mkl_wait!`), so that is captured as well.
+    oneAPI.oneL0.execute!(oneAPI.global_stream(ctx, dev)) do list
+        oneAPI.oneL0.append_signal!(list, ev)
+    end
+
+    return ev
+end
+
+function KI.wait_event(::oneAPIBackend, ev::oneAPI.oneL0.ZeEvent)
+    ctx = oneAPI.context()
+    dev = oneAPI.device()
+    if ev.pool.context == ctx
+        # non-blocking: subsequent work on the current task's (in-order) stream for this
+        # device waits on the device for the event, also when it was recorded on another
+        # device of the same context.
+        oneAPI.oneL0.execute!(oneAPI.global_stream(ctx, dev)) do list
+            oneAPI.oneL0.append_wait!(list, ev)
+        end
+    else
+        # an event from another context (a device under a different driver) cannot be
+        # waited on device-side; block the host instead, like `synchronize` does.
+        wait(ev)
+    end
+    return
+end
+
 ## Synchronization and Printing
 
 @device_override @inline function KI.barrier()
