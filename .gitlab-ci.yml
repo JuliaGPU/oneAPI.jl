@@ -8,7 +8,9 @@
 # Layout: the Aurora PBS `debug` queue caps walltime at 1 h (the only 1-node queue), so
 # everything that doesn't need a GPU — the support-library build and package
 # instantiation/precompilation — runs on the login-node shell runner into a persistent
-# depot on flare, and only the test run itself goes through PBS.
+# depot on flare, and only the test run itself goes through PBS. The whole chain runs
+# once per Julia version (latest LTS release and latest stable release), each with its
+# own depot.
 
 include:
   - project: 'anl/ci-resources/defaults'
@@ -31,6 +33,8 @@ variables:
   # from qsub; and the CPU target must be identical in every job or the batch job rebuilds
   # the package images the build job precompiled (icelake = login nodes, sapphirerapids =
   # compute nodes, -avx512fp16 = host Float16 miscompile workaround, see ci.yml).
+  # The depot only needs to be *set* here for the .bashrc guard; every job overrides it
+  # with its per-version depot (see the .julia-* templates).
   JULIA_DEPOT_PATH: /lus/flare/projects/Julia/mschanen/ci/julia_depot
   JULIA_CPU_TARGET: "generic;icelake-server;sapphirerapids,-avx512fp16"
   # Single-target variant for the runtime JIT (-C): multi-target strings are image-only
@@ -40,11 +44,36 @@ variables:
 
 stages: [build, test, coverage]
 
+# One template per tested Julia version: the latest LTS release and the latest stable
+# release. Each gets its own depot (two Pkg/precompile runs on one depot are not safe, and
+# the LocalPreferences.toml / test/Manifest.toml artifacts are version-specific anyway).
+# The jobs below are spelled out per version rather than using `parallel: matrix` because
+# GitLab does not expand variables in `needs:parallel:matrix`, so a matrix test job cannot
+# be tied to its own version's build artifacts (verified with the CI lint API on GitLab
+# 19.3).
+#
+# All jobs share ONE resource group, i.e. the whole pipeline is serialized, also across
+# pipelines. Two reasons: a build must not touch a depot while a test job reads it, and
+# the Aurora debug queue allows a single queued job per user — a second `qsub` is
+# refused outright ("would exceed queue generic's per-user limit of jobs in 'Q' state"),
+# which Jacamar reports as a plain script failure. Per-version resource groups would let
+# both batch jobs submit at once.
+.julia-1.10:
+  variables:
+    JULIA_VERSION: "1.10"
+    JULIA_DEPOT_PATH: /lus/flare/projects/Julia/mschanen/ci/julia_depot-1.10
+
+.julia-1.13:
+  variables:
+    JULIA_VERSION: "1.13"
+    JULIA_DEPOT_PATH: /lus/flare/projects/Julia/mschanen/ci/julia_depot-1.13
+
 .aurora-env:
   script:
-    # Site profile supplies julia 1.12, ONEAPI_LTS=1 and the ZE_* settings. errexit off
+    # The site julia modules supply ONEAPI_LTS=1 and the ZE_* settings; the version is
+    # loaded explicitly since the default `julia` module is still 1.12. errexit off
     # across it — profile.d scripts reference unset variables and return non-zero freely.
-    - set +eu; source /etc/profile >/dev/null 2>&1; module load julia >/dev/null 2>&1; set -eu
+    - set +eu; source /etc/profile >/dev/null 2>&1; module load julia/$JULIA_VERSION >/dev/null 2>&1; set -eu
     - command -v julia || { echo "ERROR no julia on PATH after site profile" >&2; exit 1; }
     - julia --version; echo "depot=$JULIA_DEPOT_PATH"
 
@@ -53,11 +82,11 @@ stages: [build, test, coverage]
 # depot's scratch space, so with the depot on flare the products persist across jobs at a
 # stable absolute path; the LocalPreferences.toml files it writes into the checkout just
 # point there and travel to the test job as artifacts.
-build:support:
+.build:support:
   stage: build
   extends: .aurora-shell-runner
   timeout: 3h
-  resource_group: aurora-ci-depot  # pipelines share the depot; serialize against test:lts
+  resource_group: aurora-ci
   script:
     - !reference [.aurora-env, script]
     - julia --color=yes --project=deps deps/build_local.jl
@@ -86,11 +115,11 @@ build:support:
       - test/Manifest.toml
     expire_in: 1 week
 
-test:lts:
+.test:lts:
   stage: test
   extends: .aurora-batch-runner
   timeout: 5h  # must cover PBS queue wait, not just the 1 h walltime
-  resource_group: aurora-ci-depot
+  resource_group: aurora-ci
   variables:
     ANL_AURORA_SCHEDULER_PARAMETERS: "-A Julia -q debug -l select=1,walltime=01:00:00,filesystems=home:flare,place=scatter"
   script:
@@ -125,12 +154,12 @@ test:lts:
     expire_in: 1 week
 
 # Coverage reporting must not be able to fail the build (parity with ci.yml). Only
-# created when the CODECOV_TOKEN CI/CD variable is set on the GitLab project.
-coverage:upload:
+# created when the CODECOV_TOKEN CI/CD variable is set on the GitLab project. Both
+# versions upload for the same commit; codecov merges the reports.
+.coverage:upload:
   stage: coverage
   extends: .aurora-shell-runner
   timeout: 30m
-  needs: [test:lts]
   rules:
     - if: $CODECOV_TOKEN
   allow_failure: true
@@ -138,3 +167,23 @@ coverage:upload:
     - curl -sSf -o codecov https://cli.codecov.io/latest/linux/codecov && chmod +x codecov
     - ./codecov upload-process -t "$CODECOV_TOKEN" --git-service github
         --slug JuliaGPU/oneAPI.jl --commit-sha "$CI_COMMIT_SHA" -f lcov.info
+
+# Concrete jobs. `needs` ties every job to its own version's artifacts.
+build:support:1.10:
+  extends: [.build:support, .julia-1.10]
+build:support:1.13:
+  extends: [.build:support, .julia-1.13]
+
+test:lts:1.10:
+  extends: [.test:lts, .julia-1.10]
+  needs: ["build:support:1.10"]
+test:lts:1.13:
+  extends: [.test:lts, .julia-1.13]
+  needs: ["build:support:1.13"]
+
+coverage:upload:1.10:
+  extends: [.coverage:upload, .julia-1.10]
+  needs: ["test:lts:1.10"]
+coverage:upload:1.13:
+  extends: [.coverage:upload, .julia-1.13]
+  needs: ["test:lts:1.13"]

@@ -26,6 +26,7 @@ steps:
               - "1.10"
               - "1.11"
               - "1.12"
+              - "1.13"
               - "nightly"
           adjustments:
             - with:
@@ -39,7 +40,7 @@ steps:
       - label: "Validation"
         plugins:
           - JuliaCI/julia#v1:
-              version: "1.11"
+              version: "1.13"
           - JuliaCI/julia-test#v1:
               julia_args: "-g2"
           - JuliaCI/julia-coverage#v1:
