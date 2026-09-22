@@ -4,6 +4,7 @@ using GPUArrays
 using Adapt
 
 using GPUCompiler
+import GPUToolbox
 
 import ExprTools
 
