@@ -46,23 +46,27 @@ stages: [build, test, coverage]
 
 # One template per tested Julia version: the latest LTS release and the latest stable
 # release. Each gets its own depot (two Pkg/precompile runs on one depot are not safe, and
-# the LocalPreferences.toml / test/Manifest.toml artifacts are version-specific anyway)
-# and its own resource group, which serializes build vs. test on that depot while letting
-# the two versions proceed independently. The jobs below are spelled out per version
-# rather than using `parallel: matrix` because GitLab does not expand variables in
-# `needs:parallel:matrix`, so a matrix test job cannot be tied to its own version's build
-# artifacts (verified with the CI lint API on GitLab 19.3).
+# the LocalPreferences.toml / test/Manifest.toml artifacts are version-specific anyway).
+# The jobs below are spelled out per version rather than using `parallel: matrix` because
+# GitLab does not expand variables in `needs:parallel:matrix`, so a matrix test job cannot
+# be tied to its own version's build artifacts (verified with the CI lint API on GitLab
+# 19.3).
+#
+# All jobs share ONE resource group, i.e. the whole pipeline is serialized, also across
+# pipelines. Two reasons: a build must not touch a depot while a test job reads it, and
+# the Aurora debug queue allows a single queued job per user — a second `qsub` is
+# refused outright ("would exceed queue generic's per-user limit of jobs in 'Q' state"),
+# which Jacamar reports as a plain script failure. Per-version resource groups would let
+# both batch jobs submit at once.
 .julia-1.10:
   variables:
     JULIA_VERSION: "1.10"
     JULIA_DEPOT_PATH: /lus/flare/projects/Julia/mschanen/ci/julia_depot-1.10
-  resource_group: aurora-ci-depot-1.10
 
 .julia-1.13:
   variables:
     JULIA_VERSION: "1.13"
     JULIA_DEPOT_PATH: /lus/flare/projects/Julia/mschanen/ci/julia_depot-1.13
-  resource_group: aurora-ci-depot-1.13
 
 .aurora-env:
   script:
@@ -82,6 +86,7 @@ stages: [build, test, coverage]
   stage: build
   extends: .aurora-shell-runner
   timeout: 3h
+  resource_group: aurora-ci
   script:
     - !reference [.aurora-env, script]
     - julia --color=yes --project=deps deps/build_local.jl
@@ -114,6 +119,7 @@ stages: [build, test, coverage]
   stage: test
   extends: .aurora-batch-runner
   timeout: 5h  # must cover PBS queue wait, not just the 1 h walltime
+  resource_group: aurora-ci
   variables:
     ANL_AURORA_SCHEDULER_PARAMETERS: "-A Julia -q debug -l select=1,walltime=01:00:00,filesystems=home:flare,place=scatter"
   script:
@@ -162,8 +168,7 @@ stages: [build, test, coverage]
     - ./codecov upload-process -t "$CODECOV_TOKEN" --git-service github
         --slug JuliaGPU/oneAPI.jl --commit-sha "$CI_COMMIT_SHA" -f lcov.info
 
-# Concrete jobs. `needs` ties every job to its own version's artifacts and lets each
-# version's chain advance as soon as its predecessor is done.
+# Concrete jobs. `needs` ties every job to its own version's artifacts.
 build:support:1.10:
   extends: [.build:support, .julia-1.10]
 build:support:1.13:
