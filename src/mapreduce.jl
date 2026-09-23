@@ -1,5 +1,3 @@
-## COV_EXCL_START
-
 # TODO
 # - serial version for lower latency
 # - group-stride loop to delay need for second kernel launch
@@ -134,8 +132,6 @@ function coalesced_mapreduce_device(f, op, neutral, Rreduce, Rother, R, As...)
     end
     return
 end
-
-## COV_EXCL_STOP
 
 # Aurora LTS workaround: the NEO/IGC LTS stack miscompiles *strided* (non-coalesced) global
 # reads inside the reduction kernel, silently corrupting results whenever an input is read
