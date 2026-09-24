@@ -1105,8 +1105,6 @@ end
         end
 
             @testset "oneSparseMatrixCSC" begin
-                csc_supported || continue
-                (T isa Complex) && continue
                 for S in (Int32, Int64)
                     A = sprand(T, 20, 10, 0.5)
                     A = SparseMatrixCSC{T, S}(A)
@@ -1127,8 +1125,147 @@ end
                 B = oneSparseMatrixCOO(A)
                 A2 = SparseMatrixCSC(B)
                 @test A == A2
+                    C = oneSparseMatrixCOO(B.rowInd, B.colInd, B.nzVal, size(B))
+                    @test SparseMatrixCSC(C) == A
+                    D = oneSparseMatrixCOO(oneVector(S[]), oneVector(S[]), oneVector(T[]), (0, 0)) # empty matrix
             end
         end
+
+
+            sparse_matrices = (oneSparseMatrixCSR, oneSparseMatrixCSC, oneSparseMatrixCOO)
+
+            @testset "GPUArrays interface" begin
+                @testset "$SparseMatrix" for SparseMatrix in sparse_matrices
+                    A = SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.5))
+                    B = SparseMatrix(A)
+                    @test B isa GPUArrays.AbstractGPUSparseMatrix{T, Int32}
+                    @test size(B) == (20, 10)
+                    @test size(B, 1) == 20
+                    @test size(B, 2) == 10
+                    @test size(B, 3) == 1
+                    @test nnz(B) == nnz(A)
+                    @test collect(B) == collect(A)
+                    @test Array(B) == Array(A)
+                    @test Array(oneArray(B)) == Array(A)
+                    @test SparseMatrixCSC(copy(B)) == A
+                    @test similar(B) isa SparseMatrix{T, Int32}
+                    @test nnz(similar(B)) == nnz(A)
+                    @test similar(B, Float32) isa SparseMatrix{Float32, Int32}
+                    @test similar(B, Float32, 3, 4) isa SparseMatrix{Float32, Int32}
+                    @test size(similar(B, Float32, (3, 4))) == (3, 4)
+                    @test SparseMatrixCSC(similar(B, (3, 4))) == spzeros(T, 3, 4)
+                    @test similar(B, T, (5,)) isa oneVector{T}
+                    @test SparseMatrixCSC(SparseMatrix(sparsevec(A[:, 1]))) == A[:, 1:1]
+                    @test SparseMatrix{T, Int64}(A) isa SparseMatrix{T, Int64}
+                    @test SparseMatrix{T}(SparseMatrixCSC{T, Int64}(A)) isa SparseMatrix{T, Int64}
+                    @allowscalar begin
+                        @test B[2, 3] == A[2, 3]
+                        @test all(B[i, j] == A[i, j] for i in 1:20, j in 1:10)
+                        @test Array(B[:, 2]) == A[:, 2]
+                    end
+                    @test_throws BoundsError B[0, 1]
+                    @test_throws BoundsError B[21, 1]
+                end
+                A = SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.5))
+                @test adapt(oneArray, A) isa oneSparseMatrixCSC{T, Int32}
+                @test SparseMatrixCSC(adapt(oneArray, A)) == A
+                @test adapt(oneArray{T}, SparseMatrixCSC{T, Int64}(A)) isa oneSparseMatrixCSC{T, Int64}
+                @test adapt(Array, oneSparseMatrixCSR(A)) == A
+            end
+
+            @testset "conversions" begin
+                for S in (Int32, Int64)
+                    A = SparseMatrixCSC{T, S}(sprand(T, 20, 10, 0.3))
+                    # include empty rows and columns
+                    A[3, :] .= 0
+                    A[:, 5] .= 0
+                    dropzeros!(A)
+                    @testset "$src -> $dst" for src in sparse_matrices, dst in sparse_matrices
+                        B = dst(src(A))
+                        @test B isa dst{T, S}
+                        @test SparseMatrixCSC(B) == A
+                    end
+                    @testset "transpose $SparseMatrix" for SparseMatrix in sparse_matrices
+                        B = SparseMatrix(A)
+                        @test SparseMatrixCSC(GPUArrays._sptranspose(B)) == transpose(A)
+                        @test SparseMatrixCSC(GPUArrays._spadjoint(B)) == adjoint(A)
+                        @test SparseMatrixCSC(SparseMatrix(transpose(B))) == transpose(A)
+                        @test SparseMatrixCSC(SparseMatrix(adjoint(B))) == adjoint(A)
+                        @test SparseMatrixCSC(SparseMatrix(transpose(A))) == transpose(A)
+                        @test SparseMatrixCSC(SparseMatrix(adjoint(A))) == adjoint(A)
+                    end
+                    Z = spzeros(T, S, 5, 7)
+                    @testset "empty $src -> $dst" for src in sparse_matrices, dst in sparse_matrices
+                        @test SparseMatrixCSC(dst(src(Z))) == Z
+                    end
+                end
+            end
+
+            @testset "broadcast and reductions" begin
+                @testset "$SparseMatrix" for SparseMatrix in (oneSparseMatrixCSR, oneSparseMatrixCSC)
+                    A = SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.3))
+                    B = SparseMatrix(A)
+                    C = B .* T(2)
+                    @test C isa SparseMatrix{T, Int32}
+                    @test SparseMatrixCSC(C) == A .* T(2)
+                    D = B .+ T(1)
+                    @test D isa oneMatrix{T}
+                    @test Array(D) ≈ Array(A .+ T(1))
+                    @test SparseMatrixCSC(B .* B) ≈ A .* A
+                    @test sum(B) ≈ sum(A)
+                    @test Array(sum(B; dims = 1)) ≈ sum(A; dims = 1)
+                    @test Array(sum(B; dims = 2)) ≈ sum(A; dims = 2)
+                    @test opnorm(B, 1) ≈ opnorm(A, 1)
+                    @test opnorm(B, Inf) ≈ opnorm(A, Inf)
+                    @test !iszero(B)
+                    @test iszero(B .* T(0))
+                    I, J, V = findnz(B)
+                    @test (Array(I), Array(J), Array(V)) == findnz(A)
+
+                    Asq = SparseMatrixCSC{T, Int32}(sprand(T, 10, 10, 0.3))
+                    Bsq = SparseMatrix(Asq)
+                    @test SparseMatrixCSC(Bsq + Bsq) == Asq + Asq
+                    @test SparseMatrixCSC(Bsq - transpose(Bsq)) == Asq - transpose(Asq)
+                    @test SparseMatrixCSC(adjoint(Bsq) + Bsq) == adjoint(Asq) + Asq
+                    @test !issymmetric(Bsq)
+                    @test issymmetric(SparseMatrix(Asq + transpose(Asq)))
+                    @test SparseMatrixCSC(triu(Bsq)) == triu(Asq)
+                    @test SparseMatrixCSC(tril(Bsq, -1)) == tril(Asq, -1)
+                end
+            end
+
+            @testset "lazy oneMKL handles" begin
+                A = SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.3))
+                x = oneArray(rand(T, 10))
+                @testset "$SparseMatrix" for SparseMatrix in csr_csc_matrices
+                    B = SparseMatrix(A)
+                    @test B.handle === nothing
+                    @test Array(B * x) ≈ A * Array(x)
+                    @test B.handle !== nothing
+                    # matrices produced by generic code
+                    C = B .* T(2)
+                    @test Array(C * x) ≈ (A .* T(2)) * Array(x)
+                    @test Array(SparseMatrix(oneSparseMatrixCOO(A)) * x) ≈ A * Array(x)
+                    # copyto! replaces the storage, so the handle must be recreated
+                    copyto!(C, B)
+                    @test C.handle === nothing
+                    @test Array(C * x) ≈ A * Array(x)
+                    # empty matrices do not need a handle
+                    E = similar(B, T, 20, 10)
+                    @test Array(E * x) == zeros(T, 20)
+                    y = oneArray(ones(T, 20))
+                    @test Array(mul!(y, E, x, true, T(2))) == fill(T(2), 20)
+                    oneAPI.unsafe_free!(B)
+                    @test B.handle === nothing
+                end
+                if !csc_supported
+                    @test_throws ErrorException oneSparseMatrixCSC(A) * x
+                end
+                # any element type can be stored, but oneMKL only operates on BLAS types
+                F = oneSparseMatrixCSR(sprand(Float16, 10, 10, 0.3))
+                @test F isa oneSparseMatrixCSR{Float16, Int}
+                @test_throws ArgumentError oneMKL.sparse_matrix_handle(F)
+            end
 
         @testset "sparse gemv" begin
                 @testset  "$SparseMatrix" for SparseMatrix in coo_csr_csc_matrices

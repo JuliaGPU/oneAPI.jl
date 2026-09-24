@@ -40,10 +40,33 @@ y = dA * x
 ```
 
 Three storage formats are available: `oneSparseMatrixCSR`, `oneSparseMatrixCSC` and
-`oneSparseMatrixCOO`. oneMKL's sparse back-end is CSR-based, and a `oneSparseMatrixCSC` is
-therefore stored as the CSR representation of its transpose. As a consequence the triangular
-operations (`sparse_trmv!`, `sparse_trsv!`, `sparse_trsm!`) cannot be expressed for CSC
-matrices and throw an `ArgumentError`. Prefer CSR when you have the choice.
+`oneSparseMatrixCOO`. They are subtypes of the corresponding GPUArrays.jl abstract types
+(`AbstractGPUSparseMatrixCSR`, `AbstractGPUSparseMatrixCSC`, `AbstractGPUSparseMatrixCOO`), so the
+generic sparse functionality of GPUArrays.jl is available: broadcasting (zero-preserving functions
+return a sparse matrix, others a dense `oneArray`), `sum`/`mapreduce` (also along a dimension),
+`norm`/`opnorm`, `findnz`, `triu`/`tril`/`kron`, `iszero`, and scalar indexing under
+`GPUArrays.@allowscalar`. Matrices can be converted between the three formats, transposed and
+added on the device, and `adapt(oneArray, A)` of a `SparseMatrixCSC` yields a `oneSparseMatrixCSC`.
+
+```julia
+dA = oneSparseMatrixCSR(sprand(Float32, 100, 100, 0.1))
+dB = dA .* 2f0                      # oneSparseMatrixCSR
+dC = dA .+ 1f0                      # dense oneMatrix
+sum(dA; dims=1)                     # row vector
+dAt = oneSparseMatrixCSC(dA)        # format conversion, on the device
+dS = dA + transpose(dA)             # sparse addition
+```
+
+Any element type can be stored in these matrices, but the oneMKL operations (`*`, `mul!`, the
+triangular solves, and the `sparse_*!` wrappers) require `Float32`, `Float64`, `ComplexF32` or
+`ComplexF64` values with `Int32` or `Int64` indices. The oneMKL matrix handle is created lazily
+when such an operation is first invoked; it refers to the storage vectors of the matrix, which
+therefore must not be modified in place afterwards (use `copyto!` or create a new matrix instead).
+
+oneMKL's sparse back-end is CSR-based, and a `oneSparseMatrixCSC` is therefore handed to oneMKL as
+the CSR representation of its transpose (this requires oneMKL 2025.3 or later). As a consequence
+the triangular operations (`sparse_trmv!`, `sparse_trsv!`, `sparse_trsm!`) cannot be expressed
+for CSC matrices and throw an `ArgumentError`. Prefer CSR when you have the choice.
 
 ## FFTs
 
