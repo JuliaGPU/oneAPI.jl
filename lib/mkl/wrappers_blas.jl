@@ -1136,6 +1136,8 @@ function trsm(side::Char,
     trsm!(side, uplo, transa, diag, alpha, A, copy(B))
 end
 
+# out-of-place "variants": C = alpha * op(A) * B + beta * C and C = alpha * op(A) \ B + beta * C
+# (or B * op(A) resp. B / op(A) for side = 'R'). B is left untouched.
 for (mmname_variant, smname_variant, elty) in
         ((:onemklDtrmm_variant, :onemklDtrsm_variant, :Float64),
          (:onemklStrmm_variant, :onemklStrsm_variant, :Float32),
@@ -1155,12 +1157,13 @@ for (mmname_variant, smname_variant, elty) in
             mA, nA = size(A)
             if mA != nA throw(DimensionMismatch("A must be square")) end
             if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trmm!")) end
+            if size(C) != (m, n) throw(DimensionMismatch("C must have the same size as B")) end
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $mmname_variant(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
-            B
+            C
         end
 
         function trsm!(side::Char,
@@ -1176,12 +1179,13 @@ for (mmname_variant, smname_variant, elty) in
             mA, nA = size(A)
             if mA != nA throw(DimensionMismatch("A must be square")) end
             if nA != (side == 'L' ? m : n) throw(DimensionMismatch("trsm!")) end
+            if size(C) != (m, n) throw(DimensionMismatch("C must have the same size as B")) end
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
-            queue = global_queue(context(A), device())
+            queue = global_queue(context(A), device(A))
             $smname_variant(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
-            B
+            C
         end
     end
 end
