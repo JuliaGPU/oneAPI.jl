@@ -14,6 +14,12 @@ import Adapt: adapt
 # convert sparse matrices freely without paying for oneMKL handle set-up, and so that the struct
 # can hold element types oneMKL does not support.
 
+# The storage vectors are often shared between matrices (e.g. the output of a single-input
+# broadcast reuses the pointer array of its input, and type conversions reuse the vectors whose
+# type does not change). Every matrix therefore holds its own reference to the underlying
+# memory, so that `unsafe_free!` on one matrix does not free the storage of another.
+_own_ref(x::oneVector) = GPUArrays.derive(eltype(x), x, size(x), 0)
+
 mutable struct oneSparseMatrixCSR{Tv, Ti} <: GPUArrays.AbstractGPUSparseMatrixCSR{Tv, Ti}
     handle::Union{Nothing, matrix_handle_t}
     rowPtr::oneVector{Ti}
@@ -26,7 +32,7 @@ mutable struct oneSparseMatrixCSR{Tv, Ti} <: GPUArrays.AbstractGPUSparseMatrixCS
             rowPtr::oneVector{Ti}, colVal::oneVector{Ti}, nzVal::oneVector{Tv},
             dims::NTuple{2, <:Integer}
         ) where {Tv, Ti <: Integer}
-        A = new{Tv, Ti}(nothing, rowPtr, colVal, nzVal, Int.(dims), Ti(length(nzVal)))
+        A = new{Tv, Ti}(nothing, _own_ref(rowPtr), _own_ref(colVal), _own_ref(nzVal), Int.(dims), Ti(length(nzVal)))
         return finalizer(sparse_release_matrix_handle, A)
     end
 end
@@ -43,7 +49,7 @@ mutable struct oneSparseMatrixCSC{Tv, Ti} <: GPUArrays.AbstractGPUSparseMatrixCS
             colPtr::oneVector{Ti}, rowVal::oneVector{Ti}, nzVal::oneVector{Tv},
             dims::NTuple{2, <:Integer}
         ) where {Tv, Ti <: Integer}
-        A = new{Tv, Ti}(nothing, colPtr, rowVal, nzVal, Int.(dims), Ti(length(nzVal)))
+        A = new{Tv, Ti}(nothing, _own_ref(colPtr), _own_ref(rowVal), _own_ref(nzVal), Int.(dims), Ti(length(nzVal)))
         return finalizer(sparse_release_matrix_handle, A)
     end
 end
@@ -60,7 +66,7 @@ mutable struct oneSparseMatrixCOO{Tv, Ti} <: GPUArrays.AbstractGPUSparseMatrixCO
             rowInd::oneVector{Ti}, colInd::oneVector{Ti}, nzVal::oneVector{Tv},
             dims::NTuple{2, <:Integer}
         ) where {Tv, Ti <: Integer}
-        A = new{Tv, Ti}(nothing, rowInd, colInd, nzVal, Int.(dims), Ti(length(nzVal)))
+        A = new{Tv, Ti}(nothing, _own_ref(rowInd), _own_ref(colInd), _own_ref(nzVal), Int.(dims), Ti(length(nzVal)))
         return finalizer(sparse_release_matrix_handle, A)
     end
 end
@@ -175,33 +181,35 @@ Base.copy(A::oneSparseMatrixCSC{Tv, Ti}) where {Tv, Ti} =
 Base.copy(A::oneSparseMatrixCOO{Tv, Ti}) where {Tv, Ti} =
     oneSparseMatrixCOO{Tv, Ti}(copy(A.rowInd), copy(A.colInd), copy(A.nzVal), size(A))
 
+_copy_as(::Type{T}, x::oneVector) where {T} = eltype(x) === T ? copy(x) : T.(x)
+
 # `copyto!` may change the sparsity structure, so it replaces the storage vectors (they may be
 # shared with other matrices, e.g. the output of a single-input broadcast reuses the pointer
 # array of its input) and drops the oneMKL handle, which refers to the old storage.
-function Base.copyto!(dst::oneSparseMatrixCSR{Tv, Ti}, src::oneSparseMatrixCSR{Tv, Ti}) where {Tv, Ti}
+function Base.copyto!(dst::oneSparseMatrixCSR{Tv, Ti}, src::oneSparseMatrixCSR) where {Tv, Ti}
     size(dst) == size(src) || throw(ArgumentError("Inconsistent Sparse Matrix size"))
     _invalidate_handle!(dst)
-    dst.rowPtr = copy(src.rowPtr)
-    dst.colVal = copy(src.colVal)
-    dst.nzVal = copy(src.nzVal)
+    dst.rowPtr = _copy_as(Ti, src.rowPtr)
+    dst.colVal = _copy_as(Ti, src.colVal)
+    dst.nzVal = _copy_as(Tv, src.nzVal)
     dst.nnz = src.nnz
     return dst
 end
-function Base.copyto!(dst::oneSparseMatrixCSC{Tv, Ti}, src::oneSparseMatrixCSC{Tv, Ti}) where {Tv, Ti}
+function Base.copyto!(dst::oneSparseMatrixCSC{Tv, Ti}, src::oneSparseMatrixCSC) where {Tv, Ti}
     size(dst) == size(src) || throw(ArgumentError("Inconsistent Sparse Matrix size"))
     _invalidate_handle!(dst)
-    dst.colPtr = copy(src.colPtr)
-    dst.rowVal = copy(src.rowVal)
-    dst.nzVal = copy(src.nzVal)
+    dst.colPtr = _copy_as(Ti, src.colPtr)
+    dst.rowVal = _copy_as(Ti, src.rowVal)
+    dst.nzVal = _copy_as(Tv, src.nzVal)
     dst.nnz = src.nnz
     return dst
 end
-function Base.copyto!(dst::oneSparseMatrixCOO{Tv, Ti}, src::oneSparseMatrixCOO{Tv, Ti}) where {Tv, Ti}
+function Base.copyto!(dst::oneSparseMatrixCOO{Tv, Ti}, src::oneSparseMatrixCOO) where {Tv, Ti}
     size(dst) == size(src) || throw(ArgumentError("Inconsistent Sparse Matrix size"))
     _invalidate_handle!(dst)
-    dst.rowInd = copy(src.rowInd)
-    dst.colInd = copy(src.colInd)
-    dst.nzVal = copy(src.nzVal)
+    dst.rowInd = _copy_as(Ti, src.rowInd)
+    dst.colInd = _copy_as(Ti, src.colInd)
+    dst.nzVal = _copy_as(Tv, src.nzVal)
     dst.nnz = src.nnz
     return dst
 end

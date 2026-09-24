@@ -1267,6 +1267,74 @@ end
                 @test_throws ArgumentError oneMKL.sparse_matrix_handle(F)
             end
 
+            @testset "shared storage" begin
+                A = SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.3))
+                x = oneArray(rand(T, 10))
+                @testset "$SparseMatrix" for SparseMatrix in csr_csc_matrices
+                    B = SparseMatrix(A)
+                    @test Array(B * x) ≈ A * Array(x)
+                    # a single-input broadcast reuses the pointer array of its input
+                    C = B .* T(2)
+                    oneAPI.unsafe_free!(C)
+                    @test SparseMatrixCSC(B) == A
+                    @test Array(B * x) ≈ A * Array(x)
+                    # converting the index type reuses the values
+                    D = SparseMatrix{T, Int64}(B)
+                    oneAPI.unsafe_free!(D)
+                    @test SparseMatrixCSC(B) == A
+                    @test Array(B * x) ≈ A * Array(x)
+                end
+            end
+
+            @testset "copyto! with different types" begin
+                A = SparseMatrixCSC{T, Int64}(sprand(T, 20, 10, 0.3))
+                x = oneArray(rand(T, 10))
+                # COO matrices have no `*` method, only the oneMKL wrapper
+                matvec(M, x) = oneMKL.sparse_gemv!('N', one(T), M, x, zero(T), similar(x, size(M, 1)))
+                @testset "$SparseMatrix" for SparseMatrix in coo_csr_csc_matrices
+                    src = SparseMatrix(A)
+                    dst = SparseMatrix(SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.1)))
+                    matvec(dst, x) # create a handle
+                    shared = typeof(dst)(oneMKL._storage(dst)..., size(dst))
+                    expected = SparseMatrixCSC(shared)
+                    copyto!(dst, src)
+                    @test dst isa SparseMatrix{T, Int32}
+                    @test dst.handle === nothing
+                    @test SparseMatrixCSC(dst) == A
+                    @test Array(matvec(dst, x)) ≈ A * Array(x)
+                    # matrices sharing the old storage are left untouched
+                    @test SparseMatrixCSC(shared) == expected
+                end
+            end
+
+            @testset "empty triangular matrices" begin
+                E = oneSparseMatrixCSR(spzeros(T, 10, 10))
+                x = rand(T, 10)
+                y = rand(T, 10)
+                alpha = rand(T)
+                beta = rand(T)
+                # with a unit diagonal, an empty triangular matrix is the identity
+                dy = oneVector(y)
+                oneMKL.sparse_trmv!('L', 'N', 'U', alpha, E, oneVector(x), beta, dy)
+                @test collect(dy) ≈ alpha * x + beta * y
+                dy = oneVector(y)
+                oneMKL.sparse_trmv!('L', 'N', 'N', alpha, E, oneVector(x), beta, dy)
+                @test collect(dy) ≈ beta * y
+                dy = oneVector(y)
+                oneMKL.sparse_trsv!('L', 'N', 'U', alpha, E, oneVector(x), dy)
+                @test collect(dy) ≈ alpha * x
+                @test_throws SingularException oneMKL.sparse_trsv!('L', 'N', 'N', alpha, E, oneVector(x), dy)
+                X = rand(T, 10, 4)
+                dY = oneMatrix(zeros(T, 10, 4))
+                oneMKL.sparse_trsm!('U', 'N', 'N', 'U', alpha, E, oneMatrix(X), dY)
+                @test collect(dY) ≈ alpha * X
+                dY = oneMatrix(zeros(T, 10, 4))
+                oneMKL.sparse_trsm!('U', 'N', 'C', 'U', alpha, E, oneMatrix(collect(X')), dY)
+                @test collect(dY) ≈ alpha * X
+                @test_throws SingularException oneMKL.sparse_trsm!('U', 'N', 'N', 'N', alpha, E, oneMatrix(X), dY)
+                @test collect(UnitLowerTriangular(E) \ oneVector(x)) ≈ x
+            end
+
         @testset "sparse gemv" begin
                 @testset  "$SparseMatrix" for SparseMatrix in coo_csr_csc_matrices
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]

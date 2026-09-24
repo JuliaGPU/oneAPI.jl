@@ -75,6 +75,29 @@ function _scale_output!(beta::Number, y::AbstractArray)
     return y
 end
 
+# an empty triangular matrix is the identity if it has a unit diagonal, and singular otherwise
+# (unless it has no rows or columns, in which case there is nothing to compute)
+_empty_triangular_is_identity(diag::Char, A::oneAbstractSparseMatrix) =
+    diag == 'U' || any(iszero, size(A))
+
+# result of op(A) * x for an empty triangular A
+function _empty_trmv!(diag::Char, alpha::Number, x::AbstractVector, beta::Number, y::AbstractVector)
+    _scale_output!(beta, y)
+    diag == 'U' && (y .+= alpha .* x)
+    return y
+end
+
+# result of op(A) \ alpha * op(X) for an empty triangular A
+function _empty_trsm!(
+        diag::Char, A::oneAbstractSparseMatrix, alpha::Number, transX::Char,
+        X::AbstractArray, Y::AbstractArray
+    )
+    _empty_triangular_is_identity(diag, A) || throw(LinearAlgebra.SingularException(1))
+    opX = transX == 'N' ? X : transX == 'T' ? permutedims(X) : conj.(permutedims(X))
+    Y .= alpha .* opX
+    return Y
+end
+
 # drop the cached oneMKL handle, e.g. because the storage vectors are about to be replaced
 function _invalidate_handle!(A::oneAbstractSparseMatrix)
     handle = A.handle
@@ -498,7 +521,7 @@ for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
-            _mkl_empty(A) && return _scale_output!(beta, y)
+            _mkl_empty(A) && return _empty_trmv!(diag, alpha, x, beta, y)
             queue = global_queue(context(y), device(y))
             $fname(sycl_queue(queue), uplo, trans, diag, alpha, sparse_matrix_handle(A), x, beta, y)
             y
@@ -532,7 +555,7 @@ for (fname, elty) in (
                 y::oneStridedVector{$elty}
             )
 
-            _mkl_empty(A) && return _scale_output!(beta, y)
+            _mkl_empty(A) && return _empty_trmv!(diag, alpha, x, beta, y)
             # Intel oneAPI sparse trmv only supports nontrans operations.
             # Since CSC(A) is stored as CSR(A^T), we cannot map CSC operations
             # to CSR operations for triangular operations without transpose support.
@@ -577,7 +600,7 @@ for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
                               x::oneStridedVector{$elty},
                               y::oneStridedVector{$elty})
 
-            _mkl_empty(A) && throw(ArgumentError("cannot perform a triangular solve with an empty sparse matrix"))
+            _mkl_empty(A) && return _empty_trsm!(diag, A, alpha, 'N', x, y)
             queue = global_queue(context(y), device(y))
             $fname(sycl_queue(queue), uplo, trans, diag, alpha, sparse_matrix_handle(A), x, y)
             y
@@ -609,7 +632,7 @@ for (fname, elty) in (
                 y::oneStridedVector{$elty}
             )
 
-            _mkl_empty(A) && throw(ArgumentError("cannot perform a triangular solve with an empty sparse matrix"))
+            _mkl_empty(A) && return _empty_trsm!(diag, A, alpha, 'N', x, y)
             throw(
                 ArgumentError(
                     "sparse_trsv! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
@@ -652,7 +675,7 @@ for (fname, elty) in ((:onemklSsparse_trsm, :Float32),
                               X::oneStridedMatrix{$elty},
                               Y::oneStridedMatrix{$elty})
 
-            _mkl_empty(A) && throw(ArgumentError("cannot perform a triangular solve with an empty sparse matrix"))
+            _mkl_empty(A) && return _empty_trsm!(diag, A, alpha, transX, X, Y)
             mX, nX = size(X)
             mY, nY = size(Y)
             (mX != mY) && (transX == 'N') && throw(ArgumentError("X and Y must have the same number of rows."))
@@ -703,7 +726,7 @@ for (fname, elty) in (
                 Y::oneStridedMatrix{$elty}
             )
 
-            _mkl_empty(A) && throw(ArgumentError("cannot perform a triangular solve with an empty sparse matrix"))
+            _mkl_empty(A) && return _empty_trsm!(diag, A, alpha, transX, X, Y)
             # Intel oneAPI sparse trsm only supports nontrans operations for the matrix A.
             # Since CSC(A) is stored as CSR(A^T), we cannot map CSC operations
             # to CSR operations for triangular solve operations without transpose support.
