@@ -141,8 +141,11 @@ stages: [build, test, coverage]
     # Base.julia_cmd().
     # --code-coverage propagates to the parallel workers via Base.julia_cmd(), as the
     # cpu-target does (see ci.yml). Every LTS-gated branch is unreachable on the rolling
-    # stack, so this job is the only coverage signal for those paths.
-    - julia -C "$JULIA_JIT_TARGET" --code-coverage=user --color=yes --project=test test/runtests.jl --quickfail
+    # stack, so this job is the only coverage signal for those paths. Track only the
+    # checkout: `user` also covers every dependency, so each of the ~45 workers writes
+    # thousands of .cov files into the depot on flare, which stretches worker start-up
+    # and shutdown past Malt's fixed 30 s / 20 s timeouts and fails the run.
+    - julia -C "$JULIA_JIT_TARGET" --code-coverage=@$CI_PROJECT_DIR --color=yes --project=test test/runtests.jl --quickfail
     # Collapse the per-file .cov output into lcov.info for the upload job; directories
     # match the buildkite julia-coverage plugin's.
     - julia --color=yes --project=$JULIA_DEPOT_PATH/environments/coverage -e '
