@@ -121,6 +121,19 @@ init_worker_code = quote
     end
     TestSuite.supported_eltypes(::Type{<:oneArray}) = eltypes
 
+    # run the GPUArrays sparse testsuite on the oneMKL sparse matrix types (COO is excluded
+    # because GPUArrays' generic sparse broadcast only supports vectors, CSR and CSC).
+    # oneMKL itself is only needed for linear algebra, so integer element types are the only
+    # ones to exclude: the testsuite's sprand/mapreduce checks do not make sense for them.
+    TestSuite.sparse_types(::Type{<:oneArray}) = (oneMKL.oneSparseMatrixCSR, oneMKL.oneSparseMatrixCSC)
+    function TestSuite.supported_eltypes(::Type{<:oneArray}, test)
+        typs = copy(eltypes)
+        if startswith(string(test), "test_sparse")
+            filter!(ET -> !(ET <: Integer || ET <: Complex{<:Integer}), typs)
+        end
+        return typs
+    end
+
 
     const validation_layer = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
     const parameter_validation = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
@@ -173,6 +186,7 @@ end
 
 init_code = quote
     using oneAPI, Adapt
+    using GPUArrays: GPUArrays, @allowscalar
 
     import ..TestSuite, ..testf
     import ..eltypes, ..float16_supported, ..float64_supported,

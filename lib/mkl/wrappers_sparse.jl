@@ -6,12 +6,16 @@
 const _deferred_sparse_handles = Vector{matrix_handle_t}()
 const _deferred_sparse_handles_lock = ReentrantLock()
 
-function sparse_release_matrix_handle(A::oneAbstractSparseMatrix)
-    return if A.handle !== nothing
-        lock(_deferred_sparse_handles_lock) do
-            push!(_deferred_sparse_handles, A.handle)
-        end
+function _defer_release(handle::matrix_handle_t)
+    return lock(_deferred_sparse_handles_lock) do
+        push!(_deferred_sparse_handles, handle)
     end
+end
+
+function sparse_release_matrix_handle(A::oneAbstractSparseMatrix)
+    handle = A.handle
+    handle === nothing || _defer_release(handle)
+    return
 end
 
 function flush_deferred_sparse_releases()
@@ -50,6 +54,94 @@ function _check_csc_support()
     )
 end
 
+
+## lazy oneMKL matrix handles
+
+# oneMKL operations are only defined for these element and index types; matrices with other
+# types can still be created and used with the generic GPUArrays functionality.
+const onemklSparseFloat = onemklFloat
+const onemklSparseInt = Union{Int32, Int64}
+
+# matrices without stored entries never get a handle: the operations short-circuit instead
+_mkl_empty(A::oneAbstractSparseMatrix) = nnz(A) == 0 || any(iszero, size(A))
+
+# result of op(A) * x for an empty A
+function _scale_output!(beta::Number, y::AbstractArray)
+    if iszero(beta)
+        fill!(y, zero(eltype(y)))
+    else
+        y .*= beta
+    end
+    return y
+end
+
+# an empty triangular matrix is the identity if it has a unit diagonal, and singular otherwise
+# (unless it has no rows or columns, in which case there is nothing to compute)
+_empty_triangular_is_identity(diag::Char, A::oneAbstractSparseMatrix) =
+    diag == 'U' || any(iszero, size(A))
+
+# result of op(A) * x for an empty triangular A
+function _empty_trmv!(diag::Char, alpha::Number, x::AbstractVector, beta::Number, y::AbstractVector)
+    _scale_output!(beta, y)
+    diag == 'U' && (y .+= alpha .* x)
+    return y
+end
+
+# result of op(A) \ alpha * op(X) for an empty triangular A
+function _empty_trsm!(
+        diag::Char, A::oneAbstractSparseMatrix, alpha::Number, transX::Char,
+        X::AbstractArray, Y::AbstractArray
+    )
+    _empty_triangular_is_identity(diag, A) || throw(LinearAlgebra.SingularException(1))
+    opX = transX == 'N' ? X : transX == 'T' ? permutedims(X) : conj.(permutedims(X))
+    Y .= alpha .* opX
+    return Y
+end
+
+# drop the cached oneMKL handle, e.g. because the storage vectors are about to be replaced
+function _invalidate_handle!(A::oneAbstractSparseMatrix)
+    handle = A.handle
+    handle === nothing && return A
+    A.handle = nothing
+    _defer_release(handle)
+    return A
+end
+
+"""
+    sparse_matrix_handle(A::oneAbstractSparseMatrix)
+
+Return the oneMKL matrix handle describing `A`, creating it on first use. The handle refers to
+the storage vectors of `A`, so those must not be replaced or resized afterwards (use `copyto!`,
+which takes care of this, or construct a new matrix).
+"""
+function sparse_matrix_handle(A::oneAbstractSparseMatrix)
+    handle = A.handle
+    handle === nothing || return handle
+    _mkl_empty(A) && throw(ArgumentError("cannot create a oneMKL handle for an empty sparse matrix"))
+
+    flush_deferred_sparse_releases()
+    Support._check_sparse_abi()
+    handle_ptr = Ref{matrix_handle_t}()
+    onemklXsparse_init_matrix_handle(handle_ptr)
+    try
+        _set_matrix_data!(A, handle_ptr[])
+    catch
+        _defer_release(handle_ptr[])
+        rethrow()
+    end
+    A.handle = handle_ptr[]
+    return handle_ptr[]
+end
+
+function _set_matrix_data!(A::oneAbstractSparseMatrix, handle::matrix_handle_t)
+    throw(
+        ArgumentError(
+            "oneMKL sparse operations only support Float32, Float64, ComplexF32 and ComplexF64 " *
+                "matrices with Int32 or Int64 indices, got $(typeof(A))"
+        )
+    )
+end
+
 for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int32),
                              (:onemklSsparse_set_csr_data_64, :Float32   , :Int64),
                              (:onemklDsparse_set_csr_data   , :Float64   , :Int32),
@@ -59,81 +151,20 @@ for (fname, elty, intty) in ((:onemklSsparse_set_csr_data   , :Float32   , :Int3
                              (:onemklZsparse_set_csr_data   , :ComplexF64, :Int32),
                              (:onemklZsparse_set_csr_data_64, :ComplexF64, :Int64))
     @eval begin
-
-        function oneSparseMatrixCSR(
-                rowPtr::oneVector{$intty}, colVal::oneVector{$intty},
-                nzVal::oneVector{$elty}, dims::NTuple{2, Int}
-            )
-            flush_deferred_sparse_releases()
-            handle_ptr = Ref{matrix_handle_t}()
-            onemklXsparse_init_matrix_handle(handle_ptr)
-            m, n = dims
-            nnzA = length(nzVal)
-            queue = global_queue(context(nzVal), device(nzVal))
-            # Don't update handle if matrix is empty
-            if m != 0 && n != 0
-                Support._check_sparse_abi()
-                $fname(sycl_queue(queue), handle_ptr[], m, n, nnzA, 'O', rowPtr, colVal, nzVal)
-                dA = oneSparseMatrixCSR{$elty, $intty}(handle_ptr[], rowPtr, colVal, nzVal, (m, n), nnzA)
-                finalizer(sparse_release_matrix_handle, dA)
-            else
-                dA = oneSparseMatrixCSR{$elty, $intty}(nothing, rowPtr, colVal, nzVal, (m, n), nnzA)
-            end
-            return dA
-        end
-
-        function oneSparseMatrixCSC(
-                colPtr::oneVector{$intty}, rowVal::oneVector{$intty},
-                nzVal::oneVector{$elty}, dims::NTuple{2, Int}
-            )
-            flush_deferred_sparse_releases()
-            queue = global_queue(context(nzVal), device(nzVal))
-            handle_ptr = Ref{matrix_handle_t}()
-            onemklXsparse_init_matrix_handle(handle_ptr)
-            m, n = dims
-            nnzA = length(nzVal)
-            # Don't update handle if matrix is empty
-            if m != 0 && n != 0
-                Support._check_sparse_abi()
-                _check_csc_support()
-                $fname(sycl_queue(queue), handle_ptr[], n, m, nnzA, 'O', colPtr, rowVal, nzVal)  # CSC of A is CSR of Aᵀ
-                dA = oneSparseMatrixCSC{$elty, $intty}(handle_ptr[], colPtr, rowVal, nzVal, (m, n), nnzA)
-                finalizer(sparse_release_matrix_handle, dA)
-            else
-                dA = oneSparseMatrixCSC{$elty, $intty}(nothing, colPtr, rowVal, nzVal, (m, n), nnzA)
-            end
-            return dA
-        end
-
-
-        function oneSparseMatrixCSR(A::SparseMatrixCSC{$elty, $intty})
+        function _set_matrix_data!(A::oneSparseMatrixCSR{$elty, $intty}, handle::matrix_handle_t)
             m, n = size(A)
-            At = SparseMatrixCSC(A |> transpose)
-            rowPtr = oneVector{$intty}(At.colptr)
-            colVal = oneVector{$intty}(At.rowval)
-            nzVal = oneVector{$elty}(At.nzval)
-            return oneSparseMatrixCSR(rowPtr, colVal, nzVal, (m, n))
+            queue = global_queue(context(A.nzVal), device(A.nzVal))
+            $fname(sycl_queue(queue), handle, m, n, nnz(A), 'O', A.rowPtr, A.colVal, A.nzVal)
+            return
         end
 
-        function SparseArrays.SparseMatrixCSC(A::oneSparseMatrixCSR{$elty, $intty})
-            handle_ptr = Ref{matrix_handle_t}()
-            At = SparseMatrixCSC(reverse(A.dims)..., Vector(A.rowPtr), Vector(A.colVal), Vector(A.nzVal))
-            A_csc = SparseMatrixCSC(At |> transpose)
-            return A_csc
-        end
-
-        function oneSparseMatrixCSC(A::SparseMatrixCSC{$elty, $intty})
+        function _set_matrix_data!(A::oneSparseMatrixCSC{$elty, $intty}, handle::matrix_handle_t)
+            _check_csc_support()
             m, n = size(A)
-            colPtr = oneVector{$intty}(A.colptr)
-            rowVal = oneVector{$intty}(A.rowval)
-            nzVal = oneVector{$elty}(A.nzval)
-            return oneSparseMatrixCSC(colPtr, rowVal, nzVal, (m, n))
-        end
-
-        function SparseArrays.SparseMatrixCSC(A::oneSparseMatrixCSC{$elty, $intty})
-            handle_ptr = Ref{matrix_handle_t}()
-            A_csc = SparseMatrixCSC(A.dims..., Vector(A.colPtr), Vector(A.rowVal), Vector(A.nzVal))
-            return A_csc
+            queue = global_queue(context(A.nzVal), device(A.nzVal))
+            # CSC of A is CSR of Aᵀ
+            $fname(sycl_queue(queue), handle, n, m, nnz(A), 'O', A.colPtr, A.rowVal, A.nzVal)
+            return
         end
     end
 end
@@ -147,35 +178,23 @@ for (fname, elty, intty) in ((:onemklSsparse_set_coo_data   , :Float32   , :Int3
                              (:onemklZsparse_set_coo_data   , :ComplexF64, :Int32),
                              (:onemklZsparse_set_coo_data_64, :ComplexF64, :Int64))
     @eval begin
-        function oneSparseMatrixCOO(A::SparseMatrixCSC{$elty, $intty})
-            flush_deferred_sparse_releases()
-            handle_ptr = Ref{matrix_handle_t}()
-            onemklXsparse_init_matrix_handle(handle_ptr)
+        function _set_matrix_data!(A::oneSparseMatrixCOO{$elty, $intty}, handle::matrix_handle_t)
             m, n = size(A)
-            row, col, val = findnz(A)
-            rowInd = oneVector{$intty}(row)
-            colInd = oneVector{$intty}(col)
-            nzVal = oneVector{$elty}(val)
-            nnzA = length(val)
-            queue = global_queue(context(nzVal), device(nzVal))
-            if m != 0 && n != 0
-                Support._check_sparse_abi()
-                $fname(sycl_queue(queue), handle_ptr[], m, n, nnzA, 'O', rowInd, colInd, nzVal)
-                dA = oneSparseMatrixCOO{$elty, $intty}(handle_ptr[], rowInd, colInd, nzVal, (m, n), nnzA)
-                finalizer(sparse_release_matrix_handle, dA)
-            else
-                dA = oneSparseMatrixCOO{$elty, $intty}(nothing, rowInd, colInd, nzVal, (m, n), nnzA)
-            end
-            return dA
-        end
-
-        function SparseArrays.SparseMatrixCSC(A::oneSparseMatrixCOO{$elty, $intty})
-            handle_ptr = Ref{matrix_handle_t}()
-            A = sparse(Vector(A.rowInd), Vector(A.colInd), Vector(A.nzVal), A.dims...)
-            return A
+            queue = global_queue(context(A.nzVal), device(A.nzVal))
+            $fname(sycl_queue(queue), handle, m, n, nnz(A), 'O', A.rowInd, A.colInd, A.nzVal)
+            return
         end
     end
 end
+
+function oneAPI.unsafe_free!(A::oneAbstractSparseMatrix)
+    _invalidate_handle!(A)
+    foreach(unsafe_free!, _storage(A))
+    return
+end
+
+
+## operations
 
 for SparseMatrix in (:oneSparseMatrixCSR, :oneSparseMatrixCOO)
     for (fname, elty) in ((:onemklSsparse_gemv, :Float32),
@@ -190,8 +209,9 @@ for SparseMatrix in (:oneSparseMatrixCSR, :oneSparseMatrixCOO)
                                   beta::Number,
                                   y::oneStridedVector{$elty})
 
+                _mkl_empty(A) && return _scale_output!(beta, y)
                 queue = global_queue(context(x), device(x))
-                $fname(sycl_queue(queue), trans, alpha, A.handle, x, beta, y)
+                $fname(sycl_queue(queue), trans, alpha, sparse_matrix_handle(A), x, beta, y)
                 y
             end
         end
@@ -199,8 +219,9 @@ for SparseMatrix in (:oneSparseMatrixCSR, :oneSparseMatrixCOO)
 
     @eval begin
         function sparse_optimize_gemv!(trans::Char, A::$SparseMatrix)
+            _mkl_empty(A) && return A
             queue = global_queue(context(A.nzVal), device(A.nzVal))
-            onemklXsparse_optimize_gemv(sycl_queue(queue), trans, A.handle)
+            onemklXsparse_optimize_gemv(sycl_queue(queue), trans, sparse_matrix_handle(A))
             return A
         end
     end
@@ -225,10 +246,11 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                                   beta::Number,
                                   y::oneStridedVector{$elty})
 
+                _mkl_empty(A) && return _scale_output!(beta, y)
                 queue = global_queue(context(x), device(x))
                 m, n = size(A)
                 if m != 0 && n != 0
-                    $fname(sycl_queue(queue), flip_trans(trans), alpha, A.handle, x, beta, y)
+                    $fname(sycl_queue(queue), flip_trans(trans), alpha, sparse_matrix_handle(A), x, beta, y)
                 end
                 y
             end
@@ -250,6 +272,7 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                     y::oneStridedVector{$elty}
                 )
 
+                _mkl_empty(A) && return _scale_output!(beta, y)
                 # Compute A^H*x via identity:
                 #   conj(y_new) = conj(alpha) * (A^T) * conj(x) + conj(beta) * conj(y)
                 # Since S=A^T and op='N' computes S*x = A^T*x, we can realize this with one call.
@@ -262,7 +285,7 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                 end
 
                 queue = global_queue(context(x), device(x))
-                $fname(sycl_queue(queue), flip_trans(trans), alpha, A.handle, x, beta, y)
+                $fname(sycl_queue(queue), flip_trans(trans), alpha, sparse_matrix_handle(A), x, beta, y)
 
                 if trans == 'C'
                     y .= conj.(y)
@@ -275,9 +298,10 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
     end
     @eval begin
         function sparse_optimize_gemv!(trans::Char, A::$SparseMatrix)
+            _mkl_empty(A) && return A
             # complex 'C' case is implemented using op='N' on S=A^T with conjugation trick
             queue = global_queue(context(A.nzVal), device(A.nzVal))
-            onemklXsparse_optimize_gemv(sycl_queue(queue), flip_trans(trans), A.handle)
+            onemklXsparse_optimize_gemv(sycl_queue(queue), flip_trans(trans), sparse_matrix_handle(A))
             return A
         end
     end
@@ -298,6 +322,7 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
                 C::oneStridedMatrix{$elty}
             )
 
+            _mkl_empty(A) && return _scale_output!(beta, C)
             mB, nB = size(B)
             mC, nC = size(C)
             (nB != nC) && (transb == 'N') && throw(ArgumentError("B and C must have the same number of columns."))
@@ -306,21 +331,23 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
             queue = global_queue(context(C), device(C))
-            $fname(sycl_queue(queue), 'C', transa, transb, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
+            $fname(sycl_queue(queue), 'C', transa, transb, alpha, sparse_matrix_handle(A), B, nrhs, ldb, beta, C, ldc)
             C
         end
     end
 end
 
 function sparse_optimize_gemm!(trans::Char, A::oneSparseMatrixCSR)
+    _mkl_empty(A) && return A
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_gemm(sycl_queue(queue), trans, A.handle)
+    onemklXsparse_optimize_gemm(sycl_queue(queue), trans, sparse_matrix_handle(A))
     return A
 end
 
 function sparse_optimize_gemm!(trans::Char, transB::Char, nrhs::Int, A::oneSparseMatrixCSR)
+    _mkl_empty(A) && return A
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_gemm_advanced(sycl_queue(queue), 'C', trans, transB, A.handle, nrhs)
+    onemklXsparse_optimize_gemm_advanced(sycl_queue(queue), 'C', trans, transB, sparse_matrix_handle(A), nrhs)
     return A
 end
 
@@ -335,6 +362,7 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
                               beta::Number,
                               C::oneStridedMatrix{$elty})
 
+            _mkl_empty(A) && return _scale_output!(beta, C)
             mB, nB = size(B)
             mC, nC = size(C)
             (nB != nC) && (transb == 'N') && throw(ArgumentError("B and C must have the same number of columns."))
@@ -343,7 +371,7 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
             queue = global_queue(context(C), device(C))
-            $fname(sycl_queue(queue), 'C', flip_trans(transa), transb, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
+            $fname(sycl_queue(queue), 'C', flip_trans(transa), transb, alpha, sparse_matrix_handle(A), B, nrhs, ldb, beta, C, ldc)
             C
         end
     end
@@ -365,6 +393,7 @@ for (fname, elty) in (
                 C::oneStridedMatrix{$elty}
             )
 
+            _mkl_empty(A) && return _scale_output!(beta, C)
             # Map op(A) to op(S) where S = A^T stored as CSR in the handle
             # transa: 'N' -> op(S)='T'; 'T' -> op(S)='N'; 'C' ->
             #   real: op(S)='N' (since A^H == A^T)
@@ -408,7 +437,7 @@ for (fname, elty) in (
                 transb_eff = transb
             end
 
-            $fname(sycl_queue(queue), 'C', flip_trans(transa), transb_eff, alpha, A.handle, B, nrhs, ldb, beta, C, ldc)
+            $fname(sycl_queue(queue), 'C', flip_trans(transa), transb_eff, alpha, sparse_matrix_handle(A), B, nrhs, ldb, beta, C, ldc)
 
             # Undo conjugation to obtain C_new
             if transa == 'C'
@@ -424,14 +453,16 @@ for (fname, elty) in (
 end
 
 function sparse_optimize_gemm!(trans::Char, A::oneSparseMatrixCSC)
+    _mkl_empty(A) && return A
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_gemm(sycl_queue(queue), flip_trans(trans), A.handle)
+    onemklXsparse_optimize_gemm(sycl_queue(queue), flip_trans(trans), sparse_matrix_handle(A))
     return A
 end
 
 function sparse_optimize_gemm!(trans::Char, transB::Char, nrhs::Int, A::oneSparseMatrixCSC)
+    _mkl_empty(A) && return A
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_gemm_advanced(sycl_queue(queue), 'C', flip_trans(trans), transB, A.handle, nrhs)
+    onemklXsparse_optimize_gemm_advanced(sycl_queue(queue), 'C', flip_trans(trans), transB, sparse_matrix_handle(A), nrhs)
     return A
 end
 
@@ -447,8 +478,9 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
+            _mkl_empty(A) && return _scale_output!(beta, y)
             queue = global_queue(context(y), device(y))
-            $fname(sycl_queue(queue), uplo, alpha, A.handle, x, beta, y)
+            $fname(sycl_queue(queue), uplo, alpha, sparse_matrix_handle(A), x, beta, y)
             y
         end
     end
@@ -467,8 +499,9 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
+            _mkl_empty(A) && return _scale_output!(beta, y)
             queue = global_queue(context(y), device(y))
-            $fname(sycl_queue(queue), flip_uplo(uplo), alpha, A.handle, x, beta, y)
+            $fname(sycl_queue(queue), flip_uplo(uplo), alpha, sparse_matrix_handle(A), x, beta, y)
             y
         end
     end
@@ -488,16 +521,18 @@ for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
                               beta::Number,
                               y::oneStridedVector{$elty})
 
+            _mkl_empty(A) && return _empty_trmv!(diag, alpha, x, beta, y)
             queue = global_queue(context(y), device(y))
-            $fname(sycl_queue(queue), uplo, trans, diag, alpha, A.handle, x, beta, y)
+            $fname(sycl_queue(queue), uplo, trans, diag, alpha, sparse_matrix_handle(A), x, beta, y)
             y
         end
     end
 end
 
 function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSR)
+    _mkl_empty(A) && return A
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, trans, diag, A.handle)
+    onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, trans, diag, sparse_matrix_handle(A))
     return A
 end
 
@@ -520,6 +555,7 @@ for (fname, elty) in (
                 y::oneStridedVector{$elty}
             )
 
+            _mkl_empty(A) && return _empty_trmv!(diag, alpha, x, beta, y)
             # Intel oneAPI sparse trmv only supports nontrans operations.
             # Since CSC(A) is stored as CSR(A^T), we cannot map CSC operations
             # to CSR operations for triangular operations without transpose support.
@@ -531,13 +567,14 @@ for (fname, elty) in (
                 )
             )
             queue = global_queue(context(y), device(y))
-            $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, A.handle, x, beta, y)
+            $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, sparse_matrix_handle(A), x, beta, y)
             return y
         end
     end
 end
 
 function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
+    _mkl_empty(A) && return A
     throw(
         ArgumentError(
             "sparse_optimize_trmv! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
@@ -546,7 +583,7 @@ function sparse_optimize_trmv!(uplo::Char, trans::Char, diag::Char, A::oneSparse
         )
     )
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
+    onemklXsparse_optimize_trmv(sycl_queue(queue), uplo, flip_trans(trans), diag, sparse_matrix_handle(A))
     return A
 end
 
@@ -563,16 +600,18 @@ for (fname, elty) in ((:onemklSsparse_trsv, :Float32),
                               x::oneStridedVector{$elty},
                               y::oneStridedVector{$elty})
 
+            _mkl_empty(A) && return _empty_trsm!(diag, A, alpha, 'N', x, y)
             queue = global_queue(context(y), device(y))
-            $fname(sycl_queue(queue), uplo, trans, diag, alpha, A.handle, x, y)
+            $fname(sycl_queue(queue), uplo, trans, diag, alpha, sparse_matrix_handle(A), x, y)
             y
         end
     end
 end
 
 function sparse_optimize_trsv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSR)
+    _mkl_empty(A) && return A
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, trans, diag, A.handle)
+    onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, trans, diag, sparse_matrix_handle(A))
     return A
 end
 
@@ -593,6 +632,7 @@ for (fname, elty) in (
                 y::oneStridedVector{$elty}
             )
 
+            _mkl_empty(A) && return _empty_trsm!(diag, A, alpha, 'N', x, y)
             throw(
                 ArgumentError(
                     "sparse_trsv! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
@@ -601,13 +641,14 @@ for (fname, elty) in (
                 )
             )
             queue = global_queue(context(y), device(y))
-            onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
+            onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, flip_trans(trans), diag, sparse_matrix_handle(A))
             return A
         end
     end
 end
 
 function sparse_optimize_trsv!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
+    _mkl_empty(A) && return A
     throw(
         ArgumentError(
             "sparse_optimize_trsv! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
@@ -616,7 +657,7 @@ function sparse_optimize_trsv!(uplo::Char, trans::Char, diag::Char, A::oneSparse
         )
     )
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, flip_trans(trans), diag, A.handle)
+    onemklXsparse_optimize_trsv(sycl_queue(queue), uplo, flip_trans(trans), diag, sparse_matrix_handle(A))
     return A
 end
 
@@ -634,6 +675,7 @@ for (fname, elty) in ((:onemklSsparse_trsm, :Float32),
                               X::oneStridedMatrix{$elty},
                               Y::oneStridedMatrix{$elty})
 
+            _mkl_empty(A) && return _empty_trsm!(diag, A, alpha, transX, X, Y)
             mX, nX = size(X)
             mY, nY = size(Y)
             (mX != mY) && (transX == 'N') && throw(ArgumentError("X and Y must have the same number of rows."))
@@ -644,21 +686,23 @@ for (fname, elty) in ((:onemklSsparse_trsm, :Float32),
             ldx = max(1,stride(X,2))
             ldy = max(1,stride(Y,2))
             queue = global_queue(context(Y), device(Y))
-            $fname(sycl_queue(queue), 'C', transA, transX, uplo, diag, alpha, A.handle, X, nrhs, ldx, Y, ldy)
+            $fname(sycl_queue(queue), 'C', transA, transX, uplo, diag, alpha, sparse_matrix_handle(A), X, nrhs, ldx, Y, ldy)
             Y
         end
     end
 end
 
 function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSR)
+    _mkl_empty(A) && return A
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsm(sycl_queue(queue), uplo, trans, diag, A.handle)
+    onemklXsparse_optimize_trsm(sycl_queue(queue), uplo, trans, diag, sparse_matrix_handle(A))
     return A
 end
 
 function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A::oneSparseMatrixCSR)
+    _mkl_empty(A) && return A
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsm_advanced(sycl_queue(queue), 'C', uplo, trans, diag, A.handle, nrhs)
+    onemklXsparse_optimize_trsm_advanced(sycl_queue(queue), 'C', uplo, trans, diag, sparse_matrix_handle(A), nrhs)
     return A
 end
 
@@ -682,6 +726,7 @@ for (fname, elty) in (
                 Y::oneStridedMatrix{$elty}
             )
 
+            _mkl_empty(A) && return _empty_trsm!(diag, A, alpha, transX, X, Y)
             # Intel oneAPI sparse trsm only supports nontrans operations for the matrix A.
             # Since CSC(A) is stored as CSR(A^T), we cannot map CSC operations
             # to CSR operations for triangular solve operations without transpose support.
@@ -703,13 +748,14 @@ for (fname, elty) in (
             ldx = max(1, stride(X, 2))
             ldy = max(1, stride(Y, 2))
             queue = global_queue(context(Y), device(Y))
-            $fname(sycl_queue(queue), 'C', flip_trans(transA), transX, uplo, diag, alpha, A.handle, X, nrhs, ldx, Y, ldy)
+            $fname(sycl_queue(queue), 'C', flip_trans(transA), transX, uplo, diag, alpha, sparse_matrix_handle(A), X, nrhs, ldx, Y, ldy)
             return Y
         end
     end
 end
 
 function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, A::oneSparseMatrixCSC)
+    _mkl_empty(A) && return A
     throw(
         ArgumentError(
             "sparse_optimize_trsm! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
@@ -718,11 +764,12 @@ function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, A::oneSparse
         )
     )
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsm(sycl_queue(queue), uplo, trans, diag, A.handle)
+    onemklXsparse_optimize_trsm(sycl_queue(queue), uplo, trans, diag, sparse_matrix_handle(A))
     return A
 end
 
 function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A::oneSparseMatrixCSC)
+    _mkl_empty(A) && return A
     throw(
         ArgumentError(
             "sparse_optimize_trsm! is not supported for oneSparseMatrixCSC due to Intel oneAPI limitations. " *
@@ -731,6 +778,6 @@ function sparse_optimize_trsm!(uplo::Char, trans::Char, diag::Char, nrhs::Int, A
         )
     )
     queue = global_queue(context(A.nzVal), device(A.nzVal))
-    onemklXsparse_optimize_trsm_advanced(sycl_queue(queue), 'C', uplo, trans, diag, A.handle, nrhs)
+    onemklXsparse_optimize_trsm_advanced(sycl_queue(queue), 'C', uplo, trans, diag, sparse_matrix_handle(A), nrhs)
     return A
 end

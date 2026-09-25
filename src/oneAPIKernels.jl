@@ -37,6 +37,15 @@ Adapt.adapt_storage(::oneAPIBackend, a::AbstractArray) = Adapt.adapt(oneArray, a
 Adapt.adapt_storage(::oneAPIBackend, a::oneArray) = a
 Adapt.adapt_storage(::KA.CPU, a::oneArray) = convert(Array, a)
 
+# sparse arrays (oneMKL is only available on Linux)
+@static if Sys.islinux()
+    import GPUArrays, SparseArrays
+    KA.get_backend(::oneAPI.oneMKL.oneAbstractSparseMatrix) = oneAPIBackend()
+    # without this, `adapt_storage(::oneAPIBackend, ::AbstractArray)` would densify sparse arrays
+    Adapt.adapt_storage(::oneAPIBackend, a::GPUArrays.AbstractGPUSparseArray) = a
+    Adapt.adapt_storage(::KA.CPU, a::oneAPI.oneMKL.oneAbstractSparseMatrix) = SparseArrays.SparseMatrixCSC(a)
+end
+
 
 ## Memory Operations
 
