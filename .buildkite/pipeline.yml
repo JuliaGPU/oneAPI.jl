@@ -1,9 +1,16 @@
+# Commit message tags select what to run: `[only X]` runs only the listed steps, `[skip X]`
+# skips them, where X is a comma-separated list of: `tests` (all steps), `julia` (released
+# Julia versions), `nightly`, `special`. Draft pull requests only test the newest Julia
+# release and nightly, unless steps are selected explicitly. See also GPUCompiler.jl's CI,
+# which uses the same tags.
 steps:
   # Test supported Julia versions
   - group: ":julia: Julia"
     key: "julia"
     steps:
-      - label: "Julia {{matrix.julia}}"
+      # the newest release, also tested on draft pull requests
+      - &julia
+        label: "Julia {{matrix.julia}}"
         plugins:
           - JuliaCI/julia#v1:
               version: "{{matrix.julia}}"
@@ -18,20 +25,37 @@ steps:
           queue: "oneapi"
         commands: |
           julia --project=deps deps/build_ci.jl
-        if: build.message !~ /\[skip tests\]/
+        if: |
+          build.message !~ /\[skip [^\]]*(tests|julia)/ &&
+          (build.message =~ /\[only [^\]]*(tests|julia)/ || build.message !~ /\[only /)
         timeout_in_minutes: 120
+        matrix:
+          setup:
+            julia:
+              - "1.13"
+
+      # older releases
+      - <<: *julia
+        if: |
+          build.message !~ /\[skip [^\]]*(tests|julia)/ &&
+          (build.message =~ /\[only [^\]]*(tests|julia)/ ||
+           build.message !~ /\[only / && !build.pull_request.draft)
         matrix:
           setup:
             julia:
               - "1.10"
               - "1.11"
               - "1.12"
-              - "1.13"
+
+      - <<: *julia
+        if: |
+          build.message !~ /\[skip [^\]]*(tests|nightly)/ &&
+          (build.message =~ /\[only [^\]]*(tests|nightly)/ || build.message !~ /\[only /)
+        soft_fail: true
+        matrix:
+          setup:
+            julia:
               - "nightly"
-          adjustments:
-            - with:
-                julia: "nightly"
-              soft_fail: true
 
   # Special tests
   - group: ":eyes: Special"
@@ -55,14 +79,16 @@ steps:
               # use debug JLLs, for asserts + better backtraces
               using oneAPI
               oneAPI.set_debug!(true)'
-        if: build.message !~ /\[skip tests\]/
         env:
           ZE_ENABLE_VALIDATION_LAYER: '1'
           ZE_ENABLE_PARAMETER_VALIDATION: '1'
           EnableDebugBreak: '0'
         agents:
           queue: "oneapi"
-        if: build.message !~ /\[skip tests\]/ && !build.pull_request.draft
+        if: |
+          build.message !~ /\[skip [^\]]*(tests|special)/ &&
+          (build.message =~ /\[only [^\]]*(tests|special)/ ||
+           build.message !~ /\[only / && !build.pull_request.draft)
         timeout_in_minutes: 60
         soft_fail: true
 
