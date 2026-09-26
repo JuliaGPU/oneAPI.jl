@@ -26,7 +26,7 @@ if _precompile_lts ? SPIRV_LLVM_Translator_jll.is_available() :
             target = SPIRVCompilerTarget(;
                 backend = (_precompile_lts ? :khronos : :llvm),
                 extensions = "", supports_fp16 = true,
-                supports_fp64 = true, supports_bfloat16 = false,
+                supports_fp64 = true, supports_bfloat16 = false, driver = :intel,
             )
             params = oneAPICompilerParams()
             config = CompilerConfig(target, params; kernel=true, name=nothing,
