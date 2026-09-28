@@ -84,7 +84,7 @@ function KI.kernel_function(backend::oneAPIBackend, f::F, tt::TT=Tuple{}; name =
     KI.Kernel{oneAPIBackend, typeof(kern)}(backend, kern)
 end
 
-function KI.launch(obj::KI.Kernel{oneAPIBackend}, groups::Dims{3}, items::Dims{3}, args...; kwargs...)
+function KI.launch(obj::KI.Kernel{oneAPIBackend}, groups::Dims{3}, items::Dims{3}, args::Vararg{Any, N}; kwargs...) where {N}
     # kernels are compiled for a device, and launched on the task's stream of the active one
     obj.kern.fun.mod.device == device() ||
         throw(ArgumentError("Cannot launch a kernel compiled for another device than the active one"))
