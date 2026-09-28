@@ -24,6 +24,11 @@ steps:
         agents:
           queue: "oneapi"
         commands: |
+          if [[ "{{matrix.julia}}" == "1.10" ]]; then
+            # XXX: Julia 1.10 ignores [sources]; develop the unregistered KernelInterface instead
+            git clone --depth 1 --branch tb/ki-0.3 https://github.com/JuliaGPU/KernelAbstractions.jl ka
+            julia --project -e 'using Pkg; Pkg.develop(path="ka/lib/KernelInterface")'
+          fi
           julia --project=deps deps/build_ci.jl
         if: |
           build.message !~ /\[skip [^\]]*(tests|julia)/ &&

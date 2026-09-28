@@ -31,5 +31,11 @@ jobs:
         with:
           version: 'lts'
       - uses: julia-actions/cache@v3
+      # XXX: Julia 1.10 ignores [sources]; develop the unregistered KernelInterface instead
+      - run: |
+          git clone --depth 1 --branch tb/ki-0.3 https://github.com/JuliaGPU/KernelAbstractions.jl ka
+          for project in . docs; do
+            julia --project=$project -e 'using Pkg; Pkg.develop(path="ka/lib/KernelInterface")'
+          done
       - uses: julia-actions/julia-buildpkg@latest
       - run: julia --project=docs/ docs/make.jl
