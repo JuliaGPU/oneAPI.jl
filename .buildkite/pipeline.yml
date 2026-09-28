@@ -25,6 +25,8 @@ steps:
           queue: "oneapi"
         commands: |
           julia --project=deps deps/build_ci.jl
+          # TEMP: test against KernelAbstractions 0.10 and an AcceleratedKernels supporting it
+          julia --project -e 'using Pkg; Pkg.add([PackageSpec(url="https://github.com/JuliaGPU/AcceleratedKernels.jl", rev="main"), PackageSpec(url="https://github.com/JuliaGPU/KernelAbstractions.jl", rev="main")])'
         if: |
           build.message !~ /\[skip [^\]]*(tests|julia)/ &&
           (build.message =~ /\[only [^\]]*(tests|julia)/ || build.message !~ /\[only /)
@@ -75,6 +77,8 @@ steps:
                 - examples
         command: |
           julia --project=deps deps/build_ci.jl
+          # TEMP: test against KernelAbstractions 0.10 and an AcceleratedKernels supporting it
+          julia --project -e 'using Pkg; Pkg.add([PackageSpec(url="https://github.com/JuliaGPU/AcceleratedKernels.jl", rev="main"), PackageSpec(url="https://github.com/JuliaGPU/KernelAbstractions.jl", rev="main")])'
           julia --project -e '
               # use debug JLLs, for asserts + better backtraces
               using oneAPI
