@@ -23,7 +23,6 @@ oneAPIBackend(; prefer_blocks = false, always_inline = false) = oneAPIBackend(pr
 @inline KI.allocate(::oneAPIBackend, ::Type{T}, dims::Tuple; unified::Bool = false) where {T} = oneArray{T, length(dims), unified ? oneAPI.oneL0.SharedBuffer : oneAPI.oneL0.DeviceBuffer}(undef, dims)
 
 KI.get_backend(::oneArray) = oneAPIBackend()
-# TODO should be non-blocking
 KI.synchronize(::oneAPIBackend) = oneAPI.oneL0.synchronize()
 KI.supports_float64(::oneAPIBackend) = device_limits().supports_float64
 KI.supports_unified(::oneAPIBackend) = true
