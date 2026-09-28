@@ -743,6 +743,51 @@ end
     @test all(results)
 end
 
+# burns `iters` dependent steps per work-item, which the compiler cannot fold away
+function slow_kernel(a, iters)
+    i = get_global_id()
+    acc = i % UInt32
+    for k in UInt32(1):iters
+        acc = acc * 0x0019660d + k
+    end
+    @inbounds a[i] = acc
+    return
+end
+
+@testset "cooperative synchronize" begin
+    a = oneArray{UInt32}(undef, 64)
+    slow(iters) = @oneapi items=64 slow_kernel(a, UInt32(iters))
+    slow(1)
+    synchronize()
+    # warm up the slow path of `synchronize`: compiling it would end the calibration early
+    slow(2^16)
+    synchronize()
+
+    # make the kernel run for a while
+    iters = 2^16
+    while iters < 2^30 && @elapsed((slow(iters); synchronize())) < 0.1
+        iters *= 4
+    end
+
+    # other tasks keep running while one waits
+    stamps = UInt64[]
+    waiting = Ref(true)
+    ticker = @async while waiting[]
+        push!(stamps, time_ns())
+        sleep(0.001)
+    end
+    slow(iters)
+    synchronize()
+    done = time_ns()
+    waiting[] = false
+    wait(ticker)
+    @test count(<(done), stamps) > 10
+
+    # blocking synchronization is still available
+    slow(1)
+    @test synchronize(; blocking=true) === nothing
+end
+
 ############################################################################################
 
 # Keep allocation consumers at top level so kernels do not capture test state.

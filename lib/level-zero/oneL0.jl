@@ -124,6 +124,7 @@ end
 include("context.jl")
 include("cmdqueue.jl")
 include("cmdlist.jl")
+include("synchronization.jl")
 include("fence.jl")
 include("event.jl")
 include("barrier.jl")
