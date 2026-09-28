@@ -241,9 +241,9 @@ function launch_configuration(kernel::HostKernel{F,TT}) where {F,TT}
     # configurations, so roll our own version that behaves like CUDA's
     # occupancy API and assumes the kernel still does bounds checking.
 
-    kernel_props = oneL0.properties(kernel.fun)
-    group_size = if kernel_props.maxGroupSize !== missing
-        kernel_props.maxGroupSize
+    max_group_size = oneL0.max_group_size(kernel.fun)
+    group_size = if max_group_size !== missing
+        max_group_size
     else
         # without the MAX_GROUP_SIZE extension, we need to be conservative
         dev = kernel.fun.mod.device
@@ -261,7 +261,7 @@ function launch_configuration(kernel::HostKernel{F,TT}) where {F,TT}
     # size but does not fold it into `maxGroupSize`, so account for it here. Rounded down to
     # a power of two, both because group sizes want to be anyway and to stay clear of the
     # limit rather than right at it.
-    spill = kernel_props.spillMemSize
+    spill = oneL0.spill_mem_size(kernel.fun)
     if spill > 0 && group_size * spill > MAX_GROUP_SCRATCH
         group_size = max(1, prevpow(2, max(1, MAX_GROUP_SCRATCH ÷ spill)))
     end
