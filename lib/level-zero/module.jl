@@ -85,13 +85,17 @@ mutable struct ZeKernel
     # Read on every launch by the scratch hedge, so it must not cost an API call.
     spill::Int
 
+    # cached maxGroupSize, seeded by `properties`; -1 while unqueried, and 0 without the
+    # MAX_GROUP_SIZE extension. Read on every KernelInterface launch.
+    max_group_size::Int
+
     function ZeKernel(mod, name)
         GC.@preserve name begin
             desc_ref = Ref(ze_kernel_desc_t(; pKernelName=pointer(name)))
             handle_ref = Ref{ze_kernel_handle_t}()
             zeKernelCreate(mod, desc_ref, handle_ref)
         end
-        obj = new(mod, handle_ref[], ReentrantLock(), -1)
+        obj = new(mod, handle_ref[], ReentrantLock(), -1, -1)
 
         finalizer(obj) do obj
             zeKernelDestroy(obj)
@@ -268,6 +272,8 @@ function properties(kernel::ZeKernel)
 
     props = props_ref[]
     kernel.spill = Int(props.spillMemSize)
+    kernel.max_group_size = max_group_size_props_ref === nothing ? 0 :
+        Int(max_group_size_props_ref[].maxGroupSize)
     return (
         numKernelArgs=Int(props.numKernelArgs),
         requiredGroupSize=ZeDim3(props.requiredGroupSizeX,
@@ -293,6 +299,13 @@ end
 function spill_mem_size(kernel::ZeKernel)
     s = kernel.spill
     return s >= 0 ? s : Int(properties(kernel).spillMemSize)
+end
+
+# Cached access to a kernel's maxGroupSize, `missing` without the MAX_GROUP_SIZE extension.
+function max_group_size(kernel::ZeKernel)
+    s = kernel.max_group_size
+    s < 0 && (s = coalesce(properties(kernel).maxGroupSize, 0))
+    return s > 0 ? s : missing
 end
 
 
