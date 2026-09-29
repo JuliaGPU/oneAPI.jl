@@ -110,6 +110,164 @@ end
   @test Array(c) == [100, 2]
 end
 
+# arrays that occupy whole pages, so that wrapping them cannot be rejected because their
+# pages partially overlap memory that is already wrapped
+function page_aligned_array(T, n)
+  pagesize = ccall(:getpagesize, Cint, ())
+  ref = Ref{Ptr{Cvoid}}()
+  bytes = cld(n * sizeof(T), pagesize) * pagesize
+  @assert ccall(:posix_memalign, Cint, (Ptr{Ptr{Cvoid}}, Csize_t, Csize_t), ref, pagesize, bytes) == 0
+  return unsafe_wrap(Array, Ptr{T}(ref[]), n; own=true)
+end
+
+# wrap an array and memory inside of it, free the outer wrapper, and return the inner one
+@noinline function wrap_inner()
+  big = page_aligned_array(Float32, 4096)
+  outer = unsafe_wrap(oneArray, big)
+  inner = GC.@preserve big unsafe_wrap(oneArray, pointer(big) + 4096, 16)
+  oneAPI.unsafe_free!(outer)
+  return inner, WeakRef(big)
+end
+
+# create wrappers that are unreachable once this returns
+@noinline function wrap_garbage(n)
+  for _ in 1:n
+    unsafe_wrap(oneArray, page_aligned_array(Float32, 4096)) .+= 1
+  end
+end
+
+function wrap_kernel(a)
+  i = get_global_id()
+  @inbounds a[i] = i
+  return
+end
+
+@testset "wrapping host memory" begin
+  if !oneAPI.system_memmap_supported(oneAPI.driver())
+    @test_throws ArgumentError unsafe_wrap(oneArray, Float32[1])
+  else
+    a = Float32[1, 2, 3, 4]
+    b = unsafe_wrap(oneArray, a)
+    @test b isa oneVector{Float32, oneL0.HostBuffer}
+    @test size(b) == size(a)
+    @test UInt(pointer(b)) == UInt(pointer(a))
+
+    # changes are visible in both directions
+    b .+= 1
+    synchronize()
+    @test a == [2, 3, 4, 5]
+    a[1] = 10
+    c = oneArray{Float32, 1, oneL0.DeviceBuffer}(undef, 4)
+    c .= b    # read on the device, not via the host
+    @test Array(c) == [10, 3, 4, 5]
+    @test pointer(unsafe_wrap(Array, b)) == pointer(a)
+
+    for AT in [oneArray, oneArray{Float32}, oneArray{Float32, 1},
+               oneArray{Float32, 1, oneL0.HostBuffer}],
+        f in [x -> unsafe_wrap(AT, pointer(x), length(x)),
+              x -> unsafe_wrap(AT, pointer(x), size(x)),
+              x -> unsafe_wrap(AT, x)]
+      d = f(a)
+      @test d isa oneVector{Float32, oneL0.HostBuffer}
+      @test Array(d) == a
+    end
+    let m = rand(Float32, 3, 4)
+      d = unsafe_wrap(oneArray, m)
+      @test d isa oneMatrix{Float32}
+      d .*= 2
+      synchronize()
+      @test Array(d) == m
+    end
+    @test isempty(Array(unsafe_wrap(oneArray, Float32[])))
+
+    # large arrays, and copies to and from regular device arrays
+    let x = copyto!(page_aligned_array(Float32, 10^6), rand(Float32, 10^6))
+      ref = x .* 2
+      d = unsafe_wrap(oneArray, x)
+      d .*= 2
+      synchronize()
+      @test x == ref
+      e = oneArray(ref .+ 1)
+      copyto!(d, e)
+      synchronize()
+      @test x == ref .+ 1
+    end
+
+    fill!(b, 42)
+    synchronize()
+    @test all(==(42), a)
+    @oneapi items=length(b) wrap_kernel(b)
+    synchronize()
+    @test a == [1, 2, 3, 4]
+
+    # memory within pages that are already mapped can be wrapped too
+    nmappings = length(oneAPI.system_mappings)
+    let big = page_aligned_array(Float32, 4096)
+      wbig = unsafe_wrap(oneArray, big)
+      GC.@preserve big begin
+        inner = unsafe_wrap(oneArray, pointer(big) + 4096, 16)
+        wbig .= 1
+        inner .= 2
+        synchronize()
+        @test big[1] == 1 && big[1025] == 2
+        # partially overlapping memory cannot be wrapped
+        @test_throws ArgumentError unsafe_wrap(oneArray, pointer(big) + 4 * 4096 - 16, 1024)
+        oneAPI.unsafe_free!(inner)
+      end
+      oneAPI.unsafe_free!(wbig)
+    end
+    # small arrays share pages, which are mapped once
+    # a mapping keeps the memory it covers alive, even after the wrapper that created it
+    # is freed while other wrappers still use the mapping
+    inner, big_ref = wrap_inner()
+    for _ in 1:3
+      GC.gc(true)
+    end
+    @test big_ref.value !== nothing
+    inner .= 5
+    synchronize()
+    @test Array(inner) == fill(5, 16)
+    oneAPI.unsafe_free!(inner)
+    @test length(oneAPI.system_mappings) == nmappings
+
+    xs = [Float32[i, i] for i in 1:8]
+    ws = [unsafe_wrap(oneArray, x) for x in xs]
+    push!(ws, unsafe_wrap(oneArray, xs[1]))   # wrapping the same memory twice
+    for w in ws
+      w .+= 1
+    end
+    synchronize()
+    @test xs[1] == [3, 3]
+    @test xs[2] == [3, 3]
+    foreach(oneAPI.unsafe_free!, ws)
+    @test length(oneAPI.system_mappings) == nmappings
+
+    # wrappers freed by the GC are released asynchronously
+    wrap_garbage(10)
+    synchronize()
+    for _ in 1:100
+      GC.gc(true)
+      length(oneAPI.system_mappings) == nmappings && break
+      sleep(0.1)
+    end
+    @test length(oneAPI.system_mappings) == nmappings
+
+    # the wrapper keeps the array alive
+    d = unsafe_wrap(oneArray, fill!(page_aligned_array(Float32, 1024), 1))
+    GC.gc(true)
+    @test sum(d) == 1024
+
+    @test_throws ArgumentError resize!(b, 5)
+    @test_throws ArgumentError unsafe_wrap(oneVector{Float32, oneL0.DeviceBuffer}, a)
+    @test_throws ArgumentError unsafe_wrap(oneArray, Ptr{Float32}(C_NULL), 1)
+    @test_throws ArgumentError unsafe_wrap(oneArray, pointer(a), (-1,))
+    @test_throws ArgumentError unsafe_wrap(oneArray, Ptr{Float32}(typemax(UInt) - 15), 16)
+    GC.@preserve a begin
+      @test_throws ArgumentError unsafe_wrap(oneArray, Ptr{Float32}(pointer(a) + 1), 1)
+    end
+  end
+end
+
 @testset "reductions of host-accessible arrays" begin
   for B in (oneL0.SharedBuffer, oneL0.HostBuffer)
     a = oneArray{Float32, 1, B}(fill(1.0f0, 1024))
