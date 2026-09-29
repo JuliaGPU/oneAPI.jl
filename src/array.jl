@@ -370,14 +370,19 @@ end
 
 ## indexing
 
-# Host-accessible arrays can be indexed from CPU, bypassing GPUArrays restrictions
+# Host-accessible arrays can be indexed from CPU, bypassing GPUArrays restrictions.
+# Wait for queued work first, e.g., the kernel computing the result of a reduction. This
+# only synchronizes the current task's stream; work submitted by other tasks, or to an
+# explicitly created queue, needs to be synchronized explicitly.
 function Base.getindex(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, I::Int)
     @boundscheck checkbounds(x, I)
+    synchronize(global_stream(context(x), device()))
     return unsafe_load(pointer(x, I; type = oneL0.HostBuffer))
 end
 
 function Base.setindex!(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, v, I::Int)
     @boundscheck checkbounds(x, I)
+    synchronize(global_stream(context(x), device()))
     return unsafe_store!(pointer(x, I; type = oneL0.HostBuffer), v)
 end
 
@@ -599,16 +604,288 @@ Base.unsafe_convert(::Type{ZePtr{T}}, A::PermutedDimsArray) where {T} =
 ## unsafe_wrap
 
 """
-    unsafe_wrap(Array, arr::oneArray{_,_,oneL0.SharedBuffer})
+    unsafe_wrap(Array, arr::oneArray{_,_,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}})
 
-Wrap a Julia `Array` around the buffer that backs a `oneArray`. This is only possible if the
-GPU array is backed by a shared buffer, i.e. if it was created with `oneArray{T}(undef, ...)`.
+Wrap a Julia `Array` around the buffer that backs a `oneArray`, without copying. This is
+only possible if the GPU array is backed by memory that is accessible from the host, i.e.,
+a shared buffer (as created by `oneArray{T}(undef, ...)`), a host buffer, or host memory
+that was itself wrapped using `unsafe_wrap(oneArray, ...)`.
+
+!!! warning
+
+    The returned `Array` does **not** keep `arr` alive. The caller has to keep a reference
+    to `arr` for as long as the `Array`, or anything derived from it, is used; otherwise
+    the `Array` may end up referring to freed memory. Device operations execute
+    asynchronously, so call `synchronize()` before accessing the returned array after
+    using `arr` on the device.
 """
-function Base.unsafe_wrap(::Type{Array}, arr::oneArray{T,N,oneL0.SharedBuffer}) where {T,N}
+function Base.unsafe_wrap(::Type{Array},
+                          arr::oneArray{T,N,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}) where {T,N}
   # TODO: can we make this more convenient by increasing the buffer's refcount and using
   #       a finalizer on the Array? does that work when taking views etc of the Array?
   ptr = reinterpret(Ptr{T}, pointer(arr))
   unsafe_wrap(Array, ptr, size(arr))
+end
+
+"""
+    unsafe_wrap(oneArray, a::Array)
+    unsafe_wrap(oneArray, ptr::Ptr{T}, dims)
+    unsafe_wrap(oneArray{T,N,oneL0.HostBuffer}, ...)
+
+Wrap a `oneArray` around host memory, without copying, so that it can be used on the
+device, e.g., in kernels or broadcasts. Changes made through the `oneArray` are visible in
+the original array, and vice versa. The resulting array is backed by a host buffer.
+
+This requires a driver that supports mapping system memory (the
+`ZE_extension_external_memmap_sysmem` extension); otherwise an `ArgumentError` is thrown,
+and `oneArray(a)` can be used to copy the data instead.
+
+When wrapping an `Array`, the returned `oneArray` keeps it alive. When wrapping a pointer,
+the caller has to make sure the memory stays valid for as long as the `oneArray` is used.
+In both cases, the memory must not be freed or reallocated while it is wrapped (e.g., by
+calling `resize!` on the original array), and resizing the wrapper is not supported.
+
+Device operations execute asynchronously, so call `synchronize()` before accessing the
+original memory on the host.
+
+!!! warning
+
+    Level Zero maps host memory in whole pages, and does not support overlapping mappings.
+    Memory within pages that are already mapped for another wrapper can be wrapped as long
+    as it lies entirely within that mapping. Memory whose pages only partially overlap an
+    existing mapping cannot be wrapped, and results in an `ArgumentError`, until the other
+    wrappers are freed. As a result, whether wrapping succeeds can depend on the order in
+    which neighboring arrays are wrapped: wrapping a large array first allows wrapping
+    smaller arrays inside of it, but not the other way around.
+
+```julia
+a = rand(Float32, 1024)
+b = unsafe_wrap(oneArray, a)
+b .= sin.(b)        # executes on the device, updating `a`
+synchronize()
+```
+"""
+unsafe_wrap(::Type{<:oneArray}, ::Any, ::Any...)
+
+# Level Zero can only map whole pages of system memory, and does not support overlapping
+# mappings (e.g., of two small arrays that share a page). Each mapping covers a range of
+# pages, and is shared by all wrappers of memory within that range. Memory that only
+# partially overlaps an existing mapping cannot be wrapped: that would require replacing
+# the mapping, which the driver cannot do while it is in use. Mappings are never replaced
+# or freed while wrappers use them.
+mutable struct SystemMapping
+    const ctx::ZeContext
+    const lo::UInt
+    const hi::UInt
+    const buf::oneL0.HostBuffer
+    # devices the mapping has been made resident on
+    const resident::Vector{ZeDevice}
+    # owners of memory within the mapping, which have to outlive it. they are kept until
+    # the mapping is released, not just until their own wrapper is freed, because other
+    # wrappers may keep the mapping alive.
+    const owners::Base.IdSet{Any}
+    refcount::Int
+    # set when freeing the mapping failed; its pages then remain occupied
+    broken::Bool
+end
+
+const system_mappings = SystemMapping[]
+const system_mappings_lock = ReentrantLock()
+
+page_range(ptr::Ptr, bytesize::Integer) = let pagesize = UInt(ccall(:getpagesize, Cint, ()))
+    lo = UInt(ptr) & ~(pagesize - 1)
+    hi = Base.checked_add(UInt(ptr), UInt(bytesize), pagesize - 1) & ~(pagesize - 1)
+    lo, hi
+end
+
+function map_system_memory(ctx::ZeContext, dev::ZeDevice, ptr::Ptr, bytesize::Integer, owner)
+    lo, hi = page_range(ptr, bytesize)
+    @lock system_mappings_lock begin
+        for m in system_mappings
+            m.ctx == ctx && m.lo < hi && lo < m.hi || continue
+            if m.broken || !(m.lo <= lo && hi <= m.hi)
+                throw(ArgumentError("""Cannot wrap host memory at $ptr: its pages ($(repr(lo))-$(repr(hi))) partially overlap memory that is already wrapped (pages $(repr(m.lo))-$(repr(m.hi))).
+                                       Level Zero maps host memory in whole pages and does not support overlapping mappings.
+                                       Free the other wrapper first, wrap memory in a different order, or use `oneArray(a)` to copy the data instead."""))
+            end
+            if !(dev in m.resident)
+                make_resident(ctx, dev, m.buf)
+                push!(m.resident, dev)
+            end
+            m.refcount += 1
+            owner === nothing || push!(m.owners, owner)
+            return m
+        end
+
+        buf = oneL0.host_memmap(ctx, Ptr{Cvoid}(lo), hi - lo)
+        try
+            # like any host allocation, the mapping has to be resident to be usable by kernels
+            make_resident(ctx, dev, buf)
+        catch
+            release(buf)
+            rethrow()
+        end
+        owners = Base.IdSet{Any}()
+        owner === nothing || push!(owners, owner)
+        m = SystemMapping(ctx, lo, hi, buf, [dev], owners, 1, false)
+        push!(system_mappings, m)
+        return m
+    end
+end
+
+# a wrapper's claim on a mapping. records are linked into a queue when they are freed from a
+# finalizer, which keeps the mapping (and the owners it roots) alive until it is released.
+mutable struct SystemWrapper
+    const mapping::SystemMapping
+    next::Union{Nothing,SystemWrapper}
+end
+
+function unmap_system_memory(m::SystemMapping)
+    @lock system_mappings_lock begin
+        m.refcount -= 1
+        m.refcount == 0 || return
+        try
+            # this waits for outstanding work using the mapping
+            release(m.buf)
+        catch err
+            # keep the mapping registered, which keeps its pages occupied and its owners
+            # alive, rather than risking mapping them again or freeing memory that the
+            # device may still access
+            m.broken = true
+            @error "Failed to release a mapping of host memory; its memory will be leaked" exception=(err, catch_backtrace())
+            return
+        end
+        filter!(x -> x !== m, system_mappings)
+    end
+    return
+end
+
+# finalizers must not block or call into the driver, so wrappers that are freed from a
+# finalizer are queued (without allocating or yielding while holding the lock), and
+# released by a task that is woken up through an async condition.
+const pending_wrappers = Ref{Union{Nothing,SystemWrapper}}(nothing)
+const pending_lock = Threads.SpinLock()
+const release_condition = Ref{Base.AsyncCondition}()
+const release_task_lock = ReentrantLock()
+
+function start_release_task()
+    isassigned(release_condition) && return
+    @lock release_task_lock begin
+        isassigned(release_condition) && return
+        cond = Base.AsyncCondition()
+        errormonitor(@async while true
+            wait(cond)
+            process_pending_wrappers()
+        end)
+        release_condition[] = cond
+    end
+    return
+end
+
+function process_pending_wrappers()
+    lock(pending_lock)
+    w = pending_wrappers[]
+    pending_wrappers[] = nothing
+    unlock(pending_lock)
+    while w !== nothing
+        next = w.next
+        w.next = nothing
+        unmap_system_memory(w.mapping)
+        w = next
+    end
+end
+
+function free_system_wrapper(w::SystemWrapper)
+    if ccall(:jl_gc_is_in_finalizer, Int8, ()) == 0
+        unmap_system_memory(w.mapping)
+    else
+        lock(pending_lock)
+        w.next = pending_wrappers[]
+        pending_wrappers[] = w
+        unlock(pending_lock)
+        ccall(:uv_async_send, Cint, (Ptr{Cvoid},), release_condition[].handle)
+    end
+    return
+end
+
+system_memmap_supported(drv::ZeDriver) =
+    haskey(oneL0.extension_properties(drv), "ZE_extension_external_memmap_sysmem")
+
+# `owner` is kept alive for as long as the wrapper
+function wrap_system_memory(::Type{oneArray{T,N,B}}, ptr::Ptr{T}, dims::NTuple{N,Int},
+                            owner=nothing) where {T,N,B}
+    B == oneL0.HostBuffer ||
+        throw(ArgumentError("Cannot wrap host memory as $B; use oneL0.HostBuffer"))
+    check_eltype(T)
+    isbitstype(T) || throw(ArgumentError("Can only unsafe_wrap a pointer to a bits type"))
+    all(>=(0), dims) || throw(ArgumentError("Invalid dimensions $dims"))
+    bytesize = Base.checked_mul(foldl(Base.checked_mul, dims; init=1), sizeof(T))
+    if bytesize > 0 && ptr == C_NULL
+        throw(ArgumentError("Cannot wrap a NULL pointer"))
+    end
+    if !iszero(UInt(ptr) % Base.datatype_alignment(T))
+        throw(ArgumentError("Pointer $ptr is not sufficiently aligned for elements of type $T"))
+    end
+    if Base.Checked.add_with_overflow(UInt(ptr), UInt(bytesize) + UInt(ccall(:getpagesize, Cint, ())))[2]
+        throw(ArgumentError("Memory range of $bytesize bytes at $ptr exceeds the address space"))
+    end
+    if !system_memmap_supported(driver())
+        throw(ArgumentError("""The Level Zero driver does not support mapping host memory, which is required to wrap it as a oneArray.
+                               Use `oneArray(a)` to copy the data instead."""))
+    end
+
+    ctx = context()
+    buf = oneL0.HostBuffer(Ptr{Cvoid}(ptr), bytesize, ctx)
+    bytesize == 0 && return oneArray{T,N}(DataRef(Returns(nothing), buf), dims)
+
+    start_release_task()
+    m = map_system_memory(ctx, device(), ptr, bytesize, owner)
+    arr, data = try
+        w = SystemWrapper(m, nothing)
+        data = DataRef(buf) do _
+            free_system_wrapper(w)
+        end
+        oneArray{T,N}(data, dims), data
+    catch
+        # give up our claim on the mapping (which roots the owner until it is released)
+        unmap_system_memory(m)
+        rethrow()
+    end
+    # the array holds its own reference
+    unsafe_free!(data)
+    return arr
+end
+wrap_system_memory(::Type{oneArray{T,N}}, ptr::Ptr{T}, dims::NTuple{N,Int}, owner=nothing) where {T,N} =
+    wrap_system_memory(oneArray{T,N,oneL0.HostBuffer}, ptr, dims, owner)
+
+Base.unsafe_wrap(::Union{Type{oneArray},Type{oneArray{T}},Type{oneArray{T,N}}},
+                 ptr::Ptr{T}, dims::NTuple{N,Int}) where {T,N} =
+    wrap_system_memory(oneArray{T,N}, ptr, dims)
+Base.unsafe_wrap(::Type{oneArray{T,N,B}}, ptr::Ptr{T}, dims::NTuple{N,Int}) where {T,N,B} =
+    wrap_system_memory(oneArray{T,N,B}, ptr, dims)
+
+# integer size input
+Base.unsafe_wrap(::Union{Type{oneArray},Type{oneArray{T}},Type{oneArray{T,1}}},
+                 ptr::Ptr{T}, dim::Integer) where {T} =
+    unsafe_wrap(oneArray{T,1}, ptr, (Int(dim),))
+Base.unsafe_wrap(::Type{oneArray{T,1,B}}, ptr::Ptr{T}, dim::Integer) where {T,B} =
+    unsafe_wrap(oneArray{T,1,B}, ptr, (Int(dim),))
+
+# array input: keep the array alive for as long as the wrapper
+Base.unsafe_wrap(::Union{Type{oneArray},Type{oneArray{T}},Type{oneArray{T,N}}},
+                 a::Array{T,N}) where {T,N} =
+    wrap_system_memory(oneArray{T,N}, pointer(a), size(a), a)
+Base.unsafe_wrap(::Type{oneArray{T,N,B}}, a::Array{T,N}) where {T,N,B} =
+    wrap_system_memory(oneArray{T,N,B}, pointer(a), size(a), a)
+
+# whether an array wraps host memory using `unsafe_wrap`
+function is_system(a::oneArray)
+    buf = a.data[]
+    buf isa oneL0.HostBuffer && sizeof(buf) > 0 || return false
+    lo, hi = page_range(pointer(buf), sizeof(buf))
+    @lock system_mappings_lock begin
+        any(m -> m.ctx == context(a) && m.lo <= lo && hi <= m.hi, system_mappings)
+    end
 end
 
 
@@ -622,6 +899,9 @@ the first `n` elements will be retained. If `n` is larger, the new elements are 
 guaranteed to be initialized.
 """
 function Base.resize!(a::oneVector{T}, n::Integer) where {T}
+    # resizing would detach the array from the host memory it wraps
+    is_system(a) && throw(ArgumentError("Cannot resize a oneArray that wraps host memory"))
+
     # TODO: add additional space to allow for quicker resizing
     maxsize = n * sizeof(T)
     bufsize = if isbitstype(T)

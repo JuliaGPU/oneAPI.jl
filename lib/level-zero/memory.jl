@@ -104,6 +104,36 @@ function host_alloc(ctx::ZeContext, bytesize::Integer, alignment::Integer=1;
     return HostBuffer(ptr_ref[], bytesize, ctx)
 end
 
+# from the ZE_extension_external_memmap_sysmem extension, which our headers predate
+struct ze_external_memmap_sysmem_ext_desc_t
+    stype::ze_structure_type_t
+    pNext::Ptr{Cvoid}
+    pSystemMemory::Ptr{Cvoid}
+    size::UInt64
+end
+const ZE_STRUCTURE_TYPE_EXTERNAL_MEMMAP_SYSMEM_EXT_DESC =
+    reinterpret(ze_structure_type_t, UInt32(0x00020037))
+
+"""
+    host_memmap(ctx, ptr, bytesize) -> HostBuffer
+
+Create a host allocation backed by existing system memory, using the
+`ZE_extension_external_memmap_sysmem` extension. Both `ptr` and `bytesize` must be
+page-aligned. Freeing the resulting buffer removes the mapping, but does not free the
+memory itself.
+"""
+function host_memmap(ctx::ZeContext, ptr::Ptr, bytesize::Integer)
+    sysmem_ref = Ref(ze_external_memmap_sysmem_ext_desc_t(
+        ZE_STRUCTURE_TYPE_EXTERNAL_MEMMAP_SYSMEM_EXT_DESC, C_NULL, ptr, bytesize))
+    ptr_ref = Ref{Ptr{Cvoid}}()
+    GC.@preserve sysmem_ref begin
+        pNext = Base.unsafe_convert(Ptr{Cvoid}, sysmem_ref)
+        desc_ref = Ref(ze_host_mem_alloc_desc_t(; pNext))
+        zeMemAllocHost(ctx, desc_ref, bytesize, 1, ptr_ref)
+    end
+    return HostBuffer(ptr_ref[], bytesize, ctx)
+end
+
 Base.pointer(buf::HostBuffer) = buf.ptr
 Base.sizeof(buf::HostBuffer) = buf.bytesize
 context(buf::HostBuffer) = buf.context
