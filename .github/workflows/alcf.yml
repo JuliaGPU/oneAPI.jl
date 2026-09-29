@@ -90,6 +90,46 @@ jobs:
           curl -sS -X POST -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "$API/mirror/pull" \
             || echo "::warning::mirror sync request failed; relying on scheduled sync"
 
+      # A mirror sync does not create a new pipeline for a SHA GitLab already has, so a
+      # plain re-run would re-adopt the old (e.g. runner-outage) result. On re-runs,
+      # create a fresh pipeline through the trigger token if the newest one for the SHA
+      # finished unsuccessfully. (Retrying the old pipeline is not an option: the retry
+      # would be attributed to the bot user, which the Jacamar runners refuse; see
+      # header comment.)
+      - name: Trigger a fresh pipeline on re-run
+        if: github.run_attempt > 1 && github.event_name != 'pull_request_target'
+        env:
+          REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          api() { curl -sS --max-time 30 -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "$@" || true; }
+
+          # Only replace a pipeline that finished unsuccessfully. Anything else (none
+          # yet, still active, succeeded, lookup failed) is left to the wait step below.
+          STATUS=$(api "$API/pipelines?sha=$HEAD_SHA&order_by=id&sort=desc&per_page=1" \
+            | jq -r '.[0].status // empty' 2>/dev/null || true)
+          case "$STATUS" in
+            failed|canceled|skipped) ;;
+            *) echo "latest pipeline for $HEAD_SHA: ${STATUS:-none}; nothing to re-trigger"; exit 0 ;;
+          esac
+          if [ -z "$GITLAB_TRIGGER_TOKEN" ]; then
+            echo "::error::ALCF_GITLAB_TRIGGER_TOKEN secret not set; cannot create a fresh pipeline"
+            exit 1
+          fi
+          # The trigger runs the ref's current tip, which must still be HEAD_SHA.
+          TIP=$(api "$API/repository/branches/$(jq -rn --arg r "$REF" '$r | @uri')" \
+            | jq -r '.commit.id // empty' 2>/dev/null || true)
+          if [ "$TIP" != "$HEAD_SHA" ]; then
+            echo "::error::$REF is at ${TIP:-unknown} on GitLab, not $HEAD_SHA; re-run the newest commit instead"
+            exit 1
+          fi
+          RESP=$(curl -sS -X POST "$API/trigger/pipeline" \
+            --form-string "token=${GITLAB_TRIGGER_TOKEN}" --form-string "ref=$REF" || true)
+          if [ "$(echo "$RESP" | jq -r '.sha // empty' 2>/dev/null)" != "$HEAD_SHA" ]; then
+            echo "::error::failed to trigger a GitLab pipeline for $HEAD_SHA: $RESP"
+            exit 1
+          fi
+          echo "triggered fresh pipeline $(echo "$RESP" | jq -r .id) for $HEAD_SHA"
+
       - name: Wait for pipeline and adopt its result
         run: |
           # Transient API failures (network, rate limiting) must not fail the check:
