@@ -370,14 +370,19 @@ end
 
 ## indexing
 
-# Host-accessible arrays can be indexed from CPU, bypassing GPUArrays restrictions
+# Host-accessible arrays can be indexed from CPU, bypassing GPUArrays restrictions.
+# Wait for queued work first, e.g., the kernel computing the result of a reduction. This
+# only synchronizes the current task's stream; work submitted by other tasks, or to an
+# explicitly created queue, needs to be synchronized explicitly.
 function Base.getindex(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, I::Int)
     @boundscheck checkbounds(x, I)
+    synchronize(global_stream(context(x), device()))
     return unsafe_load(pointer(x, I; type = oneL0.HostBuffer))
 end
 
 function Base.setindex!(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, v, I::Int)
     @boundscheck checkbounds(x, I)
+    synchronize(global_stream(context(x), device()))
     return unsafe_store!(pointer(x, I; type = oneL0.HostBuffer), v)
 end
 
