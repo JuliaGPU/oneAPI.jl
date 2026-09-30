@@ -360,7 +360,8 @@ end
     spill > s.scratch_hwm && scratch_hedge!(s, spill)
 
     append_launch!(s.list, kernel, groups)
-    oneL0.sync_each_submission() && oneL0.synchronize(s.list)
+    # wait cooperatively, as `synchronize` does, or the workaround blocks the thread
+    oneL0.sync_each_submission() && oneL0.nonblocking_synchronize(s.list)
     return
 end
 

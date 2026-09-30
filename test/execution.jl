@@ -759,6 +759,9 @@ end
     slow(iters) = @oneapi items=64 slow_kernel(a, UInt32(iters))
     slow(1)
     synchronize()
+    # warm up the slow path of `synchronize`: compiling it would end the calibration early
+    slow(2^16)
+    synchronize()
 
     # make the kernel run for a while
     iters = 2^16
