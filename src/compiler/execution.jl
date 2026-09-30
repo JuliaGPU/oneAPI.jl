@@ -4,7 +4,7 @@ export @oneapi, zefunction, kernel_convert
 ## high-level @oneapi interface
 
 const MACRO_KWARGS = [:launch]
-const COMPILER_KWARGS = [:kernel, :name, :always_inline]
+const COMPILER_KWARGS = [:kernel, :name, :always_inline, :sub_group_size]
 const LAUNCH_KWARGS = [:groups, :items, :queue]
 
 """
@@ -25,6 +25,9 @@ launches the kernel on the GPU.
 - `kernel::Bool=false`: Whether to compile as a kernel (true) or device function (false)
 - `name::Union{String,Nothing}=nothing`: Explicit name for the kernel
 - `always_inline::Bool=false`: Whether to always inline device functions
+- `sub_group_size::Union{Int,Nothing}=nothing`: The sub-group size the kernel has to be
+  compiled for, one of the device's `oneL0.compute_properties(dev).subGroupSizes`. By
+  default, the compiler chooses one.
 
 ## Launch Keywords (runtime)
 - `groups`: Number of workgroups (required). Can be an integer or tuple.
@@ -241,9 +244,9 @@ function launch_configuration(kernel::HostKernel{F,TT}) where {F,TT}
     # configurations, so roll our own version that behaves like CUDA's
     # occupancy API and assumes the kernel still does bounds checking.
 
-    kernel_props = oneL0.properties(kernel.fun)
-    group_size = if kernel_props.maxGroupSize !== missing
-        kernel_props.maxGroupSize
+    max_group_size = oneL0.max_group_size(kernel.fun)
+    group_size = if max_group_size !== missing
+        max_group_size
     else
         # without the MAX_GROUP_SIZE extension, we need to be conservative
         dev = kernel.fun.mod.device
@@ -261,7 +264,7 @@ function launch_configuration(kernel::HostKernel{F,TT}) where {F,TT}
     # size but does not fold it into `maxGroupSize`, so account for it here. Rounded down to
     # a power of two, both because group sizes want to be anyway and to stay clear of the
     # limit rather than right at it.
-    spill = kernel_props.spillMemSize
+    spill = oneL0.spill_mem_size(kernel.fun)
     if spill > 0 && group_size * spill > MAX_GROUP_SCRATCH
         group_size = max(1, prevpow(2, max(1, MAX_GROUP_SCRATCH ÷ spill)))
     end
@@ -360,7 +363,8 @@ end
     spill > s.scratch_hwm && scratch_hedge!(s, spill)
 
     append_launch!(s.list, kernel, groups)
-    oneL0.sync_each_submission() && oneL0.synchronize(s.list)
+    # wait cooperatively, as `synchronize` does, or the workaround blocks the thread
+    oneL0.sync_each_submission() && oneL0.nonblocking_synchronize(s.list)
     return
 end
 

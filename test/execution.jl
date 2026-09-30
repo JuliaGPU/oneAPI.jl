@@ -41,6 +41,22 @@ end
 end
 
 
+function store_max_sub_group_size(a)
+    @inbounds a[1] = get_max_sub_group_size()
+    return
+end
+
+@testset "sub-group size" begin
+    a = oneArray{UInt32}(undef, 1)
+    sizes = oneL0.compute_properties(device()).subGroupSizes
+    for sub_group_size in sizes
+        @oneapi items=64 sub_group_size store_max_sub_group_size(a)
+        @test Array(a)[1] == sub_group_size
+    end
+    @test_throws ArgumentError @oneapi sub_group_size=maximum(sizes)+1 dummy()
+end
+
+
 @testset "inference" begin
     foo() = @oneapi dummy()
     @inferred foo()
@@ -741,6 +757,51 @@ end
         acc
     end for _ in 1:2])
     @test all(results)
+end
+
+# burns `iters` dependent steps per work-item, which the compiler cannot fold away
+function slow_kernel(a, iters)
+    i = get_global_id()
+    acc = i % UInt32
+    for k in UInt32(1):iters
+        acc = acc * 0x0019660d + k
+    end
+    @inbounds a[i] = acc
+    return
+end
+
+@testset "cooperative synchronize" begin
+    a = oneArray{UInt32}(undef, 64)
+    slow(iters) = @oneapi items=64 slow_kernel(a, UInt32(iters))
+    slow(1)
+    synchronize()
+    # warm up the slow path of `synchronize`: compiling it would end the calibration early
+    slow(2^16)
+    synchronize()
+
+    # make the kernel run for a while
+    iters = 2^16
+    while iters < 2^30 && @elapsed((slow(iters); synchronize())) < 0.1
+        iters *= 4
+    end
+
+    # other tasks keep running while one waits
+    stamps = UInt64[]
+    waiting = Ref(true)
+    ticker = @async while waiting[]
+        push!(stamps, time_ns())
+        sleep(0.001)
+    end
+    slow(iters)
+    synchronize()
+    done = time_ns()
+    waiting[] = false
+    wait(ticker)
+    @test count(<(done), stamps) > 10
+
+    # blocking synchronization is still available
+    slow(1)
+    @test synchronize(; blocking=true) === nothing
 end
 
 ############################################################################################
