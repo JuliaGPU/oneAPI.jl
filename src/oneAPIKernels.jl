@@ -264,6 +264,58 @@ end
 ## COV_EXCL_STOP
 
 
+## Events
+
+# Level Zero has no reusable timeline events, so every `record_event` creates a fresh
+# one-shot event in its own host-visible pool. Its signal has `HOST` scope, the broadest:
+# it flushes caches far enough for the host *and* other devices.
+#
+# `wait_event` waits for the event on the host, cooperatively: making the waiting task's
+# stream wait for it on the device would require keeping the event alive until that stream
+# has executed the wait. Recorded events are kept alive until they have been signaled, as
+# destroying an event that the device still has to signal is undefined; not by the
+# recording task, which may end before that.
+const pending_events = oneAPI.oneL0.ZeEvent[]
+const pending_events_lock = ReentrantLock()
+
+function KI.record_event(::oneAPIBackend)
+    ctx = oneAPI.context()
+    dev = oneAPI.device()
+
+    pool = oneAPI.oneL0.ZeEventPool(ctx, 1;
+                                    flags = oneAPI.oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    ev = oneAPI.oneL0.ZeEvent(pool, 1;
+                              signal = oneAPI.oneL0.ZE_EVENT_SCOPE_FLAG_HOST,
+                              wait = oneAPI.oneL0.ZE_EVENT_SCOPE_FLAG_HOST)
+
+    @lock pending_events_lock begin
+        filter!(!Base.isdone, pending_events)
+        push!(pending_events, ev)
+    end
+
+    # the task's stream is an in-order immediate command list, so the signal fires once
+    # everything appended before it has completed. `execute!` first drains any pending
+    # oneMKL work on the companion queue (`mkl_wait!`), so that is captured as well.
+    try
+        oneAPI.oneL0.execute!(oneAPI.global_stream(ctx, dev)) do list
+            oneAPI.oneL0.append_signal!(list, ev)
+        end
+    catch
+        # the signal wasn't submitted, so nothing references the event
+        @lock pending_events_lock filter!(!=(ev), pending_events)
+        rethrow()
+    end
+
+    return ev
+end
+
+# the event can come from any device, also one of another driver
+function KI.wait_event(::oneAPIBackend, ev::oneAPI.oneL0.ZeEvent)
+    oneAPI.oneL0.nonblocking_synchronize(ev)
+    return
+end
+
+
 ## Other
 
 function KI.priority!(::oneAPIBackend, prio::Symbol)

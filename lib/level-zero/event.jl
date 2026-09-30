@@ -36,8 +36,8 @@ mutable struct ZeEvent
     handle::ze_event_handle_t
     pool::ZeEventPool
 
-    function ZeEvent(pool, index::Integer)
-        desc_ref = Ref(ze_event_desc_t(; index=index-1))
+    function ZeEvent(pool, index::Integer; signal=0, wait=0)
+        desc_ref = Ref(ze_event_desc_t(; index=index-1, signal, wait))
         handle_ref = Ref{ze_event_handle_t}()
         zeEventCreate(pool, desc_ref, handle_ref)
         obj = new(handle_ref[], pool)
