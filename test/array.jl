@@ -110,6 +110,14 @@ end
   @test Array(c) == [100, 2]
 end
 
+@testset "reductions of host-accessible arrays" begin
+  for B in (oneL0.SharedBuffer, oneL0.HostBuffer)
+    a = oneArray{Float32, 1, B}(fill(1.0f0, 1024))
+    @test sum(a) == 1024
+    @test maximum(a) == 1
+  end
+end
+
 # https://github.com/JuliaGPU/CUDA.jl/issues/2191
 @testset "preserving buffer types" begin
   a = oneVector{Int,oneL0.SharedBuffer}([1])
