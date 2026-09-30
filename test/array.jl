@@ -101,6 +101,13 @@ end
   @test Array(a) == [100, 42]
   oneAPI.@sync copyto!(a, 2, [200], 1, 1)
   @test b == [100, 200]
+
+  # the same works for arrays backed by host memory
+  c = oneVector{Int,oneL0.HostBuffer}([1, 2])
+  d = unsafe_wrap(Array, c)
+  @test d == [1, 2]
+  d[1] = 100
+  @test Array(c) == [100, 2]
 end
 
 # https://github.com/JuliaGPU/CUDA.jl/issues/2191
