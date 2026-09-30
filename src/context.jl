@@ -378,12 +378,15 @@ function synchronize_all_streams(ctx::ZeContext, dev::Union{ZeDevice, Nothing})
 end
 
 """
-    synchronize()
-    synchronize(stream::oneStream)
+    synchronize(; blocking=false)
+    synchronize(stream::oneStream; blocking=false)
 
-Block the host thread until all operations on the calling task's stream for the current
-context and device have completed: work appended to the immediate command list as well
-as oneMKL work on the companion queue.
+Block the calling task until all operations on its stream for the current context and
+device have completed: work appended to the immediate command list as well as oneMKL work
+on the companion queue.
+
+Unless `blocking` is set, other tasks keep running while waiting: the host thread is only
+blocked in the driver when the work is already done.
 
 This is useful for timing operations or ensuring that GPU work has finished before
 accessing results on the CPU.
@@ -398,18 +401,19 @@ println("GPU work completed")
 
 See also: [`global_stream`](@ref), [`context`](@ref), [`device`](@ref)
 """
-function oneL0.synchronize(s::oneStream)
-    oneL0.synchronize(s.list)
+function oneL0.synchronize(s::oneStream; blocking::Bool=false)
+    sync = blocking ? oneL0.synchronize : oneL0.nonblocking_synchronize
+    sync(s.list)
     q = s.queue
     if q !== nothing
-        oneL0.synchronize(q)
+        sync(q)
         s.mkl_dirty = false
     end
     return
 end
 
-function oneL0.synchronize()
-    oneL0.synchronize(global_stream(context(), device()))
+function oneL0.synchronize(; blocking::Bool=false)
+    oneL0.synchronize(global_stream(context(), device()); blocking)
 end
 
 # Julia → MKL ordering: everything Julia appended to the task's immediate list must be

@@ -26,7 +26,6 @@ oneAPIBackend(; prefer_blocks = false, always_inline = false) = oneAPIBackend(pr
 @inline KA.ones(::oneAPIBackend, ::Type{T}, dims::Tuple; unified::Bool = false) where {T} = fill!(oneArray{T, length(dims), unified ? oneAPI.oneL0.SharedBuffer : oneAPI.oneL0.DeviceBuffer}(undef, dims), one(T))
 
 KA.get_backend(::oneArray) = oneAPIBackend()
-# TODO should be non-blocking
 KA.synchronize(::oneAPIBackend) = oneAPI.oneL0.synchronize()
 KA.supports_float64(::oneAPIBackend) = false  # TODO: Check if this is device dependent
 KA.supports_unified(::oneAPIBackend) = true
