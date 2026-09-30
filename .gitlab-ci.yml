@@ -90,6 +90,18 @@ stages: [build, test, coverage]
   script:
     - !reference [.aurora-env, script]
     - julia --color=yes --project=deps deps/build_local.jl
+    # XXX: KernelAbstractions 0.10 and KernelInterface 0.4 aren't registered yet, nor is an
+    #      AcceleratedKernels that supports them, and Julia 1.10 ignores [sources]: check
+    #      them out and develop them (the checkouts travel to the test job as artifacts,
+    #      like test/Manifest.toml)
+    - |
+      if [ "$JULIA_VERSION" = "1.10" ]; then
+        rm -rf ka ak
+        git clone --depth 1 --branch main https://github.com/JuliaGPU/KernelAbstractions.jl ka
+        git clone --depth 1 https://github.com/JuliaGPU/AcceleratedKernels.jl ak
+        julia --color=yes --project=. -e 'using Pkg; Pkg.develop([PackageSpec(; path) for path in ("ka", "ka/lib/KernelInterface", "ak")])'
+        julia --color=yes --project=test -e 'using Pkg; Pkg.develop([PackageSpec(; path) for path in (".", "ka", "ka/lib/KernelInterface", "ak")])'
+      fi
     # Instantiate (and thereby precompile) both environments here so the 1 h batch job
     # spends its walltime on tests, not on Pkg. Manifests are gitignored, so the test
     # env must be resolved here with oneAPI dev'ed at the checkout (path "..") — a plain
@@ -113,6 +125,8 @@ stages: [build, test, coverage]
       - LocalPreferences.toml
       - test/LocalPreferences.toml
       - test/Manifest.toml
+      - ka
+      - ak
     expire_in: 1 week
 
 .test:lts:
