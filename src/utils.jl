@@ -37,7 +37,7 @@ function versioninfo(io::IO=stdout)
     println(io, "Julia packages:")
     println(io, "- oneAPI.jl: $(Base.pkgversion(oneAPI))")
     for pkg in [:GPUArrays, :GPUCompiler, ("63c18a36-062a-441e-b654-da1e3ab1ce7c", "KernelAbstractions"),
-                 :LLVM, :SPIRVIntrinsics]
+                 :KernelInterface, :LLVM, :SPIRVIntrinsics]
         name, mod = get_module(pkg)
         isnothing(mod) || println(io, "- $(name): $(Base.pkgversion(mod))")
     end
