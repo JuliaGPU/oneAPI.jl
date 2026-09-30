@@ -24,6 +24,16 @@ steps:
         agents:
           queue: "oneapi"
         commands: |
+          # XXX: KernelAbstractions 0.10 and KernelInterface 0.4 aren't registered yet, and
+          #      neither is an AcceleratedKernels that supports them. Julia 1.10 ignores
+          #      [sources], and Julia 1.11 doesn't pick them up for the test environment,
+          #      so check them out and develop them together, as the registered
+          #      AcceleratedKernels excludes KernelAbstractions 0.10.
+          if [[ "{{matrix.julia}}" == "1.10" || "{{matrix.julia}}" == "1.11" ]]; then
+            git clone --depth 1 --branch main https://github.com/JuliaGPU/KernelAbstractions.jl ka
+            git clone --depth 1 https://github.com/JuliaGPU/AcceleratedKernels.jl ak
+            julia --project -e 'using Pkg; Pkg.develop([PackageSpec(; path) for path in ("ka", "ka/lib/KernelInterface", "ak")])'
+          fi
           julia --project=deps deps/build_ci.jl
         if: |
           build.message !~ /\[skip [^\]]*(tests|julia)/ &&
