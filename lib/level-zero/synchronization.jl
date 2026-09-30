@@ -1,14 +1,14 @@
 # cooperative synchronization
 #
-# `zeCommandListHostSynchronize` and `zeCommandQueueSynchronize` block the calling thread
-# until the work has completed, so no other task can run on it in the meantime. As CUDA.jl
+# `zeCommandListHostSynchronize`, `zeCommandQueueSynchronize` and `zeEventHostSynchronize`
+# block the calling thread until the work has completed, so no other task can run on it in the meantime. As CUDA.jl
 # does, first busy-wait on a non-blocking query, which keeps the latency of short
 # operations low, and then block in the driver on a separate thread, while the calling
 # task waits for that thread without blocking the scheduler.
 
 export nonblocking_synchronize
 
-const SyncObject = Union{ZeImmediateCommandList, ZeCommandQueue}
+const SyncObject = Union{ZeImmediateCommandList, ZeCommandQueue, ZeEvent}
 
 # with a zero timeout, a synchronization is a query
 function check_done(res::ze_result_t)
@@ -32,6 +32,14 @@ gcsafe_synchronize(list::ZeImmediateCommandList) =
 gcsafe_synchronize(queue::ZeCommandQueue) =
     @gcsafe_ccall libze_loader.zeCommandQueueSynchronize(
         queue::ze_command_queue_handle_t, typemax(UInt64)::UInt64)::ze_result_t
+gcsafe_synchronize(event::ZeEvent) =
+    @gcsafe_ccall libze_loader.zeEventHostSynchronize(
+        event::ze_event_handle_t, typemax(UInt64)::UInt64)::ze_result_t
+
+# once the work has completed, synchronizing a list or queue doesn't block anymore; a
+# signaled event needs nothing more
+finish_synchronization(obj::Union{ZeImmediateCommandList, ZeCommandQueue}) = synchronize(obj)
+finish_synchronization(::ZeEvent) = nothing
 
 
 ## bidirectional channel
@@ -163,15 +171,16 @@ end
 
 """
     nonblocking_synchronize(list_or_queue)
+    nonblocking_synchronize(event)
 
-Wait for the work on an immediate command list or command queue to complete, like
-[`synchronize`](@ref), but without blocking the Julia scheduler: other tasks keep running
-while this one waits.
+Wait for the work on an immediate command list or command queue to complete, or for an
+event to be signaled, like [`synchronize`](@ref) or `wait`, but without blocking the Julia
+scheduler: other tasks keep running while this one waits.
 """
 function nonblocking_synchronize(obj::SyncObject)
     if spinning_synchronization(Base.isdone, obj)
         # done, so this doesn't block
-        synchronize(obj)
+        finish_synchronization(obj)
         return
     end
 
