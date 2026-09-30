@@ -98,7 +98,10 @@ function KI.max_work_group_size(kernel::KI.Kernel{oneAPIBackend})::Int
     # without the MAX_GROUP_SIZE extension, the device limit is all we know
     return coalesce(max_group_size, device_limits(fun.mod.device).max_work_group_size)
 end
-function KI.launch_configuration(kernel::KI.Kernel{oneAPIBackend}; max_work_group_size::Integer = typemax(Int))
+function KI.launch_configuration(
+        kernel::KI.Kernel{oneAPIBackend}; nitems::Union{Integer, Nothing} = nothing,
+        max_work_group_size::Integer = typemax(Int)
+    )
     group_size = oneAPI.launch_configuration(kernel.kern)
     return (; workgroupsize = Int(min(group_size, max_work_group_size)))
 end
