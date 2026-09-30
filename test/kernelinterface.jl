@@ -61,3 +61,7 @@ end
     @test_throws ArgumentError kernel(A; ndrange=4, items=8)
     @test_throws ArgumentError kernel(A; ndrange=4, groups=2)
 end
+
+@testset "versioninfo" begin
+    @test occursin("oneAPI.jl", sprint(KI.versioninfo, oneAPIBackend()))
+end
