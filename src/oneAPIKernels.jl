@@ -318,6 +318,8 @@ end
 
 ## Other
 
+KI.versioninfo(io::IO, ::oneAPIBackend) = oneAPI.versioninfo(io)
+
 function KI.priority!(::oneAPIBackend, prio::Symbol)
     if !(prio in (:high, :normal, :low))
         error("priority must be one of :high, :normal, :low")
