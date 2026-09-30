@@ -32,6 +32,13 @@ KI.synchronize(::oneAPIBackend) = oneAPI.oneL0.synchronize()
 KI.supports_float64(::oneAPIBackend) = device_limits().supports_float64
 KI.supports_unified(::oneAPIBackend) = true
 KI.supports_atomics(::oneAPIBackend) = true
+KI.supports_subgroups(::oneAPIBackend) = device_limits().sub_group_size > 0
+function KI.supports_shuffle(::oneAPIBackend, ::Type{T}) where {T}
+    T in SPIRVIntrinsics.gentypes || return false
+    T === Float64 && return device_limits().supports_float64
+    T === Float16 && return device_limits().supports_float16
+    return true
+end
 
 KI.functional(::oneAPIBackend) = oneAPI.functional()
 
@@ -92,7 +99,16 @@ struct oneAPIKernel{F, H <: oneAPI.HostKernel}
 end
 
 function KI.kernel_function(backend::oneAPIBackend, f::F, tt::TT=Tuple{}; name = nothing, kwargs...) where {F,TT}
-    host = zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs...)
+    # compile for the sub-group width that `KI.sub_group_size` promises
+    sub_group_size = KI.sub_group_size(backend)
+    if get(kwargs, :sub_group_size, sub_group_size) != sub_group_size
+        throw(ArgumentError("KernelInterface kernels are compiled for a sub-group size of $sub_group_size, got $(kwargs[:sub_group_size])"))
+    end
+    host = if sub_group_size > 0
+        zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs..., sub_group_size)
+    else
+        zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs...)
+    end
     kern = oneAPIKernel(f, host)
     KI.Kernel{oneAPIBackend, typeof(kern)}(backend, kern)
 end
@@ -149,7 +165,7 @@ end
 # querying the device allocates, so cache what every launch needs
 const DeviceLimits = @NamedTuple{
     max_work_group_size::Int, max_work_group_dims::NTuple{3, Int}, max_num_groups::NTuple{3, Int},
-    supports_float64::Bool,
+    sub_group_size::Int, supports_float16::Bool, supports_float64::Bool,
 }
 function device_limits(dev::oneAPI.oneL0.ZeDevice = device())
     limits = get!(task_local_storage(), :oneAPIDeviceLimits) do
@@ -158,15 +174,22 @@ function device_limits(dev::oneAPI.oneL0.ZeDevice = device())
     get!(limits, dev) do
         props = oneAPI.oneL0.compute_properties(dev)
         module_props = oneAPI.oneL0.module_properties(dev)
+        # the sub-group width that `kernel_function` compiles for: 32, like a CUDA warp, if
+        # the device supports it, and 0 if the device has no sub-groups
+        sg_sizes = props.subGroupSizes
+        sub_group_size = 32 in sg_sizes ? 32 : maximum(sg_sizes; init = 0)
         (; max_work_group_size = props.maxTotalGroupSize,
            max_work_group_dims = (props.maxGroupSizeX, props.maxGroupSizeY, props.maxGroupSizeZ),
            max_num_groups = (props.maxGroupCountX, props.maxGroupCountY, props.maxGroupCountZ),
+           sub_group_size,
+           supports_float16 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP16 != 0,
            supports_float64 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0)
     end
 end
 KI.max_work_group_size(::oneAPIBackend)::Int = device_limits().max_work_group_size
 KI.max_work_group_dims(::oneAPIBackend)::NTuple{3, Int} = device_limits().max_work_group_dims
 KI.max_num_groups(::oneAPIBackend)::NTuple{3, Int} = device_limits().max_num_groups
+KI.sub_group_size(::oneAPIBackend)::Int = device_limits().sub_group_size
 # Level Zero calls Xe cores sub-slices
 function KI.multiprocessor_count(::oneAPIBackend)::Int
     props = oneAPI.oneL0.properties(device())
@@ -195,6 +218,16 @@ end
     return (; x = get_num_groups(1) % T, y = get_num_groups(2) % T, z = get_num_groups(3) % T)
 end
 
+@device_override KI.get_sub_group_size(::Type{T}) where {T} = get_sub_group_size() % T
+
+@device_override KI.get_max_sub_group_size(::Type{T}) where {T} = get_max_sub_group_size() % T
+
+@device_override KI.get_num_sub_groups(::Type{T}) where {T} = get_num_sub_groups() % T
+
+@device_override KI.get_sub_group_id(::Type{T}) where {T} = get_sub_group_id() % T
+
+@device_override KI.get_sub_group_local_id(::Type{T}) where {T} = get_sub_group_local_id() % T
+
 
 ## Shared Memory
 
@@ -214,6 +247,14 @@ end
     # visible to other work-items after the barrier. `LOCAL_MEM_FENCE | GLOBAL_MEM_FENCE`
     # ORs in the WorkgroupMemory/CrossWorkgroupMemory fence bits.
     barrier(SPIRVIntrinsics.LOCAL_MEM_FENCE | SPIRVIntrinsics.GLOBAL_MEM_FENCE)
+end
+
+@device_override @inline function KI.sub_group_barrier()
+    sub_group_barrier(SPIRVIntrinsics.LOCAL_MEM_FENCE | SPIRVIntrinsics.GLOBAL_MEM_FENCE)
+end
+
+@device_override function KI.shfl_down(val::T, offset::Integer) where T
+    sub_group_shuffle(val, get_sub_group_local_id() + offset)
 end
 
 @device_override @inline function KI._print(args...)
