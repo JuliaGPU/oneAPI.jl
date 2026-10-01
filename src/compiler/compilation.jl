@@ -59,12 +59,14 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module,
                    job, mod, entry)
 
     # OpenCL 2.0
-    push!(metadata(mod)["opencl.ocl.version"],
+    push!(
+        get!(mod.metadata, "opencl.ocl.version").operands,
           MDNode([ConstantInt(Int32(2)),
                   ConstantInt(Int32(0))]))
 
     # SPIR-V 1.5
-    push!(metadata(mod)["opencl.spirv.version"],
+    push!(
+        get!(mod.metadata, "opencl.spirv.version").operands,
           MDNode([ConstantInt(Int32(1)),
                   ConstantInt(Int32(5))]))
 
@@ -105,21 +107,22 @@ function add_heap!(mod::LLVM.Module, entry::LLVM.Function)
     heap_field = Base.fieldindex(KernelState, :heap) - 1
     uses_heap(mod, T_state, heap_field) || return false
 
-    params = parameters(entry)
-    if isempty(params) || value_type(params[1]) != T_state
-        error("kernel `$(LLVM.name(entry))` allocates but has no kernel state to hold the heap")
+    params = entry.parameters
+    if isempty(params) || params[1].value_type != T_state
+        error("kernel `$(entry.name)` allocates but has no kernel state to hold the heap")
     end
     state = params[1]
-    users = LLVM.Value[user(use) for use in uses(state)]
+    # collect the users now, before the insertvalue below becomes one of them
+    users = collect(state.users)
 
     T_size = convert(LLVMType, Csize_t)
     T_heap = LLVM.StructType([T_size, T_size, LLVM.ArrayType(LLVM.Int8Type(), HEAP_SIZE)])
     T_ptr = convert(LLVMType, fieldtype(KernelState, :heap))
     @dispose builder = IRBuilder() begin
-        position!(builder, first(instructions(first(blocks(entry)))))
+        position!(builder, LLVM.at_begin(entry.entry))
 
         heap = alloca!(builder, T_heap, "heap")
-        alignment!(heap, HEAP_ALIGNMENT)
+        heap.alignment = HEAP_ALIGNMENT
         store!(builder, ConstantInt(T_size, 0), struct_gep!(builder, T_heap, heap, 0))
         store!(builder, ConstantInt(T_size, HEAP_SIZE), struct_gep!(builder, T_heap, heap, 1))
 
@@ -127,7 +130,7 @@ function add_heap!(mod::LLVM.Module, entry::LLVM.Function)
         ptr = pointercast!(builder, heap, T_ptr)
         new_state = insert_value!(builder, state, ptr, heap_field, "state")
         for u in users
-            ops = operands(u)
+            ops = u.operands
             for i in 1:length(ops)
                 ops[i] == state && (ops[i] = new_state)
             end
@@ -139,9 +142,9 @@ end
 
 # Inspect field reads rather than calls to malloc, which may already have been inlined.
 function uses_heap(mod::LLVM.Module, T_state::LLVMType, heap_field::Integer)
-    for f in functions(mod), bb in blocks(f), inst in instructions(bb)
+    for f in mod.functions, bb in f.blocks, inst in bb.instructions
         inst isa LLVM.ExtractValueInst || continue
-        value_type(operands(inst)[1]) == T_state || continue
+        inst.operands[1].value_type == T_state || continue
         unsafe_load(LLVM.API.LLVMGetIndices(inst)) == heap_field && return true
     end
     return false
@@ -165,30 +168,30 @@ function lower_bfloat_to_i16!(mod::LLVM.Module)
     eliminate_bf16_bitcasts!(mod, T_bf16, T_i16)
 
     # Phase 2: Replace remaining bfloat GEPs, loads, and stores with i16 equivalents.
-    for f in functions(mod)
-        isempty(blocks(f)) && continue
-        for bb in blocks(f)
+    for f in mod.functions
+        isempty(f.blocks) && continue
+        for bb in f.blocks
             to_replace = LLVM.Instruction[]
-            for inst in instructions(bb)
+            for inst in bb.instructions
                 opcode = LLVM.API.LLVMGetInstructionOpcode(inst)
                 if opcode == LLVM.API.LLVMGetElementPtr
                     src_ty = LLVMType(LLVM.API.LLVMGetGEPSourceElementType(inst))
                     src_ty == T_bf16 && push!(to_replace, inst)
                 elseif opcode == LLVM.API.LLVMLoad
-                    value_type(inst) == T_bf16 && push!(to_replace, inst)
+                    inst.value_type == T_bf16 && push!(to_replace, inst)
                 elseif opcode == LLVM.API.LLVMStore
-                    value_type(LLVM.operands(inst)[1]) == T_bf16 && push!(to_replace, inst)
+                    inst.operands[1].value_type == T_bf16 && push!(to_replace, inst)
                 end
             end
 
             for inst in to_replace
                 opcode = LLVM.API.LLVMGetInstructionOpcode(inst)
                 builder = LLVM.IRBuilder()
-                LLVM.position!(builder, inst)
+                position!(builder, LLVM.before(inst))
 
                 if opcode == LLVM.API.LLVMGetElementPtr
-                    ptr = LLVM.operands(inst)[1]
-                    indices = LLVM.Value[LLVM.operands(inst)[i] for i in 2:length(LLVM.operands(inst))]
+                    ptr = inst.operands[1]
+                    indices = LLVM.Value[inst.operands[i] for i in 2:length(inst.operands)]
                     new_gep = if LLVM.API.LLVMIsInBounds(inst) != 0
                         LLVM.inbounds_gep!(builder, T_i16, ptr, indices)
                     else
@@ -196,12 +199,12 @@ function lower_bfloat_to_i16!(mod::LLVM.Module)
                     end
                     LLVM.replace_uses!(inst, new_gep)
                 elseif opcode == LLVM.API.LLVMLoad
-                    ptr = LLVM.operands(inst)[1]
+                    ptr = inst.operands[1]
                     new_load = LLVM.load!(builder, T_i16, ptr)
                     LLVM.replace_uses!(inst, new_load)
                 elseif opcode == LLVM.API.LLVMStore
-                    val = LLVM.operands(inst)[1]
-                    ptr = LLVM.operands(inst)[2]
+                    val = inst.operands[1]
+                    ptr = inst.operands[2]
                     LLVM.store!(builder, val, ptr)
                 end
 
@@ -219,15 +222,15 @@ function eliminate_bf16_bitcasts!(mod::LLVM.Module, T_bf16::LLVMType, T_i16::LLV
     changed = true
     while changed
         changed = false
-        for f in functions(mod)
-            isempty(blocks(f)) && continue
-            for bb in blocks(f)
+        for f in mod.functions
+            isempty(f.blocks) && continue
+            for bb in f.blocks
                 to_delete = LLVM.Instruction[]
-                for inst in instructions(bb)
+                for inst in bb.instructions
                     if LLVM.API.LLVMGetInstructionOpcode(inst) == LLVM.API.LLVMBitCast
-                        src = LLVM.operands(inst)[1]
-                        src_ty = value_type(src)
-                        dst_ty = value_type(inst)
+                        src = inst.operands[1]
+                        src_ty = src.value_type
+                        dst_ty = inst.value_type
                         if (src_ty == T_i16 && dst_ty == T_bf16) ||
                                 (src_ty == T_bf16 && dst_ty == T_i16) ||
                                 (src_ty == dst_ty)
@@ -323,7 +326,7 @@ function compile_to_obj(@nospecialize(job::CompilerJob))
         GPUCompiler.compile(:obj, job)
     end
 
-    (image=asm, entry=LLVM.name(meta.entry))
+    (image=asm, entry=meta.entry.name)
 end
 
 # link the SPIR-V bytes into a session-local `ZeKernel` on the given context and device.
