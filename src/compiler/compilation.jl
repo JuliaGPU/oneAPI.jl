@@ -145,7 +145,7 @@ function uses_heap(mod::LLVM.Module, T_state::LLVMType, heap_field::Integer)
     for f in mod.functions, bb in f.blocks, inst in bb.instructions
         inst isa LLVM.ExtractValueInst || continue
         inst.operands[1].value_type == T_state || continue
-        unsafe_load(LLVM.API.LLVMGetIndices(inst)) == heap_field && return true
+        first(inst.indices) == heap_field && return true
     end
     return false
 end
@@ -173,42 +173,39 @@ function lower_bfloat_to_i16!(mod::LLVM.Module)
         for bb in f.blocks
             to_replace = LLVM.Instruction[]
             for inst in bb.instructions
-                opcode = LLVM.API.LLVMGetInstructionOpcode(inst)
-                if opcode == LLVM.API.LLVMGetElementPtr
-                    src_ty = LLVMType(LLVM.API.LLVMGetGEPSourceElementType(inst))
-                    src_ty == T_bf16 && push!(to_replace, inst)
-                elseif opcode == LLVM.API.LLVMLoad
+                if inst isa LLVM.GetElementPtrInst
+                    inst.source_element_type == T_bf16 && push!(to_replace, inst)
+                elseif inst isa LLVM.LoadInst
                     inst.value_type == T_bf16 && push!(to_replace, inst)
-                elseif opcode == LLVM.API.LLVMStore
+                elseif inst isa LLVM.StoreInst
                     inst.operands[1].value_type == T_bf16 && push!(to_replace, inst)
                 end
             end
 
             for inst in to_replace
-                opcode = LLVM.API.LLVMGetInstructionOpcode(inst)
                 builder = LLVM.IRBuilder()
                 position!(builder, LLVM.before(inst))
 
-                if opcode == LLVM.API.LLVMGetElementPtr
+                if inst isa LLVM.GetElementPtrInst
                     ptr = inst.operands[1]
                     indices = LLVM.Value[inst.operands[i] for i in 2:length(inst.operands)]
-                    new_gep = if LLVM.API.LLVMIsInBounds(inst) != 0
+                    new_gep = if inst.inbounds
                         LLVM.inbounds_gep!(builder, T_i16, ptr, indices)
                     else
                         LLVM.gep!(builder, T_i16, ptr, indices)
                     end
                     LLVM.replace_uses!(inst, new_gep)
-                elseif opcode == LLVM.API.LLVMLoad
+                elseif inst isa LLVM.LoadInst
                     ptr = inst.operands[1]
                     new_load = LLVM.load!(builder, T_i16, ptr)
                     LLVM.replace_uses!(inst, new_load)
-                elseif opcode == LLVM.API.LLVMStore
+                elseif inst isa LLVM.StoreInst
                     val = inst.operands[1]
                     ptr = inst.operands[2]
                     LLVM.store!(builder, val, ptr)
                 end
 
-                LLVM.API.LLVMInstructionEraseFromParent(inst)
+                erase!(inst)
                 LLVM.dispose(builder)
             end
         end
@@ -227,7 +224,7 @@ function eliminate_bf16_bitcasts!(mod::LLVM.Module, T_bf16::LLVMType, T_i16::LLV
             for bb in f.blocks
                 to_delete = LLVM.Instruction[]
                 for inst in bb.instructions
-                    if LLVM.API.LLVMGetInstructionOpcode(inst) == LLVM.API.LLVMBitCast
+                    if inst isa LLVM.BitCastInst
                         src = inst.operands[1]
                         src_ty = src.value_type
                         dst_ty = inst.value_type
@@ -241,7 +238,7 @@ function eliminate_bf16_bitcasts!(mod::LLVM.Module, T_bf16::LLVMType, T_i16::LLV
                     end
                 end
                 for inst in to_delete
-                    LLVM.API.LLVMInstructionEraseFromParent(inst)
+                    erase!(inst)
                 end
             end
         end
