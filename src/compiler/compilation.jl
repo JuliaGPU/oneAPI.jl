@@ -92,7 +92,7 @@ function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
     # (`supports_bfloat16 = false`, see `_compiler_config`), so this pass never
     # runs there.
     target = job.config.target
-    if @static(isdefined(Core, :BFloat16) && isdefined(LLVM, :BFloatType)) &&
+    if isdefined(Core, :BFloat16) &&
             target.supports_bfloat16 && !occursin("SPV_KHR_bfloat16", target.extensions)
         lower_bfloat_to_i16!(mod)
     end
@@ -121,8 +121,7 @@ function add_heap!(mod::LLVM.Module, entry::LLVM.Function)
     @dispose builder = IRBuilder() begin
         position!(builder, LLVM.at_begin(entry.entry))
 
-        heap = alloca!(builder, T_heap, "heap")
-        heap.alignment = HEAP_ALIGNMENT
+        heap = alloca!(builder, T_heap, "heap"; align = HEAP_ALIGNMENT)
         store!(builder, ConstantInt(T_size, 0), struct_gep!(builder, T_heap, heap, 0))
         store!(builder, ConstantInt(T_size, HEAP_SIZE), struct_gep!(builder, T_heap, heap, 1))
 
@@ -130,10 +129,7 @@ function add_heap!(mod::LLVM.Module, entry::LLVM.Function)
         ptr = pointercast!(builder, heap, T_ptr)
         new_state = insert_value!(builder, state, ptr, heap_field, "state")
         for u in users
-            ops = u.operands
-            for i in 1:length(ops)
-                ops[i] == state && (ops[i] = new_state)
-            end
+            replace!(u.operands, state => new_state)
         end
     end
 
@@ -168,45 +164,42 @@ function lower_bfloat_to_i16!(mod::LLVM.Module)
     eliminate_bf16_bitcasts!(mod, T_bf16, T_i16)
 
     # Phase 2: Replace remaining bfloat GEPs, loads, and stores with i16 equivalents.
-    for f in mod.functions
-        isempty(f.blocks) && continue
-        for bb in f.blocks
-            to_replace = LLVM.Instruction[]
-            for inst in bb.instructions
-                if inst isa LLVM.GetElementPtrInst
-                    inst.source_element_type == T_bf16 && push!(to_replace, inst)
-                elseif inst isa LLVM.LoadInst
-                    inst.value_type == T_bf16 && push!(to_replace, inst)
-                elseif inst isa LLVM.StoreInst
-                    inst.operands[1].value_type == T_bf16 && push!(to_replace, inst)
-                end
-            end
-
-            for inst in to_replace
-                builder = LLVM.IRBuilder()
-                position!(builder, LLVM.before(inst))
-
-                if inst isa LLVM.GetElementPtrInst
-                    ptr = inst.operands[1]
-                    indices = LLVM.Value[inst.operands[i] for i in 2:length(inst.operands)]
-                    new_gep = if inst.inbounds
-                        LLVM.inbounds_gep!(builder, T_i16, ptr, indices)
-                    else
-                        LLVM.gep!(builder, T_i16, ptr, indices)
+    @dispose builder = IRBuilder() begin
+        for f in mod.functions
+            isdeclaration(f) && continue
+            for bb in f.blocks
+                to_replace = LLVM.Instruction[]
+                for inst in bb.instructions
+                    if inst isa LLVM.GetElementPtrInst
+                        inst.source_element_type == T_bf16 && push!(to_replace, inst)
+                    elseif inst isa LLVM.LoadInst
+                        inst.value_type == T_bf16 && push!(to_replace, inst)
+                    elseif inst isa LLVM.StoreInst
+                        inst.value_operand.value_type == T_bf16 && push!(to_replace, inst)
                     end
-                    LLVM.replace_uses!(inst, new_gep)
-                elseif inst isa LLVM.LoadInst
-                    ptr = inst.operands[1]
-                    new_load = LLVM.load!(builder, T_i16, ptr)
-                    LLVM.replace_uses!(inst, new_load)
-                elseif inst isa LLVM.StoreInst
-                    val = inst.operands[1]
-                    ptr = inst.operands[2]
-                    LLVM.store!(builder, val, ptr)
                 end
 
-                erase!(inst)
-                LLVM.dispose(builder)
+                for inst in to_replace
+                    position!(builder, LLVM.before(inst))
+
+                    if inst isa LLVM.GetElementPtrInst
+                        ptr = inst.pointer_operand
+                        new_gep = if inst.inbounds
+                            LLVM.inbounds_gep!(builder, T_i16, ptr, inst.indices)
+                        else
+                            LLVM.gep!(builder, T_i16, ptr, inst.indices)
+                        end
+                        LLVM.replace_uses!(inst, new_gep)
+                    elseif inst isa LLVM.LoadInst
+                        ptr = inst.pointer_operand
+                        new_load = LLVM.load!(builder, T_i16, ptr)
+                        LLVM.replace_uses!(inst, new_load)
+                    elseif inst isa LLVM.StoreInst
+                        LLVM.store!(builder, inst.value_operand, inst.pointer_operand)
+                    end
+
+                    erase!(inst)
+                end
             end
         end
     end
@@ -220,7 +213,7 @@ function eliminate_bf16_bitcasts!(mod::LLVM.Module, T_bf16::LLVMType, T_i16::LLV
     while changed
         changed = false
         for f in mod.functions
-            isempty(f.blocks) && continue
+            isdeclaration(f) && continue
             for bb in f.blocks
                 to_delete = LLVM.Instruction[]
                 for inst in bb.instructions
