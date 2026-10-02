@@ -743,6 +743,109 @@ end
     @test all(results)
 end
 
+function fill_kernel(a, x)
+    @inbounds a[get_global_id()] = x
+    return
+end
+
+@testset "cooperative synchronize" begin
+    # keep the work on the task's stream waiting for an event until another task signals
+    # it, which makes these tests independent of timing: synchronizing can only return after
+    # that task got to run. if it cannot (e.g., because synchronizing blocks the thread), a
+    # watchdog on another thread signals the event after a while instead, and records that.
+    pool = oneL0.ZeEventPool(context(), 1, device();
+                             flags=oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    gate = pool[1]
+    timeout = UInt64(60_000_000_000)    # ns
+
+    # run `f` with the task's stream waiting for the gate, which another task on the same
+    # thread opens, but only after it got to run many more times than the polling at the
+    # start of a synchronization yields. returns whether `f` only returned after the gate
+    # had been opened, and the watchdog did not have to.
+    function gated(f)
+        list = oneAPI.global_stream(context(), device()).list
+        reset(gate)
+        # while the gate is closed, nothing on the host may wait for the GPU to become
+        # idle, as freeing memory does on some stacks. so avoid running finalizers, by
+        # collecting beforehand and not collecting while the gate is closed.
+        GC.gc(true)
+        gc_enabled = GC.enable(false)
+        watching = Threads.Atomic{Bool}(false)
+        opened = Threads.Atomic{Bool}(false)
+        in_time, timed_out = false, true
+        local watchdog, opener
+        try
+            # the watchdog waits on one of `cooperative_wait`'s worker threads, which keep
+            # running when this thread is blocked
+            watchdog = @async oneL0.cooperative_wait(gate; spin=false) do gate
+                watching[] = true
+                res = oneL0.@gcsafe_ccall oneL0.libze_loader.zeEventHostSynchronize(
+                    gate::oneL0.ze_event_handle_t, timeout::UInt64)::oneL0.ze_result_t
+                res == oneL0.RESULT_NOT_READY || return false
+                oneL0.signal(gate)
+                return true
+            end
+            while !watching[]
+                yield()
+            end
+
+            oneL0.append_wait!(list, gate)
+            opener = @async begin
+                for _ in 1:10_000
+                    yield()
+                end
+                opened[] = true
+                oneL0.signal(gate)
+            end
+            f()
+            in_time = opened[]
+        finally
+            # also when `f` failed, as the gate is reused
+            oneL0.signal(gate)
+            @isdefined(opener) && wait(opener)
+            @isdefined(watchdog) && (timed_out = something(fetch(watchdog)))
+            GC.enable(gc_enabled)
+        end
+        synchronize()
+        return in_time && !timed_out
+    end
+
+    # compile everything beforehand, as that could wait for the GPU to become idle
+    a = oneArray{Int32}(undef, 64)
+    @oneapi items=64 fill_kernel(a, Int32(0))
+    synchronize()
+    @test gated(synchronize)
+
+    @test gated() do
+        oneL0.sync_each_submission(false) do
+            @oneapi items=64 fill_kernel(a, Int32(1))
+        end
+        synchronize()
+    end
+    @test Array(a) == fill(Int32(1), 64)
+
+    @test gated() do
+        oneL0.sync_each_submission(false) do
+            @oneapi items=64 fill_kernel(a, Int32(2))
+        end
+        synchronize(oneAPI.global_stream(context(), device()))
+    end
+    @test Array(a) == fill(Int32(2), 64)
+
+    # synchronizing after every launch, as on the LTS stack
+    @test gated() do
+        oneL0.sync_each_submission(true) do
+            @oneapi items=64 fill_kernel(a, Int32(3))
+        end
+    end
+    @test Array(a) == fill(Int32(3), 64)
+
+    # blocking synchronization is still available
+    @oneapi items=64 fill_kernel(a, Int32(4))
+    @test synchronize(; blocking=true) === nothing
+    @test Array(a) == fill(Int32(4), 64)
+end
+
 ############################################################################################
 
 # Keep allocation consumers at top level so kernels do not capture test state.
