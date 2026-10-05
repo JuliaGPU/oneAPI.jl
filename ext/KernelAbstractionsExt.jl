@@ -5,8 +5,6 @@ using oneAPI: @device_override, method_table
 
 import KernelAbstractions as KA
 
-import StaticArrays
-
 import Adapt
 
 Adapt.adapt_storage(::KA.CPU, a::oneArray) = convert(Array, a)
@@ -21,7 +19,7 @@ end
 ## scratch memory
 
 @device_override @inline function KA.Scratchpad(ctx, ::Type{T}, ::Val{Dims}) where {T, Dims}
-    StaticArrays.MArray{Tuple{Dims...}, T}(undef)
+    KA.PrivateArray{T}(undef, Val(Dims), Val(oneAPI.AS.Function))
 end
 
 
