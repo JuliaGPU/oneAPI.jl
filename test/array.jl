@@ -118,6 +118,24 @@ end
   end
 end
 
+# https://github.com/JuliaGPU/oneAPI.jl/issues/661: kernels have to declare indirect access,
+# or an allocation that reuses the address of a freed one isn't visible to them. Whether a
+# reused shared allocation reads as zeros depends on allocator state, so churn through
+# enough allocations (two live ones, freed in alternating order, plus collections of the
+# reductions' outputs) to hit it reliably.
+@testset "reusing freed $B allocations" for B in (oneL0.DeviceBuffer, oneL0.SharedBuffer, oneL0.HostBuffer)
+    results = map(1:100) do i
+        a = oneArray{Float32, 1, B}(fill(1.0f0, 1024))
+        b = oneArray{Float32, 1, B}(fill(2.0f0, 1024))
+        r = (sum(a), maximum(b))
+        oneAPI.unsafe_free!(isodd(i) ? a : b)
+        oneAPI.unsafe_free!(isodd(i) ? b : a)
+        i % 10 == 0 && GC.gc(false)
+        r
+    end
+    @test all(==((1024, 2)), results)
+end
+
 # https://github.com/JuliaGPU/CUDA.jl/issues/2191
 @testset "preserving buffer types" begin
   a = oneVector{Int,oneL0.SharedBuffer}([1])

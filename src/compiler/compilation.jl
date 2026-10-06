@@ -322,5 +322,18 @@ end
 # link the SPIR-V bytes into a session-local `ZeKernel` on the given context and device.
 function link_kernel(image::Vector{UInt8}, entry::String, ctx::ZeContext, dev::ZeDevice)
     mod = ZeModule(ctx, dev, image)
-    kernels(mod)[entry]
+    kernel = kernels(mod)[entry]
+
+    # Kernels receive their arrays as `oneDeviceArray` structs, so to Level Zero every USM
+    # pointer they dereference is an indirect access. Without declaring that, the driver
+    # only maps the allocations we explicitly made resident, and a shared allocation that
+    # reuses the address of a freed (but never evicted) one isn't visible to the kernel:
+    # it reads zeros (JuliaGPU/oneAPI.jl#661). SYCL declares the same for all its kernels.
+    oneL0.indirect_access!(
+        kernel, oneL0.ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE |
+            oneL0.ZE_KERNEL_INDIRECT_ACCESS_FLAG_HOST |
+            oneL0.ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED
+    )
+
+    return kernel
 end
