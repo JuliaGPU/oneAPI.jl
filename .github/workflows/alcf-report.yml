@@ -1,0 +1,145 @@
+name: ALCF CI report
+
+# Reports the result of an ALCF GitLab CI pipeline (see .gitlab-ci.yml) as a commit status
+# on GitHub, without a runner having to wait for the pipeline: GitLab calls this workflow
+# when a pipeline changes state.
+#
+#  - The GitLab project (https://gitlab-ci.alcf.anl.gov/mschanen/oneAPI-jl) has a webhook
+#    for pipeline events that posts to this workflow's workflow_dispatch endpoint
+#      https://api.github.com/repos/JuliaGPU/oneAPI.jl/actions/workflows/alcf-report.yml/dispatches
+#    with the custom template
+#      {"ref":"main","inputs":{"pipeline_id":"{{object_attributes.id}}","status":"{{object_attributes.status}}"}}
+#    and an "Authorization: Bearer <token>" custom header. The token is a fine-grained
+#    personal access token for this repository with only the "Actions: read and write"
+#    permission. It lives in the webhook configuration, so CI jobs never see it. When it
+#    expires GitLab disables the webhook after a few failed deliveries and statuses stay
+#    pending: renew the token, re-enable the webhook, and re-report by hand (below).
+#  - The inputs are only a hint. The commit and the result are read back from GitLab, so a
+#    forged or reordered dispatch cannot report anything but a pipeline's actual state.
+#  - The GitLab instance requires an ALCF login, so the job logs are copied into the run,
+#    which the commit status links to.
+#
+# To (re-)report a pipeline by hand, e.g. after a lost webhook delivery:
+#   gh workflow run alcf-report.yml -f pipeline_id=<id>
+
+on:
+  workflow_dispatch:
+    inputs:
+      pipeline_id:
+        description: ALCF GitLab pipeline id
+        required: true
+        type: string
+      status:
+        description: Pipeline status as sent by the GitLab webhook (leave empty)
+        required: false
+        type: string
+
+run-name: ALCF pipeline ${{ inputs.pipeline_id }} ${{ inputs.status }}
+
+permissions:
+  statuses: write
+
+jobs:
+  report:
+    name: Report pipeline result
+    # The webhook fires on every status change of a pipeline, but only the final ones are
+    # worth a runner. A run without the status hint is a manual one and always reports.
+    if: >-
+      inputs.status == '' ||
+      contains(fromJSON('["success", "failed", "canceled", "skipped"]'), inputs.status)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # One at a time per pipeline. Each run reports the state it reads from GitLab, so it
+    # does not matter which of several queued runs gets to go.
+    concurrency:
+      group: alcf-report-${{ inputs.pipeline_id }}
+    env:
+      GITLAB_HOST: gitlab-ci.alcf.anl.gov
+      GITLAB_PROJECT: mschanen/oneAPI-jl
+      API: https://gitlab-ci.alcf.anl.gov/api/v4/projects/238
+      GITLAB_TOKEN: ${{ secrets.ALCF_GITLAB_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      PIPELINE_ID: ${{ inputs.pipeline_id }}
+      CONTEXT: ALCF / LTS stack (Aurora)
+    steps:
+      # This run is attached to the head of main, not to the commit the pipeline tested,
+      # so it only fails if reporting itself fails. The pipeline's result goes into the
+      # commit status.
+      - name: Set commit status
+        run: |
+          case "$PIPELINE_ID" in
+            ''|*[!0-9]*) echo "::error::pipeline_id must be a number"; exit 1 ;;
+          esac
+          api() { curl -sS --max-time 30 -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "$@" || true; }
+
+          PIPELINE=""
+          for i in $(seq 1 5); do
+            PIPELINE=$(api "$API/pipelines/$PIPELINE_ID")
+            if echo "$PIPELINE" | jq -e '.sha and .status' >/dev/null 2>&1; then break; fi
+            PIPELINE=""
+            sleep 15
+          done
+          if [ -z "$PIPELINE" ]; then
+            echo "::error::could not read GitLab pipeline $PIPELINE_ID"
+            exit 1
+          fi
+          SHA=$(echo "$PIPELINE" | jq -r '.sha')
+          STATUS=$(echo "$PIPELINE" | jq -r '.status')
+          URL="https://${GITLAB_HOST}/${GITLAB_PROJECT}/-/pipelines/$PIPELINE_ID"
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          echo "pipeline: $URL"
+          echo "commit: $SHA"
+          echo "status: $STATUS"
+
+          FAILED=""
+          TARGET="$RUN_URL"
+          case "$STATUS" in
+            success)
+              STATE=success; DESC="Pipeline $PIPELINE_ID passed" ;;
+            failed)
+              STATE=failure
+              FAILED=$(api "$API/pipelines/$PIPELINE_ID/jobs?per_page=100" \
+                | jq -r '[.[] | select(.status=="failed" and (.allow_failure | not)) | .name] | join(", ")' 2>/dev/null || true)
+              DESC="Pipeline $PIPELINE_ID failed${FAILED:+: $FAILED}" ;;
+            canceled|skipped)
+              STATE=error; DESC="Pipeline $PIPELINE_ID $STATUS" ;;
+            *)
+              STATE=pending; DESC="Pipeline $PIPELINE_ID $STATUS"; TARGET="$URL" ;;
+          esac
+          if [ "$STATE" != pending ]; then echo "FINISHED=true" >> "$GITHUB_ENV"; fi
+
+          {
+            echo "[ALCF GitLab pipeline $PIPELINE_ID]($URL) for $SHA: **$STATUS**"
+            if [ -n "$FAILED" ]; then echo; echo "Failed jobs: $FAILED"; fi
+            if [ "$STATE" = failure ] || [ "$STATE" = error ]; then
+              echo
+              echo "To run it again, re-run the [ALCF CI check of that commit]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$SHA/checks); for a pull request from a fork, re-apply the \`alcf-ci\` label."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # A commit can have several pipelines (re-runs). Only the newest one speaks for
+          # the commit, so that a late report of an old pipeline does not replace it.
+          NEWEST=$(api "$API/pipelines?sha=$SHA&order_by=id&sort=desc&per_page=1" \
+            | jq -r '.[0].id // empty' 2>/dev/null || true)
+          if [ -n "$NEWEST" ] && [ "$NEWEST" != "$PIPELINE_ID" ]; then
+            echo "::notice::pipeline $PIPELINE_ID was superseded by $NEWEST for $SHA; leaving the commit status alone"
+            exit 0
+          fi
+
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -f state="$STATE" -f context="$CONTEXT" \
+            -f description="${DESC:0:140}" -f target_url="$TARGET" >/dev/null
+          echo "set '$CONTEXT' to $STATE: $DESC"
+
+      - name: Publish GitLab job logs
+        if: env.FINISHED == 'true'
+        run: |
+          api() { curl -sS --max-time 60 -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "$@" || true; }
+          api "$API/pipelines/$PIPELINE_ID/jobs?per_page=100" \
+            | jq -r '.[] | "\(.id)|\(.name)|\(.status)"' \
+            | while IFS='|' read -r jid jname jstatus; do
+                echo "::group::${jname} — ${jstatus}"
+                api "$API/jobs/$jid/trace"
+                echo ""
+                echo "::endgroup::"
+              done
