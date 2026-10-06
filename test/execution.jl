@@ -124,6 +124,23 @@ end
 end
 
 
+@testset "shared method table" begin
+    mod = @eval module $(gensym())
+        on_device() = Int32(0)
+        Base.Experimental.@overlay $(oneAPI.GPUCompiler.SHARED_METHOD_TABLE) on_device() = Int32(1)
+        function kernel(a)
+            @inbounds a[1] = on_device()
+            return
+        end
+    end
+
+    a = oneArray(Int32[0])
+    Base.invokelatest() do
+        @oneapi mod.kernel(a)
+    end
+    @test Array(a)[1] == 1
+end
+
 @testset "calling device function" begin
     @noinline child(i) = sink(i)
     function parent()
