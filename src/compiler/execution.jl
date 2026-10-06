@@ -326,14 +326,15 @@ end
 # by `GPUCompiler.cached_results` (Julia's integrated code cache on 1.11+, which also
 # persists artifacts through precompilation; a session-local store on 1.10).
 #
-# `image === nothing` identifies a `oneAPIResults` that hasn't been compiled yet. The
-# `compile_hook` check additionally forces the compile path so reflection-style
-# consumers (`@device_code_*`) observe the compilation even on a cache hit.
+# `image === nothing` identifies a `oneAPIResults` that hasn't been compiled yet. Every
+# lookup is reported to the `@device_code_*` hook, so reflection observes cached kernels
+# without recompiling them.
 # Specialize on the target/parameter types so callers can avoid boxing CompilerJob.
 # Keep the body out of callers that specialize per kernel.
 @noinline function compile_or_lookup(job::CompilerJob)::oneAPIResults
+    GPUCompiler.run_compile_hook(job)
     res = GPUCompiler.cached_results(oneAPIResults, job)
-    if res === nothing || res.image === nothing || GPUCompiler.compile_hook[] !== nothing
+    if res === nothing || res.image === nothing
         compiled = compile_to_obj(job)
         res = @something res GPUCompiler.cached_results(oneAPIResults, job)
         res.image = compiled.image
