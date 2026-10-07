@@ -279,9 +279,6 @@ end
 # @testset "atomics (low level)" begin
 
     @testset "atomic_add($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([zero(T)])
 
         function kernel(a, b)
@@ -294,9 +291,6 @@ end
     end
 
     @testset "atomic_sub($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([T(256)])
 
         function kernel(a, b)
@@ -333,9 +327,6 @@ end
     end
 
     @testset "atomic_min($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([T(256)])
 
         function kernel(a, T)
@@ -349,9 +340,6 @@ end
     end
 
     @testset "atomic_max($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([zero(T)])
 
         function kernel(a, T)
@@ -419,9 +407,6 @@ end
     end
 
     @testset "atomic_xchg($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([zero(T)])
 
         function kernel(a, b)
