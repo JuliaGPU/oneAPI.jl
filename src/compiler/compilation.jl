@@ -264,6 +264,32 @@ function _driver_supports_bfloat16_spirv(dev=device())
     end
 end
 
+# The atomic operations that GPUCompiler may select SPIR-V instructions for; the others are
+# implemented with compare-and-swap loops.
+function _atomics_capabilities(dev, properties; supports_fp16, supports_fp64)
+    int64 = properties.flags & oneL0.ZE_DEVICE_MODULE_FLAG_INT64_ATOMICS ==
+            oneL0.ZE_DEVICE_MODULE_FLAG_INT64_ATOMICS
+
+    fp_atomics = oneL0.float_atomic_properties(dev)
+    fp_atomics === nothing && return SPIRVAtomics(; int64)
+    has_add(flags, flag) = flags & flag == flag
+    global_add = oneL0.ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_ADD
+    local_add = oneL0.ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_ADD
+
+    # IGC rejects (and exits the process on) SPIR-V modules with half-precision atomic
+    # additions on devices that don't report them, e.g. Xe-LP. Xe-LP does report
+    # double-precision atomics without supporting double-precision arithmetic, though.
+    return SPIRVAtomics(;
+        int64,
+        fadd_f16_global = supports_fp16 && has_add(fp_atomics.fp16flags, global_add),
+        fadd_f16_local  = supports_fp16 && has_add(fp_atomics.fp16flags, local_add),
+        fadd_f32_global = has_add(fp_atomics.fp32flags, global_add),
+        fadd_f32_local  = has_add(fp_atomics.fp32flags, local_add),
+        fadd_f64_global = supports_fp64 && has_add(fp_atomics.fp64flags, global_add),
+        fadd_f64_local  = supports_fp64 && has_add(fp_atomics.fp64flags, local_add),
+    )
+end
+
 @noinline function _compiler_config(dev; kernel=true, name=nothing, always_inline=false, kwargs...)
     properties = oneL0.module_properties(dev)
     supports_fp16 = properties.fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
@@ -273,13 +299,11 @@ end
     # Khronos translator; the rolling stack uses the LLVM SPIR-V back-end. GPUCompiler picks
     # the tool from the target's `backend` field and loads the JLL lazily, so both can be
     # listed as deps and the choice is made here at compile time. Either way the extensions
-    # below have to be declared explicitly: without SPV_EXT_shader_atomic_float_add,
-    # floating-point atomic operations fail to translate ("The atomic float instruction
-    # requires ... SPV_EXT_shader_atomic_float_add").
+    # below have to be declared explicitly; the ones that atomics need are added by
+    # GPUCompiler based on `atomics`.
     # TODO: emit printf format strings in constant memory
     extensions = String[
         "SPV_EXT_relaxed_printf_string_address_space",
-        "SPV_EXT_shader_atomic_float_add",
     ]
     if oneL0.LTS[]
         backend = :khronos
@@ -299,8 +323,11 @@ end
     end
     extensions_str = join(map(ext -> "+$ext", extensions), ",")
 
+    atomics = _atomics_capabilities(dev, properties; supports_fp16, supports_fp64)
+
     # create GPUCompiler objects
-    target = SPIRVCompilerTarget(; backend, extensions = extensions_str, supports_fp16, supports_fp64, supports_bfloat16,
+    target = SPIRVCompilerTarget(; backend, extensions = extensions_str, atomics,
+                                   supports_fp16, supports_fp64, supports_bfloat16,
                                    driver = :intel, kwargs...)
     params = oneAPICompilerParams()
     CompilerConfig(target, params; kernel, name, always_inline)
