@@ -420,6 +420,31 @@ end
 
 # end
 
+@testset "atomics keyword" begin
+    function kernel(a, b)
+        oneAPI.atomic_add!(pointer(a), b)
+        return
+    end
+    a = oneArray(Float32[0])
+    tt = Tuple{typeof(oneAPI.kernel_convert(a)), Float32}
+
+    spirv = sprint(io -> oneAPI.code_spirv(io, kernel, tt; kernel=true))
+    fp_atomics = oneL0.float_atomic_properties(device())
+    if fp_atomics !== nothing &&
+       fp_atomics.fp32flags & oneL0.ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_ADD != 0
+        @test occursin("OpAtomicFAddEXT", spirv)
+    end
+
+    # without the capability, a compare-and-swap loop is used
+    atomics = oneAPI.SPIRVAtomics()
+    spirv = sprint(io -> oneAPI.code_spirv(io, kernel, tt; kernel=true, atomics))
+    @test !occursin("OpAtomicFAddEXT", spirv)
+    @test occursin("OpAtomicCompareExchange", spirv)
+
+    @oneapi items=256 atomics=atomics kernel(a, 1f0)
+    @test Array(a)[1] == 256
+end
+
 @testset "8- and 16-bit atomics" begin
     # these are implemented on the containing 32-bit word, so neighbouring elements contend,
     # and the last element of an odd-sized array needs the allocation to be padded
