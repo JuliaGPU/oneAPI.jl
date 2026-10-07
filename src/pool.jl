@@ -56,8 +56,18 @@ function _maybe_gc(dev, bytes)
     end
 end
 
+# GPUCompiler implements 8- and 16-bit atomics with 32-bit atomics on the containing aligned
+# word, so every buffer has to extend to a multiple of 4 bytes and be aligned accordingly.
+# The array's dimensions stay as requested; only the buffer gets bigger.
+function atomic_allocation(bytes::Int, alignment::Int)
+    padded = bytes + (-bytes & 3)
+    padded < bytes && throw(ArgumentError("allocation of $bytes bytes is too large"))
+    return padded, max(alignment, 4)
+end
+
 function allocate(::Type{oneL0.DeviceBuffer}, ctx, dev, bytes::Int, alignment::Int)
     bytes == 0 && return oneL0.DeviceBuffer(ZE_NULL, bytes, ctx, dev)
+    bytes, alignment = atomic_allocation(bytes, alignment)
 
     _maybe_gc(dev, bytes)
     buf = device_alloc(ctx, dev, bytes, alignment)
@@ -69,6 +79,7 @@ end
 
 function allocate(::Type{oneL0.SharedBuffer}, ctx, dev, bytes::Int, alignment::Int)
     bytes == 0 && return oneL0.SharedBuffer(ZE_NULL, bytes, ctx, dev)
+    bytes, alignment = atomic_allocation(bytes, alignment)
 
     # TODO: support cross-device shared buffers (by setting `dev=nothing`)
 
@@ -82,6 +93,7 @@ end
 
 function allocate(::Type{oneL0.HostBuffer}, ctx, dev, bytes::Int, alignment::Int)
     bytes == 0 && return oneL0.HostBuffer(ZE_NULL, bytes, ctx)
+    bytes, alignment = atomic_allocation(bytes, alignment)
     buf = host_alloc(ctx, bytes, alignment)
     # Host USM must be made resident on the device, exactly like the device and shared
     # allocations above. A GPU kernel that reads a non-resident host buffer can take a

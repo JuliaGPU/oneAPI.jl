@@ -1,3 +1,5 @@
+using UnsafeAtomics
+
 @testset "work items" begin
     @on_device get_work_dim() |> sink
 
@@ -432,6 +434,30 @@ end
     end
 
 # end
+
+@testset "8- and 16-bit atomics" begin
+    # these are implemented on the containing 32-bit word, so neighbouring elements contend,
+    # and the last element of an odd-sized array needs the allocation to be padded
+    function kernel(a, x)
+        i = (get_global_id() - 1) % length(a) + 1
+        UnsafeAtomics.modify!(pointer(a, i), +, x, UnsafeAtomics.monotonic,
+                              UnsafeAtomics.device)
+        return
+    end
+
+    types = [(Int8, 5), (UInt16, 3)]
+    float16_supported && push!(types, (Float16, 3))
+    @testset "$T" for (T, n) in types
+        a = oneArray(zeros(T, n))
+        @test length(a) == n
+        @test sizeof(a.data[]) % 4 == 0
+
+        # 1020 work-items, so that every element is incremented as often
+        @oneapi items=204 groups=5 kernel(a, one(T))
+        k = 1020 ÷ n
+        @test Array(a) == fill(T <: Integer ? k % T : T(k), n)
+    end
+end
 
 
 
