@@ -234,6 +234,17 @@ oneAPI.atomic_min!(ptr, value)
 oneAPI.atomic_max!(ptr, value)
 ```
 
+Atomic operations on 8- and 16-bit values (e.g., `Int8` or `Float16`, through
+UnsafeAtomics.jl, Atomix.jl or KernelAbstractions.jl) are generally implemented by the
+compiler as 32-bit compare-and-swap loops on the aligned 4-byte word that contains the value
+(a half-precision addition can use a native instruction instead, if the device supports it).
+Arrays allocated by oneAPI.jl are padded to a multiple of 4 bytes so that this word is always
+part of the allocation. When using such atomics on memory that oneAPI.jl did not allocate,
+e.g. a pointer obtained from another library, the whole aligned 4-byte word containing every
+element you access atomically must be accessible to the device. Other elements in that word,
+such as adjacent elements of the same array, must not be modified with plain stores while an
+atomic operation on the word may be in flight; access them atomically too.
+
 Example histogram kernel:
 
 ```julia

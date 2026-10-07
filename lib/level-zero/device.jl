@@ -1,4 +1,4 @@
-export ZeDevice, properties, compute_properties, module_properties, memory_properties, memory_access_properties, cache_properties, image_properties, p2p_properties
+export ZeDevice, properties, compute_properties, module_properties, float_atomic_properties, memory_properties, memory_access_properties, cache_properties, image_properties, p2p_properties
 
 struct ZeDevice
     handle::ze_device_handle_t
@@ -102,6 +102,26 @@ function module_properties(dev::ZeDevice)
         maxArgumentsSize=Int(props.maxArgumentsSize),
         printfBufferSize=Int(props.printfBufferSize),
         nativeKernelSupported=Base.UUID(reinterpret(UInt128, [props.nativeKernelSupported.id...])[1]),
+    )
+end
+
+# the floating-point atomic operations the device supports (`ze_device_fp_atomic_ext_flags_t`
+# per precision), or `nothing` if the driver doesn't implement ZE_extension_float_atomics
+function float_atomic_properties(dev::ZeDevice)
+    haskey(extension_properties(dev.driver), ZE_FLOAT_ATOMICS_EXT_NAME) || return nothing
+
+    props_ref = Ref(ze_device_module_properties_t())
+    atomic_props_ref = Ref(ze_float_atomic_ext_properties_t())
+    GC.@preserve props_ref atomic_props_ref begin
+        link_extensions(props_ref, atomic_props_ref)
+        zeDeviceGetModuleProperties(dev, props_ref)
+    end
+
+    props = atomic_props_ref[]
+    return (
+        fp16flags=props.fp16Flags,
+        fp32flags=props.fp32Flags,
+        fp64flags=props.fp64Flags,
     )
 end
 

@@ -1,3 +1,5 @@
+using UnsafeAtomics
+
 @testset "work items" begin
     @on_device get_work_dim() |> sink
 
@@ -277,9 +279,6 @@ end
 # @testset "atomics (low level)" begin
 
     @testset "atomic_add($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([zero(T)])
 
         function kernel(a, b)
@@ -292,9 +291,6 @@ end
     end
 
     @testset "atomic_sub($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([T(256)])
 
         function kernel(a, b)
@@ -331,9 +327,6 @@ end
     end
 
     @testset "atomic_min($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([T(256)])
 
         function kernel(a, T)
@@ -347,9 +340,6 @@ end
     end
 
     @testset "atomic_max($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([zero(T)])
 
         function kernel(a, T)
@@ -417,9 +407,6 @@ end
     end
 
     @testset "atomic_xchg($T)" for T in [Int32, UInt32, Float32]
-        if oneAPI.is_integrated() && T == Float32
-            continue
-        end
         a = oneArray([zero(T)])
 
         function kernel(a, b)
@@ -432,6 +419,55 @@ end
     end
 
 # end
+
+@testset "atomics keyword" begin
+    function kernel(a, b)
+        oneAPI.atomic_add!(pointer(a), b)
+        return
+    end
+    a = oneArray(Float32[0])
+    tt = Tuple{typeof(oneAPI.kernel_convert(a)), Float32}
+
+    spirv = sprint(io -> oneAPI.code_spirv(io, kernel, tt; kernel=true))
+    fp_atomics = oneL0.float_atomic_properties(device())
+    if fp_atomics !== nothing &&
+       fp_atomics.fp32flags & oneL0.ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_ADD != 0
+        @test occursin("OpAtomicFAddEXT", spirv)
+    end
+
+    # without the capability, a compare-and-swap loop is used
+    atomics = oneAPI.SPIRVAtomics()
+    spirv = sprint(io -> oneAPI.code_spirv(io, kernel, tt; kernel=true, atomics))
+    @test !occursin("OpAtomicFAddEXT", spirv)
+    @test occursin("OpAtomicCompareExchange", spirv)
+
+    @oneapi items=256 atomics=atomics kernel(a, 1f0)
+    @test Array(a)[1] == 256
+end
+
+@testset "8- and 16-bit atomics" begin
+    # these are implemented on the containing 32-bit word, so neighbouring elements contend,
+    # and the last element of an odd-sized array needs the allocation to be padded
+    function kernel(a, x)
+        i = (get_global_id() - 1) % length(a) + 1
+        UnsafeAtomics.modify!(pointer(a, i), +, x, UnsafeAtomics.monotonic,
+                              UnsafeAtomics.device)
+        return
+    end
+
+    types = [(Int8, 5), (UInt16, 3)]
+    float16_supported && push!(types, (Float16, 3))
+    @testset "$T" for (T, n) in types
+        a = oneArray(zeros(T, n))
+        @test length(a) == n
+        @test sizeof(a.data[]) % 4 == 0
+
+        # 1020 work-items, so that every element is incremented as often
+        @oneapi items=204 groups=5 kernel(a, one(T))
+        k = 1020 ÷ n
+        @test Array(a) == fill(T <: Integer ? k % T : T(k), n)
+    end
+end
 
 
 
