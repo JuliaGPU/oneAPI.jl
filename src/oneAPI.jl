@@ -71,15 +71,11 @@ end
 
 # integrations and specialized functionality
 include("broadcast.jl")
-include("mapreduce.jl")
 include("random.jl")
 include("utils.jl")
 
 include("oneAPIKernels.jl")
 import .oneAPIKernels: oneAPIBackend
-include("accumulate.jl")
-include("sorting.jl")
-include("indexing.jl")
 export oneAPIBackend
 
 # precompilation workload (warms up the SPIR-V compilation pipeline)
