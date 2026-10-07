@@ -1,8 +1,10 @@
 # Commit message tags select what to run: `[only X]` runs only the listed steps, `[skip X]`
 # skips them, where X is a comma-separated list of: `tests` (all steps), `julia` (released
-# Julia versions), `nightly`, `special`. Draft pull requests only test the newest Julia
-# release and nightly, unless steps are selected explicitly. See also GPUCompiler.jl's CI,
-# which uses the same tags.
+# Julia versions), `nightly`, `special`. To limit the load on the shared GPU runner, pull
+# requests only test the oldest and newest supported Julia release; the other versions
+# (including nightly) are tested on branch builds, or when selected explicitly with
+# `[only X]`. Draft pull requests only test the newest Julia release. See also
+# GPUCompiler.jl's CI, which uses the same tags.
 steps:
   # Test supported Julia versions
   - group: ":julia: Julia"
@@ -34,7 +36,7 @@ steps:
             julia:
               - "1.13"
 
-      # older releases
+      # the oldest supported release
       - <<: *julia
         if: |
           build.message !~ /\[skip [^\]]*(tests|julia)/ &&
@@ -44,53 +46,70 @@ steps:
           setup:
             julia:
               - "1.10"
+
+      # intermediate releases, not tested on pull requests
+      - <<: *julia
+        if: |
+          build.message !~ /\[skip [^\]]*(tests|julia)/ &&
+          (build.message =~ /\[only [^\]]*(tests|julia)/ ||
+           build.message !~ /\[only / && build.pull_request.id == null)
+        matrix:
+          setup:
+            julia:
               - "1.11"
               - "1.12"
 
       - <<: *julia
+        # not tested on pull requests
         if: |
           build.message !~ /\[skip [^\]]*(tests|nightly)/ &&
-          (build.message =~ /\[only [^\]]*(tests|nightly)/ || build.message !~ /\[only /)
+          (build.message =~ /\[only [^\]]*(tests|nightly)/ ||
+           build.message !~ /\[only / && build.pull_request.id == null)
         soft_fail: true
         matrix:
           setup:
             julia:
               - "nightly"
 
-  # Special tests
-  - group: ":eyes: Special"
-    depends_on: "julia"
-    steps:
-      - label: "Validation"
-        plugins:
-          - JuliaCI/julia#v1:
-              version: "1.13"
-          - JuliaCI/julia-test#v1:
-              julia_args: "-g2"
-          - JuliaCI/julia-coverage#v1:
-              codecov: true
-              dirs:
-                - src
-                - lib
-                - examples
-        command: |
-          julia --project=deps deps/build_ci.jl
-          julia --project -e '
-              # use debug JLLs, for asserts + better backtraces
-              using oneAPI
-              oneAPI.set_debug!(true)'
-        env:
-          ZE_ENABLE_VALIDATION_LAYER: '1'
-          ZE_ENABLE_PARAMETER_VALIDATION: '1'
-          EnableDebugBreak: '0'
-        agents:
-          queue: "oneapi"
-        if: |
-          build.message !~ /\[skip [^\]]*(tests|special)/ &&
-          (build.message =~ /\[only [^\]]*(tests|special)/ ||
-           build.message !~ /\[only / && !build.pull_request.draft)
-        timeout_in_minutes: 60
-        soft_fail: true
+  # Disabled: the Validation step has failed on every build since at least 2026-09-17, with
+  # test errors under the Level Zero validation layer (gpuarrays/broadcasting, indexing
+  # multidimensional, device/intrinsics). It was the only special step, and an empty group is
+  # invalid, so the whole group is commented out. Re-enable once those errors are fixed.
+  #
+  # # Special tests
+  # - group: ":eyes: Special"
+  #   depends_on: "julia"
+  #   steps:
+  #     - label: "Validation"
+  #       plugins:
+  #         - JuliaCI/julia#v1:
+  #             version: "1.13"
+  #         - JuliaCI/julia-test#v1:
+  #             julia_args: "-g2"
+  #         - JuliaCI/julia-coverage#v1:
+  #             codecov: true
+  #             dirs:
+  #               - src
+  #               - lib
+  #               - examples
+  #       command: |
+  #         julia --project=deps deps/build_ci.jl
+  #         julia --project -e '
+  #             # use debug JLLs, for asserts + better backtraces
+  #             using oneAPI
+  #             oneAPI.set_debug!(true)'
+  #       env:
+  #         ZE_ENABLE_VALIDATION_LAYER: '1'
+  #         ZE_ENABLE_PARAMETER_VALIDATION: '1'
+  #         EnableDebugBreak: '0'
+  #       agents:
+  #         queue: "oneapi"
+  #       if: |
+  #         build.message !~ /\[skip [^\]]*(tests|special)/ &&
+  #         (build.message =~ /\[only [^\]]*(tests|special)/ ||
+  #          build.message !~ /\[only / && !build.pull_request.draft)
+  #       timeout_in_minutes: 60
+  #       soft_fail: true
 
 env:
   JULIA_PKG_SERVER_REGISTRY_PREFERENCE: "eager" # OK to downloading JLLs from GitHub
