@@ -1,6 +1,13 @@
 using Random
 
-gpuarrays_rng() = GPUArrays.default_rng(oneArray)
+# one GPUArrays RNG per task and device, so that streams of random numbers are independent
+function gpuarrays_rng()
+    dev = device()
+    rngs = get!(task_local_storage(), :oneAPI_GLOBAL_RNGs) do
+        Dict{ZeDevice,GPUArrays.RNG{oneArray}}()
+    end
+    get!(() -> GPUArrays.RNG{oneArray}(), rngs, dev)
+end
 
 # GPUArrays in-place
 Random.rand!(A::oneWrappedArray) = Random.rand!(gpuarrays_rng(), A)
