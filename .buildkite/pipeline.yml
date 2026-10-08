@@ -71,45 +71,39 @@ steps:
             julia:
               - "nightly"
 
-  # Disabled: the Validation step has failed on every build since at least 2026-09-17, with
-  # test errors under the Level Zero validation layer (gpuarrays/broadcasting, indexing
-  # multidimensional, device/intrinsics). It was the only special step, and an empty group is
-  # invalid, so the whole group is commented out. Re-enable once those errors are fixed.
-  #
-  # # Special tests
-  # - group: ":eyes: Special"
-  #   depends_on: "julia"
-  #   steps:
-  #     - label: "Validation"
-  #       plugins:
-  #         - JuliaCI/julia#v1:
-  #             version: "1.13"
-  #         - JuliaCI/julia-test#v1:
-  #             julia_args: "-g2"
-  #         - JuliaCI/julia-coverage#v1:
-  #             codecov: true
-  #             dirs:
-  #               - src
-  #               - lib
-  #               - examples
-  #       command: |
-  #         julia --project=deps deps/build_ci.jl
-  #         julia --project -e '
-  #             # use debug JLLs, for asserts + better backtraces
-  #             using oneAPI
-  #             oneAPI.set_debug!(true)'
-  #       env:
-  #         ZE_ENABLE_VALIDATION_LAYER: '1'
-  #         ZE_ENABLE_PARAMETER_VALIDATION: '1'
-  #         EnableDebugBreak: '0'
-  #       agents:
-  #         queue: "oneapi"
-  #       if: |
-  #         build.message !~ /\[skip [^\]]*(tests|special)/ &&
-  #         (build.message =~ /\[only [^\]]*(tests|special)/ ||
-  #          build.message !~ /\[only / && !build.pull_request.draft)
-  #       timeout_in_minutes: 60
-  #       soft_fail: true
+  # Special tests
+  - group: ":eyes: Special"
+    depends_on: "julia"
+    steps:
+      - label: "Validation"
+        plugins:
+          - JuliaCI/julia#v1:
+              version: "1.13"
+          - JuliaCI/julia-test#v1:
+              julia_args: "-g2"
+          - JuliaCI/julia-coverage#v1:
+              codecov: true
+              dirs:
+                - src
+                - lib
+                - examples
+        command: |
+          julia --project=deps deps/build_ci.jl
+          julia --project -e '
+              # use debug JLLs, for asserts + better backtraces
+              using oneAPI
+              oneAPI.set_debug!(true)'
+        env:
+          ZE_ENABLE_VALIDATION_LAYER: '1'
+          ZE_ENABLE_PARAMETER_VALIDATION: '1'
+          EnableDebugBreak: '0'
+        agents:
+          queue: "oneapi"
+        if: |
+          build.message !~ /\[skip [^\]]*(tests|special)/ &&
+          (build.message =~ /\[only [^\]]*(tests|special)/ ||
+           build.message !~ /\[only / && !build.pull_request.draft)
+        timeout_in_minutes: 60
 
 env:
   JULIA_PKG_SERVER_REGISTRY_PREFERENCE: "eager" # OK to downloading JLLs from GitHub
