@@ -151,15 +151,10 @@ GPUArrays.storage(a::oneArray) = a.data
 
 ## alias detection
 
-Base.dataids(A::oneArray) = (UInt(pointer(A)),)
+# GPUArrays implements `Base.dataids` and `Base.mightalias` from where an array lives
+GPUArrays.memory_location(A::oneArray) = (UInt(convert(ZePtr{Cvoid}, A.data[])), A.offset)
 
 Base.unaliascopy(A::oneArray) = copy(A)
-
-function Base.mightalias(A::oneArray, B::oneArray)
-  rA = pointer(A):pointer(A)+sizeof(A)
-  rB = pointer(B):pointer(B)+sizeof(B)
-  return first(rA) <= first(rB) < last(rA) || first(rB) <= first(rA) < last(rB)
-end
 
 
 ## convenience constructors
