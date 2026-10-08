@@ -194,6 +194,18 @@ end
     end
 end
 
+@testset "narrow integer reduction with overflowing map" begin
+    # IGC < 2.34.4+2 kept the result of a 16-bit `mad` in the accumulator at full width, so
+    # the signed `max` compared the unwrapped value (JuliaGPU/oneAPI.jl#670, TGL and DG2).
+    A = Complex{Int16}[22264-2672im -3184-13367im 20267+16808im -29600+21497im;
+                       -2+6036im -13334-32552im -4391+23096im 1804+13481im;
+                       -19764+32524im 20734-5522im 30645+17973im 21749-26470im]
+    mk = A -> view(permutedims(A), [1, 2, 3, 4], :)
+    R = Base.mapreducedim!(abs2, max, zeros(Int16, 1, 3), mk(A))
+    dR = Base.mapreducedim!(abs2, max, oneArray(zeros(Int16, 1, 3)), mk(oneArray(A)))
+    @test Array(dR) == R
+end
+
 @testset "mapreducedim! returning same type" begin
   R = transpose(oneAPI.zeros(Float32, 2, 3))
   A = oneArray(rand(Float32, 3, 2, 10))
