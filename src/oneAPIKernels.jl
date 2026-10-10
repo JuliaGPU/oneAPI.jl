@@ -33,8 +33,18 @@ KI.supports_float64(::oneAPIBackend) = device_limits().supports_float64
 KI.supports_unified(::oneAPIBackend) = true
 KI.supports_atomics(::oneAPIBackend) = true
 KI.supports_subgroups(::oneAPIBackend) = device_limits().sub_group_size > 0
-function KI.supports_shuffle(::oneAPIBackend, ::Type{T}) where {T}
-    T in SPIRVIntrinsics.gentypes || return false
+# Intel's GPU compiler forms sub-groups from consecutive work-items (which the KernelInterface
+# testsuite checks), and they execute independently
+KI.supports_linear_subgroups(backend::oneAPIBackend) = KI.supports_subgroups(backend)
+KI.supports_independent_subgroups(backend::oneAPIBackend) = KI.supports_subgroups(backend)
+
+# The types `sub_group_shuffle` supports; other types are shuffled as words or field by
+# field. `Float16` and `Float64` are reported as unsupported on devices without them, rather
+# than shuffled as words: the overrides below are selected by type, not by device.
+const ShuffleTypes = Union{SPIRVIntrinsics.gentypes...}
+
+function KI.supports_shuffle(backend::oneAPIBackend, ::Type{T}) where {T <: ShuffleTypes}
+    KI.supports_subgroups(backend) || return false
     T === Float64 && return device_limits().supports_float64
     T === Float16 && return device_limits().supports_float16
     return true
@@ -175,8 +185,9 @@ function device_limits(dev::oneAPI.oneL0.ZeDevice = device())
         props = oneAPI.oneL0.compute_properties(dev)
         module_props = oneAPI.oneL0.module_properties(dev)
         # the sub-group width that `kernel_function` compiles for: 32, like a CUDA warp, if
-        # the device supports it, and 0 if the device has no sub-groups
-        sg_sizes = props.subGroupSizes
+        # the device supports it, and 0 if the device has no sub-groups. Only widths of up to
+        # 64, so that `KI.sub_group_ballot` (a `UInt64` mask) covers every lane.
+        sg_sizes = filter(<=(64), props.subGroupSizes)
         sub_group_size = 32 in sg_sizes ? 32 : maximum(sg_sizes; init = 0)
         (; max_work_group_size = props.maxTotalGroupSize,
            max_work_group_dims = (props.maxGroupSizeX, props.maxGroupSizeY, props.maxGroupSizeZ),
@@ -253,8 +264,59 @@ end
     sub_group_barrier(SPIRVIntrinsics.LOCAL_MEM_FENCE | SPIRVIntrinsics.GLOBAL_MEM_FENCE)
 end
 
-@device_override function KI.shfl_down(val::T, offset::Integer) where T
-    sub_group_shuffle(val, get_sub_group_local_id() + offset)
+@device_override KI.shfl(val::T, lane::Integer) where {T <: ShuffleTypes} =
+    sub_group_shuffle(val, lane)
+
+# past the sub-group width, `shfl_down` and `shfl_up` return the work-item's own value, which
+# `sub_group_shuffle` (like SPIR-V's `OpGroupNonUniformShuffleDown`) leaves undefined
+@device_override function KI.shfl_down(val::T, offset::Integer) where {T <: ShuffleTypes}
+    lane = get_sub_group_local_id()
+    # compared before adding, so that large offsets don't overflow
+    inside = offset <= get_max_sub_group_size() - lane
+    return sub_group_shuffle(val, ifelse(inside, lane + offset, lane))
+end
+
+@device_override function KI.shfl_up(val::T, offset::Integer) where {T <: ShuffleTypes}
+    lane = get_sub_group_local_id()
+    return sub_group_shuffle(val, ifelse(lane > offset, lane - offset, lane))
+end
+
+@device_override KI.shfl_xor(val::T, mask::Integer) where {T <: ShuffleTypes} =
+    sub_group_shuffle_xor(val, mask)
+
+@device_override KI.sub_group_any(pred::Bool) = SPIRVIntrinsics.sub_group_any(pred)
+
+@device_override KI.sub_group_all(pred::Bool) = SPIRVIntrinsics.sub_group_all(pred)
+
+@device_override function KI.sub_group_ballot(pred::Bool)
+    mask = SPIRVIntrinsics.sub_group_ballot(pred)
+    return UInt64(mask[1].value) | (UInt64(mask[2].value) << 32)
+end
+
+# The native reductions and scans, for `+` on 32- and 64-bit integers and floats, and
+# `min`/`max` on integers (OpenCL's `min` and `max` treat NaN and the sign of zero differently
+# from Julia's).
+const CollectiveIntTypes = Union{Int32, UInt32, Int64, UInt64}
+const CollectiveTypes = Union{CollectiveIntTypes, Float16, Float32, Float64}
+
+@device_override KI.sub_group_reduce(::typeof(+), val::CollectiveTypes) =
+    SPIRVIntrinsics.sub_group_reduce_add(val)
+@device_override KI.sub_group_reduce(::typeof(min), val::CollectiveIntTypes) =
+    SPIRVIntrinsics.sub_group_reduce_min(val)
+@device_override KI.sub_group_reduce(::typeof(max), val::CollectiveIntTypes) =
+    SPIRVIntrinsics.sub_group_reduce_max(val)
+
+@device_override KI.sub_group_scan(::typeof(+), val::CollectiveTypes) =
+    SPIRVIntrinsics.sub_group_scan_inclusive_add(val)
+@device_override KI.sub_group_scan(::typeof(min), val::CollectiveIntTypes) =
+    SPIRVIntrinsics.sub_group_scan_inclusive_min(val)
+@device_override KI.sub_group_scan(::typeof(max), val::CollectiveIntTypes) =
+    SPIRVIntrinsics.sub_group_scan_inclusive_max(val)
+
+# the native exclusive scans start from the identity, not from `init`
+@device_override function KI.sub_group_exclusive_scan(::typeof(+), val::T, init::T) where {T <: CollectiveTypes}
+    prefix = SPIRVIntrinsics.sub_group_scan_exclusive_add(val)
+    return ifelse(get_sub_group_local_id() == 1, init, init + prefix)
 end
 
 @device_override @inline function KI._print(args...)
