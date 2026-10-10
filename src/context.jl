@@ -284,7 +284,7 @@ global_queue(ctx::ZeContext, dev::ZeDevice) = stream_queue(global_stream(ctx, de
 # Register `stream` as a stream targeting (ctx, dev) so `synchronize_all_streams`/
 # `release` can find and drain it before freeing buffers whose in-flight work it may
 # still reference. EVERY stream that becomes a task's active stream must go through here
-# — not just the one `global_stream` creates but also the replacement `KA.priority!`
+# — not just the one `global_stream` creates but also the replacement `KI.priority!`
 # installs — or the unregistered stream's in-flight work can outlive a freed buffer (a
 # use-after-free that faults and bans the context on the LTS NEO stack). Only the LTS
 # stack maintains the registry; on the rolling stack this is a no-op. Returns `stream`.

@@ -29,7 +29,9 @@ jobs:
           ssh-strict: false
       - uses: julia-actions/setup-julia@latest
         with:
-          version: 'lts'
+          # XXX: needs Julia 1.11+ to pick up the unregistered KernelAbstractions 0.10 and
+          #      KernelInterface 0.4 from [sources]
+          version: '1.12'
       - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@latest
       - run: julia --project=docs/ docs/make.jl

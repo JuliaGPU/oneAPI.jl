@@ -12,7 +12,7 @@ using SpecialFunctions
 
 import Preferences
 
-import KernelAbstractions: KernelAbstractions
+import KernelInterface
 
 using LLVM, LLVM.IR, LLVM.Build, LLVM.Interop
 using Core: LLVMPtr

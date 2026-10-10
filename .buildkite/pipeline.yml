@@ -26,7 +26,19 @@ steps:
         agents:
           queue: "oneapi"
         commands: |
+          # XXX: KernelAbstractions 0.10 and KernelInterface 0.4 aren't registered yet.
+          #      Julia 1.10 ignores [sources], and Julia 1.11 doesn't pick them up for the
+          #      test environment, so check them out and develop them.
+          if [[ "{{matrix.julia}}" == "1.10" || "{{matrix.julia}}" == "1.11" ]]; then
+            git clone --depth 1 --branch main https://github.com/JuliaGPU/KernelAbstractions.jl ka
+            julia --project -e 'using Pkg; Pkg.develop([PackageSpec(; path) for path in ("ka", "ka/lib/KernelInterface")])'
+          fi
           julia --project=deps deps/build_ci.jl
+          # The julia-test plugin instantiates the project before these commands, which fails
+          # on Julia 1.10, so that step runs the tests here instead.
+          if [[ "{{matrix.julia}}" == "1.10" ]]; then
+            julia --project -e 'using Pkg; Pkg.test(; coverage=true, test_args=`--quickfail`)'
+          fi
         if: |
           build.message !~ /\[skip [^\]]*(tests|julia)/ &&
           (build.message =~ /\[only [^\]]*(tests|julia)/ || build.message !~ /\[only /)
@@ -38,6 +50,14 @@ steps:
 
       # the oldest supported release
       - <<: *julia
+        plugins:
+          - JuliaCI/julia#v1:
+              version: "{{matrix.julia}}"
+          - JuliaCI/julia-coverage#v1:
+              dirs:
+                - src
+                - lib
+                - examples
         if: |
           build.message !~ /\[skip [^\]]*(tests|julia)/ &&
           (build.message =~ /\[only [^\]]*(tests|julia)/ ||
