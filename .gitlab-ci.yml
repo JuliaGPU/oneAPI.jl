@@ -97,7 +97,7 @@ stages: [build, test, coverage]
     - |
       if [ "$JULIA_VERSION" = "1.10" ]; then
         rm -rf ka
-        git clone --depth 1 --branch main https://github.com/JuliaGPU/KernelAbstractions.jl ka
+        git clone --depth 1 --branch vc/ki-subgroup-ops https://github.com/JuliaGPU/KernelAbstractions.jl ka
         julia --color=yes --project=. -e 'using Pkg; Pkg.develop([PackageSpec(; path) for path in ("ka", "ka/lib/KernelInterface")])'
         julia --color=yes --project=test -e 'using Pkg; Pkg.develop([PackageSpec(; path) for path in (".", "ka", "ka/lib/KernelInterface")])'
       fi
