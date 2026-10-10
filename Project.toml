@@ -32,8 +32,8 @@ oneAPI_Level_Zero_Loader_jll = "13eca655-d68d-5b81-8367-6d99d727ab01"
 oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
 
 [sources]
-KernelAbstractions = {url = "https://github.com/JuliaGPU/KernelAbstractions.jl", rev = "main"}
-KernelInterface = {url = "https://github.com/JuliaGPU/KernelAbstractions.jl", rev = "main", subdir = "lib/KernelInterface"}
+KernelAbstractions = {url = "https://github.com/JuliaGPU/KernelAbstractions.jl", rev = "vc/ki-subgroup-ops"}
+KernelInterface = {url = "https://github.com/JuliaGPU/KernelAbstractions.jl", rev = "vc/ki-subgroup-ops", subdir = "lib/KernelInterface"}
 
 [extensions]
 KernelAbstractionsExt = "KernelAbstractions"
