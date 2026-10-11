@@ -202,11 +202,13 @@ end
 # compile to executable machine code
 function compile(@nospecialize(job::CompilerJob))
     # TODO: on 1.9, this actually creates a context. cache those.
-    asm, meta = JuliaContext() do ctx
-        GPUCompiler.compile(:obj, job)
+    return JuliaContext() do ctx
+        asm, meta = GPUCompiler.compile(:obj, job)
+        # the IR belongs to us: dispose of it, or it leaks along with the context
+        @dispose ir = meta.ir begin
+            (image = asm, entry = meta.entry.name)
+        end
     end
-
-    (image=asm, entry=meta.entry.name)
 end
 
 # link into an executable kernel
