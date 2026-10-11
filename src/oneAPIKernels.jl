@@ -37,10 +37,15 @@ KI.supports_subgroups(::oneAPIBackend) = device_limits().sub_group_size > 0
 # testsuite checks), and they execute independently
 KI.supports_linear_subgroups(backend::oneAPIBackend) = KI.supports_subgroups(backend)
 KI.supports_independent_subgroups(backend::oneAPIBackend) = KI.supports_subgroups(backend)
+# A sub-group is the SIMD lanes of one EU thread, so a segment of it executes the functions
+# with a `width` together without the rest of the sub-group: the shuffles and the ballot are
+# `OpGroupNonUniform*` instructions over the active lanes, and `KI.sub_group_barrier(width)`
+# only has to order memory (see below).
+KI.supports_independent_segments(backend::oneAPIBackend) = KI.supports_subgroups(backend)
 
-# The types `sub_group_shuffle` supports; other types are shuffled as words or field by
-# field. `Float16` and `Float64` are reported as unsupported on devices without them, rather
-# than shuffled as words: the overrides below are selected by type, not by device.
+# The types `sub_group_shuffle` supports; other types are shuffled as words. `Float16` and
+# `Float64` are reported as unsupported on devices without them, rather than shuffled as
+# words: the overrides below are selected by type, not by device.
 const ShuffleTypes = Union{SPIRVIntrinsics.gentypes...}
 
 function KI.supports_shuffle(backend::oneAPIBackend, ::Type{T}) where {T <: ShuffleTypes}
@@ -262,6 +267,18 @@ end
 
 @device_override @inline function KI.sub_group_barrier()
     sub_group_barrier(SPIRVIntrinsics.LOCAL_MEM_FENCE | SPIRVIntrinsics.GLOBAL_MEM_FENCE)
+end
+
+# A sub-group `OpControlBarrier` has to be executed by the whole sub-group, so a narrower
+# segment, whose lanes execute together anyway, only fences its memory accesses
+@device_override @inline function KI.sub_group_barrier(width::Integer)
+    if width == get_max_sub_group_size()
+        KI.sub_group_barrier()
+    else
+        SPIRVIntrinsics.atomic_work_item_fence(
+            SPIRVIntrinsics.LOCAL_MEM_FENCE | SPIRVIntrinsics.GLOBAL_MEM_FENCE,
+            SPIRVIntrinsics.memory_order_acq_rel, SPIRVIntrinsics.memory_scope_sub_group)
+    end
 end
 
 @device_override KI.shfl(val::T, lane::Integer) where {T <: ShuffleTypes} =
