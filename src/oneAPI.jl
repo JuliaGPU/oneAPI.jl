@@ -13,8 +13,7 @@ import Preferences
 
 import KernelAbstractions: KernelAbstractions
 
-using LLVM
-using LLVM.Interop
+using LLVM, LLVM.IR, LLVM.Build, LLVM.Interop
 using Core: LLVMPtr
 
 using SPIRV_LLVM_Translator_jll, SPIRV_Tools_jll

@@ -25,12 +25,12 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module,
                    job, mod, entry)
 
     # OpenCL 2.0
-    push!(metadata(mod)["opencl.ocl.version"],
+    push!(get!(mod.metadata, "opencl.ocl.version").operands,
           MDNode([ConstantInt(Int32(2)),
                   ConstantInt(Int32(0))]))
 
     # SPIR-V 1.5
-    push!(metadata(mod)["opencl.spirv.version"],
+    push!(get!(mod.metadata, "opencl.spirv.version").operands,
           MDNode([ConstantInt(Int32(1)),
                   ConstantInt(Int32(5))]))
 
@@ -60,14 +60,14 @@ function flatten_nested_insertvalue!(mod::LLVM.Module)
     changed = false
     count = 0
 
-    for f in functions(mod)
-        isempty(blocks(f)) && continue
+    for f in mod.functions
+        isempty(f.blocks) && continue
 
-        for bb in blocks(f)
+        for bb in f.blocks
             # Collect instructions to process (can't modify while iterating)
             to_process = LLVM.Instruction[]
 
-            for inst in instructions(bb)
+            for inst in bb.instructions
                 # Check if this is an insertvalue with nested indices
                 if LLVM.API.LLVMGetInstructionOpcode(inst) == LLVM.API.LLVMInsertValue
                     num_indices = LLVM.API.LLVMGetNumIndices(inst)
@@ -99,15 +99,15 @@ function flatten_insert!(inst::LLVM.Instruction)
     #            insertvalue %extracted, %val, j, k...
     #            insertvalue %base, %modified, i
 
-    composite = LLVM.operands(inst)[1]
-    value = LLVM.operands(inst)[2]
+    composite = inst.operands[1]
+    value = inst.operands[2]
 
     num_indices = LLVM.API.LLVMGetNumIndices(inst)
     idx_ptr = LLVM.API.LLVMGetIndices(inst)
     indices = unsafe_wrap(Array, idx_ptr, num_indices)
 
     builder = LLVM.IRBuilder()
-    LLVM.position!(builder, inst)
+    position!(builder, LLVM.before(inst))
 
     # Strategy: Recursively extract and insert for each nesting level
     # For insertvalue %base, %val, i, j, k
@@ -202,11 +202,13 @@ end
 # compile to executable machine code
 function compile(@nospecialize(job::CompilerJob))
     # TODO: on 1.9, this actually creates a context. cache those.
-    asm, meta = JuliaContext() do ctx
-        GPUCompiler.compile(:obj, job)
+    return JuliaContext() do ctx
+        asm, meta = GPUCompiler.compile(:obj, job)
+        # the IR belongs to us: dispose of it, or it leaks along with the context
+        @dispose ir = meta.ir begin
+            (image = asm, entry = meta.entry.name)
+        end
     end
-
-    (image=asm, entry=LLVM.name(meta.entry))
 end
 
 # link into an executable kernel
