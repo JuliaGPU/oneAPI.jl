@@ -140,8 +140,10 @@ end
         kernel = zefunction(kernel_f, kernel_tt; compiler_kwargs...)
         if launch
             launch_managed(kernel, f, args; call_kwargs...)
+            kernel
+        else
+            with_source(kernel, f)
         end
-        kernel
     end
 end
 
@@ -247,7 +249,16 @@ end
 struct HostKernel{F,TT} <: AbstractKernel{F,TT}
     f::F
     fun::ZeKernel
+
+    # the callable the kernel was compiled from, whose memory launches take ownership of.
+    # only set on the kernels `@oneapi launch=false` returns, as the cached ones are shared
+    # by every callable that converts to `f`.
+    source::Any
 end
+HostKernel{F,TT}(f, fun::ZeKernel) where {F,TT} = HostKernel{F,TT}(f, fun, nothing)
+
+with_source(kernel::HostKernel{F,TT}, source) where {F,TT} =
+    HostKernel{F,TT}(kernel.f, kernel.fun, source)
 
 # Upper bound on the spill (scratch) memory a single work-group may require, in bytes.
 #
@@ -427,9 +438,9 @@ end
 # `Vararg{Any,N}`, as Julia doesn't specialize a method on varargs it only passes on, and an
 # explicit `Core.kwcall` method, as the one lowered from keyword arguments splats them
 @inline (kernel::HostKernel)(args::Vararg{Any,N}) where {N} =
-    launch_managed(kernel, nothing, args)
+    launch_managed(kernel, kernel.source, args)
 @inline Core.kwcall(kwargs::NamedTuple, kernel::HostKernel, args::Vararg{Any,N}) where {N} =
-    launch_managed(kernel, nothing, args; kwargs...)
+    launch_managed(kernel, kernel.source, args; kwargs...)
 
 # launch a kernel, taking ownership of the memory its arguments use, and of the memory
 # captured by `source`, the callable the kernel was compiled from (if known): its converted

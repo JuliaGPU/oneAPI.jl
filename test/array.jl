@@ -204,6 +204,14 @@ end
   wait(@async launch(a))
   @test a[1] ≈ a[end] ≈ twice
 
+  # a kernel compiled without launching, accessing memory it captures
+  let a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
+    f = () -> (slow_increment!(a, n); return)
+    kernel = @oneapi launch=false f()
+    kernel(; items=256, groups=cld(length(a), 256))
+    @test a[1] ≈ a[end] ≈ once
+  end
+
   # a kernel submitted to an explicitly created queue
   queue = oneL0.ZeCommandQueue(context(), device(); mode=oneL0.ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS)
   a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
