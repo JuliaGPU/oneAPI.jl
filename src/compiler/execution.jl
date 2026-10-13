@@ -288,11 +288,17 @@ end
 const zefunction_lock = ReentrantLock()
 
 function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
+    fun = zefunction_link(methodinstance(F, tt); kwargs...)
+    return HostKernel{F,tt}(f, fun)
+end
+
+# the parts of `zefunction` that don't depend on the type of the function, kept separate so
+# that they are compiled once rather than for every kernel
+function zefunction_link(source::Core.MethodInstance; kwargs...)
     Base.@lock zefunction_lock begin
         ctx = context()
         dev = device()
         config = compiler_config(dev; kwargs...)::oneAPICompilerConfig
-        source = methodinstance(F, tt)
         job = CompilerJob(source, config)
 
         res = compile_or_lookup(job)::oneAPIResults
@@ -316,12 +322,7 @@ function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
             end
         end
 
-        # create a callable object that captures the function instance. we don't need to think
-        # about world age here, as GPUCompiler already does and will return a different object
-        h = hash(fun, hash(f, hash(tt)))
-        get!(_kernel_instances, h) do
-            HostKernel{F,tt}(f, fun)
-        end::HostKernel{F,tt}
+        return fun::ZeKernel
     end
 end
 
@@ -345,9 +346,6 @@ end
     end
     return res
 end
-
-# cache of kernel instances
-const _kernel_instances = Dict{UInt, Any}()
 
 @inline function onecall(kernel::ZeKernel, tt, args::Tuple; groups::ZeDim=1, items::ZeDim=1,
                          queue::Union{oneStream, ZeCommandQueue}=global_stream(context(), device()))

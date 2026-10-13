@@ -28,7 +28,7 @@ See also: `driver!`, `drivers`
 function driver()
     get!(task_local_storage(), :ZeDriver) do
         first(drivers())
-    end
+    end::ZeDriver
 end
 
 """
@@ -74,7 +74,7 @@ See also: `device!`, `devices`, `driver`
 function device()
     get!(task_local_storage(), :ZeDevice) do
         first(devices(driver()))
-    end
+    end::ZeDevice
 end
 
 """
@@ -174,7 +174,7 @@ function context()
                 ZeContext(drv)
             end
         end
-    end
+    end::ZeContext
 end
 
 """
