@@ -1,4 +1,5 @@
 import Adapt
+import LinearAlgebra
 
 using StaticArrays
 
@@ -847,6 +848,202 @@ function fill_kernel(a, x)
     return
 end
 
+# a step of a recurrence that doesn't commute, so its result depends on the order of launches
+function recurrence_kernel(a, i)
+    @inbounds a[1] = 3 * a[1] + i
+    return
+end
+function recurrence(n)
+    x = 0
+    for i in 1:n
+        x = 3 * x + i
+    end
+    return x
+end
+
+function ptr_increment_kernel(ptr)
+    unsafe_store!(ptr, unsafe_load(ptr) + 1)
+    return
+end
+
+@testset "command batching" begin
+    n = 100  # spans several batches
+    batching = oneAPI.global_stream(context(), device()).batching &&
+               !oneL0.sync_each_submission()
+
+    # dependent launches execute in order, across batches
+    a = oneArray(Int64[0])
+    for i in 1:n
+        @oneapi recurrence_kernel(a, i)
+    end
+    @test Array(a)[1] == recurrence(n)
+
+    # interleaved with operations that are submitted directly
+    a = oneArray(Int64[0])
+    for i in 1:n
+        @oneapi recurrence_kernel(a, i)
+        i % 10 == 0 && copyto!(a, a)
+        i % 25 == 0 && copyto!(oneArray{Int64}(undef, 1), [i])
+    end
+    @test Array(a)[1] == recurrence(n)
+
+    # host accesses wait for launches that haven't been submitted yet
+    a = oneArray{Int64, 1, oneL0.SharedBuffer}([0])
+    for i in 1:n
+        @oneapi recurrence_kernel(a, i)
+    end
+    @test a[1] == recurrence(n)
+
+    # also when they were recorded by another task
+    a = oneArray(Int64[0])
+    wait(@async begin
+        for i in 1:n
+            @oneapi recurrence_kernel(a, i)
+        end
+    end)
+    @test Array(a)[1] == recurrence(n)
+
+    # synchronizing submits what tasks recorded before finishing, also when the memory it
+    # uses isn't tracked, and when another task records on the same stream later
+    a = oneArray(Int64[0])
+    ptr = reinterpret(Core.LLVMPtr{Int64, oneAPI.AS.CrossWorkgroup}, pointer(a))
+    stream = fetch(@async begin
+        for _ in 1:3
+            @oneapi ptr_increment_kernel(ptr)
+        end
+        oneAPI.global_stream(context(), device())
+    end)
+    synchronize()
+    @test Array(a)[1] == 3
+    wait(@async begin
+        for _ in 1:3
+            @oneapi queue=stream ptr_increment_kernel(ptr)
+        end
+    end)
+    synchronize()
+    @test Array(a)[1] == 6
+
+    # including on the stream of a task that is still running
+    streams = Channel{Any}(1)
+    done = Channel{Nothing}(1)
+    owner = @async begin
+        # with a batch recorded, which the other task records into
+        for _ in 1:2
+            @oneapi ptr_increment_kernel(ptr)
+        end
+        put!(streams, oneAPI.global_stream(context(), device()))
+        take!(done)
+    end
+    stream = take!(streams)
+    batching && @test stream.recorder === owner
+    wait(@async begin
+        for _ in 1:3
+            @oneapi queue=stream ptr_increment_kernel(ptr)
+        end
+    end)
+    synchronize()
+    @test Array(a)[1] == 11
+    put!(done, nothing)
+    wait(owner)
+
+    # memory used by recorded launches stays alive until they have executed
+    a = oneArray(Int64[0])
+    GC.enable(false)
+    try
+        @oneapi recurrence_kernel(a, 1)  # submitted directly
+        bytes = 1 << 23                  # not sub-allocated
+        before = oneAPI._allocated_bytes[]
+        b = oneArray{Int64}(undef, bytes ÷ sizeof(Int64))
+        @oneapi items=256 groups=4 fill_kernel(b, 1)
+        oneAPI.unsafe_free!(b)
+        batching && @test oneAPI._allocated_bytes[] == before + bytes
+        synchronize()
+        @test oneAPI._allocated_bytes[] == before
+    finally
+        GC.enable(true)
+    end
+
+    # recorded launches are submitted on request
+    a = oneArray{Int64, 1, oneL0.SharedBuffer}([0])
+    synchronize()
+    for i in 1:3
+        @oneapi recurrence_kernel(a, i)
+    end
+    oneAPI.flush!()
+    # wait for the stream without waiting for the work on `a`, which would submit it, and
+    # read the memory directly
+    oneL0.synchronize(oneAPI.global_stream(context(), device()).immediate)
+    @test unsafe_load(reinterpret(Ptr{Int64}, oneAPI.device_pointer(a))) == recurrence(3)
+
+    # with all batches executing, launches are submitted directly instead of waiting for
+    # one, which may not finish before this task does something (here, open the gate)
+    if batching
+        pool = oneL0.ZeEventPool(context(), 1, device(); flags=oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+        gate = pool[1]
+        a = oneArray(Int64[0])
+        # (only a few more: many submissions waiting for the gate make the driver stall, and
+        # eventually give up on the device)
+        m = oneAPI.MAX_BATCHES * oneAPI.BATCH_SIZE + 10
+        GC.enable(false)  # freeing memory may wait for the stream on some stacks
+        try
+            oneL0.execute!(oneAPI.global_stream(context(), device())) do list
+                oneL0.append_wait!(list, gate)
+            end
+            for i in 1:m
+                @oneapi recurrence_kernel(a, i)
+            end
+            oneL0.signal(gate)
+        finally
+            GC.enable(true)
+        end
+        @test Array(a)[1] == recurrence(m)
+    end
+
+    # work recorded before using oneMKL is executed first, and work after it waits for it
+    x = oneArray(ones(Float32, 1024))
+    y = oneArray(zeros(Float32, 1024))
+    for _ in 1:40
+        x .+= 1
+    end
+    LinearAlgebra.axpy!(2f0, x, y)
+    for _ in 1:40
+        y .+= 1
+    end
+    @test Array(y) == fill(2f0 * 41 + 40, 1024)
+
+    # a failed submission is reported until the stream is synchronized
+    @test fetch(@async begin
+        a = oneArray(Int64[0])
+        stream = oneAPI.global_stream(context(), device())
+        err = ErrorException("submission failed")
+        stream.error = err
+        caught(f) = try f(); nothing catch e; e end
+        results = [caught(() -> @oneapi recurrence_kernel(a, 1)),
+                   caught(() -> copyto!(a, [1])),
+                   caught(() -> oneAPI.flush!(stream)),
+                   caught(() -> oneAPI.drain(stream)),
+                   caught(() -> synchronize())]
+        # also when crossing a new spill tier, which synchronizes first
+        stream.error = err
+        stream.scratch_hwm = -1
+        push!(results, caught(() -> @oneapi recurrence_kernel(a, 1)))
+        stream.error = nothing
+        all(r -> r === err, results) && caught(() -> synchronize()) === nothing
+    end)
+
+    # and reported once by whoever synchronizes when the task that recorded didn't
+    err = ErrorException("submission failed")
+    a = oneArray(Int64[0])
+    wait(@async begin
+        for i in 1:2
+            @oneapi recurrence_kernel(a, i)
+        end
+        oneAPI.global_stream(context(), device()).error = err
+    end)
+    @test try synchronize(); nothing catch e; e end === (batching ? err : nothing)
+    @test try synchronize(); nothing catch e; e end === nothing
+end
+
 @testset "cooperative synchronize" begin
     # keep the work on the task's stream waiting for an event until another task signals
     # it, which makes these tests independent of timing: synchronizing can only return after
@@ -887,8 +1084,11 @@ end
                 yield()
             end
 
-            oneL0.execute!(oneAPI.global_stream(context(), device())) do list
-                oneL0.append_wait!(list, gate)
+            # (without synchronizing after the submission, which would wait for the gate)
+            oneL0.sync_each_submission(false) do
+                oneL0.execute!(oneAPI.global_stream(context(), device())) do list
+                    oneL0.append_wait!(list, gate)
+                end
             end
             opener = @async begin
                 for _ in 1:10_000

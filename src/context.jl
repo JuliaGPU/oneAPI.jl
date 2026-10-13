@@ -199,9 +199,63 @@ function context!(ctx::ZeContext)
     task_local_storage(:ZeContext, ctx)
 end
 
-# The per-task submission target. `list` is where Julia-side work (kernels, copies,
-# fills) is appended — an in-order asynchronous immediate command list, so appends are
-# submitted to the device as they happen and no per-dispatch driver objects exist.
+## command batching
+#
+# Each submission to an immediate command list is a system call, costing ~9 µs per kernel
+# launch on i915. Kernel launches are therefore recorded in a regular command list, a
+# batch, which is submitted to the stream's immediate list once it holds `BATCH_SIZE`
+# launches, or before anything else needs the stream's work: other submissions,
+# synchronization, host accesses to memory the stream uses (see `drain`), and oneMKL
+# calls. The first launch after the stream was synchronized is submitted directly, so that
+# a lone kernel doesn't wait for one of those. The memory the kernels of a batch use is
+# kept alive until the batch has executed.
+
+# initialized from ONEAPI_COMMAND_BATCHING in `__init__`
+const BATCHING = Ref{Bool}(true)
+
+const BATCH_SIZE = 32
+const MAX_BATCHES = 8
+
+mutable struct Batch
+    const list::oneL0.ZeCommandList
+    const event::oneL0.ZeEvent
+    # copies of the references to the memory the batch's kernels use, by allocation
+    const roots::Vector{DataRef}
+    const rooted::Base.IdSet{Any}
+    launches::Int
+end
+
+# whether the driver can submit regular command lists to an immediate one, which is an
+# experimental extension, and executes in-order regular lists
+const batching_support = Dict{Tuple{ZeContext, ZeDevice}, Bool}()
+const batching_support_lock = ReentrantLock()
+function batching_supported(ctx::ZeContext, dev::ZeDevice)
+    @lock batching_support_lock get!(batching_support, (ctx, dev)) do
+        try
+            list = oneL0.ZeCommandList(ctx, dev; flags = oneL0.ZE_COMMAND_LIST_FLAG_IN_ORDER)
+            oneL0.append_barrier!(list)
+            close(list)
+            immediate = oneL0.ZeImmediateCommandList(ctx, dev;
+                flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+                mode = oneL0.ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS)
+            GC.@preserve list begin
+                oneL0.zeCommandListImmediateAppendCommandListsExp(immediate, 1,
+                                                                 Ref(list.handle),
+                                                                 C_NULL, 0, C_NULL)
+                oneL0.synchronize(immediate)
+            end
+            true
+        catch err
+            # the driver rejects the flag or the function, or the loader doesn't have it
+            err isa Union{oneL0.ZeError, ErrorException} || rethrow()
+            false
+        end
+    end
+end
+
+# The per-task submission target. `immediate` is where Julia-side work (kernels, copies,
+# fills) is submitted: an in-order asynchronous immediate command list. Kernel launches are
+# mostly recorded in batches first, see above.
 # `queue` exists only for SYCL/oneMKL interop, which requires a real command-queue
 # handle, and is created on first use. Work on the two executes independently, so
 # ordering at the oneMKL boundary is restored explicitly: `mkl_boundary!` (Julia → MKL)
@@ -213,6 +267,21 @@ mutable struct oneStream
     # only append to this through `execute!` or `launch!`, which hold `lock`
     const immediate::oneL0.ZeImmediateCommandList
     const lock::ReentrantLock
+
+    # command batching (see above), protected by `lock`
+    const batching::Bool
+    batch::Union{Nothing, Batch}    # the batch being recorded
+    const submitted::Vector{Batch}  # in submission order
+    const spare::Vector{Batch}
+    nbatches::Int
+    events::Union{Nothing, oneL0.ZeEventPool}
+    idle::Bool                      # submit the next launch directly
+    recorder::Union{Nothing, Task}  # the last task to record a launch, if registered
+    const retired::Vector{DataRef}  # roots of executed batches, still to be released
+    const failed::Vector{Batch}     # possibly submitted, so never released
+    # a failed submission, reported by the next synchronization
+    error::Union{Nothing, Exception}
+
     # atomic because other tasks read it when waiting for work on memory this stream owns
     Base.@atomic queue::Union{Nothing, ZeCommandQueue}
     mkl_dirty::Bool
@@ -242,8 +311,193 @@ function create_stream(ctx::ZeContext, dev::ZeDevice,
               "reported API version $(oneL0.api_version(ctx.driver))); creation failed " *
               "with $(err.code)")
     end
-    s = oneStream(ctx, dev, list, ReentrantLock(), nothing, false, 0, priority)
+    batching = BATCHING[] && batching_supported(ctx, dev)
+    s = oneStream(ctx, dev, list, ReentrantLock(),
+                  batching, nothing, Batch[], Batch[], 0, nothing, true, nothing, DataRef[],
+                  Batch[], nothing, nothing, false, 0, priority)
     return register_stream!(ctx, dev, s)
+end
+
+# The functions below expect the caller to hold `s.lock`.
+
+check_error(s::oneStream) = (s.error === nothing || throw(s.error); nothing)
+
+function new_batch!(s::oneStream)
+    if s.events === nothing
+        s.events = oneL0.ZeEventPool(s.ctx, MAX_BATCHES, s.dev;
+                                     flags = oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    end
+    s.nbatches += 1
+    list = oneL0.ZeCommandList(s.ctx, s.dev; flags = oneL0.ZE_COMMAND_LIST_FLAG_IN_ORDER)
+    event = oneL0.ZeEvent(s.events, s.nbatches;
+                          signal = oneL0.ZE_EVENT_SCOPE_FLAG_HOST,
+                          wait = oneL0.ZE_EVENT_SCOPE_FLAG_HOST)
+    return Batch(list, event, DataRef[], Base.IdSet{Any}(), 0)
+end
+
+# recycle the batches that have executed. their roots are released by `release_retired!`,
+# not here, as that can free memory, which waits for the GPU on some stacks.
+function retire!(s::oneStream)
+    while !isempty(s.submitted) && Base.isdone(first(s.submitted).event)
+        b = popfirst!(s.submitted)
+        isempty(b.roots) || queue_release!(s)
+        append!(s.retired, b.roots)
+        empty!(b.roots)
+        empty!(b.rooted)
+        reset(b.list)
+        reset(b.event)
+        b.launches = 0
+        push!(s.spare, b)
+    end
+    return
+end
+
+# the batch to record a launch in, or `nothing` if it should be submitted directly
+function open_batch!(s::oneStream)
+    b = s.batch
+    b === nothing || return b
+    retire!(s)
+    if isempty(s.spare)
+        # with all batches executing, submit directly rather than waiting for one: the
+        # caller holds the kernel's lock, which another task may need to make progress
+        s.nbatches < MAX_BATCHES || return nothing
+        push!(s.spare, new_batch!(s))
+    end
+    b = pop!(s.spare)
+    s.batch = b
+    return b
+end
+
+function flush_batch!(s::oneStream)
+    b = s.batch
+    b === nothing && return
+    s.batch = nothing
+    try
+        close(b.list)
+        oneL0.zeCommandListImmediateAppendCommandListsExp(s.immediate, 1, Ref(b.list.handle),
+                                                         b.event, 0, C_NULL)
+    catch err
+        # the batch may have been submitted, so keep it and the memory it uses alive
+        push!(s.failed, b)
+        s.error = err
+        rethrow()
+    end
+    push!(s.submitted, b)
+    return
+end
+
+# keep `roots`, the references to the memory a launch uses, alive with the batch
+function root!(b::Batch, roots)
+    roots === nothing && return
+    for ref in roots
+        managed = ref[]
+        managed in b.rooted && continue
+        push!(b.rooted, managed)
+        push!(b.roots, copy(ref))
+    end
+    return
+end
+
+"""
+    flush!(stream::oneStream = global_stream(context(), device()))
+
+Submit the kernel launches the stream has recorded but not yet submitted to the device.
+Launches are submitted in batches, so call this before doing significant work on the host
+that should overlap with the GPU executing those kernels. Synchronizing flushes too.
+"""
+function flush!(s::oneStream = global_stream(context(), device()))
+    @lock s.lock begin
+        check_error(s)
+        flush_batch!(s)
+    end
+    return
+end
+
+# streams with roots to release, which happens at `release_pending!`
+const pending_release = Base.IdSet{oneStream}()
+const pending_release_lock = ReentrantLock()
+const npending_release = Threads.Atomic{Int}(0)
+
+function queue_release!(s::oneStream)
+    @lock pending_release_lock push!(pending_release, s)
+    npending_release[] = 1
+    return
+end
+
+# release the memory of executed batches. the caller must not hold any lock, as freeing
+# memory can wait for the GPU on some stacks.
+function release_pending!()
+    npending_release[] == 0 && return
+    streams = @lock pending_release_lock begin
+        npending_release[] = 0
+        streams = collect(pending_release)
+        empty!(pending_release)
+        streams
+    end
+    foreach(release_retired!, streams)
+    return
+end
+
+function release_retired!(s::oneStream)
+    roots = @lock s.lock begin
+        isempty(s.retired) && return
+        roots = copy(s.retired)
+        empty!(s.retired)
+        roots
+    end
+    foreach(unsafe_free!, roots)
+    return
+end
+
+# streams that recorded launches since they were last synchronized, so that `synchronize`
+# can submit what tasks recorded before finishing. the stream is referenced strongly, so
+# that it doesn't get destroyed with work recorded. a stream's lock is taken before this
+# one, and the stream's `recorder` is the task last to record on it.
+const batching_streams = Base.IdSet{oneStream}()
+const batching_streams_lock = ReentrantLock()
+
+function register_batching!(s::oneStream)
+    @lock batching_streams_lock push!(batching_streams, s)
+    s.recorder = current_task()
+    return
+end
+
+# forget a stream once nothing it recorded is still to execute. streams with batches that
+# failed to submit, which may still execute, are kept around.
+function maybe_unregister_batching!(s::oneStream)
+    if s.recorder !== nothing && s.batch === nothing && isempty(s.submitted) &&
+       isempty(s.failed)
+        @lock batching_streams_lock delete!(batching_streams, s)
+        s.recorder = nothing
+    end
+    return
+end
+
+# wait for the streams on which tasks that have finished were the last to record. other
+# tasks' streams are left alone: their tasks synchronize them.
+function adopt_orphans!(ctx::ZeContext, dev::ZeDevice)
+    streams = @lock batching_streams_lock collect(batching_streams)
+    for s in streams
+        (s.ctx == ctx && s.dev == dev) || continue
+        orphaned = @lock s.lock begin
+            task = s.recorder
+            task !== nothing && istaskdone(task)
+        end
+        orphaned || continue
+        err = nothing
+        try
+            drain(s)
+        catch e
+            err = e
+        end
+        @lock s.lock begin
+            # reported here, as the task that would have isn't around anymore
+            err === nothing || (s.error = nothing)
+            maybe_unregister_batching!(s)
+        end
+        err === nothing || throw(err)
+    end
+    return
 end
 
 """
@@ -406,18 +660,43 @@ println("GPU work completed")
 See also: [`global_stream`](@ref), [`context`](@ref), [`device`](@ref)
 """
 function oneL0.synchronize(s::oneStream; blocking::Bool=false)
+    err = synchronize_stream!(s; blocking)
+    release_pending!()
+    err === nothing || throw(err)
+    return
+end
+
+# synchronize a stream, returning the error of a failed submission
+function synchronize_stream!(s::oneStream; blocking::Bool=false)
     sync = blocking ? oneL0.synchronize : oneL0.nonblocking_synchronize
+    # a failed submission is recorded in `s.error`, and reported below
+    @lock s.lock try
+        flush_batch!(s)
+    catch
+    end
     sync(s.immediate)
     q = Base.@atomic s.queue
     if q !== nothing
         sync(q)
         s.mkl_dirty = false
     end
-    return
+    err = @lock s.lock begin
+        retire!(s)
+        s.idle = true
+        maybe_unregister_batching!(s)
+        err = s.error
+        s.error = nothing
+        err
+    end
+    return err
 end
 
 function oneL0.synchronize(; blocking::Bool=false)
-    oneL0.synchronize(global_stream(context(), device()); blocking)
+    ctx = context()
+    dev = device()
+    oneL0.synchronize(global_stream(ctx, dev); blocking)
+    adopt_orphans!(ctx, dev)
+    release_pending!()
 end
 
 # Julia → MKL ordering: everything Julia appended to the task's immediate list must be
@@ -427,6 +706,10 @@ end
 # preparation (temporaries, conversions), which holds today because the queue is the
 # first ccall argument and Julia evaluates arguments left to right.
 function mkl_boundary!(s::oneStream = global_stream(context(), device()))
+    @lock s.lock begin
+        check_error(s)
+        flush_batch!(s)
+    end
     oneL0.synchronize(s.immediate)
     s.mkl_dirty = true
     return
@@ -456,7 +739,11 @@ outstanding oneMKL work. Appends are submitted to the device as they happen.
 """
 @inline function oneL0.execute!(f::Base.Callable, s::oneStream)
     mkl_wait!(s)
-    @lock s.lock oneL0.execute!(f, s.immediate)
+    @lock s.lock begin
+        check_error(s)
+        flush_batch!(s)
+        oneL0.execute!(f, s.immediate)
+    end
 end
 
 # re-export and augment parts of oneL0 to make driver and device selection easier

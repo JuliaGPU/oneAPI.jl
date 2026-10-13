@@ -85,9 +85,17 @@ Base.sizeof(managed::Managed) = sizeof(managed.mem)
 # wait for all work on a stream, possibly from another task. unlike `synchronize`, this
 # leaves `mkl_dirty` alone, which only the stream's own task may modify.
 function drain(s::oneStream)
+    @lock s.lock begin
+        check_error(s)
+        flush_batch!(s)
+    end
     oneL0.nonblocking_synchronize(s.immediate)
     q = Base.@atomic s.queue
     q === nothing || oneL0.nonblocking_synchronize(q)
+    @lock s.lock begin
+        retire!(s)
+        s.idle = true
+    end
     return
 end
 drain(q::ZeCommandQueue) = oneL0.nonblocking_synchronize(q)
@@ -125,7 +133,7 @@ end
 function with_managed_locks(f, managed::Vector{Managed})
     locked = sort!(unique!(managed); by=objectid)
     nlocked = 0
-    try
+    ret = try
         for m in locked
             lock(m.lock)
             nlocked += 1
@@ -136,6 +144,7 @@ function with_managed_locks(f, managed::Vector{Managed})
             unlock(locked[i].lock)
         end
     end
+    return ret
 end
 
 # submit an operation using the memory of `managed` to `owner`, as a single transaction

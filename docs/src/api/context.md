@@ -80,7 +80,21 @@ do not use it, so synchronizing this queue does not wait for them; use `synchron
 Block the host thread until all operations on the global stream for the current context
 and device have completed: both the immediate command list and, if one has been created,
 the companion command queue. `synchronize(stream::oneStream)` does the same for an
-explicit stream.
+explicit stream. `synchronize()` also submits and waits for the work of tasks that
+finished without synchronizing.
+
+### Command batching
+
+Submitting work to the GPU is expensive, so kernels launched on a stream are recorded and
+submitted in batches of up to 32. A batch is submitted when it is full, and before
+anything needs the stream's work: synchronizing, copies and other operations on the
+stream, accessing an array's memory from the host or from another task, and oneMKL calls.
+The first kernel after synchronizing is submitted right away.
+
+As a result, the GPU may not start executing a kernel until one of those happens. Call
+`oneAPI.flush!()` (or `oneAPI.flush!(stream)`) to submit the recorded kernels, e.g., before
+doing work on the host that should overlap with them. Set `ONEAPI_COMMAND_BATCHING=0` to
+submit every kernel when it is launched.
 
 
 ## Example Workflow

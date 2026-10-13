@@ -139,6 +139,7 @@ function __init__()
         # slabs are process-local
         empty!(pools)
         POOL[] = oneL0.parse_env_bool("ONEAPI_MEMORY_POOL", true)
+        BATCHING[] = oneL0.parse_env_bool("ONEAPI_COMMAND_BATCHING", true)
 
         @static if Sys.iswindows()
             @warn """oneAPI.jl support for native Windows is experimental and incomplete.
