@@ -313,6 +313,32 @@ end
 end
 
 
+@testset "arguments of a union of singleton types" begin
+    # JuliaLang/julia#63482: `GC.@preserve` of such a value crashed codegen
+    function kernel(a, op)
+        @inbounds a[1] = op(a[1], Int16(1))
+        return
+    end
+
+    function compile(a)
+        kernels = []
+        for op in (max, min)
+            push!(kernels, @oneapi launch=false kernel(a, op))
+        end
+        kernels
+    end
+    @test length(compile(oneArray(Int16[5]))) == 2
+
+    function launch(a)
+        for op in (max, min)
+            @oneapi kernel(a, op)
+        end
+        Array(a)
+    end
+    @test launch(oneArray(Int16[5])) == Int16[1]
+end
+
+
 @testset "immutables" begin
     # issue #15: immutables not passed by pointer
 
