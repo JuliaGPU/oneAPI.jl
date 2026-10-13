@@ -105,7 +105,7 @@ end
 See also: [`oneVector`](@ref), [`oneMatrix`](@ref), [`is_device`](@ref), [`is_shared`](@ref)
 """
 mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
-  data::DataRef{B}
+  data::DataRef{Managed{B}}
 
   maxsize::Int  # maximum data size; excluding any selector bytes
   offset::Int   # offset of the data in the buffer, in bytes
@@ -126,15 +126,15 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
     alignment = Base.datatype_alignment(T)
     data = GPUArrays.cached_alloc((oneArray, B, ctx, dev, bufsize, alignment)) do
         buf = allocate(B, ctx, dev, bufsize, alignment)
-        data = DataRef(buf) do buf
-          release(buf)
+        data = DataRef(Managed(buf)) do managed
+          release(managed.mem)
         end
     end
     obj = new{T,N,B}(data, maxsize, 0, dims)
     finalizer(unsafe_free!, obj)
   end
 
-  function oneArray{T,N}(data::DataRef{B}, dims::Dims{N};
+  function oneArray{T,N}(data::DataRef{Managed{B}}, dims::Dims{N};
                          maxsize::Int=prod(dims) * sizeof(T), offset::Int=0) where {T,N,B}
     check_eltype(T)
     if sizeof(T) == 0
@@ -152,7 +152,7 @@ GPUArrays.storage(a::oneArray) = a.data
 ## alias detection
 
 # GPUArrays implements `Base.dataids` and `Base.mightalias` from where an array lives
-GPUArrays.memory_location(A::oneArray) = (UInt(convert(ZePtr{Cvoid}, A.data[])), A.offset)
+GPUArrays.memory_location(A::oneArray) = (UInt(convert(ZePtr{Cvoid}, A.data[].mem)), A.offset)
 
 Base.unaliascopy(A::oneArray) = copy(A)
 
@@ -227,11 +227,11 @@ Base.size(x::oneArray) = x.dims
 Base.sizeof(x::oneArray) = Base.elsize(x) * length(x)
 
 function context(A::oneArray)
-  return oneL0.context(A.data[])
+  return oneL0.context(A.data[].mem)
 end
 
 function device(A::oneArray)
-  return oneL0.device(A.data[])
+  return oneL0.device(A.data[].mem)
 end
 
 buftype(x::oneArray) = buftype(typeof(x))
@@ -246,7 +246,7 @@ Device memory provides the fastest GPU access but cannot be directly accessed fr
 
 See also: [`is_shared`](@ref), [`is_host`](@ref)
 """
-is_device(a::oneArray) = isa(a.data[], oneL0.DeviceBuffer)
+is_device(a::oneArray) = isa(a.data[].mem, oneL0.DeviceBuffer)
 
 """
     is_shared(a::oneArray) -> Bool
@@ -257,7 +257,7 @@ Shared memory is accessible from both CPU and GPU with unified virtual addressin
 
 See also: [`is_device`](@ref), [`is_host`](@ref)
 """
-is_shared(a::oneArray) = isa(a.data[], oneL0.SharedBuffer)
+is_shared(a::oneArray) = isa(a.data[].mem, oneL0.SharedBuffer)
 
 """
     is_host(a::oneArray) -> Bool
@@ -268,7 +268,7 @@ Host memory resides on the CPU but is visible to the GPU, useful for staging dat
 
 See also: [`is_device`](@ref), [`is_shared`](@ref)
 """
-is_host(a::oneArray) = isa(a.data[], oneL0.HostBuffer)
+is_host(a::oneArray) = isa(a.data[].mem, oneL0.HostBuffer)
 
 ## derived types
 
@@ -350,34 +350,41 @@ Base.convert(::Type{T}, x::T) where T <: oneArray = x
 
 ## interop with libraries
 
+# host pointers wait for outstanding work on the memory, so that the host sees its results
+# and doesn't race with it
 function Base.unsafe_convert(::Type{Ptr{T}}, x::oneArray{T}) where {T}
-  buf = x.data[]
   if is_device(x)
     throw(ArgumentError("cannot take the CPU address of a $(typeof(x))"))
   end
-  convert(Ptr{T}, x.data[]) + x.offset
+  managed = x.data[]
+  maybe_synchronize(managed)
+  convert(Ptr{T}, managed.mem) + x.offset
 end
 
+# device pointers record the task's stream as the memory's user, assuming the pointer is
+# used by work submitted there. operations that know their submission target take
+# ownership themselves, and use `device_pointer` instead.
 function Base.unsafe_convert(::Type{ZePtr{T}}, x::oneArray{T}) where {T}
-  convert(ZePtr{T}, x.data[]) + x.offset
+  managed = x.data[]
+  @lock managed.lock take_ownership!(managed, global_stream(context(x), device()))
+  device_pointer(x)
 end
+
+device_pointer(x::oneArray{T}, i::Integer=1) where {T} =
+  convert(ZePtr{T}, x.data[].mem) + x.offset + (i-1) * Base.elsize(x)
 
 
 ## indexing
 
 # Host-accessible arrays can be indexed from CPU, bypassing GPUArrays restrictions.
-# Wait for queued work first, e.g., the kernel computing the result of a reduction. This
-# only synchronizes the current task's stream; work submitted by other tasks, or to an
-# explicitly created queue, needs to be synchronized explicitly.
+# Taking the host pointer waits for outstanding work on the memory.
 function Base.getindex(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, I::Int)
     @boundscheck checkbounds(x, I)
-    synchronize(global_stream(context(x), device()))
     return unsafe_load(pointer(x, I; type = oneL0.HostBuffer))
 end
 
 function Base.setindex!(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, v, I::Int)
     @boundscheck checkbounds(x, I)
-    synchronize(global_stream(context(x), device()))
     return unsafe_store!(pointer(x, I; type = oneL0.HostBuffer), v)
 end
 
@@ -397,7 +404,7 @@ function typetagdata(a::oneArray, i=1)
   # for zero-size element types (e.g. singleton unions), the byte offset
   # is always zero, so the corresponding element offset is also zero
   elem_offset = iszero(Base.elsize(a)) ? 0 : a.offset ÷ Base.elsize(a)
-  return convert(ZePtr{UInt8}, a.data[]) + a.maxsize + elem_offset + i - 1
+  return convert(ZePtr{UInt8}, a.data[].mem) + a.maxsize + elem_offset + i - 1
 end
 
 function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::Array{T}, soffs::Integer,
@@ -445,11 +452,14 @@ Base.copyto!(dest::oneDenseArray{T}, src::oneDenseArray{T}) where {T} =
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T}, doffs, src::Array{T}, soffs, n) where T
+  stream = global_stream(ctx, dev)
   GC.@preserve src dest begin
-    unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
+    with_ownership(stream, Managed[dest.data[]]) do
+      unsafe_copyto!(ctx, dev, device_pointer(dest, doffs), pointer(src, soffs), n)
+    end
 
     # Keep pageable host memory alive until the queued copy completes.
-    synchronize(global_stream(ctx, dev))
+    synchronize(stream)
   end
   if Base.isbitsunion(T)
     # copy selector bytes
@@ -461,21 +471,30 @@ end
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::Array{T}, doffs, src::oneDenseArray{T}, soffs, n) where T
-  GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
+  stream = global_stream(ctx, dev)
+  GC.@preserve src dest begin
+    with_ownership(stream, Managed[src.data[]]) do
+      unsafe_copyto!(ctx, dev, pointer(dest, doffs), device_pointer(src, soffs), n)
+    end
+  end
   if Base.isbitsunion(T)
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
   end
 
   # copies to the host are synchronizing
-  synchronize(global_stream(context(src), device()))
+  synchronize(stream)
 
   return dest
 end
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T}, doffs, src::oneDenseArray{T}, soffs, n) where T
-  GC.@preserve src dest unsafe_copyto!(ctx, dev, pointer(dest, doffs), pointer(src, soffs), n)
+  GC.@preserve src dest begin
+    with_ownership(global_stream(ctx, dev), Managed[dest.data[], src.data[]]) do
+      unsafe_copyto!(ctx, dev, device_pointer(dest, doffs), device_pointer(src, soffs), n)
+    end
+  end
   if Base.isbitsunion(T)
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
@@ -487,20 +506,14 @@ end
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, doffs, src::Array{T}, soffs, n) where T
-  # maintain queue-ordered semantics
-  synchronize(global_stream(ctx, dev))
-
   if Base.isbitsunion(T)
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
   end
-  GC.@preserve src dest begin
-    ptr = pointer(dest, doffs)
+  # the host pointer waits for outstanding work; hold the lock so that no new work is
+  # submitted while copying
+  GC.@preserve src dest with_managed_locks(Managed[dest.data[]]) do
     unsafe_copyto!(pointer(dest, doffs; type=oneL0.HostBuffer), pointer(src, soffs), n)
-    if Base.isbitsunion(T)
-      # copy selector bytes
-      error("oneArray does not yet support isbits-union arrays")
-    end
   end
 
   return dest
@@ -508,20 +521,14 @@ end
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::Array{T}, doffs, src::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, soffs, n) where T
-  # maintain queue-ordered semantics
-  synchronize(global_stream(ctx, dev))
-
   if Base.isbitsunion(T)
     # copy selector bytes
     error("oneArray does not yet support isbits-union arrays")
   end
-  GC.@preserve src dest begin
-    ptr = pointer(dest, doffs)
+  # the host pointer waits for outstanding work; hold the lock so that no new work is
+  # submitted while copying
+  GC.@preserve src dest with_managed_locks(Managed[src.data[]]) do
     unsafe_copyto!(pointer(dest, doffs), pointer(src, soffs; type=oneL0.HostBuffer), n)
-    if Base.isbitsunion(T)
-      # copy selector bytes
-      error("oneArray does not yet support isbits-union arrays")
-    end
   end
 
   return dest
@@ -609,15 +616,17 @@ a shared buffer (as created by `oneArray{T}(undef, ...)`) or a host buffer.
 
     The returned `Array` does **not** keep `arr` alive. The caller has to keep a reference
     to `arr` for as long as the `Array`, or anything derived from it, is used; otherwise
-    the `Array` may end up referring to freed memory. Device operations execute
-    asynchronously, so call `synchronize()` before accessing the returned array after
-    using `arr` on the device.
+    the `Array` may end up referring to freed memory. Wrapping waits for device
+    operations that use `arr`, but operations submitted afterwards execute
+    asynchronously: before accessing the returned array again, wait for them by
+    synchronizing the stream or queue they were submitted to, or by taking the host
+    pointer of `arr`, e.g., with `pointer(arr; type=oneL0.HostBuffer)`.
 """
 function Base.unsafe_wrap(::Type{Array},
                           arr::oneArray{T,N,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}) where {T,N}
   # TODO: can we make this more convenient by increasing the buffer's refcount and using
   #       a finalizer on the Array? does that work when taking views etc of the Array?
-  ptr = reinterpret(Ptr{T}, pointer(arr))
+  ptr = pointer(arr; type=oneL0.HostBuffer)
   unsafe_wrap(Array, ptr, size(arr))
 end
 
@@ -646,13 +655,14 @@ function Base.resize!(a::oneVector{T}, n::Integer) where {T}
     ctx = context(a)
     dev = device(a)
     buf = allocate(buftype(a), ctx, dev, bufsize, Base.datatype_alignment(T))
-    ptr = convert(ZePtr{T}, buf)
+    new_data = DataRef(Managed(buf)) do managed
+        release(managed.mem)
+    end
     m = min(length(a), n)
     if m > 0
-        unsafe_copyto!(ctx, dev, ptr, pointer(a), m)
-    end
-    new_data = DataRef(buf) do buf
-        release(buf)
+        with_ownership(global_stream(ctx, dev), Managed[new_data[], a.data[]]) do
+            unsafe_copyto!(ctx, dev, convert(ZePtr{T}, buf), device_pointer(a), m)
+        end
     end
     unsafe_free!(a)
 
