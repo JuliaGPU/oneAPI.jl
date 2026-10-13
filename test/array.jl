@@ -209,6 +209,22 @@ end
   @test length(b) == 0
   resize!(b, 1)
   @test length(b) == 1
+
+  # resized buffers are released through the pool, like freshly allocated ones
+  c = oneArray{Float32}(undef, 4)
+  resize!(c, 0)
+  oneAPI.unsafe_free!(c)
+
+  GC.enable(false)
+  try
+    d = oneArray{Float32}(undef, 1024)
+    before = oneAPI._allocated_bytes[]
+    resize!(d, 1 << 20)
+    oneAPI.unsafe_free!(d)
+    @test oneAPI._allocated_bytes[] == before - sizeof(Float32) * 1024
+  finally
+    GC.enable(true)
+  end
 end
 
 # Reductions and scans come from GPUArrays (AcceleratedKernels). oneAPI used to work around
