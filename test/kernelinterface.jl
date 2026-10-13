@@ -3,7 +3,10 @@ import KernelInterface as KI
 
 include(joinpath(dirname(pathof(KernelInterface)), "..", "test", "testsuite.jl"))
 
-Testsuite.testsuite(oneAPIBackend(), oneArray)
+# synchronizing every submission makes a launch wait for the device, so the timing check that
+# an event wait is ordered after earlier work can't distinguish a missing wait
+skip_tests = oneL0.sync_each_submission() ? Set(["Events"]) : Set{String}()
+Testsuite.testsuite(oneAPIBackend(), oneArray; skip_tests)
 
 function ki_subgroup_kernel(num, sizes, max, id, lane)
     l = KI.get_local_id()
