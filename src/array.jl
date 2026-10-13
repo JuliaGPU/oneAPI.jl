@@ -125,10 +125,7 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
     dev = device()
     alignment = Base.datatype_alignment(T)
     data = GPUArrays.cached_alloc((oneArray, B, ctx, dev, bufsize, alignment)) do
-        buf = allocate(B, ctx, dev, bufsize, alignment)
-        data = DataRef(Managed(buf)) do managed
-          release(managed.mem)
-        end
+        DataRef(release, alloc_managed(B, ctx, dev, bufsize, alignment))
     end
     obj = new{T,N,B}(data, maxsize, 0, dims)
     finalizer(unsafe_free!, obj)
@@ -654,14 +651,12 @@ function Base.resize!(a::oneVector{T}, n::Integer) where {T}
     # as a result, we can safely support resizing unowned buffers.
     ctx = context(a)
     dev = device(a)
-    buf = allocate(buftype(a), ctx, dev, bufsize, Base.datatype_alignment(T))
-    new_data = DataRef(Managed(buf)) do managed
-        release(managed.mem)
-    end
+    new_data = DataRef(release, alloc_managed(buftype(a), ctx, dev, bufsize,
+                                              Base.datatype_alignment(T)))
     m = min(length(a), n)
     if m > 0
         with_ownership(global_stream(ctx, dev), Managed[new_data[], a.data[]]) do
-            unsafe_copyto!(ctx, dev, convert(ZePtr{T}, buf), device_pointer(a), m)
+            unsafe_copyto!(ctx, dev, convert(ZePtr{T}, new_data[].mem), device_pointer(a), m)
         end
     end
     unsafe_free!(a)

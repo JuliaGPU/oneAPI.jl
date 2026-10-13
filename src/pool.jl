@@ -103,6 +103,13 @@ function allocate(::Type{oneL0.HostBuffer}, ctx, dev, bytes::Int, alignment::Int
     return buf
 end
 
+# Allocate the memory backing an array, together with its ownership state, and release it.
+# Arrays only allocate and free memory through these.
+alloc_managed(::Type{B}, ctx, dev, bytes::Int, alignment::Int) where {B} =
+    Managed(allocate(B, ctx, dev, bytes, alignment))
+
+release(managed::Managed) = release(managed.mem)
+
 function release(buf::oneL0.AbstractBuffer)
     sizeof(buf) == 0 && return
 
