@@ -203,6 +203,12 @@ end
   launch(a)
   wait(@async launch(a))
   @test a[1] ≈ a[end] ≈ twice
+
+  # a kernel submitted to an explicitly created queue
+  queue = oneL0.ZeCommandQueue(context(), device(); mode=oneL0.ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS)
+  a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
+  @oneapi items=256 groups=cld(length(a), 256) queue=queue slow_increment!(a, n)
+  @test a[1] ≈ a[end] ≈ once
 end
 
 # https://github.com/JuliaGPU/oneAPI.jl/issues/661: kernels have to declare indirect access,

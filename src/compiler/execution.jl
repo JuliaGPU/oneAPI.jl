@@ -139,7 +139,7 @@ end
         kernel_tt = Tuple{map(Core.Typeof, kernel_args)...}
         kernel = zefunction(kernel_f, kernel_tt; compiler_kwargs...)
         if launch
-            kernel(args...; call_kwargs...)
+            launch_managed(kernel, f, args; call_kwargs...)
         end
         kernel
     end
@@ -148,14 +148,23 @@ end
 
 ## argument conversion
 
-struct KernelAdaptor end
+# conversion doesn't take ownership of the arrays' memory, since the launch target isn't
+# known yet. instead, the allocations are collected, if requested, so that the launch can
+# take ownership of them right before submitting the kernel.
+struct KernelAdaptor
+  managed::Union{Nothing, Vector{Managed}}
+end
+KernelAdaptor() = KernelAdaptor(nothing)
 
 # convert oneAPI host pointers to device pointers
 Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} = reinterpret(Ptr{T}, p)
 
 # convert oneAPI host arrays to device arrays
-Adapt.adapt_storage(::KernelAdaptor, xs::oneArray{T,N}) where {T,N} =
-  Base.unsafe_convert(oneDeviceArray{T,N,AS.CrossWorkgroup}, xs)
+function Adapt.adapt_storage(to::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
+  to.managed === nothing || push!(to.managed, xs.data[])
+  ptr = reinterpret(LLVMPtr{T,AS.CrossWorkgroup}, device_pointer(xs))
+  oneDeviceArray{T,N,AS.CrossWorkgroup}(size(xs), ptr, xs.maxsize - xs.offset)
+end
 
 # Base.RefValue isn't GPU compatible, so provide a compatible alternative.
 # TODO: port improvements from CUDA.jl
@@ -195,7 +204,7 @@ input object `x` as-is.
 Do not add methods to this function, but instead extend the underlying Adapt.jl package and
 register methods for the the `oneAPI.KernelAdaptor` type.
 """
-kernel_convert(arg) = adapt(KernelAdaptor(), arg)
+kernel_convert(arg, managed=nothing) = adapt(KernelAdaptor(managed), arg)
 
 
 ## abstract kernel functionality
@@ -418,9 +427,25 @@ end
 # `Vararg{Any,N}`, as Julia doesn't specialize a method on varargs it only passes on, and an
 # explicit `Core.kwcall` method, as the one lowered from keyword arguments splats them
 @inline (kernel::HostKernel)(args::Vararg{Any,N}) where {N} =
-    call(kernel, map(kernel_convert, args))
+    launch_managed(kernel, nothing, args)
 @inline Core.kwcall(kwargs::NamedTuple, kernel::HostKernel, args::Vararg{Any,N}) where {N} =
-    call(kernel, map(kernel_convert, args); kwargs...)
+    launch_managed(kernel, nothing, args; kwargs...)
+
+# launch a kernel, taking ownership of the memory its arguments use, and of the memory
+# captured by `source`, the callable the kernel was compiled from (if known): its converted
+# form, which the kernel holds, only contains pointers. ownership is taken with the
+# allocations locked until the kernel has been submitted, so that other tasks never observe
+# it without the work it describes.
+@inline function launch_managed(kernel::HostKernel, source, args::Tuple;
+                                queue::Union{oneStream, ZeCommandQueue}=global_stream(context(), device()),
+                                kwargs...)
+    managed = Managed[]
+    source === nothing || kernel_convert(source, managed)
+    converted = map(arg -> kernel_convert(arg, managed), args)
+    GC.@preserve source args with_ownership(queue, managed) do
+        call(kernel, converted; queue, kwargs...)
+    end
+end
 
 
 ## TODO: device-side kernels

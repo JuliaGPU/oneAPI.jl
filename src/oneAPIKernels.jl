@@ -139,7 +139,7 @@ function KI.launch(obj::KI.Kernel{oneAPIBackend}, groups::Dims{3}, items::Dims{3
     # stream for the active ones
     (; f, host) = obj.kern
     check_target(host.fun.mod, get(kwargs, :queue, nothing))
-    GC.@preserve f host(args...; items, groups, kwargs...)
+    oneAPI.launch_managed(host, f, args; items, groups, kwargs...)
     return
 end
 
