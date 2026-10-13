@@ -22,7 +22,9 @@ workflow:
     # "trigger" covers fork-PR pipelines, created via a pipeline trigger token by
     # .github/workflows/alcf.yml so they run as a real user instead of the mirror
     # project's bot (which the Jacamar runners refuse).
-    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "trigger"
+    # "push" (i.e. every mirror sync) is left out while automatic runs are disabled; see
+    # .github/workflows/alcf.yml.
+    - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "trigger"
 
 default:
   interruptible: true  # force-pushes cancel stale runs instead of queueing behind them

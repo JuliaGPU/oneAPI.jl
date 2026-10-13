@@ -18,11 +18,14 @@ name: ALCF CI
 # token, i.e. a bot user, and ALCF's Jacamar runners refuse bot-attributed pipelines
 # ("bot account token used for job, unsupported by runner"). Trigger-token pipelines
 # run as the user who created the token, which Jacamar accepts.
+#
+# Automatic runs are disabled while the Aurora pipelines are broken (every pipeline since
+# 2026-10-10 fails with ZE_RESULT_ERROR_MODULE_BUILD_FAILURE, on main too). Until then the
+# 'alcf-ci' label is the only way in, for same-repo PRs as well. To re-enable, restore the
+# push (main) and pull_request triggers and the fork-only condition on the label below,
+# and "push" in the workflow rules of .gitlab-ci.yml.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   pull_request_target:
     types: [labeled]
 
@@ -39,13 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     # PBS queue wait + 1 h walltime + build stage; generous but below the 6 h runner cap
     timeout-minutes: 330
-    if: >-
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository) ||
-      (github.event_name == 'pull_request_target' &&
-       github.event.label.name == 'alcf-ci' &&
-       github.event.pull_request.head.repo.full_name != github.repository)
+    if: github.event.label.name == 'alcf-ci'
     env:
       GITLAB_HOST: gitlab-ci.alcf.anl.gov
       GITLAB_PROJECT: mschanen/oneAPI-jl
