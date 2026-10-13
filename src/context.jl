@@ -211,7 +211,8 @@ mutable struct oneStream
     const ctx::ZeContext
     const dev::ZeDevice
     const list::oneL0.ZeImmediateCommandList
-    queue::Union{Nothing, ZeCommandQueue}
+    # atomic because other tasks read it when waiting for work on memory this stream owns
+    Base.@atomic queue::Union{Nothing, ZeCommandQueue}
     mkl_dirty::Bool
     # high-water mark of per-thread spill (bytes) among kernels submitted to this
     # stream, maintained by the scratch hedge (see src/compiler/execution.jl)
@@ -264,11 +265,12 @@ end
 # the companion command queue of a stream, created on first use. Only the SYCL/oneMKL
 # interop path needs one; pure-Julia workloads never create a queue.
 function stream_queue(s::oneStream)
-    q = s.queue
+    q = Base.@atomic s.queue
     q === nothing || return q
-    s.queue = ZeCommandQueue(s.ctx, s.dev; flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                             priority = s.priority)
-    return s.queue::ZeCommandQueue
+    q = ZeCommandQueue(s.ctx, s.dev; flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+                       priority = s.priority)
+    Base.@atomic s.queue = q
+    return q
 end
 
 """
@@ -356,7 +358,7 @@ function synchronize_all_streams(ctx::ZeContext, dev::Union{ZeDevice, Nothing})
         # lists/queues finalized before their stream was registered stale.
         for stream in streams
             stream.list.handle == C_NULL || oneL0.synchronize(stream.list)
-            q = stream.queue
+            q = Base.@atomic stream.queue
             (q === nothing || q.handle == C_NULL) || oneL0.synchronize(q)
         end
         # retire drained streams of dead tasks, allowing their list and queue to be
@@ -404,7 +406,7 @@ See also: [`global_stream`](@ref), [`context`](@ref), [`device`](@ref)
 function oneL0.synchronize(s::oneStream; blocking::Bool=false)
     sync = blocking ? oneL0.synchronize : oneL0.nonblocking_synchronize
     sync(s.list)
-    q = s.queue
+    q = Base.@atomic s.queue
     if q !== nothing
         sync(q)
         s.mkl_dirty = false
@@ -435,7 +437,7 @@ end
 # creation the flag does not force).
 @inline function mkl_wait!(s::oneStream)
     if s.mkl_dirty
-        q = s.queue
+        q = Base.@atomic s.queue
         q === nothing || oneL0.synchronize(q)
         s.mkl_dirty = false
     end
