@@ -85,7 +85,7 @@ Base.sizeof(managed::Managed) = sizeof(managed.mem)
 # wait for all work on a stream, possibly from another task. unlike `synchronize`, this
 # leaves `mkl_dirty` alone, which only the stream's own task may modify.
 function drain(s::oneStream)
-    oneL0.nonblocking_synchronize(s.list)
+    oneL0.nonblocking_synchronize(s.immediate)
     q = Base.@atomic s.queue
     q === nothing || oneL0.nonblocking_synchronize(q)
     return

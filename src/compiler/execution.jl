@@ -403,9 +403,9 @@ end
     spill = oneL0.spill_mem_size(kernel)
     spill > s.scratch_hwm && scratch_hedge!(s, spill)
 
-    append_launch!(s.list, kernel, groups)
+    @lock s.lock append_launch!(s.immediate, kernel, groups)
     # wait cooperatively, as `synchronize` does, or the workaround blocks the thread
-    oneL0.sync_each_submission() && oneL0.nonblocking_synchronize(s.list)
+    oneL0.sync_each_submission() && oneL0.nonblocking_synchronize(s.immediate)
     return
 end
 

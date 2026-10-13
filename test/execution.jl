@@ -862,7 +862,6 @@ end
     # start of a synchronization yields. returns whether `f` only returned after the gate
     # had been opened, and the watchdog did not have to.
     function gated(f)
-        list = oneAPI.global_stream(context(), device()).list
         reset(gate)
         # while the gate is closed, nothing on the host may wait for the GPU to become
         # idle, as freeing memory does on some stacks. so avoid running finalizers, by
@@ -888,7 +887,9 @@ end
                 yield()
             end
 
-            oneL0.append_wait!(list, gate)
+            oneL0.execute!(oneAPI.global_stream(context(), device())) do list
+                oneL0.append_wait!(list, gate)
+            end
             opener = @async begin
                 for _ in 1:10_000
                     yield()

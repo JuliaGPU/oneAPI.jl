@@ -210,7 +210,9 @@ end
 mutable struct oneStream
     const ctx::ZeContext
     const dev::ZeDevice
-    const list::oneL0.ZeImmediateCommandList
+    # only append to this through `execute!` or `launch!`, which hold `lock`
+    const immediate::oneL0.ZeImmediateCommandList
+    const lock::ReentrantLock
     # atomic because other tasks read it when waiting for work on memory this stream owns
     Base.@atomic queue::Union{Nothing, ZeCommandQueue}
     mkl_dirty::Bool
@@ -240,7 +242,7 @@ function create_stream(ctx::ZeContext, dev::ZeDevice,
               "reported API version $(oneL0.api_version(ctx.driver))); creation failed " *
               "with $(err.code)")
     end
-    s = oneStream(ctx, dev, list, nothing, false, 0, priority)
+    s = oneStream(ctx, dev, list, ReentrantLock(), nothing, false, 0, priority)
     return register_stream!(ctx, dev, s)
 end
 
@@ -357,7 +359,7 @@ function synchronize_all_streams(ctx::ZeContext, dev::Union{ZeDevice, Nothing})
         # and synchronization; the null-handle checks are defense in depth against
         # lists/queues finalized before their stream was registered stale.
         for stream in streams
-            stream.list.handle == C_NULL || oneL0.synchronize(stream.list)
+            stream.immediate.handle == C_NULL || oneL0.synchronize(stream.immediate)
             q = Base.@atomic stream.queue
             (q === nothing || q.handle == C_NULL) || oneL0.synchronize(q)
         end
@@ -405,7 +407,7 @@ See also: [`global_stream`](@ref), [`context`](@ref), [`device`](@ref)
 """
 function oneL0.synchronize(s::oneStream; blocking::Bool=false)
     sync = blocking ? oneL0.synchronize : oneL0.nonblocking_synchronize
-    sync(s.list)
+    sync(s.immediate)
     q = Base.@atomic s.queue
     if q !== nothing
         sync(q)
@@ -425,7 +427,7 @@ end
 # preparation (temporaries, conversions), which holds today because the queue is the
 # first ccall argument and Julia evaluates arguments left to right.
 function mkl_boundary!(s::oneStream = global_stream(context(), device()))
-    oneL0.synchronize(s.list)
+    oneL0.synchronize(s.immediate)
     s.mkl_dirty = true
     return
 end
@@ -454,7 +456,7 @@ outstanding oneMKL work. Appends are submitted to the device as they happen.
 """
 @inline function oneL0.execute!(f::Base.Callable, s::oneStream)
     mkl_wait!(s)
-    oneL0.execute!(f, s.list)
+    @lock s.lock oneL0.execute!(f, s.immediate)
 end
 
 # re-export and augment parts of oneL0 to make driver and device selection easier
