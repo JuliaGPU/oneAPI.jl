@@ -196,9 +196,9 @@ kernel_convert(arg) = adapt(KernelAdaptor(), arg)
 
 abstract type AbstractKernel{F,TT} end
 
-@inline @generated function call(kernel::AbstractKernel{F,TT}, args...; call_kwargs...) where {F,TT}
+@inline @generated function call(kernel::AbstractKernel{F,TT}, args::Tuple; call_kwargs...) where {F,TT}
     sig = Tuple{F, TT.parameters...}    # Base.signature_type with a function type
-    args = (:(kernel.f), (:( args[$i] ) for i in 1:length(args))...)
+    args = (:(kernel.f), (:( args[$i] ) for i in 1:fieldcount(args))...)
 
     # filter out ghost arguments that shouldn't be passed
     predicate = dt -> isghosttype(dt) || Core.Compiler.isconstType(dt)
@@ -222,7 +222,7 @@ abstract type AbstractKernel{F,TT} end
     call_tt = Base.to_tuple_type(call_t)
 
     quote
-        onecall(kernel.fun, $call_tt, $(call_args...); call_kwargs...)
+        onecall(kernel.fun, $call_tt, ($(call_args...),); call_kwargs...)
     end
 end
 
@@ -349,16 +349,24 @@ end
 # cache of kernel instances
 const _kernel_instances = Dict{UInt, Any}()
 
-@inline function onecall(kernel::ZeKernel, tt, args...; groups::ZeDim=1, items::ZeDim=1,
+@inline function onecall(kernel::ZeKernel, tt, args::Tuple; groups::ZeDim=1, items::ZeDim=1,
                          queue::Union{oneStream, ZeCommandQueue}=global_stream(context(), device()))
     Base.@lock kernel begin
-        for (i, arg) in enumerate(args)
-            oneL0.arguments(kernel)[i] = arg
+        # unrolled, as iterating a heterogeneous tuple would dispatch at run time
+        ntuple(Val(length(args))) do i
+            oneL0.arguments(kernel)[i] = args[i]
+            return
         end
-
-        groupsize!(kernel, items)
-        launch!(queue, kernel, groups)
+        launch_kernel(kernel, groups, items, queue)
     end
+end
+
+# kept out of `onecall`, which is compiled for every kernel signature, as none of this
+# depends on it
+@noinline function launch_kernel(kernel::ZeKernel, groups::ZeDim, items::ZeDim,
+                                 queue::Union{oneStream, ZeCommandQueue})
+    groupsize!(kernel, items)
+    launch!(queue, kernel, groups)
 end
 
 @inline function launch!(s::oneStream, kernel::ZeKernel, groups::ZeDim)
@@ -403,9 +411,12 @@ end
     return
 end
 
-function (kernel::HostKernel)(args...; kwargs...)
-    call(kernel, map(kernel_convert, args)...; kwargs...)
-end
+# `Vararg{Any,N}`, as Julia doesn't specialize a method on varargs it only passes on, and an
+# explicit `Core.kwcall` method, as the one lowered from keyword arguments splats them
+@inline (kernel::HostKernel)(args::Vararg{Any,N}) where {N} =
+    call(kernel, map(kernel_convert, args))
+@inline Core.kwcall(kwargs::NamedTuple, kernel::HostKernel, args::Vararg{Any,N}) where {N} =
+    call(kernel, map(kernel_convert, args); kwargs...)
 
 
 ## TODO: device-side kernels

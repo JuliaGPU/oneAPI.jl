@@ -68,6 +68,46 @@ end
 end
 
 
+function store_kernel(a, x)
+    @inbounds a[1] = x
+    return
+end
+function store_twice_kernel(a, x)
+    @inbounds a[1] = x + x
+    return
+end
+
+@testset "launch specialization" begin
+    # the launch is specialized on the argument types, so it doesn't dispatch at run time
+    a = oneArray(zeros(Float32, 1))
+    @oneapi items=1 store_kernel(a, 1f0)
+    k = @oneapi launch=false store_kernel(a, 1f0)
+    k(a, 2f0)
+    @test Array(a)[1] == 2f0
+    for m in [methods(k)..., methods(Core.kwcall, Tuple{NamedTuple, typeof(k), Vararg})...],
+        mi in Base.specializations(m)
+        params = mi.specTypes.parameters
+        any(p -> p === typeof(k), params) || continue
+        @test !Base.isvarargtype(last(params))
+    end
+
+    # creating and launching a kernel mostly doesn't depend on its signature, so launching
+    # kernels with new signatures shouldn't compile that again
+    shared = (oneAPI.launch_kernel,)
+    nspecializations() =
+        sum(f -> sum(m -> length(collect(Base.specializations(m))), methods(f)), shared)
+    before = nspecializations()
+    for T in (Int32, Int16, UInt8)
+        b = oneArray(zeros(T, 1))
+        @oneapi items=1 store_kernel(b, one(T))
+        @test Array(b)[1] == one(T)
+        @oneapi items=1 store_twice_kernel(b, one(T))
+        @test Array(b)[1] == T(2)
+    end
+    @test nspecializations() == before
+end
+
+
 @testset "reflection" begin
     oneAPI.code_lowered(dummy, Tuple{})
     oneAPI.code_typed(dummy, Tuple{})
