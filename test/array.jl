@@ -237,6 +237,28 @@ end
     end
 end
 
+@testset "branching reduction with loop-carried booleans" begin
+    # Before libigc_jll 2.34.4+3, IGC promoted its own replacements, leaving undefined
+    # operands in loop-carried i1 values (JuliaGPU/oneAPI.jl#678). This 2-D reduction
+    # triggers the bug on Julia 1.12 with --check-bounds=yes.
+    A = rand(Int32(1):Int32(4), 64, 64)
+    dA = oneArray(A)
+    dB = oneArray(A)
+    init = (; is_missing=false, is_equal=true)
+    mapper(a, b) = (; is_missing=false, is_equal=a == b)
+    branching(a, b) = (a.is_missing || b.is_missing) ?
+        (; is_missing=true, is_equal=false) :
+        (; is_missing=false, is_equal=a.is_equal & b.is_equal)
+
+    @test mapreduce(mapper, branching, dA, dB; init) == init
+
+    B = copy(A)
+    B[end] += Int32(1)
+    copyto!(dB, B)
+    @test mapreduce(mapper, branching, dA, dB; init) ==
+        (; is_missing=false, is_equal=false)
+end
+
 @testset "narrow integer reduction with overflowing map" begin
     # IGC < 2.34.4+2 kept the result of a 16-bit `mad` in the accumulator at full width, so
     # the signed `max` compared the unwrapped value (JuliaGPU/oneAPI.jl#670, TGL and DG2).
