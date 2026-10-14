@@ -86,7 +86,7 @@ macro oneapi(ex...)
     args = call.args[2:end]
 
     code = quote end
-    vars, var_exprs = assign_args!(code, args)
+    _, var_exprs = assign_args!(code, args)
 
     # group keyword argument
     macro_kwargs, compiler_kwargs, call_kwargs, other_kwargs =
@@ -113,30 +113,36 @@ macro oneapi(ex...)
 
     # FIXME: macro hygiene wrt. escaping kwarg values (this broke with 1.5)
     #        we esc() the whole thing now, necessitating gensyms...
-    @gensym f_var kernel_f kernel_args kernel_tt kernel
-
-    # convert the arguments, call the compiler and launch the kernel
-    # while keeping the original arguments alive
     push!(code.args,
-        quote
-            $f_var = $f
-            GC.@preserve $(vars...) $f_var begin
-                $kernel_f = $kernel_convert($f_var)
-                $kernel_args = map($kernel_convert, ($(var_exprs...),))
-                $kernel_tt = Tuple{map(Core.Typeof, $kernel_args)...}
-                $kernel = $zefunction($kernel_f, $kernel_tt; $(compiler_kwargs...))
-                if $launch
-                    $kernel($(var_exprs...); $(call_kwargs...))
-                end
-                $kernel
-            end
-         end)
+        :($compile_and_launch($f, ($(var_exprs...),), $(Val(launch)),
+                              (; $(call_kwargs...)), (; $(compiler_kwargs...)))))
 
     return esc(quote
         let
             $code
         end
     end)
+end
+
+
+# convert the arguments, call the compiler and launch the kernel while keeping the original
+# arguments alive. this is a function rather than part of the macro expansion so that the
+# arguments have concrete types when they are preserved: `GC.@preserve` of a value that is a
+# union of singletons, e.g. `op` in `for op in (max, min)`, crashes codegen on Julia 1.12 and
+# 1.13.0-1.13.1 (JuliaLang/julia#63482).
+@inline function compile_and_launch(f::F, args::Tuple, ::Val{launch},
+                                    call_kwargs::NamedTuple,
+                                    compiler_kwargs::NamedTuple) where {F,launch}
+    GC.@preserve f args begin
+        kernel_f = kernel_convert(f)
+        kernel_args = map(kernel_convert, args)
+        kernel_tt = Tuple{map(Core.Typeof, kernel_args)...}
+        kernel = zefunction(kernel_f, kernel_tt; compiler_kwargs...)
+        if launch
+            kernel(args...; call_kwargs...)
+        end
+        kernel
+    end
 end
 
 
