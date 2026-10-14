@@ -209,9 +209,19 @@ end
 
 arguments(kernel::ZeKernel) = ZeKernelArgumentList(kernel)
 
-function Base.setindex!(args::ZeKernelArgumentList, value::Any, index::Integer)
-    @assert isbits(value)
-    zeKernelSetArgumentValue(args.kernel, index-1, Core.sizeof(value), Base.RefValue(value))
+function Base.setindex!(args::ZeKernelArgumentList, value::T, index::Integer) where {T}
+    @assert isbitstype(T)
+    ref = Base.RefValue(value)
+    GC.@preserve ref begin
+        ptr = Base.unsafe_convert(Ptr{Cvoid}, ref)
+        set_argument_value!(args.kernel, Int(index), Core.sizeof(T), ptr)
+    end
+    return args
+end
+
+# kept out of `setindex!`, which is compiled for every argument type
+@noinline function set_argument_value!(kernel::ZeKernel, index::Int, size::Int, ptr::Ptr{Cvoid})
+    zeKernelSetArgumentValue(kernel, index-1, size, ptr)
 end
 
 
