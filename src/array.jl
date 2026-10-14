@@ -652,7 +652,7 @@ function Base.resize!(a::oneVector{T}, n::Integer) where {T}
         unsafe_copyto!(ctx, dev, ptr, pointer(a), m)
     end
     new_data = DataRef(buf) do buf
-        free(buf)
+        release(buf)
     end
     unsafe_free!(a)
 
