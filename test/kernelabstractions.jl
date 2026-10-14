@@ -11,6 +11,12 @@ skip_tests=Set([
     "CPU synchronization",
     "fallback test: callable types",
 ])
+if oneL0.LTS[]
+    # IGC before 2.22 segfaults on a private array whose address escapes, as in the
+    # "in-place" test (passing a `@private` array to a non-inlined function). The testsuite
+    # only allows skipping all private-memory tests.
+    push!(skip_tests, "Private")
+end
 Testsuite.testsuite(()->oneAPIBackend(), "oneAPI", oneAPI, oneArray, oneDeviceArray; skip_tests)
 
 KA.@kernel function store_global_linear!(A)
