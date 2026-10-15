@@ -1,4 +1,4 @@
-export ZeDevice, properties, compute_properties, module_properties, float_atomic_properties, memory_properties, memory_access_properties, cache_properties, image_properties, p2p_properties
+export ZeDevice, properties, compute_properties, module_properties, float_atomic_properties, ip_version, memory_properties, memory_access_properties, cache_properties, image_properties, p2p_properties
 
 struct ZeDevice
     handle::ze_device_handle_t
@@ -123,6 +123,20 @@ function float_atomic_properties(dev::ZeDevice)
         fp32flags=props.fp32Flags,
         fp64flags=props.fp64Flags,
     )
+end
+
+function ip_version(dev::ZeDevice)
+    haskey(extension_properties(dev.driver), ZE_DEVICE_IP_VERSION_EXT_NAME) || return nothing
+
+    props_ref = Ref(ze_device_properties_t())
+    ip_props_ref = Ref(ze_device_ip_version_ext_t())
+    GC.@preserve props_ref ip_props_ref begin
+        link_extensions(props_ref, ip_props_ref)
+        zeDeviceGetProperties(dev, props_ref)
+    end
+
+    ip = ip_props_ref[].ipVersion
+    return ip == 0 ? nothing : ip
 end
 
 function memory_properties(dev::ZeDevice)

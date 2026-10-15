@@ -61,10 +61,13 @@ them.
 BFloat16 support.
 
 **Solution**:
-The LTS SPIR-V stack cannot translate the LLVM `bfloat` type in generic kernels; the
-device-level check (`oneAPI._device_supports_bfloat16()`) reports hardware capability and
-does not capture this. Use `Float16` or `Float32` on that stack — see
-[Intel LTS Driver Stack](lts.md).
+`BFloat16` arrays only need the device to support BFloat16 conversions
+(`oneAPI._device_supports_bfloat16()`), but kernels that compute with `BFloat16` values need
+IGC to accept the `SPV_KHR_bfloat16` SPIR-V extension. IGC only does so on Xe-HPG and newer
+GPUs, excluding Meteor Lake, so such kernels fail on Xe-LP (Tiger Lake, Alder Lake, DG1,
+...) and Meteor Lake. The LTS SPIR-V stack cannot translate the LLVM `bfloat` type in
+generic kernels at all — see [Intel LTS Driver Stack](lts.md). Use `Float16` or `Float32`
+there.
 
 ## Debugging
 

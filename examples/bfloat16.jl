@@ -5,7 +5,7 @@ using oneAPI, Test
     exit()
 end
 
-bfloat16_supported = oneAPI._device_supports_bfloat16()
+bfloat16_supported = oneAPI._driver_supports_bfloat16_spirv()
 
 @info "BFloat16 support: $bfloat16_supported"
 
@@ -14,10 +14,9 @@ if !bfloat16_supported
     exit()
 end
 
-# _device_supports_bfloat16() reflects hardware conversion support, but the Aurora LTS
-# SPIR-V stack (Khronos translator + NEO/IGC) cannot translate the `bfloat` LLVM type at
-# all: even a load/store forces SPV_KHR_bfloat16, which the LTS runtime rejects. So bf16
-# kernels can't be compiled there regardless of device support.
+# The Aurora LTS SPIR-V stack (Khronos translator + NEO/IGC) cannot translate the `bfloat`
+# LLVM type at all: even a load/store forces SPV_KHR_bfloat16, which the LTS runtime
+# rejects. So bf16 kernels can't be compiled there regardless of device support.
 if oneAPI.oneL0.LTS[]
     @info "BFloat16 kernels are unsupported on the Aurora LTS SPIR-V stack, skipping."
     exit()
