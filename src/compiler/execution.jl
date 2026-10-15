@@ -154,7 +154,7 @@ end
 # known yet. instead, the allocations are collected, if requested, so that the launch can
 # take ownership of them right before submitting the kernel.
 struct KernelAdaptor
-  managed::Union{Nothing, Vector{Managed}}
+  refs::Union{Nothing, Vector{DataRef}}
 end
 KernelAdaptor() = KernelAdaptor(nothing)
 
@@ -163,7 +163,7 @@ Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} = reinterpret(Ptr{
 
 # convert oneAPI host arrays to device arrays
 function Adapt.adapt_storage(to::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
-  to.managed === nothing || push!(to.managed, xs.data[])
+  to.refs === nothing || push!(to.refs, xs.data)
   ptr = reinterpret(LLVMPtr{T,AS.CrossWorkgroup}, device_pointer(xs))
   oneDeviceArray{T,N,AS.CrossWorkgroup}(size(xs), ptr, xs.maxsize - xs.offset)
 end
@@ -206,7 +206,7 @@ input object `x` as-is.
 Do not add methods to this function, but instead extend the underlying Adapt.jl package and
 register methods for the the `oneAPI.KernelAdaptor` type.
 """
-kernel_convert(arg, managed=nothing) = adapt(KernelAdaptor(managed), arg)
+kernel_convert(arg, refs=nothing) = adapt(KernelAdaptor(refs), arg)
 
 
 ## abstract kernel functionality
@@ -374,44 +374,63 @@ end
 end
 
 @inline function onecall(kernel::ZeKernel, tt, args::Tuple; groups::ZeDim=1, items::ZeDim=1,
-                         queue::Union{oneStream, ZeCommandQueue}=global_stream(context(), device()))
+                         queue::Union{oneStream, ZeCommandQueue}=global_stream(context(), device()),
+                         roots=nothing)
     Base.@lock kernel begin
         # unrolled, as iterating a heterogeneous tuple would dispatch at run time
         ntuple(Val(length(args))) do i
             oneL0.arguments(kernel)[i] = args[i]
             return
         end
-        launch_kernel(kernel, groups, items, queue)
+        launch_kernel(kernel, groups, items, queue, roots)
     end
 end
 
 # kept out of `onecall`, which is compiled for every kernel signature, as none of this
 # depends on it
 @noinline function launch_kernel(kernel::ZeKernel, groups::ZeDim, items::ZeDim,
-                                 queue::Union{oneStream, ZeCommandQueue})
+                                 queue::Union{oneStream, ZeCommandQueue}, roots)
     groupsize!(kernel, items)
-    launch!(queue, kernel, groups)
+    launch!(queue, kernel, groups, roots)
 end
 
-@inline function launch!(s::oneStream, kernel::ZeKernel, groups::ZeDim)
+# `roots` are the references to the memory the kernel uses, which a batch keeps alive
+@inline function launch!(s::oneStream, kernel::ZeKernel, groups::ZeDim, roots=nothing)
     mkl_wait!(s)
 
     # NEO allocates a stream's scratch buffer at the first submission of a kernel whose
     # spill exceeds what is already allocated, and that allocation aborts the process on
     # failure (no null check). Cross each new spill high-water mark deliberately, at the
-    # cleanest reachable moment, instead of at a GC-lottery-determined one.
+    # cleanest reachable moment, instead of at a GC-lottery-determined one, and submit
+    # the kernel right away.
     spill = oneL0.spill_mem_size(kernel)
-    spill > s.scratch_hwm && scratch_hedge!(s, spill)
+    direct = spill > s.scratch_hwm
+    direct && scratch_hedge!(s, spill)
 
-    append_launch!(s.list, kernel, groups)
+    @lock s.lock begin
+        check_error(s)
+        direct |= !s.batching || s.idle || oneL0.sync_each_submission()
+        batch = direct ? nothing : open_batch!(s)
+        if batch === nothing
+            flush_batch!(s)
+            append_launch!(s.immediate, kernel, groups)
+            s.idle = false
+        else
+            append_launch!(batch.list, kernel, groups)
+            s.recorder === current_task() || register_batching!(s)
+            root!(batch, roots)
+            batch.launches += 1
+            batch.launches == BATCH_SIZE && flush_batch!(s)
+        end
+    end
     # wait cooperatively, as `synchronize` does, or the workaround blocks the thread
-    oneL0.sync_each_submission() && oneL0.nonblocking_synchronize(s.list)
+    oneL0.sync_each_submission() && oneL0.nonblocking_synchronize(s.immediate)
     return
 end
 
 # explicit-queue compatibility: `@oneapi queue=...` submits through a per-dispatch
 # command list, as it always has
-@inline function launch!(queue::ZeCommandQueue, kernel::ZeKernel, groups::ZeDim)
+@inline function launch!(queue::ZeCommandQueue, kernel::ZeKernel, groups::ZeDim, roots=nothing)
     spill = oneL0.spill_mem_size(kernel)
     spill > queue.scratch_hwm && scratch_hedge!(queue, spill)
     execute!(queue) do list
@@ -426,7 +445,13 @@ end
 # only skips the drain.
 @noinline function scratch_hedge!(target::Union{oneStream, ZeCommandQueue}, spill::Int)
     if oneL0.SCRATCH_HEDGE[]
-        oneL0.synchronize(target)
+        # (without releasing memory batches kept alive: the caller holds locks)
+        if target isa oneStream
+            err = synchronize_stream!(target)
+            err === nothing || throw(err)
+        else
+            oneL0.synchronize(target)
+        end
         oneL0._run_reclaim_callbacks()
         GC.gc(false)
         Threads.atomic_add!(oneL0.SCRATCH_HEDGE_COUNT, 1)
@@ -450,12 +475,17 @@ end
 @inline function launch_managed(kernel::HostKernel, source, args::Tuple;
                                 queue::Union{oneStream, ZeCommandQueue}=global_stream(context(), device()),
                                 kwargs...)
-    managed = Managed[]
-    source === nothing || kernel_convert(source, managed)
-    converted = map(arg -> kernel_convert(arg, managed), args)
-    GC.@preserve source args with_ownership(queue, managed) do
-        call(kernel, converted; queue, kwargs...)
+    refs = DataRef[]
+    source === nothing || kernel_convert(source, refs)
+    converted = map(arg -> kernel_convert(arg, refs), args)
+    managed = Managed[ref[] for ref in refs]
+    ret = GC.@preserve source args with_ownership(queue, managed) do
+        call(kernel, converted; queue, roots=refs, kwargs...)
     end
+    # memory that batches kept alive and turned out to be unused, also while waiting for
+    # another stream above. this is the first point without locks held.
+    release_pending!()
+    return ret
 end
 
 
