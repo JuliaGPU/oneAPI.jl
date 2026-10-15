@@ -253,7 +253,8 @@ const _toolchain = Ref{Any}()
 const _compiler_configs = Dict{UInt, oneAPICompilerConfig}()
 const compiler_config_lock = ReentrantLock()
 function compiler_config(dev; kwargs...)
-    h = hash(dev.driver, hash(dev, hash(kwargs)))
+    # (as a `NamedTuple`: hashing the `Pairs` boxes each value, on every launch)
+    h = hash(dev.driver, hash(dev, hash(values(kwargs))))
     Base.@lock compiler_config_lock begin
         get!(_compiler_configs, h) do
             _compiler_config(dev; kwargs...)
