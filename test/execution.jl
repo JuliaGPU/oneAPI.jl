@@ -1068,3 +1068,30 @@ end
     @test occursin(r"%heap\d* = alloca", sprint(io -> oneAPI.code_llvm(io, ref_kernel, T; kernel = true)))
     @test !occursin(r"%heap\d* = alloca", sprint(io -> oneAPI.code_llvm(io, plain_kernel, T; kernel = true)))
 end
+
+@testset "loop exiting on counter wrap-around" begin
+    # The SPIR-V back-end turns `i += 1; i == 0` into OpIAddCarry, and IGC's optimizer sinks
+    # the extracts of its {i64, i1} result through the loop PHI. Before libigc_jll 2.34.4+5,
+    # IGC's legalization then erased the intrinsic while that PHI still referenced it, a
+    # use-after-free that crashed or silently corrupted the host
+    # (https://buildkite.com/julialang/oneapi-dot-jl/builds/1800).
+    function count_until_wrap(out, flags, n)
+        i = n
+        while true
+            i += one(i)
+            i == 0 && break
+            if @inbounds(flags[1])
+                @inbounds out[1] = i
+                break
+            end
+        end
+        return
+    end
+    out = oneAPI.zeros(UInt64, 1)
+    flags = oneArray([false])
+    @oneapi count_until_wrap(out, flags, typemax(UInt64) - 3)
+    @test Array(out) == [0]
+    copyto!(flags, [true])
+    @oneapi count_until_wrap(out, flags, typemax(UInt64) - 3)
+    @test Array(out) == [typemax(UInt64) - 2]
+end
