@@ -136,6 +136,10 @@ function __init__()
     end
 
     if oneL0.functional[]
+        # slabs are process-local
+        empty!(pools)
+        POOL[] = oneL0.parse_env_bool("ONEAPI_MEMORY_POOL", true)
+
         @static if Sys.iswindows()
             @warn """oneAPI.jl support for native Windows is experimental and incomplete.
                  For the time being, it is recommended to use WSL or Linux instead."""

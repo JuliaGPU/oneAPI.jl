@@ -76,7 +76,8 @@ mutable struct Managed{B<:oneL0.AbstractBuffer}
     # accesses can check it without taking the lock.
     Base.@atomic dirty::Bool
 
-    Managed(mem::B) where {B} = new{B}(mem, ReentrantLock(), nothing, false)
+    Managed(mem::B, owner=nothing, dirty::Bool=false) where {B} =
+        new{B}(mem, ReentrantLock(), owner, dirty)
 end
 
 Base.sizeof(managed::Managed) = sizeof(managed.mem)

@@ -219,6 +219,85 @@ end
   @test a[1] ≈ a[end] ≈ once
 end
 
+@testset "sub-allocation" begin
+  n = 1_000_000
+  once = slow_increment(0f0, n)
+  base(x) = pointer(oneL0.lookup_alloc(context(), pointer(x)))
+
+  if oneAPI.POOL[]
+    # small arrays share driver allocations, which every kernel launch would otherwise make
+    # resident one by one
+    a = oneArray{Float32}(undef, 16)
+    b = oneArray{Float32}(undef, 16)
+    @test base(a) == base(b)
+
+    c = oneArray{Float32}(undef, 1 << 20)
+    @test base(c) == pointer(c)
+  end
+
+  # memory reused on the same stream is only written after earlier work on it
+  a = oneArray(zeros(Float32, 1024))
+  @oneapi items=256 groups=4 slow_increment!(a, n)
+  ptr = pointer(a)
+  oneAPI.unsafe_free!(a)
+  b = oneArray{Float32}(undef, 1024)
+  oneAPI.POOL[] && @test pointer(b) == ptr
+  copyto!(b, ones(Float32, 1024))
+  @test Array(b) == ones(Float32, 1024)
+
+  # and from another task, only after waiting for it. that task only gets the memory if
+  # there are no other chunks of that size, so use them up.
+  n_chunk = oneAPI.MAX_CHUNK ÷ sizeof(Float32)
+  a = oneArray(zeros(Float32, n_chunk))
+  @oneapi items=256 groups=4 slow_increment!(a, n)
+  others = []
+  if oneAPI.POOL[]
+    class = oneAPI.chunk_class(oneAPI.MAX_CHUNK)
+    available() = oneAPI.with_pool_lock() do
+      pool = oneAPI.pools[(context(), device())]
+      !isempty(pool.fresh[class]) || !isempty(pool.free[class])
+    end
+    while available()
+      push!(others, oneArray{Float32}(undef, n_chunk))
+    end
+  end
+  ptr = oneAPI.device_pointer(a)
+  oneAPI.unsafe_free!(a)
+  stream = oneAPI.global_stream(context(), device())
+  inherited, b = fetch(@async begin
+    b = oneArray{Float32}(undef, n_chunk)
+    # the new array is owned by the stream that used the memory, so that using it here
+    # waits for the kernel first (which this GPU might do anyway, executing work in order)
+    inherited = b.data[].owner === stream
+    copyto!(b, ones(Float32, n_chunk))
+    inherited, b
+  end)
+  if oneAPI.POOL[]
+    @test oneAPI.device_pointer(b) == ptr
+    @test inherited
+  end
+  synchronize()
+  @test Array(b) == ones(Float32, n_chunk)
+
+  # many small arrays keep their contents, also when unused memory is given back
+  xs = [oneArray(fill(Float32(i), i)) for i in 1:300]
+  for i in 1:2:300
+    oneAPI.unsafe_free!(xs[i])
+  end
+  if oneAPI.POOL[]
+    before = oneAPI._allocated_bytes[]
+    ys = [oneArray{Float32}(undef, 1 << 16) for _ in 1:8]   # a slab of their own
+    foreach(oneAPI.unsafe_free!, ys)
+    oneAPI.trim_pools!()   # (which also frees other empty slabs)
+    @test oneAPI._allocated_bytes[] <= before
+  end
+  @test all(i -> Array(xs[i]) == fill(Float32(i), i), 2:2:300)
+  for i in 2:2:300
+    xs[i] = oneArray(fill(Float32(i), i))
+  end
+  @test all(i -> Array(xs[i]) == fill(Float32(i), i), 2:2:300)
+end
+
 # https://github.com/JuliaGPU/oneAPI.jl/issues/661: kernels have to declare indirect access,
 # or an allocation that reuses the address of a freed one isn't visible to them. Whether a
 # reused shared allocation reads as zeros depends on allocator state, so churn through
@@ -278,13 +357,14 @@ end
   resize!(c, 0)
   oneAPI.unsafe_free!(c)
 
+  # (with buffers big enough not to be sub-allocated, which `_allocated_bytes` doesn't track)
   GC.enable(false)
   try
-    d = oneArray{Float32}(undef, 1024)
+    d = oneArray{Float32}(undef, 1 << 19)
     before = oneAPI._allocated_bytes[]
     resize!(d, 1 << 20)
     oneAPI.unsafe_free!(d)
-    @test oneAPI._allocated_bytes[] == before - sizeof(Float32) * 1024
+    @test oneAPI._allocated_bytes[] == before - sizeof(Float32) * (1 << 19)
   finally
     GC.enable(true)
   end

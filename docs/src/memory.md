@@ -33,6 +33,17 @@ free(buf)
 `host_alloc` and `shared_alloc` allocate host and shared USM memory respectively, using the
 same signature.
 
+## Sub-allocation
+
+Device arrays of up to 1 MiB are carved out of larger driver allocations of 2 MiB, which
+are kept around when the arrays are freed. The driver backs every allocation with a
+buffer object of at least 64 KiB, and has to make every live one resident for each kernel
+launch, so with many small arrays separate allocations make allocating and launching
+kernels slow.
+
+Set `ONEAPI_MEMORY_POOL=0` to give every array its own allocation, e.g., when debugging
+out-of-bounds accesses, which may then fault instead of corrupting another array.
+
 ## Garbage Collection
 
 Julia's garbage collector automatically manages `oneArray` objects. However, GPU memory is a limited resource. If you are running into out-of-memory errors, you might need to manually trigger garbage collection or free arrays.
