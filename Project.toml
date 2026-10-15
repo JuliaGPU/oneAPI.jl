@@ -39,7 +39,7 @@ KernelAbstractionsExt = "KernelAbstractions"
 [compat]
 AbstractFFTs = "1.5.0"
 Adapt = "4"
-CEnum = "0.4, 0.5"
+CEnum = "0.5, 1"
 ExprTools = "0.1"
 GPUArrays = "12.1"
 GPUCompiler = "2.13"
