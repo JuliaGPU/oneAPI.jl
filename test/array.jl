@@ -156,6 +156,69 @@ end
   end
 end
 
+# https://github.com/JuliaGPU/oneAPI.jl/issues/652: host accesses wait for outstanding work
+# on the memory, also when it was submitted by another task. The kernel takes long enough
+# for a missing wait to be observed.
+function slow_increment(x, n)
+  for _ in 1:n
+    x = x * 1.0000001f0 + 1f0
+  end
+  return x
+end
+function slow_increment!(a, n)
+  i = get_global_id()
+  @inbounds a[i] = slow_increment(a[i], n)
+  return
+end
+@testset "host access to $B arrays waits for GPU work" for B in (oneL0.SharedBuffer, oneL0.HostBuffer)
+  n = 1_000_000
+  launch(a) = @oneapi items=256 groups=cld(length(a), 256) slow_increment!(a, n)
+  once = slow_increment(0f0, n)
+  twice = slow_increment(once, n)
+
+  # broadcast, then scalar indexing
+  a = oneArray{Float32, 1, B}(undef, 1024)
+  a .= 42
+  @test a[1] == a[end] == 42
+
+  # a kernel submitted by another task
+  a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
+  wait(@async launch(a))
+  @test a[1] ≈ a[end] ≈ once
+
+  # wrapping the memory in an Array
+  a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
+  launch(a)
+  A = unsafe_wrap(Array, a)
+  @test A[1] ≈ A[end] ≈ once
+
+  # copying to an Array, which happens on the CPU
+  a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
+  wait(@async launch(a))
+  A = Array(a)
+  @test A[1] ≈ A[end] ≈ once
+
+  # work from another task has to wait for this task's work on the same memory
+  a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
+  launch(a)
+  wait(@async launch(a))
+  @test a[1] ≈ a[end] ≈ twice
+
+  # a kernel compiled without launching, accessing memory it captures
+  let a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
+    f = () -> (slow_increment!(a, n); return)
+    kernel = @oneapi launch=false f()
+    kernel(; items=256, groups=cld(length(a), 256))
+    @test a[1] ≈ a[end] ≈ once
+  end
+
+  # a kernel submitted to an explicitly created queue
+  queue = oneL0.ZeCommandQueue(context(), device(); mode=oneL0.ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS)
+  a = oneArray{Float32, 1, B}(zeros(Float32, 1024))
+  @oneapi items=256 groups=cld(length(a), 256) queue=queue slow_increment!(a, n)
+  @test a[1] ≈ a[end] ≈ once
+end
+
 # https://github.com/JuliaGPU/oneAPI.jl/issues/661: kernels have to declare indirect access,
 # or an allocation that reuses the address of a freed one isn't visible to them. Whether a
 # reused shared allocation reads as zeros depends on allocator state, so churn through
