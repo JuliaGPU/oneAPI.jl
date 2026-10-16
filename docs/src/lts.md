@@ -59,8 +59,8 @@ The LTS SPIR-V stack cannot translate the LLVM `bfloat` type in generic kernels:
 that merely keeps a `BFloat16` value (`clamp!`, say) fails with an `InvalidIRError`, and
 declaring the `SPV_KHR_bfloat16` extension crashes the LTS runtime outright. On LTS the
 compiler is therefore configured with `supports_bfloat16 = false`, regardless of what the
-device reports — `oneAPI._device_supports_bfloat16()` is a *hardware* capability check and
-does not capture this limitation.
+device reports — `oneAPI._device_supports_bfloat16()` only checks BFloat16 conversion
+support and does not capture this limitation.
 
 Consequently `BFloat16` is dropped from the element types exercised by the test suite, and
 `examples/bfloat16.jl` exits early with a message. Other floating-point types are unaffected.

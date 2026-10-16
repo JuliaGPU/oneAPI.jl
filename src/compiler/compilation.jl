@@ -88,21 +88,6 @@ function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
                    Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod), typeof(entry)},
                    job, mod, entry)
 
-    # When the device supports BFloat16 but the SPIR-V runtime doesn't accept
-    # SPV_KHR_bfloat16, lower all bfloat types to i16 so the back-end/translator can
-    # handle the module without the extension. Both conditions are read from the
-    # (device-independent) compiler config so this stays valid without a live
-    # device: `_compiler_config` sets `supports_bfloat16` from the device and adds
-    # the `SPV_KHR_bfloat16` extension iff the driver's SPIR-V runtime accepts it.
-    # Rolling stack only: bf16 is forced off on the LTS stack
-    # (`supports_bfloat16 = false`, see `_compiler_config`), so this pass never
-    # runs there.
-    target = job.config.target
-    if isdefined(Core, :BFloat16) &&
-            target.supports_bfloat16 && !occursin("SPV_KHR_bfloat16", target.extensions)
-        lower_bfloat_to_i16!(mod)
-    end
-
     return entry
 end
 
@@ -152,100 +137,6 @@ function uses_heap(mod::LLVM.Module, T_state::LLVMType, heap_field::Integer)
     return false
 end
 
-# Lower bfloat types to i16 in the LLVM IR.
-# This is needed when the device supports BFloat16 but the SPIR-V runtime/translator
-# doesn't support SPV_KHR_bfloat16. Since sizeof(bfloat)==sizeof(i16)==2, the memory
-# layout is identical.
-#
-# TODO: Julia 1.12's Core.BFloat16 is a bare primitive (no Float32 conversion, no
-# arithmetic), so fptrunc/fpext instructions never appear in practice. If Julia adds
-# BFloat16 conversion methods in the future, this pass should be extended to handle
-# fptrunc float→bfloat and fpext bfloat→float, either via inline RNE bit manipulation
-# or calls to __devicelib_ConvertFToBF16INTEL / __devicelib_ConvertBF16ToFINTEL.
-function lower_bfloat_to_i16!(mod::LLVM.Module)
-    T_bf16 = LLVM.BFloatType()
-    T_i16 = LLVM.Int16Type()
-
-    # Phase 1: Eliminate all bitcasts between i16 and bfloat (same bit width).
-    eliminate_bf16_bitcasts!(mod, T_bf16, T_i16)
-
-    # Phase 2: Replace remaining bfloat GEPs, loads, and stores with i16 equivalents.
-    @dispose builder = IRBuilder() begin
-        for f in mod.functions
-            isdeclaration(f) && continue
-            for bb in f.blocks
-                to_replace = LLVM.Instruction[]
-                for inst in bb.instructions
-                    if inst isa LLVM.GetElementPtrInst
-                        inst.source_element_type == T_bf16 && push!(to_replace, inst)
-                    elseif inst isa LLVM.LoadInst
-                        inst.value_type == T_bf16 && push!(to_replace, inst)
-                    elseif inst isa LLVM.StoreInst
-                        inst.value_operand.value_type == T_bf16 && push!(to_replace, inst)
-                    end
-                end
-
-                for inst in to_replace
-                    position!(builder, LLVM.before(inst))
-
-                    if inst isa LLVM.GetElementPtrInst
-                        ptr = inst.pointer_operand
-                        new_gep = if inst.inbounds
-                            LLVM.inbounds_gep!(builder, T_i16, ptr, inst.indices)
-                        else
-                            LLVM.gep!(builder, T_i16, ptr, inst.indices)
-                        end
-                        LLVM.replace_uses!(inst, new_gep)
-                    elseif inst isa LLVM.LoadInst
-                        ptr = inst.pointer_operand
-                        new_load = LLVM.load!(builder, T_i16, ptr)
-                        LLVM.replace_uses!(inst, new_load)
-                    elseif inst isa LLVM.StoreInst
-                        LLVM.store!(builder, inst.value_operand, inst.pointer_operand)
-                    end
-
-                    erase!(inst)
-                end
-            end
-        end
-    end
-
-    return true
-end
-
-# Iteratively eliminate bitcasts between i16 and bfloat (same bit representation).
-function eliminate_bf16_bitcasts!(mod::LLVM.Module, T_bf16::LLVMType, T_i16::LLVMType)
-    changed = true
-    while changed
-        changed = false
-        for f in mod.functions
-            isdeclaration(f) && continue
-            for bb in f.blocks
-                to_delete = LLVM.Instruction[]
-                for inst in bb.instructions
-                    if inst isa LLVM.BitCastInst
-                        src = inst.operands[1]
-                        src_ty = src.value_type
-                        dst_ty = inst.value_type
-                        if (src_ty == T_i16 && dst_ty == T_bf16) ||
-                                (src_ty == T_bf16 && dst_ty == T_i16) ||
-                                (src_ty == dst_ty)
-                            LLVM.replace_uses!(inst, src)
-                            push!(to_delete, inst)
-                            changed = true
-                        end
-                    end
-                end
-                for inst in to_delete
-                    erase!(inst)
-                end
-            end
-        end
-    end
-    return
-end
-
-
 ## compiler implementation (configure, compile, and link)
 
 # cache of compiler configurations, per device (but additionally configurable via kwargs)
@@ -262,15 +153,22 @@ function compiler_config(dev; kwargs...)
     end
 end
 # Whether the driver's SPIR-V runtime accepts the SPV_KHR_bfloat16 extension.
+#
+# XXX: this mirrors IGC's platform table, because IGC terminates the process when a module
+#      uses an extension it doesn't accept on the device, and Level Zero has no query for
+#      the accepted extensions (intel/intel-graphics-compiler#452). IGC 2.41 accepts
+#      SPV_KHR_bfloat16 on Xe-HPG and newer cores except Meteor Lake (`SPIRVExtensions.td`;
+#      2.34 behaves the same), which corresponds to graphics IP 12.55 and up, excluding 12.70
+#      and 12.71 (MTL, and the ARL-U/S parts that share its IP). Re-check with every IGC bump.
+#      ZE_extension_bfloat16_conversions is no substitute: it covers the conversion
+#      instructions of SPV_INTEL_bfloat16_conversion, which NEO 26.35 advertises everywhere.
 function _driver_supports_bfloat16_spirv(dev=device())
-    return @static if isdefined(Core, :BFloat16)
-        haskey(
-            oneL0.extension_properties(dev.driver),
-            oneL0.ZE_BFLOAT16_CONVERSIONS_EXT_NAME
-        )
-    else
-        false
-    end
+    @static isdefined(Core, :BFloat16) || return false
+    oneL0.LTS[] && return false
+    ip = oneL0.ip_version(dev)
+    ip === nothing && return false
+    arch_release = (Int(ip >> 22), Int((ip >> 14) & 0xff))
+    return arch_release >= (12, 55) && arch_release ∉ ((12, 70), (12, 71))
 end
 
 # The atomic operations that GPUCompiler may select SPIR-V instructions for; the others are
@@ -329,11 +227,8 @@ end
         supports_bfloat16 = false
     else
         backend = :llvm
-        # Allow BFloat16 in IR if the device supports it (even if the SPIR-V runtime doesn't
-        # advertise the extension); finish_ir! lowers bfloat->i16 when the extension is absent.
-        supports_bfloat16 = _device_supports_bfloat16(dev)
-        # Only declare the SPIR-V extension when the runtime actually accepts it.
-        if _driver_supports_bfloat16_spirv(dev)
+        supports_bfloat16 = _driver_supports_bfloat16_spirv(dev)
+        if supports_bfloat16
             push!(extensions, "SPV_KHR_bfloat16")
         end
     end

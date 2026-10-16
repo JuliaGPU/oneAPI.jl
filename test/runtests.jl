@@ -94,11 +94,12 @@ init_worker_code = quote
         append!(eltypes, [Float64, ComplexF64])
     end
     @static if isdefined(Core, :BFloat16)
-        # Exercising BFloat16 as a generic element type needs (1) hardware support,
-        # (2) a non-LTS stack — the Aurora LTS SPIR-V stack (Khronos translator +
-        # NEO/IGC) cannot codegen native `bfloat` in generic kernels: any kernel that
-        # keeps a bfloat value (e.g. clamp!) fails with InvalidIRError, and declaring
-        # SPV_KHR_bfloat16 crashes the LTS runtime — and (3) a working CPU reference
+        # Exercising BFloat16 as a generic element type needs (1) a device on which IGC
+        # accepts SPV_KHR_bfloat16, (2) a non-LTS stack — the Aurora LTS SPIR-V stack
+        # (Khronos translator + NEO/IGC) cannot codegen native `bfloat` in generic
+        # kernels: any kernel that keeps a bfloat value (e.g. clamp!) fails with
+        # InvalidIRError, and declaring SPV_KHR_bfloat16 crashes the LTS runtime — and
+        # (3) a working CPU reference
         # path, which requires more host-side BFloat16 support than BFloat16s.jl
         # currently implements (e.g. the div/rem family throws "rem not defined for
         # BFloat16"). Probe the operations the testsuite relies on, so the element
@@ -111,7 +112,7 @@ init_worker_code = quote
         catch
             false
         end
-        const bfloat16_supported = oneAPI._device_supports_bfloat16() &&
+        const bfloat16_supported = oneAPI._driver_supports_bfloat16_spirv() &&
             !oneL0.LTS[] && bfloat16_host_support()
         if bfloat16_supported
             push!(eltypes, Core.BFloat16)
