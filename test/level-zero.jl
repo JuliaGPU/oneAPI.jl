@@ -388,3 +388,33 @@ for buf in [device_alloc(ctx, dev, 1024),
 end
 
 end
+
+@testset "SIGSEGV handler chaining" begin
+
+# NEO installs a SIGSEGV handler that chains to Julia's. Julia's GC makes every thread fault
+# on its safepoint page at the same time, which crashed NEO before it made chaining
+# thread-safe (oneAPI.jl#607, intel/compute-runtime#1009).
+script = raw"""
+    using oneAPI, oneAPI.oneL0
+    # NEO installs its handler on the first shared allocation that gets device storage.
+    # Integrated GPUs normally don't use it, and fail the allocation when forced to,
+    # but the handler is installed anyway.
+    try
+        free(shared_alloc(context(), device(), 1024))
+    catch err
+        err isa oneL0.OutOfGPUMemoryError || rethrow()
+    end
+    Threads.@threads for i in 1:100
+        x = [rand(100) for _ in 1:1000]
+        GC.gc(false)
+    end
+"""
+cmd = `$(Base.julia_cmd()) --project=$(Base.active_project()) --threads=4 -e $script`
+cmd = addenv(cmd, "NEOReadDebugKeys" => "1", "AllocateSharedAllocationsWithCpuAndGpuStorage" => "1")
+# Only our NEO_jll build carries the fix; skip with a system driver (e.g. on Aurora, where
+# preferences point NEO_jll at /usr/lib64).
+NEO_jll = oneL0.NEO_jll
+system_driver = !startswith(NEO_jll.libze_intel_gpu, NEO_jll.artifact_dir)
+@test success(pipeline(cmd, stdout=stdout, stderr=stderr)) skip=system_driver
+
+end
