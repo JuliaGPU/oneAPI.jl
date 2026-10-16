@@ -65,6 +65,14 @@ const onemklSparseInt = Union{Int32, Int64}
 # matrices without stored entries never get a handle: the operations short-circuit instead
 _mkl_empty(A::oneAbstractSparseMatrix) = nnz(A) == 0 || any(iszero, size(A))
 
+# `mul!` ignores the output when beta is zero, and callers pass uninitialized memory (e.g.
+# from `similar`), but oneMKL computes beta * y regardless in some cases (gemv with a
+# transposed CSR matrix, and gemm on older releases), letting NaNs into the result (#703).
+function _clear_ignored_output!(beta::Number, y::AbstractArray)
+    iszero(beta) && fill!(y, zero(eltype(y)))
+    return y
+end
+
 # result of op(A) * x for an empty A
 function _scale_output!(beta::Number, y::AbstractArray)
     if iszero(beta)
@@ -210,6 +218,7 @@ for SparseMatrix in (:oneSparseMatrixCSR, :oneSparseMatrixCOO)
                                   y::oneStridedVector{$elty})
 
                 _mkl_empty(A) && return _scale_output!(beta, y)
+                _clear_ignored_output!(beta, y)
                 queue = global_queue(context(x), device(x))
                 $fname(sycl_queue(queue), trans, alpha, sparse_matrix_handle(A), x, beta, y)
                 y
@@ -250,6 +259,7 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                 queue = global_queue(context(x), device(x))
                 m, n = size(A)
                 if m != 0 && n != 0
+                    _clear_ignored_output!(beta, y)
                     $fname(sycl_queue(queue), flip_trans(trans), alpha, sparse_matrix_handle(A), x, beta, y)
                 end
                 y
@@ -284,6 +294,7 @@ for SparseMatrix in (:oneSparseMatrixCSC,)
                     beta = conj(beta)
                 end
 
+                _clear_ignored_output!(beta, y)
                 queue = global_queue(context(x), device(x))
                 $fname(sycl_queue(queue), flip_trans(trans), alpha, sparse_matrix_handle(A), x, beta, y)
 
@@ -331,6 +342,7 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
             queue = global_queue(context(C), device(C))
+            _clear_ignored_output!(beta, C)
             $fname(sycl_queue(queue), 'C', transa, transb, alpha, sparse_matrix_handle(A), B, nrhs, ldb, beta, C, ldc)
             C
         end
@@ -371,6 +383,7 @@ for (fname, elty) in ((:onemklSsparse_gemm, :Float32),
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
             queue = global_queue(context(C), device(C))
+            _clear_ignored_output!(beta, C)
             $fname(sycl_queue(queue), 'C', flip_trans(transa), transb, alpha, sparse_matrix_handle(A), B, nrhs, ldb, beta, C, ldc)
             C
         end
@@ -437,6 +450,7 @@ for (fname, elty) in (
                 transb_eff = transb
             end
 
+            _clear_ignored_output!(beta, C)
             $fname(sycl_queue(queue), 'C', flip_trans(transa), transb_eff, alpha, sparse_matrix_handle(A), B, nrhs, ldb, beta, C, ldc)
 
             # Undo conjugation to obtain C_new
@@ -480,6 +494,7 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
 
             _mkl_empty(A) && return _scale_output!(beta, y)
             queue = global_queue(context(y), device(y))
+            _clear_ignored_output!(beta, y)
             $fname(sycl_queue(queue), uplo, alpha, sparse_matrix_handle(A), x, beta, y)
             y
         end
@@ -501,6 +516,7 @@ for (fname, elty) in ((:onemklSsparse_symv, :Float32),
 
             _mkl_empty(A) && return _scale_output!(beta, y)
             queue = global_queue(context(y), device(y))
+            _clear_ignored_output!(beta, y)
             $fname(sycl_queue(queue), flip_uplo(uplo), alpha, sparse_matrix_handle(A), x, beta, y)
             y
         end
@@ -523,6 +539,7 @@ for (fname, elty) in ((:onemklSsparse_trmv, :Float32),
 
             _mkl_empty(A) && return _empty_trmv!(diag, alpha, x, beta, y)
             queue = global_queue(context(y), device(y))
+            _clear_ignored_output!(beta, y)
             $fname(sycl_queue(queue), uplo, trans, diag, alpha, sparse_matrix_handle(A), x, beta, y)
             y
         end
@@ -567,6 +584,7 @@ for (fname, elty) in (
                 )
             )
             queue = global_queue(context(y), device(y))
+            _clear_ignored_output!(beta, y)
             $fname(sycl_queue(queue), uplo, flip_trans(trans), diag, alpha, sparse_matrix_handle(A), x, beta, y)
             return y
         end
