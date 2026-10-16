@@ -1381,6 +1381,27 @@ end
                 @test collect(UnitLowerTriangular(E) \ oneVector(x)) ≈ x
             end
 
+            @testset "beta = 0 ignores the output" begin
+                # empty rows and columns produce outputs without any contribution
+                A = SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.3))
+                A[2, :] .= 0
+                A[:, 3] .= 0
+                dropzeros!(A)
+                @testset "$SparseMatrix" for SparseMatrix in csr_csc_matrices
+                    dA = SparseMatrix(A)
+                    @testset "opa = $(nameof(opa))" for opa in (identity, transpose, adjoint)
+                        x = rand(T, size(opa(A), 2))
+                        y = oneVector(fill(T(NaN), size(opa(A), 1)))
+                        mul!(y, opa(dA), oneVector(x))
+                        @test collect(y) ≈ opa(A) * x
+                        X = rand(T, size(opa(A), 2), 2)
+                        Y = oneMatrix(fill(T(NaN), size(opa(A), 1), 2))
+                        mul!(Y, opa(dA), oneMatrix(X))
+                        @test collect(Y) ≈ opa(A) * X
+                    end
+                end
+            end
+
         @testset "sparse gemv" begin
                 @testset  "$SparseMatrix" for SparseMatrix in coo_csr_csc_matrices
                     @testset "transa = $transa" for (transa, opa) in [('N', identity), ('T', transpose), ('C', adjoint)]
