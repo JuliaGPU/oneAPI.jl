@@ -44,6 +44,29 @@ end
         @test testf(a->exp.(a), Matrix{ComplexF32}([1.0 + 1.0im 1.0 - 1.0im; -1.0 + 1.0im -1.0 - 1.0im]))
 
     end
+
+    # Base compares rationals using the 128-bit products of their numerators and
+    # denominators, which GPUToolbox computes in 64-bit words instead
+    @testset "rational comparisons" begin
+        # constructing the rational on the device needs `checked_neg`, which the SPIR-V
+        # translator can't compile (`llvm.ssub.with.overflow`)
+        r = 3 // 2
+        xs = Float32[0, -1, 1.4, 1.5, 1.6, Inf, NaN]
+        @test Array(map(x -> x < r, oneArray(xs))) == (xs .< r)
+
+        qs = [1//3, -5//7, 3//2, typemax(Int)//2, 2^40//3, -typemax(Int)//(2^40 + 1)]
+        ns = [0, -1, 2, 2^35, typemax(Int), typemin(Int)]
+        fs = Float32[0.3, -0.7, 1.5, 2f0^62, 3.6f11, -Inf]
+        for op in (<, <=, cmp)
+            @test Array(op.(oneArray(qs), oneArray(fs))) == op.(qs, fs)
+            @test Array(op.(oneArray(fs), oneArray(qs))) == op.(fs, qs)
+        end
+        for op in (<, <=)
+            @test Array(op.(oneArray(qs), oneArray(reverse(qs)))) == op.(qs, reverse(qs))
+            @test Array(op.(oneArray(qs), oneArray(ns))) == op.(qs, ns)
+            @test Array(op.(oneArray(ns), oneArray(qs))) == op.(ns, qs)
+        end
+    end
 end
 
 
