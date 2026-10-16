@@ -9,6 +9,7 @@ use_ccall_macro = true
 
 [api]
 checked_rettypes = [ "ze_result_t" ]
+gcsafe = true
 
 
 [api.zeCommandListAppendMemoryCopy.argtypes]

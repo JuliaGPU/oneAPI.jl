@@ -56,6 +56,12 @@ function rewriter!(ctx, options)
             expr = node.exprs[1]
             call_expr = expr.args[2].args[1].args[3]    # assumes `@ccall`
 
+            # replace `@ccall` with `@gcsafe_ccall`, so that calls that block (e.g., module
+            # compilation or host synchronization) don't keep the GC from running
+            if haskey(options, "api") && get(options["api"], "gcsafe", false)
+                expr.args[2].args[1].args[1] = Symbol("@gcsafe_ccall")
+            end
+
             target_expr = call_expr.args[1].args[1]
             fn = String(target_expr.args[2].value)
 
