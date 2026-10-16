@@ -46,22 +46,39 @@ function _device_supports_bfloat16(dev=device())
     return false
 end
 
+# `check_eltype` runs for every array, and querying the device allocates, so cache what it
+# needs. Device handles are process-local, so `__init__` empties this.
+const EltypeSupport = @NamedTuple{float16::Bool, float64::Bool, bfloat16::Bool}
+const eltype_support_cache = Dict{ZeDevice, EltypeSupport}()
+const eltype_support_lock = ReentrantLock()
+
+function eltype_support(dev::ZeDevice=device())
+  Base.@lock eltype_support_lock begin
+    get!(eltype_support_cache, dev) do
+      flags = oneL0.module_properties(dev).flags
+      (; float16 = flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 != 0,
+         float64 = flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0,
+         bfloat16 = _device_supports_bfloat16(dev))
+    end
+  end
+end
+
 function check_eltype(T)
   Base.allocatedinline(T) || error("oneArray only supports element types that are stored inline")
   Base.isbitsunion(T) && error("oneArray does not yet support isbits-union arrays")
-  if oneL0.module_properties(device()).fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 !=
-      oneL0.ZE_DEVICE_MODULE_FLAG_FP16
+  support = eltype_support()
+  if !support.float16
     contains_eltype(T, Float16) && error("Float16 is not supported on this device")
   end
-  if oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 !=
-      oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+  if !support.float64
     contains_eltype(T, Float64) && error("Float64 is not supported on this device")
   end
-    return @static if isdefined(Core, :BFloat16)
-        if !_device_supports_bfloat16()
-            contains_eltype(T, Core.BFloat16) && error("BFloat16 is not supported on this device")
-        end
+  @static if isdefined(Core, :BFloat16)
+    if !support.bfloat16
+      contains_eltype(T, Core.BFloat16) && error("BFloat16 is not supported on this device")
     end
+  end
+  return
 end
 
 """

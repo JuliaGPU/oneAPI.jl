@@ -136,8 +136,9 @@ function __init__()
     end
 
     if oneL0.functional[]
-        # slabs are process-local
+        # slabs and device handles are process-local
         empty!(pools)
+        empty!(eltype_support_cache)
         POOL[] = oneL0.parse_env_bool("ONEAPI_MEMORY_POOL", true)
         BATCHING[] = oneL0.parse_env_bool("ONEAPI_COMMAND_BATCHING", true)
 
