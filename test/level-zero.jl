@@ -157,6 +157,32 @@ end
 end
 
 
+@testset "GC-safe blocking calls" begin
+# a thread blocked in the driver must not keep other threads from collecting garbage
+pool = ZeEventPool(ctx, 1)
+event = pool[1]
+waiting = Threads.Atomic{Bool}(false)
+# block on one of `cooperative_wait`'s worker threads. the timeout makes a collection that
+# has to wait for the driver call to return fail the test instead of deadlocking it.
+waiter = @async oneL0.cooperative_wait(event; spin=false) do event
+    waiting[] = true
+    try
+        wait(event, 10_000_000_000)
+        return true
+    catch
+        return false
+    end
+end
+while !waiting[]
+    yield()
+end
+sleep(0.5)  # let the worker enter the driver
+GC.gc()
+signal(event)
+@test something(fetch(waiter))
+end
+
+
 @testset "barrier" begin
 
 pool = ZeEventPool(ctx, 1)

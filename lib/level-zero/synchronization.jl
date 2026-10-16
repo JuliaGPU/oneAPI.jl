@@ -27,16 +27,13 @@ Base.isdone(list::ZeImmediateCommandList) =
 Base.isdone(queue::ZeCommandQueue) =
     check_done(unchecked_zeCommandQueueSynchronize(queue, 0))
 
-# the blocking synchronization, marked GC-safe so that it doesn't keep the GC from running
+# the blocking synchronization (GC-safe, like all Level Zero calls)
 gcsafe_synchronize(list::ZeImmediateCommandList) =
-    @gcsafe_ccall libze_loader.zeCommandListHostSynchronize(
-        list::ze_command_list_handle_t, typemax(UInt64)::UInt64)::ze_result_t
+    unchecked_zeCommandListHostSynchronize(list, typemax(UInt64))
 gcsafe_synchronize(queue::ZeCommandQueue) =
-    @gcsafe_ccall libze_loader.zeCommandQueueSynchronize(
-        queue::ze_command_queue_handle_t, typemax(UInt64)::UInt64)::ze_result_t
+    unchecked_zeCommandQueueSynchronize(queue, typemax(UInt64))
 gcsafe_synchronize(event::ZeEvent) =
-    @gcsafe_ccall libze_loader.zeEventHostSynchronize(
-        event::ze_event_handle_t, typemax(UInt64)::UInt64)::ze_result_t
+    unchecked_zeEventHostSynchronize(event, typemax(UInt64))
 
 """
     nonblocking_synchronize(list_or_queue)
