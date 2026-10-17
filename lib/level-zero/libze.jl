@@ -2147,12 +2147,12 @@ end
 const ze_init_flag_t = _ze_init_flag_t
 
 @checked function zeInit(flags)
-    @ccall libze_loader.zeInit(flags::ze_init_flags_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeInit(flags::ze_init_flags_t)::ze_result_t
 end
 
 @checked function zeDriverGet(pCount, phDrivers)
-    @ccall libze_loader.zeDriverGet(pCount::Ptr{UInt32},
-                                    phDrivers::Ptr{ze_driver_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverGet(pCount::Ptr{UInt32},
+                                           phDrivers::Ptr{ze_driver_handle_t})::ze_result_t
 end
 
 @cenum _ze_init_driver_type_flag_t::UInt32 begin
@@ -2164,9 +2164,9 @@ end
 const ze_init_driver_type_flag_t = _ze_init_driver_type_flag_t
 
 @checked function zeInitDrivers(pCount, phDrivers, desc)
-    @ccall libze_loader.zeInitDrivers(pCount::Ptr{UInt32},
-                                      phDrivers::Ptr{ze_driver_handle_t},
-                                      desc::Ptr{ze_init_driver_type_desc_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeInitDrivers(pCount::Ptr{UInt32},
+                                             phDrivers::Ptr{ze_driver_handle_t},
+                                             desc::Ptr{ze_init_driver_type_desc_t})::ze_result_t
 end
 
 @cenum _ze_api_version_t::UInt32 begin
@@ -2191,13 +2191,13 @@ end
 const ze_api_version_t = _ze_api_version_t
 
 @checked function zeDriverGetApiVersion(hDriver, version)
-    @ccall libze_loader.zeDriverGetApiVersion(hDriver::ze_driver_handle_t,
-                                              version::Ptr{ze_api_version_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverGetApiVersion(hDriver::ze_driver_handle_t,
+                                                     version::Ptr{ze_api_version_t})::ze_result_t
 end
 
 @checked function zeDriverGetProperties(hDriver, pDriverProperties)
-    @ccall libze_loader.zeDriverGetProperties(hDriver::ze_driver_handle_t,
-                                              pDriverProperties::Ptr{ze_driver_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverGetProperties(hDriver::ze_driver_handle_t,
+                                                     pDriverProperties::Ptr{ze_driver_properties_t})::ze_result_t
 end
 
 @cenum _ze_ipc_property_flag_t::UInt32 begin
@@ -2209,41 +2209,41 @@ end
 const ze_ipc_property_flag_t = _ze_ipc_property_flag_t
 
 @checked function zeDriverGetIpcProperties(hDriver, pIpcProperties)
-    @ccall libze_loader.zeDriverGetIpcProperties(hDriver::ze_driver_handle_t,
-                                                 pIpcProperties::Ptr{ze_driver_ipc_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverGetIpcProperties(hDriver::ze_driver_handle_t,
+                                                        pIpcProperties::Ptr{ze_driver_ipc_properties_t})::ze_result_t
 end
 
 @checked function zeDriverGetExtensionProperties(hDriver, pCount, pExtensionProperties)
-    @ccall libze_loader.zeDriverGetExtensionProperties(hDriver::ze_driver_handle_t,
-                                                       pCount::Ptr{UInt32},
-                                                       pExtensionProperties::Ptr{ze_driver_extension_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverGetExtensionProperties(hDriver::ze_driver_handle_t,
+                                                              pCount::Ptr{UInt32},
+                                                              pExtensionProperties::Ptr{ze_driver_extension_properties_t})::ze_result_t
 end
 
 @checked function zeDriverGetExtensionFunctionAddress(hDriver, name, ppFunctionAddress)
-    @ccall libze_loader.zeDriverGetExtensionFunctionAddress(hDriver::ze_driver_handle_t,
-                                                            name::Ptr{Cchar},
-                                                            ppFunctionAddress::Ptr{Ptr{Cvoid}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverGetExtensionFunctionAddress(hDriver::ze_driver_handle_t,
+                                                                   name::Ptr{Cchar},
+                                                                   ppFunctionAddress::Ptr{Ptr{Cvoid}})::ze_result_t
 end
 
 @checked function zeDriverGetLastErrorDescription(hDriver, ppString)
-    @ccall libze_loader.zeDriverGetLastErrorDescription(hDriver::ze_driver_handle_t,
-                                                        ppString::Ptr{Ptr{Cchar}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverGetLastErrorDescription(hDriver::ze_driver_handle_t,
+                                                               ppString::Ptr{Ptr{Cchar}})::ze_result_t
 end
 
 @checked function zeDeviceGet(hDriver, pCount, phDevices)
-    @ccall libze_loader.zeDeviceGet(hDriver::ze_driver_handle_t, pCount::Ptr{UInt32},
-                                    phDevices::Ptr{ze_device_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGet(hDriver::ze_driver_handle_t, pCount::Ptr{UInt32},
+                                           phDevices::Ptr{ze_device_handle_t})::ze_result_t
 end
 
 @checked function zeDeviceGetRootDevice(hDevice, phRootDevice)
-    @ccall libze_loader.zeDeviceGetRootDevice(hDevice::ze_device_handle_t,
-                                              phRootDevice::Ptr{ze_device_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetRootDevice(hDevice::ze_device_handle_t,
+                                                     phRootDevice::Ptr{ze_device_handle_t})::ze_result_t
 end
 
 @checked function zeDeviceGetSubDevices(hDevice, pCount, phSubdevices)
-    @ccall libze_loader.zeDeviceGetSubDevices(hDevice::ze_device_handle_t,
-                                              pCount::Ptr{UInt32},
-                                              phSubdevices::Ptr{ze_device_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetSubDevices(hDevice::ze_device_handle_t,
+                                                     pCount::Ptr{UInt32},
+                                                     phSubdevices::Ptr{ze_device_handle_t})::ze_result_t
 end
 
 @cenum _ze_device_property_flag_t::UInt32 begin
@@ -2257,13 +2257,13 @@ end
 const ze_device_property_flag_t = _ze_device_property_flag_t
 
 @checked function zeDeviceGetProperties(hDevice, pDeviceProperties)
-    @ccall libze_loader.zeDeviceGetProperties(hDevice::ze_device_handle_t,
-                                              pDeviceProperties::Ptr{ze_device_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetProperties(hDevice::ze_device_handle_t,
+                                                     pDeviceProperties::Ptr{ze_device_properties_t})::ze_result_t
 end
 
 @checked function zeDeviceGetComputeProperties(hDevice, pComputeProperties)
-    @ccall libze_loader.zeDeviceGetComputeProperties(hDevice::ze_device_handle_t,
-                                                     pComputeProperties::Ptr{ze_device_compute_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetComputeProperties(hDevice::ze_device_handle_t,
+                                                            pComputeProperties::Ptr{ze_device_compute_properties_t})::ze_result_t
 end
 
 @cenum _ze_device_module_flag_t::UInt32 begin
@@ -2291,8 +2291,8 @@ end
 const ze_device_fp_flag_t = _ze_device_fp_flag_t
 
 @checked function zeDeviceGetModuleProperties(hDevice, pModuleProperties)
-    @ccall libze_loader.zeDeviceGetModuleProperties(hDevice::ze_device_handle_t,
-                                                    pModuleProperties::Ptr{ze_device_module_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetModuleProperties(hDevice::ze_device_handle_t,
+                                                           pModuleProperties::Ptr{ze_device_module_properties_t})::ze_result_t
 end
 
 @cenum _ze_command_queue_group_property_flag_t::UInt32 begin
@@ -2307,9 +2307,9 @@ const ze_command_queue_group_property_flag_t = _ze_command_queue_group_property_
 
 @checked function zeDeviceGetCommandQueueGroupProperties(hDevice, pCount,
                                                          pCommandQueueGroupProperties)
-    @ccall libze_loader.zeDeviceGetCommandQueueGroupProperties(hDevice::ze_device_handle_t,
-                                                               pCount::Ptr{UInt32},
-                                                               pCommandQueueGroupProperties::Ptr{ze_command_queue_group_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetCommandQueueGroupProperties(hDevice::ze_device_handle_t,
+                                                                      pCount::Ptr{UInt32},
+                                                                      pCommandQueueGroupProperties::Ptr{ze_command_queue_group_properties_t})::ze_result_t
 end
 
 @cenum _ze_device_memory_property_flag_t::UInt32 begin
@@ -2320,9 +2320,9 @@ end
 const ze_device_memory_property_flag_t = _ze_device_memory_property_flag_t
 
 @checked function zeDeviceGetMemoryProperties(hDevice, pCount, pMemProperties)
-    @ccall libze_loader.zeDeviceGetMemoryProperties(hDevice::ze_device_handle_t,
-                                                    pCount::Ptr{UInt32},
-                                                    pMemProperties::Ptr{ze_device_memory_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetMemoryProperties(hDevice::ze_device_handle_t,
+                                                           pCount::Ptr{UInt32},
+                                                           pMemProperties::Ptr{ze_device_memory_properties_t})::ze_result_t
 end
 
 @cenum _ze_memory_access_cap_flag_t::UInt32 begin
@@ -2336,8 +2336,8 @@ end
 const ze_memory_access_cap_flag_t = _ze_memory_access_cap_flag_t
 
 @checked function zeDeviceGetMemoryAccessProperties(hDevice, pMemAccessProperties)
-    @ccall libze_loader.zeDeviceGetMemoryAccessProperties(hDevice::ze_device_handle_t,
-                                                          pMemAccessProperties::Ptr{ze_device_memory_access_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetMemoryAccessProperties(hDevice::ze_device_handle_t,
+                                                                 pMemAccessProperties::Ptr{ze_device_memory_access_properties_t})::ze_result_t
 end
 
 @cenum _ze_device_cache_property_flag_t::UInt32 begin
@@ -2348,19 +2348,19 @@ end
 const ze_device_cache_property_flag_t = _ze_device_cache_property_flag_t
 
 @checked function zeDeviceGetCacheProperties(hDevice, pCount, pCacheProperties)
-    @ccall libze_loader.zeDeviceGetCacheProperties(hDevice::ze_device_handle_t,
-                                                   pCount::Ptr{UInt32},
-                                                   pCacheProperties::Ptr{ze_device_cache_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetCacheProperties(hDevice::ze_device_handle_t,
+                                                          pCount::Ptr{UInt32},
+                                                          pCacheProperties::Ptr{ze_device_cache_properties_t})::ze_result_t
 end
 
 @checked function zeDeviceGetImageProperties(hDevice, pImageProperties)
-    @ccall libze_loader.zeDeviceGetImageProperties(hDevice::ze_device_handle_t,
-                                                   pImageProperties::Ptr{ze_device_image_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetImageProperties(hDevice::ze_device_handle_t,
+                                                          pImageProperties::Ptr{ze_device_image_properties_t})::ze_result_t
 end
 
 @checked function zeDeviceGetExternalMemoryProperties(hDevice, pExternalMemoryProperties)
-    @ccall libze_loader.zeDeviceGetExternalMemoryProperties(hDevice::ze_device_handle_t,
-                                                            pExternalMemoryProperties::Ptr{ze_device_external_memory_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetExternalMemoryProperties(hDevice::ze_device_handle_t,
+                                                                   pExternalMemoryProperties::Ptr{ze_device_external_memory_properties_t})::ze_result_t
 end
 
 @cenum _ze_device_p2p_property_flag_t::UInt32 begin
@@ -2372,25 +2372,25 @@ end
 const ze_device_p2p_property_flag_t = _ze_device_p2p_property_flag_t
 
 @checked function zeDeviceGetP2PProperties(hDevice, hPeerDevice, pP2PProperties)
-    @ccall libze_loader.zeDeviceGetP2PProperties(hDevice::ze_device_handle_t,
-                                                 hPeerDevice::ze_device_handle_t,
-                                                 pP2PProperties::Ptr{ze_device_p2p_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetP2PProperties(hDevice::ze_device_handle_t,
+                                                        hPeerDevice::ze_device_handle_t,
+                                                        pP2PProperties::Ptr{ze_device_p2p_properties_t})::ze_result_t
 end
 
 @checked function zeDeviceCanAccessPeer(hDevice, hPeerDevice, value)
-    @ccall libze_loader.zeDeviceCanAccessPeer(hDevice::ze_device_handle_t,
-                                              hPeerDevice::ze_device_handle_t,
-                                              value::Ptr{ze_bool_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceCanAccessPeer(hDevice::ze_device_handle_t,
+                                                     hPeerDevice::ze_device_handle_t,
+                                                     value::Ptr{ze_bool_t})::ze_result_t
 end
 
 @checked function zeDeviceGetStatus(hDevice)
-    @ccall libze_loader.zeDeviceGetStatus(hDevice::ze_device_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetStatus(hDevice::ze_device_handle_t)::ze_result_t
 end
 
 @checked function zeDeviceGetGlobalTimestamps(hDevice, hostTimestamp, deviceTimestamp)
-    @ccall libze_loader.zeDeviceGetGlobalTimestamps(hDevice::ze_device_handle_t,
-                                                    hostTimestamp::Ptr{UInt64},
-                                                    deviceTimestamp::Ptr{UInt64})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetGlobalTimestamps(hDevice::ze_device_handle_t,
+                                                           hostTimestamp::Ptr{UInt64},
+                                                           deviceTimestamp::Ptr{UInt64})::ze_result_t
 end
 
 @cenum _ze_context_flag_t::UInt32 begin
@@ -2401,24 +2401,25 @@ end
 const ze_context_flag_t = _ze_context_flag_t
 
 @checked function zeContextCreate(hDriver, desc, phContext)
-    @ccall libze_loader.zeContextCreate(hDriver::ze_driver_handle_t,
-                                        desc::Ptr{ze_context_desc_t},
-                                        phContext::Ptr{ze_context_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeContextCreate(hDriver::ze_driver_handle_t,
+                                               desc::Ptr{ze_context_desc_t},
+                                               phContext::Ptr{ze_context_handle_t})::ze_result_t
 end
 
 @checked function zeContextCreateEx(hDriver, desc, numDevices, phDevices, phContext)
-    @ccall libze_loader.zeContextCreateEx(hDriver::ze_driver_handle_t,
-                                          desc::Ptr{ze_context_desc_t}, numDevices::UInt32,
-                                          phDevices::Ptr{ze_device_handle_t},
-                                          phContext::Ptr{ze_context_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeContextCreateEx(hDriver::ze_driver_handle_t,
+                                                 desc::Ptr{ze_context_desc_t},
+                                                 numDevices::UInt32,
+                                                 phDevices::Ptr{ze_device_handle_t},
+                                                 phContext::Ptr{ze_context_handle_t})::ze_result_t
 end
 
 @checked function zeContextDestroy(hContext)
-    @ccall libze_loader.zeContextDestroy(hContext::ze_context_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeContextDestroy(hContext::ze_context_handle_t)::ze_result_t
 end
 
 @checked function zeContextGetStatus(hContext)
-    @ccall libze_loader.zeContextGetStatus(hContext::ze_context_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeContextGetStatus(hContext::ze_context_handle_t)::ze_result_t
 end
 
 @cenum _ze_command_queue_flag_t::UInt32 begin
@@ -2430,37 +2431,37 @@ end
 const ze_command_queue_flag_t = _ze_command_queue_flag_t
 
 @checked function zeCommandQueueCreate(hContext, hDevice, desc, phCommandQueue)
-    @ccall libze_loader.zeCommandQueueCreate(hContext::ze_context_handle_t,
-                                             hDevice::ze_device_handle_t,
-                                             desc::Ptr{ze_command_queue_desc_t},
-                                             phCommandQueue::Ptr{ze_command_queue_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandQueueCreate(hContext::ze_context_handle_t,
+                                                    hDevice::ze_device_handle_t,
+                                                    desc::Ptr{ze_command_queue_desc_t},
+                                                    phCommandQueue::Ptr{ze_command_queue_handle_t})::ze_result_t
 end
 
 @checked function zeCommandQueueDestroy(hCommandQueue)
-    @ccall libze_loader.zeCommandQueueDestroy(hCommandQueue::ze_command_queue_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandQueueDestroy(hCommandQueue::ze_command_queue_handle_t)::ze_result_t
 end
 
 @checked function zeCommandQueueExecuteCommandLists(hCommandQueue, numCommandLists,
                                                     phCommandLists, hFence)
-    @ccall libze_loader.zeCommandQueueExecuteCommandLists(hCommandQueue::ze_command_queue_handle_t,
-                                                          numCommandLists::UInt32,
-                                                          phCommandLists::Ptr{ze_command_list_handle_t},
-                                                          hFence::ze_fence_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandQueueExecuteCommandLists(hCommandQueue::ze_command_queue_handle_t,
+                                                                 numCommandLists::UInt32,
+                                                                 phCommandLists::Ptr{ze_command_list_handle_t},
+                                                                 hFence::ze_fence_handle_t)::ze_result_t
 end
 
 @checked function zeCommandQueueSynchronize(hCommandQueue, timeout)
-    @ccall libze_loader.zeCommandQueueSynchronize(hCommandQueue::ze_command_queue_handle_t,
-                                                  timeout::UInt64)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandQueueSynchronize(hCommandQueue::ze_command_queue_handle_t,
+                                                         timeout::UInt64)::ze_result_t
 end
 
 @checked function zeCommandQueueGetOrdinal(hCommandQueue, pOrdinal)
-    @ccall libze_loader.zeCommandQueueGetOrdinal(hCommandQueue::ze_command_queue_handle_t,
-                                                 pOrdinal::Ptr{UInt32})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandQueueGetOrdinal(hCommandQueue::ze_command_queue_handle_t,
+                                                        pOrdinal::Ptr{UInt32})::ze_result_t
 end
 
 @checked function zeCommandQueueGetIndex(hCommandQueue, pIndex)
-    @ccall libze_loader.zeCommandQueueGetIndex(hCommandQueue::ze_command_queue_handle_t,
-                                               pIndex::Ptr{UInt32})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandQueueGetIndex(hCommandQueue::ze_command_queue_handle_t,
+                                                      pIndex::Ptr{UInt32})::ze_result_t
 end
 
 @cenum _ze_command_list_flag_t::UInt32 begin
@@ -2475,117 +2476,118 @@ end
 const ze_command_list_flag_t = _ze_command_list_flag_t
 
 @checked function zeCommandListCreate(hContext, hDevice, desc, phCommandList)
-    @ccall libze_loader.zeCommandListCreate(hContext::ze_context_handle_t,
-                                            hDevice::ze_device_handle_t,
-                                            desc::Ptr{ze_command_list_desc_t},
-                                            phCommandList::Ptr{ze_command_list_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListCreate(hContext::ze_context_handle_t,
+                                                   hDevice::ze_device_handle_t,
+                                                   desc::Ptr{ze_command_list_desc_t},
+                                                   phCommandList::Ptr{ze_command_list_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListCreateImmediate(hContext, hDevice, altdesc, phCommandList)
-    @ccall libze_loader.zeCommandListCreateImmediate(hContext::ze_context_handle_t,
-                                                     hDevice::ze_device_handle_t,
-                                                     altdesc::Ptr{ze_command_queue_desc_t},
-                                                     phCommandList::Ptr{ze_command_list_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListCreateImmediate(hContext::ze_context_handle_t,
+                                                            hDevice::ze_device_handle_t,
+                                                            altdesc::Ptr{ze_command_queue_desc_t},
+                                                            phCommandList::Ptr{ze_command_list_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListDestroy(hCommandList)
-    @ccall libze_loader.zeCommandListDestroy(hCommandList::ze_command_list_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListDestroy(hCommandList::ze_command_list_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListClose(hCommandList)
-    @ccall libze_loader.zeCommandListClose(hCommandList::ze_command_list_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListClose(hCommandList::ze_command_list_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListReset(hCommandList)
-    @ccall libze_loader.zeCommandListReset(hCommandList::ze_command_list_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListReset(hCommandList::ze_command_list_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListAppendWriteGlobalTimestamp(hCommandList, dstptr,
                                                           hSignalEvent, numWaitEvents,
                                                           phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendWriteGlobalTimestamp(hCommandList::ze_command_list_handle_t,
-                                                                dstptr::Ptr{UInt64},
-                                                                hSignalEvent::ze_event_handle_t,
-                                                                numWaitEvents::UInt32,
-                                                                phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendWriteGlobalTimestamp(hCommandList::ze_command_list_handle_t,
+                                                                       dstptr::Ptr{UInt64},
+                                                                       hSignalEvent::ze_event_handle_t,
+                                                                       numWaitEvents::UInt32,
+                                                                       phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListHostSynchronize(hCommandList, timeout)
-    @ccall libze_loader.zeCommandListHostSynchronize(hCommandList::ze_command_list_handle_t,
-                                                     timeout::UInt64)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListHostSynchronize(hCommandList::ze_command_list_handle_t,
+                                                            timeout::UInt64)::ze_result_t
 end
 
 @checked function zeCommandListGetDeviceHandle(hCommandList, phDevice)
-    @ccall libze_loader.zeCommandListGetDeviceHandle(hCommandList::ze_command_list_handle_t,
-                                                     phDevice::Ptr{ze_device_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListGetDeviceHandle(hCommandList::ze_command_list_handle_t,
+                                                            phDevice::Ptr{ze_device_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListGetContextHandle(hCommandList, phContext)
-    @ccall libze_loader.zeCommandListGetContextHandle(hCommandList::ze_command_list_handle_t,
-                                                      phContext::Ptr{ze_context_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListGetContextHandle(hCommandList::ze_command_list_handle_t,
+                                                             phContext::Ptr{ze_context_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListGetOrdinal(hCommandList, pOrdinal)
-    @ccall libze_loader.zeCommandListGetOrdinal(hCommandList::ze_command_list_handle_t,
-                                                pOrdinal::Ptr{UInt32})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListGetOrdinal(hCommandList::ze_command_list_handle_t,
+                                                       pOrdinal::Ptr{UInt32})::ze_result_t
 end
 
 @checked function zeCommandListImmediateGetIndex(hCommandListImmediate, pIndex)
-    @ccall libze_loader.zeCommandListImmediateGetIndex(hCommandListImmediate::ze_command_list_handle_t,
-                                                       pIndex::Ptr{UInt32})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListImmediateGetIndex(hCommandListImmediate::ze_command_list_handle_t,
+                                                              pIndex::Ptr{UInt32})::ze_result_t
 end
 
 @checked function zeCommandListIsImmediate(hCommandList, pIsImmediate)
-    @ccall libze_loader.zeCommandListIsImmediate(hCommandList::ze_command_list_handle_t,
-                                                 pIsImmediate::Ptr{ze_bool_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListIsImmediate(hCommandList::ze_command_list_handle_t,
+                                                        pIsImmediate::Ptr{ze_bool_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendBarrier(hCommandList, hSignalEvent, numWaitEvents,
                                              phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendBarrier(hCommandList::ze_command_list_handle_t,
-                                                   hSignalEvent::ze_event_handle_t,
-                                                   numWaitEvents::UInt32,
-                                                   phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendBarrier(hCommandList::ze_command_list_handle_t,
+                                                          hSignalEvent::ze_event_handle_t,
+                                                          numWaitEvents::UInt32,
+                                                          phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendMemoryRangesBarrier(hCommandList, numRanges,
                                                          pRangeSizes, pRanges, hSignalEvent,
                                                          numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendMemoryRangesBarrier(hCommandList::ze_command_list_handle_t,
-                                                               numRanges::UInt32,
-                                                               pRangeSizes::Ptr{Csize_t},
-                                                               pRanges::Ptr{Ptr{Cvoid}},
-                                                               hSignalEvent::ze_event_handle_t,
-                                                               numWaitEvents::UInt32,
-                                                               phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendMemoryRangesBarrier(hCommandList::ze_command_list_handle_t,
+                                                                      numRanges::UInt32,
+                                                                      pRangeSizes::Ptr{Csize_t},
+                                                                      pRanges::Ptr{Ptr{Cvoid}},
+                                                                      hSignalEvent::ze_event_handle_t,
+                                                                      numWaitEvents::UInt32,
+                                                                      phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeContextSystemBarrier(hContext, hDevice)
-    @ccall libze_loader.zeContextSystemBarrier(hContext::ze_context_handle_t,
-                                               hDevice::ze_device_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeContextSystemBarrier(hContext::ze_context_handle_t,
+                                                      hDevice::ze_device_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListAppendMemoryCopy(hCommandList, dstptr, srcptr, size,
                                                 hSignalEvent, numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendMemoryCopy(hCommandList::ze_command_list_handle_t,
-                                                      dstptr::PtrOrZePtr{Cvoid},
-                                                      srcptr::PtrOrZePtr{Cvoid},
-                                                      size::Csize_t,
-                                                      hSignalEvent::ze_event_handle_t,
-                                                      numWaitEvents::UInt32,
-                                                      phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendMemoryCopy(hCommandList::ze_command_list_handle_t,
+                                                             dstptr::PtrOrZePtr{Cvoid},
+                                                             srcptr::PtrOrZePtr{Cvoid},
+                                                             size::Csize_t,
+                                                             hSignalEvent::ze_event_handle_t,
+                                                             numWaitEvents::UInt32,
+                                                             phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendMemoryFill(hCommandList, ptr, pattern, pattern_size,
                                                 size, hSignalEvent, numWaitEvents,
                                                 phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendMemoryFill(hCommandList::ze_command_list_handle_t,
-                                                      ptr::PtrOrZePtr{Cvoid},
-                                                      pattern::PtrOrZePtr{Cvoid},
-                                                      pattern_size::Csize_t, size::Csize_t,
-                                                      hSignalEvent::ze_event_handle_t,
-                                                      numWaitEvents::UInt32,
-                                                      phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendMemoryFill(hCommandList::ze_command_list_handle_t,
+                                                             ptr::PtrOrZePtr{Cvoid},
+                                                             pattern::PtrOrZePtr{Cvoid},
+                                                             pattern_size::Csize_t,
+                                                             size::Csize_t,
+                                                             hSignalEvent::ze_event_handle_t,
+                                                             numWaitEvents::UInt32,
+                                                             phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendMemoryCopyRegion(hCommandList, dstptr, dstRegion,
@@ -2593,85 +2595,85 @@ end
                                                       srcRegion, srcPitch, srcSlicePitch,
                                                       hSignalEvent, numWaitEvents,
                                                       phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendMemoryCopyRegion(hCommandList::ze_command_list_handle_t,
-                                                            dstptr::PtrOrZePtr{Cvoid},
-                                                            dstRegion::Ptr{ze_copy_region_t},
-                                                            dstPitch::UInt32,
-                                                            dstSlicePitch::UInt32,
-                                                            srcptr::PtrOrZePtr{Cvoid},
-                                                            srcRegion::Ptr{ze_copy_region_t},
-                                                            srcPitch::UInt32,
-                                                            srcSlicePitch::UInt32,
-                                                            hSignalEvent::ze_event_handle_t,
-                                                            numWaitEvents::UInt32,
-                                                            phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendMemoryCopyRegion(hCommandList::ze_command_list_handle_t,
+                                                                   dstptr::PtrOrZePtr{Cvoid},
+                                                                   dstRegion::Ptr{ze_copy_region_t},
+                                                                   dstPitch::UInt32,
+                                                                   dstSlicePitch::UInt32,
+                                                                   srcptr::PtrOrZePtr{Cvoid},
+                                                                   srcRegion::Ptr{ze_copy_region_t},
+                                                                   srcPitch::UInt32,
+                                                                   srcSlicePitch::UInt32,
+                                                                   hSignalEvent::ze_event_handle_t,
+                                                                   numWaitEvents::UInt32,
+                                                                   phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendMemoryCopyFromContext(hCommandList, dstptr,
                                                            hContextSrc, srcptr, size,
                                                            hSignalEvent, numWaitEvents,
                                                            phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendMemoryCopyFromContext(hCommandList::ze_command_list_handle_t,
-                                                                 dstptr::PtrOrZePtr{Cvoid},
-                                                                 hContextSrc::ze_context_handle_t,
-                                                                 srcptr::PtrOrZePtr{Cvoid},
-                                                                 size::Csize_t,
-                                                                 hSignalEvent::ze_event_handle_t,
-                                                                 numWaitEvents::UInt32,
-                                                                 phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendMemoryCopyFromContext(hCommandList::ze_command_list_handle_t,
+                                                                        dstptr::PtrOrZePtr{Cvoid},
+                                                                        hContextSrc::ze_context_handle_t,
+                                                                        srcptr::PtrOrZePtr{Cvoid},
+                                                                        size::Csize_t,
+                                                                        hSignalEvent::ze_event_handle_t,
+                                                                        numWaitEvents::UInt32,
+                                                                        phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendImageCopy(hCommandList, hDstImage, hSrcImage,
                                                hSignalEvent, numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendImageCopy(hCommandList::ze_command_list_handle_t,
-                                                     hDstImage::ze_image_handle_t,
-                                                     hSrcImage::ze_image_handle_t,
-                                                     hSignalEvent::ze_event_handle_t,
-                                                     numWaitEvents::UInt32,
-                                                     phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendImageCopy(hCommandList::ze_command_list_handle_t,
+                                                            hDstImage::ze_image_handle_t,
+                                                            hSrcImage::ze_image_handle_t,
+                                                            hSignalEvent::ze_event_handle_t,
+                                                            numWaitEvents::UInt32,
+                                                            phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendImageCopyRegion(hCommandList, hDstImage, hSrcImage,
                                                      pDstRegion, pSrcRegion, hSignalEvent,
                                                      numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendImageCopyRegion(hCommandList::ze_command_list_handle_t,
-                                                           hDstImage::ze_image_handle_t,
-                                                           hSrcImage::ze_image_handle_t,
-                                                           pDstRegion::Ptr{ze_image_region_t},
-                                                           pSrcRegion::Ptr{ze_image_region_t},
-                                                           hSignalEvent::ze_event_handle_t,
-                                                           numWaitEvents::UInt32,
-                                                           phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendImageCopyRegion(hCommandList::ze_command_list_handle_t,
+                                                                  hDstImage::ze_image_handle_t,
+                                                                  hSrcImage::ze_image_handle_t,
+                                                                  pDstRegion::Ptr{ze_image_region_t},
+                                                                  pSrcRegion::Ptr{ze_image_region_t},
+                                                                  hSignalEvent::ze_event_handle_t,
+                                                                  numWaitEvents::UInt32,
+                                                                  phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendImageCopyToMemory(hCommandList, dstptr, hSrcImage,
                                                        pSrcRegion, hSignalEvent,
                                                        numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendImageCopyToMemory(hCommandList::ze_command_list_handle_t,
-                                                             dstptr::Ptr{Cvoid},
-                                                             hSrcImage::ze_image_handle_t,
-                                                             pSrcRegion::Ptr{ze_image_region_t},
-                                                             hSignalEvent::ze_event_handle_t,
-                                                             numWaitEvents::UInt32,
-                                                             phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendImageCopyToMemory(hCommandList::ze_command_list_handle_t,
+                                                                    dstptr::Ptr{Cvoid},
+                                                                    hSrcImage::ze_image_handle_t,
+                                                                    pSrcRegion::Ptr{ze_image_region_t},
+                                                                    hSignalEvent::ze_event_handle_t,
+                                                                    numWaitEvents::UInt32,
+                                                                    phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendImageCopyFromMemory(hCommandList, hDstImage, srcptr,
                                                          pDstRegion, hSignalEvent,
                                                          numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendImageCopyFromMemory(hCommandList::ze_command_list_handle_t,
-                                                               hDstImage::ze_image_handle_t,
-                                                               srcptr::Ptr{Cvoid},
-                                                               pDstRegion::Ptr{ze_image_region_t},
-                                                               hSignalEvent::ze_event_handle_t,
-                                                               numWaitEvents::UInt32,
-                                                               phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendImageCopyFromMemory(hCommandList::ze_command_list_handle_t,
+                                                                      hDstImage::ze_image_handle_t,
+                                                                      srcptr::Ptr{Cvoid},
+                                                                      pDstRegion::Ptr{ze_image_region_t},
+                                                                      hSignalEvent::ze_event_handle_t,
+                                                                      numWaitEvents::UInt32,
+                                                                      phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendMemoryPrefetch(hCommandList, ptr, size)
-    @ccall libze_loader.zeCommandListAppendMemoryPrefetch(hCommandList::ze_command_list_handle_t,
-                                                          ptr::PtrOrZePtr{Cvoid},
-                                                          size::Csize_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendMemoryPrefetch(hCommandList::ze_command_list_handle_t,
+                                                                 ptr::PtrOrZePtr{Cvoid},
+                                                                 size::Csize_t)::ze_result_t
 end
 
 @cenum _ze_memory_advice_t::UInt32 begin
@@ -2691,10 +2693,11 @@ end
 const ze_memory_advice_t = _ze_memory_advice_t
 
 @checked function zeCommandListAppendMemAdvise(hCommandList, hDevice, ptr, size, advice)
-    @ccall libze_loader.zeCommandListAppendMemAdvise(hCommandList::ze_command_list_handle_t,
-                                                     hDevice::ze_device_handle_t,
-                                                     ptr::PtrOrZePtr{Cvoid}, size::Csize_t,
-                                                     advice::ze_memory_advice_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendMemAdvise(hCommandList::ze_command_list_handle_t,
+                                                            hDevice::ze_device_handle_t,
+                                                            ptr::PtrOrZePtr{Cvoid},
+                                                            size::Csize_t,
+                                                            advice::ze_memory_advice_t)::ze_result_t
 end
 
 @cenum _ze_event_pool_flag_t::UInt32 begin
@@ -2708,15 +2711,15 @@ end
 const ze_event_pool_flag_t = _ze_event_pool_flag_t
 
 @checked function zeEventPoolCreate(hContext, desc, numDevices, phDevices, phEventPool)
-    @ccall libze_loader.zeEventPoolCreate(hContext::ze_context_handle_t,
-                                          desc::Ptr{ze_event_pool_desc_t},
-                                          numDevices::UInt32,
-                                          phDevices::Ptr{ze_device_handle_t},
-                                          phEventPool::Ptr{ze_event_pool_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventPoolCreate(hContext::ze_context_handle_t,
+                                                 desc::Ptr{ze_event_pool_desc_t},
+                                                 numDevices::UInt32,
+                                                 phDevices::Ptr{ze_device_handle_t},
+                                                 phEventPool::Ptr{ze_event_pool_handle_t})::ze_result_t
 end
 
 @checked function zeEventPoolDestroy(hEventPool)
-    @ccall libze_loader.zeEventPoolDestroy(hEventPool::ze_event_pool_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventPoolDestroy(hEventPool::ze_event_pool_handle_t)::ze_result_t
 end
 
 @cenum _ze_event_scope_flag_t::UInt32 begin
@@ -2729,110 +2732,110 @@ end
 const ze_event_scope_flag_t = _ze_event_scope_flag_t
 
 @checked function zeEventCreate(hEventPool, desc, phEvent)
-    @ccall libze_loader.zeEventCreate(hEventPool::ze_event_pool_handle_t,
-                                      desc::Ptr{ze_event_desc_t},
-                                      phEvent::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventCreate(hEventPool::ze_event_pool_handle_t,
+                                             desc::Ptr{ze_event_desc_t},
+                                             phEvent::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeEventDestroy(hEvent)
-    @ccall libze_loader.zeEventDestroy(hEvent::ze_event_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventDestroy(hEvent::ze_event_handle_t)::ze_result_t
 end
 
 @checked function zeEventPoolGetIpcHandle(hEventPool, phIpc)
-    @ccall libze_loader.zeEventPoolGetIpcHandle(hEventPool::ze_event_pool_handle_t,
-                                                phIpc::Ptr{ze_ipc_event_pool_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventPoolGetIpcHandle(hEventPool::ze_event_pool_handle_t,
+                                                       phIpc::Ptr{ze_ipc_event_pool_handle_t})::ze_result_t
 end
 
 @checked function zeEventPoolPutIpcHandle(hContext, hIpc)
-    @ccall libze_loader.zeEventPoolPutIpcHandle(hContext::ze_context_handle_t,
-                                                hIpc::ze_ipc_event_pool_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventPoolPutIpcHandle(hContext::ze_context_handle_t,
+                                                       hIpc::ze_ipc_event_pool_handle_t)::ze_result_t
 end
 
 @checked function zeEventPoolOpenIpcHandle(hContext, hIpc, phEventPool)
-    @ccall libze_loader.zeEventPoolOpenIpcHandle(hContext::ze_context_handle_t,
-                                                 hIpc::ze_ipc_event_pool_handle_t,
-                                                 phEventPool::Ptr{ze_event_pool_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventPoolOpenIpcHandle(hContext::ze_context_handle_t,
+                                                        hIpc::ze_ipc_event_pool_handle_t,
+                                                        phEventPool::Ptr{ze_event_pool_handle_t})::ze_result_t
 end
 
 @checked function zeEventPoolCloseIpcHandle(hEventPool)
-    @ccall libze_loader.zeEventPoolCloseIpcHandle(hEventPool::ze_event_pool_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventPoolCloseIpcHandle(hEventPool::ze_event_pool_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListAppendSignalEvent(hCommandList, hEvent)
-    @ccall libze_loader.zeCommandListAppendSignalEvent(hCommandList::ze_command_list_handle_t,
-                                                       hEvent::ze_event_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendSignalEvent(hCommandList::ze_command_list_handle_t,
+                                                              hEvent::ze_event_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListAppendWaitOnEvents(hCommandList, numEvents, phEvents)
-    @ccall libze_loader.zeCommandListAppendWaitOnEvents(hCommandList::ze_command_list_handle_t,
-                                                        numEvents::UInt32,
-                                                        phEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendWaitOnEvents(hCommandList::ze_command_list_handle_t,
+                                                               numEvents::UInt32,
+                                                               phEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeEventHostSignal(hEvent)
-    @ccall libze_loader.zeEventHostSignal(hEvent::ze_event_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventHostSignal(hEvent::ze_event_handle_t)::ze_result_t
 end
 
 @checked function zeEventHostSynchronize(hEvent, timeout)
-    @ccall libze_loader.zeEventHostSynchronize(hEvent::ze_event_handle_t,
-                                               timeout::UInt64)::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventHostSynchronize(hEvent::ze_event_handle_t,
+                                                      timeout::UInt64)::ze_result_t
 end
 
 @checked function zeEventQueryStatus(hEvent)
-    @ccall libze_loader.zeEventQueryStatus(hEvent::ze_event_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventQueryStatus(hEvent::ze_event_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListAppendEventReset(hCommandList, hEvent)
-    @ccall libze_loader.zeCommandListAppendEventReset(hCommandList::ze_command_list_handle_t,
-                                                      hEvent::ze_event_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendEventReset(hCommandList::ze_command_list_handle_t,
+                                                             hEvent::ze_event_handle_t)::ze_result_t
 end
 
 @checked function zeEventHostReset(hEvent)
-    @ccall libze_loader.zeEventHostReset(hEvent::ze_event_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventHostReset(hEvent::ze_event_handle_t)::ze_result_t
 end
 
 @checked function zeEventQueryKernelTimestamp(hEvent, dstptr)
-    @ccall libze_loader.zeEventQueryKernelTimestamp(hEvent::ze_event_handle_t,
-                                                    dstptr::Ptr{ze_kernel_timestamp_result_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventQueryKernelTimestamp(hEvent::ze_event_handle_t,
+                                                           dstptr::Ptr{ze_kernel_timestamp_result_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendQueryKernelTimestamps(hCommandList, numEvents,
                                                            phEvents, dstptr, pOffsets,
                                                            hSignalEvent, numWaitEvents,
                                                            phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendQueryKernelTimestamps(hCommandList::ze_command_list_handle_t,
-                                                                 numEvents::UInt32,
-                                                                 phEvents::Ptr{ze_event_handle_t},
-                                                                 dstptr::Ptr{Cvoid},
-                                                                 pOffsets::Ptr{Csize_t},
-                                                                 hSignalEvent::ze_event_handle_t,
-                                                                 numWaitEvents::UInt32,
-                                                                 phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendQueryKernelTimestamps(hCommandList::ze_command_list_handle_t,
+                                                                        numEvents::UInt32,
+                                                                        phEvents::Ptr{ze_event_handle_t},
+                                                                        dstptr::Ptr{Cvoid},
+                                                                        pOffsets::Ptr{Csize_t},
+                                                                        hSignalEvent::ze_event_handle_t,
+                                                                        numWaitEvents::UInt32,
+                                                                        phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeEventGetEventPool(hEvent, phEventPool)
-    @ccall libze_loader.zeEventGetEventPool(hEvent::ze_event_handle_t,
-                                            phEventPool::Ptr{ze_event_pool_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventGetEventPool(hEvent::ze_event_handle_t,
+                                                   phEventPool::Ptr{ze_event_pool_handle_t})::ze_result_t
 end
 
 @checked function zeEventGetSignalScope(hEvent, pSignalScope)
-    @ccall libze_loader.zeEventGetSignalScope(hEvent::ze_event_handle_t,
-                                              pSignalScope::Ptr{ze_event_scope_flags_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventGetSignalScope(hEvent::ze_event_handle_t,
+                                                     pSignalScope::Ptr{ze_event_scope_flags_t})::ze_result_t
 end
 
 @checked function zeEventGetWaitScope(hEvent, pWaitScope)
-    @ccall libze_loader.zeEventGetWaitScope(hEvent::ze_event_handle_t,
-                                            pWaitScope::Ptr{ze_event_scope_flags_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventGetWaitScope(hEvent::ze_event_handle_t,
+                                                   pWaitScope::Ptr{ze_event_scope_flags_t})::ze_result_t
 end
 
 @checked function zeEventPoolGetContextHandle(hEventPool, phContext)
-    @ccall libze_loader.zeEventPoolGetContextHandle(hEventPool::ze_event_pool_handle_t,
-                                                    phContext::Ptr{ze_context_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventPoolGetContextHandle(hEventPool::ze_event_pool_handle_t,
+                                                           phContext::Ptr{ze_context_handle_t})::ze_result_t
 end
 
 @checked function zeEventPoolGetFlags(hEventPool, pFlags)
-    @ccall libze_loader.zeEventPoolGetFlags(hEventPool::ze_event_pool_handle_t,
-                                            pFlags::Ptr{ze_event_pool_flags_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventPoolGetFlags(hEventPool::ze_event_pool_handle_t,
+                                                   pFlags::Ptr{ze_event_pool_flags_t})::ze_result_t
 end
 
 @cenum _ze_fence_flag_t::UInt32 begin
@@ -2843,26 +2846,26 @@ end
 const ze_fence_flag_t = _ze_fence_flag_t
 
 @checked function zeFenceCreate(hCommandQueue, desc, phFence)
-    @ccall libze_loader.zeFenceCreate(hCommandQueue::ze_command_queue_handle_t,
-                                      desc::Ptr{ze_fence_desc_t},
-                                      phFence::Ptr{ze_fence_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeFenceCreate(hCommandQueue::ze_command_queue_handle_t,
+                                             desc::Ptr{ze_fence_desc_t},
+                                             phFence::Ptr{ze_fence_handle_t})::ze_result_t
 end
 
 @checked function zeFenceDestroy(hFence)
-    @ccall libze_loader.zeFenceDestroy(hFence::ze_fence_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeFenceDestroy(hFence::ze_fence_handle_t)::ze_result_t
 end
 
 @checked function zeFenceHostSynchronize(hFence, timeout)
-    @ccall libze_loader.zeFenceHostSynchronize(hFence::ze_fence_handle_t,
-                                               timeout::UInt64)::ze_result_t
+    @gcsafe_ccall libze_loader.zeFenceHostSynchronize(hFence::ze_fence_handle_t,
+                                                      timeout::UInt64)::ze_result_t
 end
 
 @checked function zeFenceQueryStatus(hFence)
-    @ccall libze_loader.zeFenceQueryStatus(hFence::ze_fence_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeFenceQueryStatus(hFence::ze_fence_handle_t)::ze_result_t
 end
 
 @checked function zeFenceReset(hFence)
-    @ccall libze_loader.zeFenceReset(hFence::ze_fence_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeFenceReset(hFence::ze_fence_handle_t)::ze_result_t
 end
 
 @cenum _ze_image_flag_t::UInt32 begin
@@ -2882,20 +2885,20 @@ end
 const ze_image_sampler_filter_flag_t = _ze_image_sampler_filter_flag_t
 
 @checked function zeImageGetProperties(hDevice, desc, pImageProperties)
-    @ccall libze_loader.zeImageGetProperties(hDevice::ze_device_handle_t,
-                                             desc::Ptr{ze_image_desc_t},
-                                             pImageProperties::Ptr{ze_image_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeImageGetProperties(hDevice::ze_device_handle_t,
+                                                    desc::Ptr{ze_image_desc_t},
+                                                    pImageProperties::Ptr{ze_image_properties_t})::ze_result_t
 end
 
 @checked function zeImageCreate(hContext, hDevice, desc, phImage)
-    @ccall libze_loader.zeImageCreate(hContext::ze_context_handle_t,
-                                      hDevice::ze_device_handle_t,
-                                      desc::Ptr{ze_image_desc_t},
-                                      phImage::Ptr{ze_image_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeImageCreate(hContext::ze_context_handle_t,
+                                             hDevice::ze_device_handle_t,
+                                             desc::Ptr{ze_image_desc_t},
+                                             phImage::Ptr{ze_image_handle_t})::ze_result_t
 end
 
 @checked function zeImageDestroy(hImage)
-    @ccall libze_loader.zeImageDestroy(hImage::ze_image_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeImageDestroy(hImage::ze_image_handle_t)::ze_result_t
 end
 
 @cenum _ze_device_mem_alloc_flag_t::UInt32 begin
@@ -2919,68 +2922,69 @@ const ze_host_mem_alloc_flag_t = _ze_host_mem_alloc_flag_t
 
 @checked function zeMemAllocShared(hContext, device_desc, host_desc, size, alignment,
                                    hDevice, pptr)
-    @ccall libze_loader.zeMemAllocShared(hContext::ze_context_handle_t,
-                                         device_desc::Ptr{ze_device_mem_alloc_desc_t},
-                                         host_desc::Ptr{ze_host_mem_alloc_desc_t},
-                                         size::Csize_t, alignment::Csize_t,
-                                         hDevice::ze_device_handle_t,
-                                         pptr::Ptr{Ptr{Cvoid}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemAllocShared(hContext::ze_context_handle_t,
+                                                device_desc::Ptr{ze_device_mem_alloc_desc_t},
+                                                host_desc::Ptr{ze_host_mem_alloc_desc_t},
+                                                size::Csize_t, alignment::Csize_t,
+                                                hDevice::ze_device_handle_t,
+                                                pptr::Ptr{Ptr{Cvoid}})::ze_result_t
 end
 
 @checked function zeMemAllocDevice(hContext, device_desc, size, alignment, hDevice, pptr)
-    @ccall libze_loader.zeMemAllocDevice(hContext::ze_context_handle_t,
-                                         device_desc::Ptr{ze_device_mem_alloc_desc_t},
-                                         size::Csize_t, alignment::Csize_t,
-                                         hDevice::ze_device_handle_t,
-                                         pptr::Ptr{Ptr{Cvoid}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemAllocDevice(hContext::ze_context_handle_t,
+                                                device_desc::Ptr{ze_device_mem_alloc_desc_t},
+                                                size::Csize_t, alignment::Csize_t,
+                                                hDevice::ze_device_handle_t,
+                                                pptr::Ptr{Ptr{Cvoid}})::ze_result_t
 end
 
 @checked function zeMemAllocHost(hContext, host_desc, size, alignment, pptr)
-    @ccall libze_loader.zeMemAllocHost(hContext::ze_context_handle_t,
-                                       host_desc::Ptr{ze_host_mem_alloc_desc_t},
-                                       size::Csize_t, alignment::Csize_t,
-                                       pptr::Ptr{Ptr{Cvoid}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemAllocHost(hContext::ze_context_handle_t,
+                                              host_desc::Ptr{ze_host_mem_alloc_desc_t},
+                                              size::Csize_t, alignment::Csize_t,
+                                              pptr::Ptr{Ptr{Cvoid}})::ze_result_t
 end
 
 @checked function zeMemFree(hContext, ptr)
-    @ccall libze_loader.zeMemFree(hContext::ze_context_handle_t,
-                                  ptr::PtrOrZePtr{Cvoid})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemFree(hContext::ze_context_handle_t,
+                                         ptr::PtrOrZePtr{Cvoid})::ze_result_t
 end
 
 @checked function zeMemGetAllocProperties(hContext, ptr, pMemAllocProperties, phDevice)
-    @ccall libze_loader.zeMemGetAllocProperties(hContext::ze_context_handle_t,
-                                                ptr::PtrOrZePtr{Cvoid},
-                                                pMemAllocProperties::Ptr{ze_memory_allocation_properties_t},
-                                                phDevice::Ptr{ze_device_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemGetAllocProperties(hContext::ze_context_handle_t,
+                                                       ptr::PtrOrZePtr{Cvoid},
+                                                       pMemAllocProperties::Ptr{ze_memory_allocation_properties_t},
+                                                       phDevice::Ptr{ze_device_handle_t})::ze_result_t
 end
 
 @checked function zeMemGetAddressRange(hContext, ptr, pBase, pSize)
-    @ccall libze_loader.zeMemGetAddressRange(hContext::ze_context_handle_t,
-                                             ptr::PtrOrZePtr{Cvoid}, pBase::Ptr{Ptr{Cvoid}},
-                                             pSize::Ptr{Csize_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemGetAddressRange(hContext::ze_context_handle_t,
+                                                    ptr::PtrOrZePtr{Cvoid},
+                                                    pBase::Ptr{Ptr{Cvoid}},
+                                                    pSize::Ptr{Csize_t})::ze_result_t
 end
 
 @checked function zeMemGetIpcHandle(hContext, ptr, pIpcHandle)
-    @ccall libze_loader.zeMemGetIpcHandle(hContext::ze_context_handle_t,
-                                          ptr::PtrOrZePtr{Cvoid},
-                                          pIpcHandle::Ptr{ze_ipc_mem_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemGetIpcHandle(hContext::ze_context_handle_t,
+                                                 ptr::PtrOrZePtr{Cvoid},
+                                                 pIpcHandle::Ptr{ze_ipc_mem_handle_t})::ze_result_t
 end
 
 @checked function zeMemGetIpcHandleFromFileDescriptorExp(hContext, handle, pIpcHandle)
-    @ccall libze_loader.zeMemGetIpcHandleFromFileDescriptorExp(hContext::ze_context_handle_t,
-                                                               handle::UInt64,
-                                                               pIpcHandle::Ptr{ze_ipc_mem_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemGetIpcHandleFromFileDescriptorExp(hContext::ze_context_handle_t,
+                                                                      handle::UInt64,
+                                                                      pIpcHandle::Ptr{ze_ipc_mem_handle_t})::ze_result_t
 end
 
 @checked function zeMemGetFileDescriptorFromIpcHandleExp(hContext, ipcHandle, pHandle)
-    @ccall libze_loader.zeMemGetFileDescriptorFromIpcHandleExp(hContext::ze_context_handle_t,
-                                                               ipcHandle::ze_ipc_mem_handle_t,
-                                                               pHandle::Ptr{UInt64})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemGetFileDescriptorFromIpcHandleExp(hContext::ze_context_handle_t,
+                                                                      ipcHandle::ze_ipc_mem_handle_t,
+                                                                      pHandle::Ptr{UInt64})::ze_result_t
 end
 
 @checked function zeMemPutIpcHandle(hContext, handle)
-    @ccall libze_loader.zeMemPutIpcHandle(hContext::ze_context_handle_t,
-                                          handle::ze_ipc_mem_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemPutIpcHandle(hContext::ze_context_handle_t,
+                                                 handle::ze_ipc_mem_handle_t)::ze_result_t
 end
 
 const ze_ipc_memory_flags_t = UInt32
@@ -2994,16 +2998,16 @@ end
 const ze_ipc_memory_flag_t = _ze_ipc_memory_flag_t
 
 @checked function zeMemOpenIpcHandle(hContext, hDevice, handle, flags, pptr)
-    @ccall libze_loader.zeMemOpenIpcHandle(hContext::ze_context_handle_t,
-                                           hDevice::ze_device_handle_t,
-                                           handle::ze_ipc_mem_handle_t,
-                                           flags::ze_ipc_memory_flags_t,
-                                           pptr::Ptr{PtrOrZePtr{Cvoid}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemOpenIpcHandle(hContext::ze_context_handle_t,
+                                                  hDevice::ze_device_handle_t,
+                                                  handle::ze_ipc_mem_handle_t,
+                                                  flags::ze_ipc_memory_flags_t,
+                                                  pptr::Ptr{PtrOrZePtr{Cvoid}})::ze_result_t
 end
 
 @checked function zeMemCloseIpcHandle(hContext, ptr)
-    @ccall libze_loader.zeMemCloseIpcHandle(hContext::ze_context_handle_t,
-                                            ptr::PtrOrZePtr{Cvoid})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemCloseIpcHandle(hContext::ze_context_handle_t,
+                                                   ptr::PtrOrZePtr{Cvoid})::ze_result_t
 end
 
 const ze_memory_atomic_attr_exp_flags_t = UInt32
@@ -3022,64 +3026,66 @@ end
 const ze_memory_atomic_attr_exp_flag_t = _ze_memory_atomic_attr_exp_flag_t
 
 @checked function zeMemSetAtomicAccessAttributeExp(hContext, hDevice, ptr, size, attr)
-    @ccall libze_loader.zeMemSetAtomicAccessAttributeExp(hContext::ze_context_handle_t,
-                                                         hDevice::ze_device_handle_t,
-                                                         ptr::Ptr{Cvoid}, size::Csize_t,
-                                                         attr::ze_memory_atomic_attr_exp_flags_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemSetAtomicAccessAttributeExp(hContext::ze_context_handle_t,
+                                                                hDevice::ze_device_handle_t,
+                                                                ptr::Ptr{Cvoid},
+                                                                size::Csize_t,
+                                                                attr::ze_memory_atomic_attr_exp_flags_t)::ze_result_t
 end
 
 @checked function zeMemGetAtomicAccessAttributeExp(hContext, hDevice, ptr, size, pAttr)
-    @ccall libze_loader.zeMemGetAtomicAccessAttributeExp(hContext::ze_context_handle_t,
-                                                         hDevice::ze_device_handle_t,
-                                                         ptr::Ptr{Cvoid}, size::Csize_t,
-                                                         pAttr::Ptr{ze_memory_atomic_attr_exp_flags_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemGetAtomicAccessAttributeExp(hContext::ze_context_handle_t,
+                                                                hDevice::ze_device_handle_t,
+                                                                ptr::Ptr{Cvoid},
+                                                                size::Csize_t,
+                                                                pAttr::Ptr{ze_memory_atomic_attr_exp_flags_t})::ze_result_t
 end
 
 @checked function zeModuleCreate(hContext, hDevice, desc, phModule, phBuildLog)
-    @ccall libze_loader.zeModuleCreate(hContext::ze_context_handle_t,
-                                       hDevice::ze_device_handle_t,
-                                       desc::Ptr{ze_module_desc_t},
-                                       phModule::Ptr{ze_module_handle_t},
-                                       phBuildLog::Ptr{ze_module_build_log_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleCreate(hContext::ze_context_handle_t,
+                                              hDevice::ze_device_handle_t,
+                                              desc::Ptr{ze_module_desc_t},
+                                              phModule::Ptr{ze_module_handle_t},
+                                              phBuildLog::Ptr{ze_module_build_log_handle_t})::ze_result_t
 end
 
 @checked function zeModuleDestroy(hModule)
-    @ccall libze_loader.zeModuleDestroy(hModule::ze_module_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleDestroy(hModule::ze_module_handle_t)::ze_result_t
 end
 
 @checked function zeModuleDynamicLink(numModules, phModules, phLinkLog)
-    @ccall libze_loader.zeModuleDynamicLink(numModules::UInt32,
-                                            phModules::Ptr{ze_module_handle_t},
-                                            phLinkLog::Ptr{ze_module_build_log_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleDynamicLink(numModules::UInt32,
+                                                   phModules::Ptr{ze_module_handle_t},
+                                                   phLinkLog::Ptr{ze_module_build_log_handle_t})::ze_result_t
 end
 
 @checked function zeModuleBuildLogDestroy(hModuleBuildLog)
-    @ccall libze_loader.zeModuleBuildLogDestroy(hModuleBuildLog::ze_module_build_log_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleBuildLogDestroy(hModuleBuildLog::ze_module_build_log_handle_t)::ze_result_t
 end
 
 @checked function zeModuleBuildLogGetString(hModuleBuildLog, pSize, pBuildLog)
-    @ccall libze_loader.zeModuleBuildLogGetString(hModuleBuildLog::ze_module_build_log_handle_t,
-                                                  pSize::Ptr{Csize_t},
-                                                  pBuildLog::Ptr{Cchar})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleBuildLogGetString(hModuleBuildLog::ze_module_build_log_handle_t,
+                                                         pSize::Ptr{Csize_t},
+                                                         pBuildLog::Ptr{Cchar})::ze_result_t
 end
 
 @checked function zeModuleGetNativeBinary(hModule, pSize, pModuleNativeBinary)
-    @ccall libze_loader.zeModuleGetNativeBinary(hModule::ze_module_handle_t,
-                                                pSize::Ptr{Csize_t},
-                                                pModuleNativeBinary::Ptr{UInt8})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleGetNativeBinary(hModule::ze_module_handle_t,
+                                                       pSize::Ptr{Csize_t},
+                                                       pModuleNativeBinary::Ptr{UInt8})::ze_result_t
 end
 
 @checked function zeModuleGetGlobalPointer(hModule, pGlobalName, pSize, pptr)
-    @ccall libze_loader.zeModuleGetGlobalPointer(hModule::ze_module_handle_t,
-                                                 pGlobalName::Ptr{Cchar},
-                                                 pSize::Ptr{Csize_t},
-                                                 pptr::Ptr{Ptr{Cvoid}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleGetGlobalPointer(hModule::ze_module_handle_t,
+                                                        pGlobalName::Ptr{Cchar},
+                                                        pSize::Ptr{Csize_t},
+                                                        pptr::Ptr{Ptr{Cvoid}})::ze_result_t
 end
 
 @checked function zeModuleGetKernelNames(hModule, pCount, pNames)
-    @ccall libze_loader.zeModuleGetKernelNames(hModule::ze_module_handle_t,
-                                               pCount::Ptr{UInt32},
-                                               pNames::Ptr{Ptr{Cchar}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleGetKernelNames(hModule::ze_module_handle_t,
+                                                      pCount::Ptr{UInt32},
+                                                      pNames::Ptr{Ptr{Cchar}})::ze_result_t
 end
 
 @cenum _ze_module_property_flag_t::UInt32 begin
@@ -3090,8 +3096,8 @@ end
 const ze_module_property_flag_t = _ze_module_property_flag_t
 
 @checked function zeModuleGetProperties(hModule, pModuleProperties)
-    @ccall libze_loader.zeModuleGetProperties(hModule::ze_module_handle_t,
-                                              pModuleProperties::Ptr{ze_module_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleGetProperties(hModule::ze_module_handle_t,
+                                                     pModuleProperties::Ptr{ze_module_properties_t})::ze_result_t
 end
 
 @cenum _ze_kernel_flag_t::UInt32 begin
@@ -3103,46 +3109,47 @@ end
 const ze_kernel_flag_t = _ze_kernel_flag_t
 
 @checked function zeKernelCreate(hModule, desc, phKernel)
-    @ccall libze_loader.zeKernelCreate(hModule::ze_module_handle_t,
-                                       desc::Ptr{ze_kernel_desc_t},
-                                       phKernel::Ptr{ze_kernel_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelCreate(hModule::ze_module_handle_t,
+                                              desc::Ptr{ze_kernel_desc_t},
+                                              phKernel::Ptr{ze_kernel_handle_t})::ze_result_t
 end
 
 @checked function zeKernelDestroy(hKernel)
-    @ccall libze_loader.zeKernelDestroy(hKernel::ze_kernel_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelDestroy(hKernel::ze_kernel_handle_t)::ze_result_t
 end
 
 @checked function zeModuleGetFunctionPointer(hModule, pFunctionName, pfnFunction)
-    @ccall libze_loader.zeModuleGetFunctionPointer(hModule::ze_module_handle_t,
-                                                   pFunctionName::Ptr{Cchar},
-                                                   pfnFunction::Ptr{Ptr{Cvoid}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleGetFunctionPointer(hModule::ze_module_handle_t,
+                                                          pFunctionName::Ptr{Cchar},
+                                                          pfnFunction::Ptr{Ptr{Cvoid}})::ze_result_t
 end
 
 @checked function zeKernelSetGroupSize(hKernel, groupSizeX, groupSizeY, groupSizeZ)
-    @ccall libze_loader.zeKernelSetGroupSize(hKernel::ze_kernel_handle_t,
-                                             groupSizeX::UInt32, groupSizeY::UInt32,
-                                             groupSizeZ::UInt32)::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelSetGroupSize(hKernel::ze_kernel_handle_t,
+                                                    groupSizeX::UInt32, groupSizeY::UInt32,
+                                                    groupSizeZ::UInt32)::ze_result_t
 end
 
 @checked function zeKernelSuggestGroupSize(hKernel, globalSizeX, globalSizeY, globalSizeZ,
                                            groupSizeX, groupSizeY, groupSizeZ)
-    @ccall libze_loader.zeKernelSuggestGroupSize(hKernel::ze_kernel_handle_t,
-                                                 globalSizeX::UInt32, globalSizeY::UInt32,
-                                                 globalSizeZ::UInt32,
-                                                 groupSizeX::Ptr{UInt32},
-                                                 groupSizeY::Ptr{UInt32},
-                                                 groupSizeZ::Ptr{UInt32})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelSuggestGroupSize(hKernel::ze_kernel_handle_t,
+                                                        globalSizeX::UInt32,
+                                                        globalSizeY::UInt32,
+                                                        globalSizeZ::UInt32,
+                                                        groupSizeX::Ptr{UInt32},
+                                                        groupSizeY::Ptr{UInt32},
+                                                        groupSizeZ::Ptr{UInt32})::ze_result_t
 end
 
 @checked function zeKernelSuggestMaxCooperativeGroupCount(hKernel, totalGroupCount)
-    @ccall libze_loader.zeKernelSuggestMaxCooperativeGroupCount(hKernel::ze_kernel_handle_t,
-                                                                totalGroupCount::Ptr{UInt32})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelSuggestMaxCooperativeGroupCount(hKernel::ze_kernel_handle_t,
+                                                                       totalGroupCount::Ptr{UInt32})::ze_result_t
 end
 
 @checked function zeKernelSetArgumentValue(hKernel, argIndex, argSize, pArgValue)
-    @ccall libze_loader.zeKernelSetArgumentValue(hKernel::ze_kernel_handle_t,
-                                                 argIndex::UInt32, argSize::Csize_t,
-                                                 pArgValue::Ptr{Cvoid})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelSetArgumentValue(hKernel::ze_kernel_handle_t,
+                                                        argIndex::UInt32, argSize::Csize_t,
+                                                        pArgValue::Ptr{Cvoid})::ze_result_t
 end
 
 const ze_kernel_indirect_access_flags_t = UInt32
@@ -3157,19 +3164,19 @@ end
 const ze_kernel_indirect_access_flag_t = _ze_kernel_indirect_access_flag_t
 
 @checked function zeKernelSetIndirectAccess(hKernel, flags)
-    @ccall libze_loader.zeKernelSetIndirectAccess(hKernel::ze_kernel_handle_t,
-                                                  flags::ze_kernel_indirect_access_flags_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelSetIndirectAccess(hKernel::ze_kernel_handle_t,
+                                                         flags::ze_kernel_indirect_access_flags_t)::ze_result_t
 end
 
 @checked function zeKernelGetIndirectAccess(hKernel, pFlags)
-    @ccall libze_loader.zeKernelGetIndirectAccess(hKernel::ze_kernel_handle_t,
-                                                  pFlags::Ptr{ze_kernel_indirect_access_flags_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelGetIndirectAccess(hKernel::ze_kernel_handle_t,
+                                                         pFlags::Ptr{ze_kernel_indirect_access_flags_t})::ze_result_t
 end
 
 @checked function zeKernelGetSourceAttributes(hKernel, pSize, pString)
-    @ccall libze_loader.zeKernelGetSourceAttributes(hKernel::ze_kernel_handle_t,
-                                                    pSize::Ptr{UInt32},
-                                                    pString::Ptr{Ptr{Cchar}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelGetSourceAttributes(hKernel::ze_kernel_handle_t,
+                                                           pSize::Ptr{UInt32},
+                                                           pString::Ptr{Ptr{Cchar}})::ze_result_t
 end
 
 const ze_cache_config_flags_t = UInt32
@@ -3183,51 +3190,52 @@ end
 const ze_cache_config_flag_t = _ze_cache_config_flag_t
 
 @checked function zeKernelSetCacheConfig(hKernel, flags)
-    @ccall libze_loader.zeKernelSetCacheConfig(hKernel::ze_kernel_handle_t,
-                                               flags::ze_cache_config_flags_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelSetCacheConfig(hKernel::ze_kernel_handle_t,
+                                                      flags::ze_cache_config_flags_t)::ze_result_t
 end
 
 @checked function zeKernelGetProperties(hKernel, pKernelProperties)
-    @ccall libze_loader.zeKernelGetProperties(hKernel::ze_kernel_handle_t,
-                                              pKernelProperties::Ptr{ze_kernel_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelGetProperties(hKernel::ze_kernel_handle_t,
+                                                     pKernelProperties::Ptr{ze_kernel_properties_t})::ze_result_t
 end
 
 @checked function zeKernelGetName(hKernel, pSize, pName)
-    @ccall libze_loader.zeKernelGetName(hKernel::ze_kernel_handle_t, pSize::Ptr{Csize_t},
-                                        pName::Ptr{Cchar})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelGetName(hKernel::ze_kernel_handle_t,
+                                               pSize::Ptr{Csize_t},
+                                               pName::Ptr{Cchar})::ze_result_t
 end
 
 @checked function zeCommandListAppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs,
                                                   hSignalEvent, numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendLaunchKernel(hCommandList::ze_command_list_handle_t,
-                                                        hKernel::ze_kernel_handle_t,
-                                                        pLaunchFuncArgs::Ptr{ze_group_count_t},
-                                                        hSignalEvent::ze_event_handle_t,
-                                                        numWaitEvents::UInt32,
-                                                        phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendLaunchKernel(hCommandList::ze_command_list_handle_t,
+                                                               hKernel::ze_kernel_handle_t,
+                                                               pLaunchFuncArgs::Ptr{ze_group_count_t},
+                                                               hSignalEvent::ze_event_handle_t,
+                                                               numWaitEvents::UInt32,
+                                                               phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendLaunchCooperativeKernel(hCommandList, hKernel,
                                                              pLaunchFuncArgs, hSignalEvent,
                                                              numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendLaunchCooperativeKernel(hCommandList::ze_command_list_handle_t,
-                                                                   hKernel::ze_kernel_handle_t,
-                                                                   pLaunchFuncArgs::Ptr{ze_group_count_t},
-                                                                   hSignalEvent::ze_event_handle_t,
-                                                                   numWaitEvents::UInt32,
-                                                                   phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendLaunchCooperativeKernel(hCommandList::ze_command_list_handle_t,
+                                                                          hKernel::ze_kernel_handle_t,
+                                                                          pLaunchFuncArgs::Ptr{ze_group_count_t},
+                                                                          hSignalEvent::ze_event_handle_t,
+                                                                          numWaitEvents::UInt32,
+                                                                          phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendLaunchKernelIndirect(hCommandList, hKernel,
                                                           pLaunchArgumentsBuffer,
                                                           hSignalEvent, numWaitEvents,
                                                           phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendLaunchKernelIndirect(hCommandList::ze_command_list_handle_t,
-                                                                hKernel::ze_kernel_handle_t,
-                                                                pLaunchArgumentsBuffer::Ptr{ze_group_count_t},
-                                                                hSignalEvent::ze_event_handle_t,
-                                                                numWaitEvents::UInt32,
-                                                                phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendLaunchKernelIndirect(hCommandList::ze_command_list_handle_t,
+                                                                       hKernel::ze_kernel_handle_t,
+                                                                       pLaunchArgumentsBuffer::Ptr{ze_group_count_t},
+                                                                       hSignalEvent::ze_event_handle_t,
+                                                                       numWaitEvents::UInt32,
+                                                                       phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendLaunchMultipleKernelsIndirect(hCommandList, numKernels,
@@ -3236,14 +3244,14 @@ end
                                                                    hSignalEvent,
                                                                    numWaitEvents,
                                                                    phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendLaunchMultipleKernelsIndirect(hCommandList::ze_command_list_handle_t,
-                                                                         numKernels::UInt32,
-                                                                         phKernels::Ptr{ze_kernel_handle_t},
-                                                                         pCountBuffer::Ptr{UInt32},
-                                                                         pLaunchArgumentsBuffer::Ptr{ze_group_count_t},
-                                                                         hSignalEvent::ze_event_handle_t,
-                                                                         numWaitEvents::UInt32,
-                                                                         phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendLaunchMultipleKernelsIndirect(hCommandList::ze_command_list_handle_t,
+                                                                                numKernels::UInt32,
+                                                                                phKernels::Ptr{ze_kernel_handle_t},
+                                                                                pCountBuffer::Ptr{UInt32},
+                                                                                pLaunchArgumentsBuffer::Ptr{ze_group_count_t},
+                                                                                hSignalEvent::ze_event_handle_t,
+                                                                                numWaitEvents::UInt32,
+                                                                                phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @cenum _ze_module_program_exp_version_t::UInt32 begin
@@ -3277,40 +3285,40 @@ end
 const ze_raytracing_mem_alloc_ext_flag_t = _ze_raytracing_mem_alloc_ext_flag_t
 
 @checked function zeContextMakeMemoryResident(hContext, hDevice, ptr, size)
-    @ccall libze_loader.zeContextMakeMemoryResident(hContext::ze_context_handle_t,
+    @gcsafe_ccall libze_loader.zeContextMakeMemoryResident(hContext::ze_context_handle_t,
+                                                           hDevice::ze_device_handle_t,
+                                                           ptr::PtrOrZePtr{Cvoid},
+                                                           size::Csize_t)::ze_result_t
+end
+
+@checked function zeContextEvictMemory(hContext, hDevice, ptr, size)
+    @gcsafe_ccall libze_loader.zeContextEvictMemory(hContext::ze_context_handle_t,
                                                     hDevice::ze_device_handle_t,
                                                     ptr::PtrOrZePtr{Cvoid},
                                                     size::Csize_t)::ze_result_t
 end
 
-@checked function zeContextEvictMemory(hContext, hDevice, ptr, size)
-    @ccall libze_loader.zeContextEvictMemory(hContext::ze_context_handle_t,
-                                             hDevice::ze_device_handle_t,
-                                             ptr::PtrOrZePtr{Cvoid},
-                                             size::Csize_t)::ze_result_t
+@checked function zeContextMakeImageResident(hContext, hDevice, hImage)
+    @gcsafe_ccall libze_loader.zeContextMakeImageResident(hContext::ze_context_handle_t,
+                                                          hDevice::ze_device_handle_t,
+                                                          hImage::ze_image_handle_t)::ze_result_t
 end
 
-@checked function zeContextMakeImageResident(hContext, hDevice, hImage)
-    @ccall libze_loader.zeContextMakeImageResident(hContext::ze_context_handle_t,
+@checked function zeContextEvictImage(hContext, hDevice, hImage)
+    @gcsafe_ccall libze_loader.zeContextEvictImage(hContext::ze_context_handle_t,
                                                    hDevice::ze_device_handle_t,
                                                    hImage::ze_image_handle_t)::ze_result_t
 end
 
-@checked function zeContextEvictImage(hContext, hDevice, hImage)
-    @ccall libze_loader.zeContextEvictImage(hContext::ze_context_handle_t,
-                                            hDevice::ze_device_handle_t,
-                                            hImage::ze_image_handle_t)::ze_result_t
-end
-
 @checked function zeSamplerCreate(hContext, hDevice, desc, phSampler)
-    @ccall libze_loader.zeSamplerCreate(hContext::ze_context_handle_t,
-                                        hDevice::ze_device_handle_t,
-                                        desc::Ptr{ze_sampler_desc_t},
-                                        phSampler::Ptr{ze_sampler_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeSamplerCreate(hContext::ze_context_handle_t,
+                                               hDevice::ze_device_handle_t,
+                                               desc::Ptr{ze_sampler_desc_t},
+                                               phSampler::Ptr{ze_sampler_handle_t})::ze_result_t
 end
 
 @checked function zeSamplerDestroy(hSampler)
-    @ccall libze_loader.zeSamplerDestroy(hSampler::ze_sampler_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeSamplerDestroy(hSampler::ze_sampler_handle_t)::ze_result_t
 end
 
 @cenum _ze_memory_access_attribute_t::UInt32 begin
@@ -3323,21 +3331,22 @@ end
 const ze_memory_access_attribute_t = _ze_memory_access_attribute_t
 
 @checked function zeVirtualMemReserve(hContext, pStart, size, pptr)
-    @ccall libze_loader.zeVirtualMemReserve(hContext::ze_context_handle_t,
-                                            pStart::Ptr{Cvoid}, size::Csize_t,
-                                            pptr::Ptr{Ptr{Cvoid}})::ze_result_t
+    @gcsafe_ccall libze_loader.zeVirtualMemReserve(hContext::ze_context_handle_t,
+                                                   pStart::Ptr{Cvoid}, size::Csize_t,
+                                                   pptr::Ptr{Ptr{Cvoid}})::ze_result_t
 end
 
 @checked function zeVirtualMemFree(hContext, ptr, size)
-    @ccall libze_loader.zeVirtualMemFree(hContext::ze_context_handle_t,
-                                         ptr::PtrOrZePtr{Cvoid}, size::Csize_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeVirtualMemFree(hContext::ze_context_handle_t,
+                                                ptr::PtrOrZePtr{Cvoid},
+                                                size::Csize_t)::ze_result_t
 end
 
 @checked function zeVirtualMemQueryPageSize(hContext, hDevice, size, pagesize)
-    @ccall libze_loader.zeVirtualMemQueryPageSize(hContext::ze_context_handle_t,
-                                                  hDevice::ze_device_handle_t,
-                                                  size::Csize_t,
-                                                  pagesize::Ptr{Csize_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeVirtualMemQueryPageSize(hContext::ze_context_handle_t,
+                                                         hDevice::ze_device_handle_t,
+                                                         size::Csize_t,
+                                                         pagesize::Ptr{Csize_t})::ze_result_t
 end
 
 @cenum _ze_physical_mem_flag_t::UInt32 begin
@@ -3349,41 +3358,44 @@ end
 const ze_physical_mem_flag_t = _ze_physical_mem_flag_t
 
 @checked function zePhysicalMemCreate(hContext, hDevice, desc, phPhysicalMemory)
-    @ccall libze_loader.zePhysicalMemCreate(hContext::ze_context_handle_t,
-                                            hDevice::ze_device_handle_t,
-                                            desc::Ptr{ze_physical_mem_desc_t},
-                                            phPhysicalMemory::Ptr{ze_physical_mem_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zePhysicalMemCreate(hContext::ze_context_handle_t,
+                                                   hDevice::ze_device_handle_t,
+                                                   desc::Ptr{ze_physical_mem_desc_t},
+                                                   phPhysicalMemory::Ptr{ze_physical_mem_handle_t})::ze_result_t
 end
 
 @checked function zePhysicalMemDestroy(hContext, hPhysicalMemory)
-    @ccall libze_loader.zePhysicalMemDestroy(hContext::ze_context_handle_t,
-                                             hPhysicalMemory::ze_physical_mem_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zePhysicalMemDestroy(hContext::ze_context_handle_t,
+                                                    hPhysicalMemory::ze_physical_mem_handle_t)::ze_result_t
 end
 
 @checked function zeVirtualMemMap(hContext, ptr, size, hPhysicalMemory, offset, access)
-    @ccall libze_loader.zeVirtualMemMap(hContext::ze_context_handle_t, ptr::Ptr{Cvoid},
-                                        size::Csize_t,
-                                        hPhysicalMemory::ze_physical_mem_handle_t,
-                                        offset::Csize_t,
-                                        access::ze_memory_access_attribute_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeVirtualMemMap(hContext::ze_context_handle_t,
+                                               ptr::Ptr{Cvoid}, size::Csize_t,
+                                               hPhysicalMemory::ze_physical_mem_handle_t,
+                                               offset::Csize_t,
+                                               access::ze_memory_access_attribute_t)::ze_result_t
 end
 
 @checked function zeVirtualMemUnmap(hContext, ptr, size)
-    @ccall libze_loader.zeVirtualMemUnmap(hContext::ze_context_handle_t, ptr::Ptr{Cvoid},
-                                          size::Csize_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeVirtualMemUnmap(hContext::ze_context_handle_t,
+                                                 ptr::Ptr{Cvoid},
+                                                 size::Csize_t)::ze_result_t
 end
 
 @checked function zeVirtualMemSetAccessAttribute(hContext, ptr, size, access)
-    @ccall libze_loader.zeVirtualMemSetAccessAttribute(hContext::ze_context_handle_t,
-                                                       ptr::Ptr{Cvoid}, size::Csize_t,
-                                                       access::ze_memory_access_attribute_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeVirtualMemSetAccessAttribute(hContext::ze_context_handle_t,
+                                                              ptr::Ptr{Cvoid},
+                                                              size::Csize_t,
+                                                              access::ze_memory_access_attribute_t)::ze_result_t
 end
 
 @checked function zeVirtualMemGetAccessAttribute(hContext, ptr, size, access, outSize)
-    @ccall libze_loader.zeVirtualMemGetAccessAttribute(hContext::ze_context_handle_t,
-                                                       ptr::Ptr{Cvoid}, size::Csize_t,
-                                                       access::Ptr{ze_memory_access_attribute_t},
-                                                       outSize::Ptr{Csize_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeVirtualMemGetAccessAttribute(hContext::ze_context_handle_t,
+                                                              ptr::Ptr{Cvoid},
+                                                              size::Csize_t,
+                                                              access::Ptr{ze_memory_access_attribute_t},
+                                                              outSize::Ptr{Csize_t})::ze_result_t
 end
 
 @cenum _ze_float_atomics_ext_version_t::UInt32 begin
@@ -3415,9 +3427,9 @@ end
 const ze_global_offset_exp_version_t = _ze_global_offset_exp_version_t
 
 @checked function zeKernelSetGlobalOffsetExp(hKernel, offsetX, offsetY, offsetZ)
-    @ccall libze_loader.zeKernelSetGlobalOffsetExp(hKernel::ze_kernel_handle_t,
-                                                   offsetX::UInt32, offsetY::UInt32,
-                                                   offsetZ::UInt32)::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelSetGlobalOffsetExp(hKernel::ze_kernel_handle_t,
+                                                          offsetX::UInt32, offsetY::UInt32,
+                                                          offsetZ::UInt32)::ze_result_t
 end
 
 @cenum _ze_relaxed_allocation_limits_exp_version_t::UInt32 begin
@@ -3444,9 +3456,9 @@ end
 const ze_kernel_get_binary_exp_version_t = _ze_kernel_get_binary_exp_version_t
 
 @checked function zeKernelGetBinaryExp(hKernel, pSize, pKernelBinary)
-    @ccall libze_loader.zeKernelGetBinaryExp(hKernel::ze_kernel_handle_t,
-                                             pSize::Ptr{Csize_t},
-                                             pKernelBinary::Ptr{UInt8})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelGetBinaryExp(hKernel::ze_kernel_handle_t,
+                                                    pSize::Ptr{Csize_t},
+                                                    pKernelBinary::Ptr{UInt8})::ze_result_t
 end
 
 @cenum _ze_driver_ddi_handles_ext_version_t::UInt32 begin
@@ -3492,39 +3504,39 @@ end
 const ze_external_semaphore_ext_flag_t = _ze_external_semaphore_ext_flag_t
 
 @checked function zeDeviceImportExternalSemaphoreExt(hDevice, desc, phSemaphore)
-    @ccall libze_loader.zeDeviceImportExternalSemaphoreExt(hDevice::ze_device_handle_t,
-                                                           desc::Ptr{ze_external_semaphore_ext_desc_t},
-                                                           phSemaphore::Ptr{ze_external_semaphore_ext_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceImportExternalSemaphoreExt(hDevice::ze_device_handle_t,
+                                                                  desc::Ptr{ze_external_semaphore_ext_desc_t},
+                                                                  phSemaphore::Ptr{ze_external_semaphore_ext_handle_t})::ze_result_t
 end
 
 @checked function zeDeviceReleaseExternalSemaphoreExt(hSemaphore)
-    @ccall libze_loader.zeDeviceReleaseExternalSemaphoreExt(hSemaphore::ze_external_semaphore_ext_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceReleaseExternalSemaphoreExt(hSemaphore::ze_external_semaphore_ext_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListAppendSignalExternalSemaphoreExt(hCommandList, numSemaphores,
                                                                 phSemaphores, signalParams,
                                                                 hSignalEvent, numWaitEvents,
                                                                 phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendSignalExternalSemaphoreExt(hCommandList::ze_command_list_handle_t,
-                                                                      numSemaphores::UInt32,
-                                                                      phSemaphores::Ptr{ze_external_semaphore_ext_handle_t},
-                                                                      signalParams::Ptr{ze_external_semaphore_signal_params_ext_t},
-                                                                      hSignalEvent::ze_event_handle_t,
-                                                                      numWaitEvents::UInt32,
-                                                                      phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendSignalExternalSemaphoreExt(hCommandList::ze_command_list_handle_t,
+                                                                             numSemaphores::UInt32,
+                                                                             phSemaphores::Ptr{ze_external_semaphore_ext_handle_t},
+                                                                             signalParams::Ptr{ze_external_semaphore_signal_params_ext_t},
+                                                                             hSignalEvent::ze_event_handle_t,
+                                                                             numWaitEvents::UInt32,
+                                                                             phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendWaitExternalSemaphoreExt(hCommandList, numSemaphores,
                                                               phSemaphores, waitParams,
                                                               hSignalEvent, numWaitEvents,
                                                               phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendWaitExternalSemaphoreExt(hCommandList::ze_command_list_handle_t,
-                                                                    numSemaphores::UInt32,
-                                                                    phSemaphores::Ptr{ze_external_semaphore_ext_handle_t},
-                                                                    waitParams::Ptr{ze_external_semaphore_wait_params_ext_t},
-                                                                    hSignalEvent::ze_event_handle_t,
-                                                                    numWaitEvents::UInt32,
-                                                                    phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendWaitExternalSemaphoreExt(hCommandList::ze_command_list_handle_t,
+                                                                           numSemaphores::UInt32,
+                                                                           phSemaphores::Ptr{ze_external_semaphore_ext_handle_t},
+                                                                           waitParams::Ptr{ze_external_semaphore_wait_params_ext_t},
+                                                                           hSignalEvent::ze_event_handle_t,
+                                                                           numWaitEvents::UInt32,
+                                                                           phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @cenum _ze_device_cache_line_size_ext_version_t::UInt32 begin
@@ -3617,72 +3629,72 @@ mutable struct _ze_rtas_parallel_operation_ext_handle_t end
 const ze_rtas_parallel_operation_ext_handle_t = Ptr{_ze_rtas_parallel_operation_ext_handle_t}
 
 @checked function zeRTASBuilderCreateExt(hDriver, pDescriptor, phBuilder)
-    @ccall libze_loader.zeRTASBuilderCreateExt(hDriver::ze_driver_handle_t,
-                                               pDescriptor::Ptr{ze_rtas_builder_ext_desc_t},
-                                               phBuilder::Ptr{ze_rtas_builder_ext_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderCreateExt(hDriver::ze_driver_handle_t,
+                                                      pDescriptor::Ptr{ze_rtas_builder_ext_desc_t},
+                                                      phBuilder::Ptr{ze_rtas_builder_ext_handle_t})::ze_result_t
 end
 
 @checked function zeRTASBuilderGetBuildPropertiesExt(hBuilder, pBuildOpDescriptor,
                                                      pProperties)
-    @ccall libze_loader.zeRTASBuilderGetBuildPropertiesExt(hBuilder::ze_rtas_builder_ext_handle_t,
-                                                           pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_ext_desc_t},
-                                                           pProperties::Ptr{ze_rtas_builder_ext_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderGetBuildPropertiesExt(hBuilder::ze_rtas_builder_ext_handle_t,
+                                                                  pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_ext_desc_t},
+                                                                  pProperties::Ptr{ze_rtas_builder_ext_properties_t})::ze_result_t
 end
 
 @checked function zeDriverRTASFormatCompatibilityCheckExt(hDriver, rtasFormatA, rtasFormatB)
-    @ccall libze_loader.zeDriverRTASFormatCompatibilityCheckExt(hDriver::ze_driver_handle_t,
-                                                                rtasFormatA::ze_rtas_format_ext_t,
-                                                                rtasFormatB::ze_rtas_format_ext_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverRTASFormatCompatibilityCheckExt(hDriver::ze_driver_handle_t,
+                                                                       rtasFormatA::ze_rtas_format_ext_t,
+                                                                       rtasFormatB::ze_rtas_format_ext_t)::ze_result_t
 end
 
 @checked function zeRTASBuilderBuildExt(hBuilder, pBuildOpDescriptor, pScratchBuffer,
                                         scratchBufferSizeBytes, pRtasBuffer,
                                         rtasBufferSizeBytes, hParallelOperation,
                                         pBuildUserPtr, pBounds, pRtasBufferSizeBytes)
-    @ccall libze_loader.zeRTASBuilderBuildExt(hBuilder::ze_rtas_builder_ext_handle_t,
-                                              pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_ext_desc_t},
-                                              pScratchBuffer::Ptr{Cvoid},
-                                              scratchBufferSizeBytes::Csize_t,
-                                              pRtasBuffer::Ptr{Cvoid},
-                                              rtasBufferSizeBytes::Csize_t,
-                                              hParallelOperation::ze_rtas_parallel_operation_ext_handle_t,
-                                              pBuildUserPtr::Ptr{Cvoid},
-                                              pBounds::Ptr{ze_rtas_aabb_ext_t},
-                                              pRtasBufferSizeBytes::Ptr{Csize_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderBuildExt(hBuilder::ze_rtas_builder_ext_handle_t,
+                                                     pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_ext_desc_t},
+                                                     pScratchBuffer::Ptr{Cvoid},
+                                                     scratchBufferSizeBytes::Csize_t,
+                                                     pRtasBuffer::Ptr{Cvoid},
+                                                     rtasBufferSizeBytes::Csize_t,
+                                                     hParallelOperation::ze_rtas_parallel_operation_ext_handle_t,
+                                                     pBuildUserPtr::Ptr{Cvoid},
+                                                     pBounds::Ptr{ze_rtas_aabb_ext_t},
+                                                     pRtasBufferSizeBytes::Ptr{Csize_t})::ze_result_t
 end
 
 @checked function zeRTASBuilderCommandListAppendCopyExt(hCommandList, dstptr, srcptr, size,
                                                         hSignalEvent, numWaitEvents,
                                                         phWaitEvents)
-    @ccall libze_loader.zeRTASBuilderCommandListAppendCopyExt(hCommandList::ze_command_list_handle_t,
-                                                              dstptr::Ptr{Cvoid},
-                                                              srcptr::Ptr{Cvoid},
-                                                              size::Csize_t,
-                                                              hSignalEvent::ze_event_handle_t,
-                                                              numWaitEvents::UInt32,
-                                                              phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderCommandListAppendCopyExt(hCommandList::ze_command_list_handle_t,
+                                                                     dstptr::Ptr{Cvoid},
+                                                                     srcptr::Ptr{Cvoid},
+                                                                     size::Csize_t,
+                                                                     hSignalEvent::ze_event_handle_t,
+                                                                     numWaitEvents::UInt32,
+                                                                     phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeRTASBuilderDestroyExt(hBuilder)
-    @ccall libze_loader.zeRTASBuilderDestroyExt(hBuilder::ze_rtas_builder_ext_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderDestroyExt(hBuilder::ze_rtas_builder_ext_handle_t)::ze_result_t
 end
 
 @checked function zeRTASParallelOperationCreateExt(hDriver, phParallelOperation)
-    @ccall libze_loader.zeRTASParallelOperationCreateExt(hDriver::ze_driver_handle_t,
-                                                         phParallelOperation::Ptr{ze_rtas_parallel_operation_ext_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASParallelOperationCreateExt(hDriver::ze_driver_handle_t,
+                                                                phParallelOperation::Ptr{ze_rtas_parallel_operation_ext_handle_t})::ze_result_t
 end
 
 @checked function zeRTASParallelOperationGetPropertiesExt(hParallelOperation, pProperties)
-    @ccall libze_loader.zeRTASParallelOperationGetPropertiesExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t,
-                                                                pProperties::Ptr{ze_rtas_parallel_operation_ext_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASParallelOperationGetPropertiesExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t,
+                                                                       pProperties::Ptr{ze_rtas_parallel_operation_ext_properties_t})::ze_result_t
 end
 
 @checked function zeRTASParallelOperationJoinExt(hParallelOperation)
-    @ccall libze_loader.zeRTASParallelOperationJoinExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASParallelOperationJoinExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t)::ze_result_t
 end
 
 @checked function zeRTASParallelOperationDestroyExt(hParallelOperation)
-    @ccall libze_loader.zeRTASParallelOperationDestroyExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASParallelOperationDestroyExt(hParallelOperation::ze_rtas_parallel_operation_ext_handle_t)::ze_result_t
 end
 
 @cenum _ze_device_vector_sizes_ext_version_t::UInt32 begin
@@ -3695,9 +3707,9 @@ const ze_device_vector_sizes_ext_version_t = _ze_device_vector_sizes_ext_version
 
 @checked function zeDeviceGetVectorWidthPropertiesExt(hDevice, pCount,
                                                       pVectorWidthProperties)
-    @ccall libze_loader.zeDeviceGetVectorWidthPropertiesExt(hDevice::ze_device_handle_t,
-                                                            pCount::Ptr{UInt32},
-                                                            pVectorWidthProperties::Ptr{ze_device_vector_width_properties_ext_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetVectorWidthPropertiesExt(hDevice::ze_device_handle_t,
+                                                                   pCount::Ptr{UInt32},
+                                                                   pVectorWidthProperties::Ptr{ze_device_vector_width_properties_ext_t})::ze_result_t
 end
 
 @cenum _ze_cache_reservation_ext_version_t::UInt32 begin
@@ -3721,15 +3733,16 @@ end
 const ze_cache_ext_region_t = _ze_cache_ext_region_t
 
 @checked function zeDeviceReserveCacheExt(hDevice, cacheLevel, cacheReservationSize)
-    @ccall libze_loader.zeDeviceReserveCacheExt(hDevice::ze_device_handle_t,
-                                                cacheLevel::Csize_t,
-                                                cacheReservationSize::Csize_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceReserveCacheExt(hDevice::ze_device_handle_t,
+                                                       cacheLevel::Csize_t,
+                                                       cacheReservationSize::Csize_t)::ze_result_t
 end
 
 @checked function zeDeviceSetCacheAdviceExt(hDevice, ptr, regionSize, cacheRegion)
-    @ccall libze_loader.zeDeviceSetCacheAdviceExt(hDevice::ze_device_handle_t,
-                                                  ptr::Ptr{Cvoid}, regionSize::Csize_t,
-                                                  cacheRegion::ze_cache_ext_region_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceSetCacheAdviceExt(hDevice::ze_device_handle_t,
+                                                         ptr::Ptr{Cvoid},
+                                                         regionSize::Csize_t,
+                                                         cacheRegion::ze_cache_ext_region_t)::ze_result_t
 end
 
 @cenum _ze_event_query_timestamps_exp_version_t::UInt32 begin
@@ -3741,10 +3754,10 @@ end
 const ze_event_query_timestamps_exp_version_t = _ze_event_query_timestamps_exp_version_t
 
 @checked function zeEventQueryTimestampsExp(hEvent, hDevice, pCount, pTimestamps)
-    @ccall libze_loader.zeEventQueryTimestampsExp(hEvent::ze_event_handle_t,
-                                                  hDevice::ze_device_handle_t,
-                                                  pCount::Ptr{UInt32},
-                                                  pTimestamps::Ptr{ze_kernel_timestamp_result_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventQueryTimestampsExp(hEvent::ze_event_handle_t,
+                                                         hDevice::ze_device_handle_t,
+                                                         pCount::Ptr{UInt32},
+                                                         pTimestamps::Ptr{ze_kernel_timestamp_result_t})::ze_result_t
 end
 
 @cenum _ze_image_memory_properties_exp_version_t::UInt32 begin
@@ -3756,8 +3769,8 @@ end
 const ze_image_memory_properties_exp_version_t = _ze_image_memory_properties_exp_version_t
 
 @checked function zeImageGetMemoryPropertiesExp(hImage, pMemoryProperties)
-    @ccall libze_loader.zeImageGetMemoryPropertiesExp(hImage::ze_image_handle_t,
-                                                      pMemoryProperties::Ptr{ze_image_memory_properties_exp_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeImageGetMemoryPropertiesExp(hImage::ze_image_handle_t,
+                                                             pMemoryProperties::Ptr{ze_image_memory_properties_exp_t})::ze_result_t
 end
 
 @cenum _ze_image_view_ext_version_t::UInt32 begin
@@ -3769,11 +3782,11 @@ end
 const ze_image_view_ext_version_t = _ze_image_view_ext_version_t
 
 @checked function zeImageViewCreateExt(hContext, hDevice, desc, hImage, phImageView)
-    @ccall libze_loader.zeImageViewCreateExt(hContext::ze_context_handle_t,
-                                             hDevice::ze_device_handle_t,
-                                             desc::Ptr{ze_image_desc_t},
-                                             hImage::ze_image_handle_t,
-                                             phImageView::Ptr{ze_image_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeImageViewCreateExt(hContext::ze_context_handle_t,
+                                                    hDevice::ze_device_handle_t,
+                                                    desc::Ptr{ze_image_desc_t},
+                                                    hImage::ze_image_handle_t,
+                                                    phImageView::Ptr{ze_image_handle_t})::ze_result_t
 end
 
 @cenum _ze_image_view_exp_version_t::UInt32 begin
@@ -3785,11 +3798,11 @@ end
 const ze_image_view_exp_version_t = _ze_image_view_exp_version_t
 
 @checked function zeImageViewCreateExp(hContext, hDevice, desc, hImage, phImageView)
-    @ccall libze_loader.zeImageViewCreateExp(hContext::ze_context_handle_t,
-                                             hDevice::ze_device_handle_t,
-                                             desc::Ptr{ze_image_desc_t},
-                                             hImage::ze_image_handle_t,
-                                             phImageView::Ptr{ze_image_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeImageViewCreateExp(hContext::ze_context_handle_t,
+                                                    hDevice::ze_device_handle_t,
+                                                    desc::Ptr{ze_image_desc_t},
+                                                    hImage::ze_image_handle_t,
+                                                    phImageView::Ptr{ze_image_handle_t})::ze_result_t
 end
 
 @cenum _ze_image_view_planar_ext_version_t::UInt32 begin
@@ -3826,8 +3839,8 @@ end
 const ze_scheduling_hint_exp_flag_t = _ze_scheduling_hint_exp_flag_t
 
 @checked function zeKernelSchedulingHintExp(hKernel, pHint)
-    @ccall libze_loader.zeKernelSchedulingHintExp(hKernel::ze_kernel_handle_t,
-                                                  pHint::Ptr{ze_scheduling_hint_exp_desc_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeKernelSchedulingHintExp(hKernel::ze_kernel_handle_t,
+                                                         pHint::Ptr{ze_scheduling_hint_exp_desc_t})::ze_result_t
 end
 
 @cenum _ze_linkonce_odr_ext_version_t::UInt32 begin
@@ -3879,8 +3892,8 @@ end
 const ze_pci_properties_ext_version_t = _ze_pci_properties_ext_version_t
 
 @checked function zeDevicePciGetPropertiesExt(hDevice, pPciProperties)
-    @ccall libze_loader.zeDevicePciGetPropertiesExt(hDevice::ze_device_handle_t,
-                                                    pPciProperties::Ptr{ze_pci_ext_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDevicePciGetPropertiesExt(hDevice::ze_device_handle_t,
+                                                           pPciProperties::Ptr{ze_pci_ext_properties_t})::ze_result_t
 end
 
 @cenum _ze_srgb_ext_version_t::UInt32 begin
@@ -3903,30 +3916,30 @@ const ze_image_copy_ext_version_t = _ze_image_copy_ext_version_t
                                                           pSrcRegion, destRowPitch,
                                                           destSlicePitch, hSignalEvent,
                                                           numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendImageCopyToMemoryExt(hCommandList::ze_command_list_handle_t,
-                                                                dstptr::Ptr{Cvoid},
-                                                                hSrcImage::ze_image_handle_t,
-                                                                pSrcRegion::Ptr{ze_image_region_t},
-                                                                destRowPitch::UInt32,
-                                                                destSlicePitch::UInt32,
-                                                                hSignalEvent::ze_event_handle_t,
-                                                                numWaitEvents::UInt32,
-                                                                phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendImageCopyToMemoryExt(hCommandList::ze_command_list_handle_t,
+                                                                       dstptr::Ptr{Cvoid},
+                                                                       hSrcImage::ze_image_handle_t,
+                                                                       pSrcRegion::Ptr{ze_image_region_t},
+                                                                       destRowPitch::UInt32,
+                                                                       destSlicePitch::UInt32,
+                                                                       hSignalEvent::ze_event_handle_t,
+                                                                       numWaitEvents::UInt32,
+                                                                       phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListAppendImageCopyFromMemoryExt(hCommandList, hDstImage, srcptr,
                                                             pDstRegion, srcRowPitch,
                                                             srcSlicePitch, hSignalEvent,
                                                             numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListAppendImageCopyFromMemoryExt(hCommandList::ze_command_list_handle_t,
-                                                                  hDstImage::ze_image_handle_t,
-                                                                  srcptr::Ptr{Cvoid},
-                                                                  pDstRegion::Ptr{ze_image_region_t},
-                                                                  srcRowPitch::UInt32,
-                                                                  srcSlicePitch::UInt32,
-                                                                  hSignalEvent::ze_event_handle_t,
-                                                                  numWaitEvents::UInt32,
-                                                                  phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListAppendImageCopyFromMemoryExt(hCommandList::ze_command_list_handle_t,
+                                                                         hDstImage::ze_image_handle_t,
+                                                                         srcptr::Ptr{Cvoid},
+                                                                         pDstRegion::Ptr{ze_image_region_t},
+                                                                         srcRowPitch::UInt32,
+                                                                         srcSlicePitch::UInt32,
+                                                                         hSignalEvent::ze_event_handle_t,
+                                                                         numWaitEvents::UInt32,
+                                                                         phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @cenum _ze_image_query_alloc_properties_ext_version_t::UInt32 begin
@@ -3938,9 +3951,9 @@ end
 const ze_image_query_alloc_properties_ext_version_t = _ze_image_query_alloc_properties_ext_version_t
 
 @checked function zeImageGetAllocPropertiesExt(hContext, hImage, pImageAllocProperties)
-    @ccall libze_loader.zeImageGetAllocPropertiesExt(hContext::ze_context_handle_t,
-                                                     hImage::ze_image_handle_t,
-                                                     pImageAllocProperties::Ptr{ze_image_allocation_ext_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeImageGetAllocPropertiesExt(hContext::ze_context_handle_t,
+                                                            hImage::ze_image_handle_t,
+                                                            pImageAllocProperties::Ptr{ze_image_allocation_ext_properties_t})::ze_result_t
 end
 
 @cenum _ze_linkage_inspection_ext_version_t::UInt32 begin
@@ -3961,10 +3974,10 @@ end
 const ze_linkage_inspection_ext_flag_t = _ze_linkage_inspection_ext_flag_t
 
 @checked function zeModuleInspectLinkageExt(pInspectDesc, numModules, phModules, phLog)
-    @ccall libze_loader.zeModuleInspectLinkageExt(pInspectDesc::Ptr{ze_linkage_inspection_ext_desc_t},
-                                                  numModules::UInt32,
-                                                  phModules::Ptr{ze_module_handle_t},
-                                                  phLog::Ptr{ze_module_build_log_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeModuleInspectLinkageExt(pInspectDesc::Ptr{ze_linkage_inspection_ext_desc_t},
+                                                         numModules::UInt32,
+                                                         phModules::Ptr{ze_module_handle_t},
+                                                         phLog::Ptr{ze_module_build_log_handle_t})::ze_result_t
 end
 
 @cenum _ze_memory_compression_hints_ext_version_t::UInt32 begin
@@ -4000,9 +4013,9 @@ end
 const ze_driver_memory_free_policy_ext_flag_t = _ze_driver_memory_free_policy_ext_flag_t
 
 @checked function zeMemFreeExt(hContext, pMemFreeDesc, ptr)
-    @ccall libze_loader.zeMemFreeExt(hContext::ze_context_handle_t,
-                                     pMemFreeDesc::Ptr{ze_memory_free_ext_desc_t},
-                                     ptr::PtrOrZePtr{Cvoid})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemFreeExt(hContext::ze_context_handle_t,
+                                            pMemFreeDesc::Ptr{ze_memory_free_ext_desc_t},
+                                            ptr::PtrOrZePtr{Cvoid})::ze_result_t
 end
 
 @cenum _ze_device_luid_ext_version_t::UInt32 begin
@@ -4014,48 +4027,48 @@ end
 const ze_device_luid_ext_version_t = _ze_device_luid_ext_version_t
 
 @checked function zeFabricVertexGetExp(hDriver, pCount, phVertices)
-    @ccall libze_loader.zeFabricVertexGetExp(hDriver::ze_driver_handle_t,
-                                             pCount::Ptr{UInt32},
-                                             phVertices::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeFabricVertexGetExp(hDriver::ze_driver_handle_t,
+                                                    pCount::Ptr{UInt32},
+                                                    phVertices::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
 end
 
 @checked function zeFabricVertexGetSubVerticesExp(hVertex, pCount, phSubvertices)
-    @ccall libze_loader.zeFabricVertexGetSubVerticesExp(hVertex::ze_fabric_vertex_handle_t,
-                                                        pCount::Ptr{UInt32},
-                                                        phSubvertices::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeFabricVertexGetSubVerticesExp(hVertex::ze_fabric_vertex_handle_t,
+                                                               pCount::Ptr{UInt32},
+                                                               phSubvertices::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
 end
 
 @checked function zeFabricVertexGetPropertiesExp(hVertex, pVertexProperties)
-    @ccall libze_loader.zeFabricVertexGetPropertiesExp(hVertex::ze_fabric_vertex_handle_t,
-                                                       pVertexProperties::Ptr{ze_fabric_vertex_exp_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeFabricVertexGetPropertiesExp(hVertex::ze_fabric_vertex_handle_t,
+                                                              pVertexProperties::Ptr{ze_fabric_vertex_exp_properties_t})::ze_result_t
 end
 
 @checked function zeFabricVertexGetDeviceExp(hVertex, phDevice)
-    @ccall libze_loader.zeFabricVertexGetDeviceExp(hVertex::ze_fabric_vertex_handle_t,
-                                                   phDevice::Ptr{ze_device_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeFabricVertexGetDeviceExp(hVertex::ze_fabric_vertex_handle_t,
+                                                          phDevice::Ptr{ze_device_handle_t})::ze_result_t
 end
 
 @checked function zeDeviceGetFabricVertexExp(hDevice, phVertex)
-    @ccall libze_loader.zeDeviceGetFabricVertexExp(hDevice::ze_device_handle_t,
-                                                   phVertex::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeDeviceGetFabricVertexExp(hDevice::ze_device_handle_t,
+                                                          phVertex::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
 end
 
 @checked function zeFabricEdgeGetExp(hVertexA, hVertexB, pCount, phEdges)
-    @ccall libze_loader.zeFabricEdgeGetExp(hVertexA::ze_fabric_vertex_handle_t,
-                                           hVertexB::ze_fabric_vertex_handle_t,
-                                           pCount::Ptr{UInt32},
-                                           phEdges::Ptr{ze_fabric_edge_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeFabricEdgeGetExp(hVertexA::ze_fabric_vertex_handle_t,
+                                                  hVertexB::ze_fabric_vertex_handle_t,
+                                                  pCount::Ptr{UInt32},
+                                                  phEdges::Ptr{ze_fabric_edge_handle_t})::ze_result_t
 end
 
 @checked function zeFabricEdgeGetVerticesExp(hEdge, phVertexA, phVertexB)
-    @ccall libze_loader.zeFabricEdgeGetVerticesExp(hEdge::ze_fabric_edge_handle_t,
-                                                   phVertexA::Ptr{ze_fabric_vertex_handle_t},
-                                                   phVertexB::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeFabricEdgeGetVerticesExp(hEdge::ze_fabric_edge_handle_t,
+                                                          phVertexA::Ptr{ze_fabric_vertex_handle_t},
+                                                          phVertexB::Ptr{ze_fabric_vertex_handle_t})::ze_result_t
 end
 
 @checked function zeFabricEdgeGetPropertiesExp(hEdge, pEdgeProperties)
-    @ccall libze_loader.zeFabricEdgeGetPropertiesExp(hEdge::ze_fabric_edge_handle_t,
-                                                     pEdgeProperties::Ptr{ze_fabric_edge_exp_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeFabricEdgeGetPropertiesExp(hEdge::ze_fabric_edge_handle_t,
+                                                            pEdgeProperties::Ptr{ze_fabric_edge_exp_properties_t})::ze_result_t
 end
 
 @cenum _ze_device_memory_properties_ext_version_t::UInt32 begin
@@ -4117,10 +4130,10 @@ end
 const ze_event_query_kernel_timestamps_ext_flag_t = _ze_event_query_kernel_timestamps_ext_flag_t
 
 @checked function zeEventQueryKernelTimestampsExt(hEvent, hDevice, pCount, pResults)
-    @ccall libze_loader.zeEventQueryKernelTimestampsExt(hEvent::ze_event_handle_t,
-                                                        hDevice::ze_device_handle_t,
-                                                        pCount::Ptr{UInt32},
-                                                        pResults::Ptr{ze_event_query_kernel_timestamps_results_ext_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeEventQueryKernelTimestampsExt(hEvent::ze_event_handle_t,
+                                                               hDevice::ze_device_handle_t,
+                                                               pCount::Ptr{UInt32},
+                                                               pResults::Ptr{ze_event_query_kernel_timestamps_results_ext_properties_t})::ze_result_t
 end
 
 @cenum _ze_rtas_device_exp_flag_t::UInt32 begin
@@ -4205,60 +4218,60 @@ mutable struct _ze_rtas_parallel_operation_exp_handle_t end
 const ze_rtas_parallel_operation_exp_handle_t = Ptr{_ze_rtas_parallel_operation_exp_handle_t}
 
 @checked function zeRTASBuilderCreateExp(hDriver, pDescriptor, phBuilder)
-    @ccall libze_loader.zeRTASBuilderCreateExp(hDriver::ze_driver_handle_t,
-                                               pDescriptor::Ptr{ze_rtas_builder_exp_desc_t},
-                                               phBuilder::Ptr{ze_rtas_builder_exp_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderCreateExp(hDriver::ze_driver_handle_t,
+                                                      pDescriptor::Ptr{ze_rtas_builder_exp_desc_t},
+                                                      phBuilder::Ptr{ze_rtas_builder_exp_handle_t})::ze_result_t
 end
 
 @checked function zeRTASBuilderGetBuildPropertiesExp(hBuilder, pBuildOpDescriptor,
                                                      pProperties)
-    @ccall libze_loader.zeRTASBuilderGetBuildPropertiesExp(hBuilder::ze_rtas_builder_exp_handle_t,
-                                                           pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_exp_desc_t},
-                                                           pProperties::Ptr{ze_rtas_builder_exp_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderGetBuildPropertiesExp(hBuilder::ze_rtas_builder_exp_handle_t,
+                                                                  pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_exp_desc_t},
+                                                                  pProperties::Ptr{ze_rtas_builder_exp_properties_t})::ze_result_t
 end
 
 @checked function zeDriverRTASFormatCompatibilityCheckExp(hDriver, rtasFormatA, rtasFormatB)
-    @ccall libze_loader.zeDriverRTASFormatCompatibilityCheckExp(hDriver::ze_driver_handle_t,
-                                                                rtasFormatA::ze_rtas_format_exp_t,
-                                                                rtasFormatB::ze_rtas_format_exp_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeDriverRTASFormatCompatibilityCheckExp(hDriver::ze_driver_handle_t,
+                                                                       rtasFormatA::ze_rtas_format_exp_t,
+                                                                       rtasFormatB::ze_rtas_format_exp_t)::ze_result_t
 end
 
 @checked function zeRTASBuilderBuildExp(hBuilder, pBuildOpDescriptor, pScratchBuffer,
                                         scratchBufferSizeBytes, pRtasBuffer,
                                         rtasBufferSizeBytes, hParallelOperation,
                                         pBuildUserPtr, pBounds, pRtasBufferSizeBytes)
-    @ccall libze_loader.zeRTASBuilderBuildExp(hBuilder::ze_rtas_builder_exp_handle_t,
-                                              pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_exp_desc_t},
-                                              pScratchBuffer::Ptr{Cvoid},
-                                              scratchBufferSizeBytes::Csize_t,
-                                              pRtasBuffer::Ptr{Cvoid},
-                                              rtasBufferSizeBytes::Csize_t,
-                                              hParallelOperation::ze_rtas_parallel_operation_exp_handle_t,
-                                              pBuildUserPtr::Ptr{Cvoid},
-                                              pBounds::Ptr{ze_rtas_aabb_exp_t},
-                                              pRtasBufferSizeBytes::Ptr{Csize_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderBuildExp(hBuilder::ze_rtas_builder_exp_handle_t,
+                                                     pBuildOpDescriptor::Ptr{ze_rtas_builder_build_op_exp_desc_t},
+                                                     pScratchBuffer::Ptr{Cvoid},
+                                                     scratchBufferSizeBytes::Csize_t,
+                                                     pRtasBuffer::Ptr{Cvoid},
+                                                     rtasBufferSizeBytes::Csize_t,
+                                                     hParallelOperation::ze_rtas_parallel_operation_exp_handle_t,
+                                                     pBuildUserPtr::Ptr{Cvoid},
+                                                     pBounds::Ptr{ze_rtas_aabb_exp_t},
+                                                     pRtasBufferSizeBytes::Ptr{Csize_t})::ze_result_t
 end
 
 @checked function zeRTASBuilderDestroyExp(hBuilder)
-    @ccall libze_loader.zeRTASBuilderDestroyExp(hBuilder::ze_rtas_builder_exp_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASBuilderDestroyExp(hBuilder::ze_rtas_builder_exp_handle_t)::ze_result_t
 end
 
 @checked function zeRTASParallelOperationCreateExp(hDriver, phParallelOperation)
-    @ccall libze_loader.zeRTASParallelOperationCreateExp(hDriver::ze_driver_handle_t,
-                                                         phParallelOperation::Ptr{ze_rtas_parallel_operation_exp_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASParallelOperationCreateExp(hDriver::ze_driver_handle_t,
+                                                                phParallelOperation::Ptr{ze_rtas_parallel_operation_exp_handle_t})::ze_result_t
 end
 
 @checked function zeRTASParallelOperationGetPropertiesExp(hParallelOperation, pProperties)
-    @ccall libze_loader.zeRTASParallelOperationGetPropertiesExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t,
-                                                                pProperties::Ptr{ze_rtas_parallel_operation_exp_properties_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASParallelOperationGetPropertiesExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t,
+                                                                       pProperties::Ptr{ze_rtas_parallel_operation_exp_properties_t})::ze_result_t
 end
 
 @checked function zeRTASParallelOperationJoinExp(hParallelOperation)
-    @ccall libze_loader.zeRTASParallelOperationJoinExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASParallelOperationJoinExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t)::ze_result_t
 end
 
 @checked function zeRTASParallelOperationDestroyExp(hParallelOperation)
-    @ccall libze_loader.zeRTASParallelOperationDestroyExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeRTASParallelOperationDestroyExp(hParallelOperation::ze_rtas_parallel_operation_exp_handle_t)::ze_result_t
 end
 
 @cenum _ze_event_pool_counter_based_exp_version_t::UInt32 begin
@@ -4295,16 +4308,17 @@ const ze_image_bindless_exp_flag_t = _ze_image_bindless_exp_flag_t
 
 @checked function zeMemGetPitchFor2dImage(hContext, hDevice, imageWidth, imageHeight,
                                           elementSizeInBytes, rowPitch)
-    @ccall libze_loader.zeMemGetPitchFor2dImage(hContext::ze_context_handle_t,
-                                                hDevice::ze_device_handle_t,
-                                                imageWidth::Csize_t, imageHeight::Csize_t,
-                                                elementSizeInBytes::Cuint,
-                                                rowPitch::Ptr{Csize_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeMemGetPitchFor2dImage(hContext::ze_context_handle_t,
+                                                       hDevice::ze_device_handle_t,
+                                                       imageWidth::Csize_t,
+                                                       imageHeight::Csize_t,
+                                                       elementSizeInBytes::Cuint,
+                                                       rowPitch::Ptr{Csize_t})::ze_result_t
 end
 
 @checked function zeImageGetDeviceOffsetExp(hImage, pDeviceOffset)
-    @ccall libze_loader.zeImageGetDeviceOffsetExp(hImage::ze_image_handle_t,
-                                                  pDeviceOffset::Ptr{UInt64})::ze_result_t
+    @gcsafe_ccall libze_loader.zeImageGetDeviceOffsetExp(hImage::ze_image_handle_t,
+                                                         pDeviceOffset::Ptr{UInt64})::ze_result_t
 end
 
 @cenum _ze_command_list_clone_exp_version_t::UInt32 begin
@@ -4316,8 +4330,8 @@ end
 const ze_command_list_clone_exp_version_t = _ze_command_list_clone_exp_version_t
 
 @checked function zeCommandListCreateCloneExp(hCommandList, phClonedCommandList)
-    @ccall libze_loader.zeCommandListCreateCloneExp(hCommandList::ze_command_list_handle_t,
-                                                    phClonedCommandList::Ptr{ze_command_list_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListCreateCloneExp(hCommandList::ze_command_list_handle_t,
+                                                           phClonedCommandList::Ptr{ze_command_list_handle_t})::ze_result_t
 end
 
 @cenum _ze_immediate_command_list_append_exp_version_t::UInt32 begin
@@ -4332,12 +4346,12 @@ const ze_immediate_command_list_append_exp_version_t = _ze_immediate_command_lis
                                                               numCommandLists,
                                                               phCommandLists, hSignalEvent,
                                                               numWaitEvents, phWaitEvents)
-    @ccall libze_loader.zeCommandListImmediateAppendCommandListsExp(hCommandListImmediate::ze_command_list_handle_t,
-                                                                    numCommandLists::UInt32,
-                                                                    phCommandLists::Ptr{ze_command_list_handle_t},
-                                                                    hSignalEvent::ze_event_handle_t,
-                                                                    numWaitEvents::UInt32,
-                                                                    phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListImmediateAppendCommandListsExp(hCommandListImmediate::ze_command_list_handle_t,
+                                                                           numCommandLists::UInt32,
+                                                                           phCommandLists::Ptr{ze_command_list_handle_t},
+                                                                           hSignalEvent::ze_event_handle_t,
+                                                                           numWaitEvents::UInt32,
+                                                                           phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @cenum _ze_mutable_command_list_exp_version_t::UInt32 begin
@@ -4371,48 +4385,48 @@ end
 const ze_mutable_command_list_exp_flag_t = _ze_mutable_command_list_exp_flag_t
 
 @checked function zeCommandListGetNextCommandIdExp(hCommandList, desc, pCommandId)
-    @ccall libze_loader.zeCommandListGetNextCommandIdExp(hCommandList::ze_command_list_handle_t,
-                                                         desc::Ptr{ze_mutable_command_id_exp_desc_t},
-                                                         pCommandId::Ptr{UInt64})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListGetNextCommandIdExp(hCommandList::ze_command_list_handle_t,
+                                                                desc::Ptr{ze_mutable_command_id_exp_desc_t},
+                                                                pCommandId::Ptr{UInt64})::ze_result_t
 end
 
 @checked function zeCommandListGetNextCommandIdWithKernelsExp(hCommandList, desc,
                                                               numKernels, phKernels,
                                                               pCommandId)
-    @ccall libze_loader.zeCommandListGetNextCommandIdWithKernelsExp(hCommandList::ze_command_list_handle_t,
-                                                                    desc::Ptr{ze_mutable_command_id_exp_desc_t},
-                                                                    numKernels::UInt32,
-                                                                    phKernels::Ptr{ze_kernel_handle_t},
-                                                                    pCommandId::Ptr{UInt64})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListGetNextCommandIdWithKernelsExp(hCommandList::ze_command_list_handle_t,
+                                                                           desc::Ptr{ze_mutable_command_id_exp_desc_t},
+                                                                           numKernels::UInt32,
+                                                                           phKernels::Ptr{ze_kernel_handle_t},
+                                                                           pCommandId::Ptr{UInt64})::ze_result_t
 end
 
 @checked function zeCommandListUpdateMutableCommandsExp(hCommandList, desc)
-    @ccall libze_loader.zeCommandListUpdateMutableCommandsExp(hCommandList::ze_command_list_handle_t,
-                                                              desc::Ptr{ze_mutable_commands_exp_desc_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListUpdateMutableCommandsExp(hCommandList::ze_command_list_handle_t,
+                                                                     desc::Ptr{ze_mutable_commands_exp_desc_t})::ze_result_t
 end
 
 @checked function zeCommandListUpdateMutableCommandSignalEventExp(hCommandList, commandId,
                                                                   hSignalEvent)
-    @ccall libze_loader.zeCommandListUpdateMutableCommandSignalEventExp(hCommandList::ze_command_list_handle_t,
-                                                                        commandId::UInt64,
-                                                                        hSignalEvent::ze_event_handle_t)::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListUpdateMutableCommandSignalEventExp(hCommandList::ze_command_list_handle_t,
+                                                                               commandId::UInt64,
+                                                                               hSignalEvent::ze_event_handle_t)::ze_result_t
 end
 
 @checked function zeCommandListUpdateMutableCommandWaitEventsExp(hCommandList, commandId,
                                                                  numWaitEvents,
                                                                  phWaitEvents)
-    @ccall libze_loader.zeCommandListUpdateMutableCommandWaitEventsExp(hCommandList::ze_command_list_handle_t,
-                                                                       commandId::UInt64,
-                                                                       numWaitEvents::UInt32,
-                                                                       phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListUpdateMutableCommandWaitEventsExp(hCommandList::ze_command_list_handle_t,
+                                                                              commandId::UInt64,
+                                                                              numWaitEvents::UInt32,
+                                                                              phWaitEvents::Ptr{ze_event_handle_t})::ze_result_t
 end
 
 @checked function zeCommandListUpdateMutableCommandKernelsExp(hCommandList, numKernels,
                                                               pCommandId, phKernels)
-    @ccall libze_loader.zeCommandListUpdateMutableCommandKernelsExp(hCommandList::ze_command_list_handle_t,
-                                                                    numKernels::UInt32,
-                                                                    pCommandId::Ptr{UInt64},
-                                                                    phKernels::Ptr{ze_kernel_handle_t})::ze_result_t
+    @gcsafe_ccall libze_loader.zeCommandListUpdateMutableCommandKernelsExp(hCommandList::ze_command_list_handle_t,
+                                                                           numKernels::UInt32,
+                                                                           pCommandId::Ptr{UInt64},
+                                                                           phKernels::Ptr{ze_kernel_handle_t})::ze_result_t
 end
 
 struct _ze_init_params_t

@@ -128,6 +128,10 @@ function Base.unsafe_convert(::Type{PtrOrZePtr{T}}, val) where {T}
     return Base.bitcast(PtrOrZePtr{T}, ptr)
 end
 
+# avoid ambiguities when passing PtrOrZePtr instances
+# NOTE: this happens now with `@gcsafe_ccall` due to the double `ccall`
+Base.unsafe_convert(::Type{PtrOrZePtr{T}}, x::PtrOrZePtr{T}) where {T} = x
+
 
 #
 # Device reference objects
