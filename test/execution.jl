@@ -1011,6 +1011,21 @@ end
     end
     @test Array(y) == fill(2f0 * 41 + 40, 1024)
 
+    # a batch appended to an idle stream is dispatched from its own command buffer, which
+    # NEO 26.35 overflowed with a pending tag update after recycling its ring buffer
+    # (intel/compute-runtime#1027)
+    x = oneArray(zeros(Float32, 1024))
+    y = similar(x)
+    for _ in 1:2000
+        copyto!(y, x)
+        oneAPI.mkl_boundary!()
+        for _ in 1:4
+            x .+= 1
+        end
+        oneAPI.mkl_boundary!()
+    end
+    @test Array(x) == fill(8000f0, 1024)
+
     # a failed submission is reported until the stream is synchronized
     @test fetch(@async begin
         a = oneArray(Int64[0])
