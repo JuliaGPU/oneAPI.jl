@@ -147,10 +147,19 @@ This workaround is independent of `ONEAPI_LTS` and can be enabled on its own.
   `ONEAPI_LTS` unset oneAPI.jl behaves exactly as it does upstream. The workarounds trade
   performance for correctness and should not be enabled on a driver that does not need them.
 
+## Known issues
+
+- **`ComplexF32` scans with `*`.** On Aurora (Data Center GPU Max 1550, LTS driver 1.3.33578),
+  `cumprod` and `cumprod!` of a `ComplexF32` vector return wrong results with Julia 1.13 and
+  AcceleratedKernels 0.5.7. The same code passes with Julia 1.10, and other element types and
+  `cumsum` are unaffected. It is not reproducible on Xe-LP hardware with the same NEO 25.18 /
+  IGC 2.11 user-mode driver, so it looks specific to IGC's PVC code generation. There is no
+  workaround in oneAPI.jl yet.
+
 ## Running the test suite
 
 The test suite reads the same switch and skips the cases the LTS stack cannot support (the
-`BFloat16` element type, the BFloat16 example). On a multi-tile node, pinning each test
+`BFloat16` element type, the BFloat16 example, `ComplexF32` in the accumulate tests). On a multi-tile node, pinning each test
 worker to its own tile avoids the oversubscription that provokes the dropped-tail
 corruption:
 
