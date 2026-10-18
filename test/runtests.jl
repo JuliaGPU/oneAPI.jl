@@ -132,6 +132,12 @@ init_worker_code = quote
         if startswith(string(test), "test_sparse")
             filter!(ET -> !(ET <: Integer || ET <: Complex{<:Integer}), typs)
         end
+        # On Aurora's LTS stack (PVC), a ComplexF32 `cumprod` returns wrong results with
+        # Julia 1.13 and AcceleratedKernels 0.5.7, which scans with sub-group shuffles. Not
+        # reproducible on other devices, nor with the same driver on Xe-LP; see docs/src/lts.md.
+        if oneL0.LTS[] && test === TestSuite.test_accumulate
+            filter!(!=(ComplexF32), typs)
+        end
         return typs
     end
 
