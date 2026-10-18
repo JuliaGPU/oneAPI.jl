@@ -85,11 +85,11 @@ init_worker_code = quote
                     Float16, Float32,
                     ComplexF32]
 
-    const float16_supported = oneL0.module_properties(device()).fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
+    const float16_supported = oneL0.module_properties(device()).flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 != 0
     if float16_supported
         append!(eltypes, [#=Float16,=# ComplexF16])
     end
-    const float64_supported = oneL0.module_properties(device()).fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+    const float64_supported = oneL0.module_properties(device()).flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0
     if float64_supported
         append!(eltypes, [Float64, ComplexF64])
     end

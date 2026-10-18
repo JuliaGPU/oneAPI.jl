@@ -203,8 +203,9 @@ end
 @noinline function _compiler_config(dev; kernel=true, name=nothing, always_inline=false,
                                     sub_group_size=nothing, kwargs...)
     properties = oneL0.module_properties(dev)
-    supports_fp16 = properties.fp16flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP16 == oneL0.ZE_DEVICE_MODULE_FLAG_FP16
-    supports_fp64 = properties.fp64flags & oneL0.ZE_DEVICE_MODULE_FLAG_FP64 == oneL0.ZE_DEVICE_MODULE_FLAG_FP64
+    support = eltype_support(dev)
+    supports_fp16 = support.float16
+    supports_fp64 = support.float64
 
     if sub_group_size !== nothing
         sizes = oneL0.compute_properties(dev).subGroupSizes

@@ -18,6 +18,20 @@ import Adapt
   @test collect(oneAPI.fill(1, 2, 2)) == ones(Int, 2, 2)
 end
 
+@testset "element type checks" begin
+  if !float64_supported
+    @test_throws "Float64 is not supported" oneArray{Float64}(undef, 1)
+    @test_throws "Float64 is not supported" oneArray{ComplexF64}(undef, 1)
+  end
+  if !float16_supported
+    @test_throws "Float16 is not supported" oneArray{Float16}(undef, 1)
+  end
+
+  # every array construction performs this check, so it shouldn't query the device
+  oneAPI.check_eltype(Float32)
+  @test @allocated(oneAPI.check_eltype(Float32)) == 0
+end
+
 @testset "adapt" begin
   A = rand(Float32, 3, 3)
   dA = oneArray(A)
