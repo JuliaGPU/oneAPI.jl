@@ -37,7 +37,7 @@ used by `@oneapi`. Returns a callable kernel object.
 
 Convert arguments for kernel execution. This function is called for every argument passed to
 a kernel, allowing customization of argument conversion. By default, it converts `oneArray`
-to `oneDeviceArray`.
+to `oneDeviceArray`, and `ZePtr{T}` to `LLVMPtr{T,AS.CrossWorkgroup}`.
 
 
 ## Basic Kernel Example
