@@ -158,8 +158,9 @@ struct KernelAdaptor
 end
 KernelAdaptor() = KernelAdaptor(nothing)
 
-# convert oneAPI host pointers to device pointers
-Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} = reinterpret(Ptr{T}, p)
+# device pointers are passed as global pointers; a plain `Ptr` is a private pointer in SPIR-V
+Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} =
+  reinterpret(LLVMPtr{T,AS.CrossWorkgroup}, p)
 
 # convert oneAPI host arrays to device arrays
 function Adapt.adapt_storage(to::KernelAdaptor, xs::oneArray{T,N}) where {T,N}

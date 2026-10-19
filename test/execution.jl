@@ -713,10 +713,25 @@ end
 
     if VERSION < v"1.12"
         a = oneArray(Float32[0])
-        @oneapi kernel(pointer(a))
+        @oneapi kernel(reinterpret(Ptr{Float32}, pointer(a)))
         @test Array(a) == [42]
     else
         @test_broken false
+    end
+end
+
+@testset "device pointer arguments" begin
+    # pointers to device memory are passed to kernels as global pointers; a plain `Ptr`
+    # would be a private pointer in SPIR-V, losing the store (#458)
+    function kernel(ptr, val)
+        unsafe_store!(ptr, val)
+        return
+    end
+
+    for B in (oneL0.DeviceBuffer, oneL0.SharedBuffer, oneL0.HostBuffer)
+        a = oneVector{Int,B}([1])
+        @oneapi kernel(pointer(a), 42)
+        @test Array(a) == [42]
     end
 end
 
