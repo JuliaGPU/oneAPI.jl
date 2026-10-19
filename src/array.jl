@@ -554,12 +554,23 @@ end
 # We don't convert isbits types in `adapt`, since they are already
 # considered GPU-compatible.
 
-Adapt.adapt_storage(::Type{oneArray}, xs::AT) where {AT<:AbstractArray} =
-  isbitstype(AT) ? xs : convert(oneArray, xs)
+# Type parameters that are specified are preserved, the others are taken from the source
+# array (or the default buffer type). Any subset can be given, e.g. `oneArray{<:Any,<:Any,B}`.
+adapt_eltype(::Type{<:oneArray{T}}, xs) where {T} = T
+adapt_eltype(::Type{<:oneArray}, xs) = eltype(xs)
+adapt_ndims(::Type{<:oneArray{<:Any,N}}, xs) where {N} = N
+adapt_ndims(::Type{<:oneArray}, xs) = ndims(xs)
+adapt_buftype(::Type{<:oneArray{<:Any,<:Any,B}}, xs) where {B} = B
+adapt_buftype(::Type{<:oneArray}, xs) =
+  xs isa oneArray ? buftype(xs) : oneL0.DeviceBuffer
 
-# if an element type is specified, convert to it
-Adapt.adapt_storage(::Type{<:oneArray{T}}, xs::AT) where {T, AT<:AbstractArray} =
-  isbitstype(AT) ? xs : convert(oneArray{T}, xs)
+function Adapt.adapt_storage(::Type{A}, xs::AT) where {A<:oneArray,AT<:AbstractArray}
+  isbitstype(AT) && return xs
+  B = oneArray{adapt_eltype(A, xs),adapt_ndims(A, xs),adapt_buftype(A, xs)}
+  # parameters taken from the source may violate bounds in `A`, e.g. `oneArray{<:Real}`
+  B <: A || throw(ArgumentError("cannot adapt a $AT to $A"))
+  return convert(B, xs)
+end
 
 
 ## utilities

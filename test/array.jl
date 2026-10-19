@@ -38,6 +38,26 @@ end
   @test Adapt.adapt(Array, dA) == A
   @test Adapt.adapt(oneArray, A) isa oneArray
   @test Array(Adapt.adapt(oneArray, A)) == A
+  @test Adapt.adapt(oneArray{Float32}, [1 2;3 4]) isa oneArray{Float32, 2, oneL0.DeviceBuffer}
+
+  # unspecified type parameters are taken from the source array
+  @test Adapt.adapt(oneMatrix, [1 2;3 4]) isa oneArray{Int, 2, oneL0.DeviceBuffer}
+  @test Adapt.adapt(oneArray{<:Any, <:Any, oneL0.SharedBuffer}, [1 2;3 4]) isa oneArray{Int, 2, oneL0.SharedBuffer}
+  @test Adapt.adapt(oneVector{<:Any, oneL0.HostBuffer}, [1, 2]) isa oneArray{Int, 1, oneL0.HostBuffer}
+  @test Adapt.adapt(oneArray{Float32, <:Any, oneL0.SharedBuffer}, [1 2;3 4]) isa oneArray{Float32, 2, oneL0.SharedBuffer}
+  let xs = Adapt.adapt(oneArray{<:Any, <:Any, oneL0.SharedBuffer}, (Float32[1], Int32[1 2]))
+    @test xs[1] isa oneArray{Float32, 1, oneL0.SharedBuffer}
+    @test xs[2] isa oneArray{Int32, 2, oneL0.SharedBuffer}
+  end
+  @test_throws MethodError Adapt.adapt(oneVector{Float32}, [1 2;3 4])
+  @test_throws ArgumentError Adapt.adapt(oneArray{<:Real}, ComplexF32[1])
+  let xs = oneArray{Float32, 1, oneL0.SharedBuffer}([1])
+    @test Adapt.adapt(oneArray, xs) === xs
+    @test Adapt.adapt(oneArray{Float32}, xs) === xs
+    @test Adapt.adapt(oneArray{Int32}, xs) isa oneArray{Int32, 1, oneL0.SharedBuffer}
+    @test Adapt.adapt(typeof(xs), xs) === xs
+    @test Adapt.adapt(oneArray{<:Any, <:Any, oneL0.DeviceBuffer}, xs) isa oneArray{Float32, 1, oneL0.DeviceBuffer}
+  end
 end
 
 @testset "reshape" begin
