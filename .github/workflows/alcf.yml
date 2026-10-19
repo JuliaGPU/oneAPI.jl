@@ -26,10 +26,6 @@ on:
   pull_request_target:
     types: [labeled]
 
-concurrency:
-  group: alcf-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
@@ -39,6 +35,11 @@ jobs:
     runs-on: ubuntu-latest
     # PBS queue wait + 1 h walltime + build stage; generous but below the 6 h runner cap
     timeout-minutes: 330
+    # On the job rather than the workflow, so that runs whose job is skipped (e.g. a same-repo
+    # PR being labeled) don't cancel the one actually waiting for the pipeline.
+    concurrency:
+      group: alcf-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     if: >-
       github.event_name == 'push' ||
       (github.event_name == 'pull_request' &&
