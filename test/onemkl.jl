@@ -139,6 +139,49 @@ end
     end
 end
 
+# BLAS-1 methods on a view of a matrix that skips rows cannot pass it to oneMKL as a
+# vector, and fall back to generic code (#712)
+@testset "views oneMKL can't address as a vector" begin
+    A, B = rand(Float32, 3, 4), rand(Float32, 3, 4)
+    dA, dB = oneArray(A), oneArray(B)
+    rows(X) = view(X, 1:2, :)
+    @test norm(rows(dA)) ≈ norm(rows(A))
+    for f! in ((x, y) -> rmul!(x, 2f0),
+               (x, y) -> axpy!(2f0, y, x),
+               (x, y) -> axpby!(2f0, y, 3f0, x),
+               (x, y) -> rotate!(x, y, 0.5f0, 0.25f0),
+               (x, y) -> reflect!(x, y, 0.5f0, 0.25f0))
+        a, b, da, db = copy(A), copy(B), copy(dA), copy(dB)
+        f!(vec(rows(a)), vec(rows(b)))
+        f!(rows(da), rows(db))
+        @test Array(da) ≈ a
+        @test Array(db) ≈ b
+    end
+
+    # BLAS pairs elements linearly, so the shapes needn't match: a contiguous view of a
+    # matrix with a vector, and a row-skipping view with a vector
+    C = rand(Float32, 2, 4); v = rand(Float32, 8)
+    dC, dv = oneArray(C), oneArray(v)
+    @test Array(axpy!(2f0, view(dC, :, :), copy(dv))) ≈ axpy!(2f0, vec(C), copy(v))
+    @test Array(axpy!(2f0, view(dA, 1:2, :), copy(dv))) ≈ axpy!(2f0, vec(A[1:2, :]), copy(v))
+    @test Array(axpby!(2f0, view(dA, 1:2, :), 3f0, copy(dv))) ≈ axpby!(2f0, vec(A[1:2, :]), 3f0, copy(v))
+    dst = view(copy(dA), 1:2, :)
+    @test axpy!(2f0, view(dC, 1:2, 1:4), dst) === dst
+    @test axpby!(2f0, view(dC, 1:2, 1:4), 3f0, dst) === dst
+
+    # ComplexF16 is computed in ComplexF32 and written back
+    if ComplexF16 in eltypes
+        x, y = rand(ComplexF16, m), rand(ComplexF16, m)
+        dx, dy = oneArray(x), oneArray(y)
+        oneMKL.axpy!(m ÷ 2, ComplexF16(2), view(dx, 1:2:m), view(dy, 1:2:m))
+        axpy!(ComplexF16(2), view(x, 1:2:m), view(y, 1:2:m))
+        @test Array(dy) ≈ y
+        oneMKL.scal!(m ÷ 2, 3f0, view(dx, 1:2:m))
+        rmul!(view(x, 1:2:m), 3f0)
+        @test Array(dx) ≈ x
+    end
+end
+
 @testset "level 2" begin
     @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
         alpha = rand(T)

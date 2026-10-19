@@ -11,14 +11,15 @@ using LinearAlgebra: Transpose, Adjoint,
 # BLAS 1
 #
 
+# oneMKL can only scale arrays that it can address as a vector
 LinearAlgebra.rmul!(x::oneStridedVecOrMat{T}, k::Number) where T<:Union{onemklHalf,onemklFloat} =
-    scal!(length(x), T(k), x)
+    x isa oneStridedVecOrDenseMat ? scal!(length(x), T(k), x) : (x .*= k)
 
 # Work around ambiguity with GPUArrays wrapper
 LinearAlgebra.rmul!(x::oneStridedVecOrMat{<:onemklFloat}, k::Real) =
 	invoke(LinearAlgebra.rmul!, Tuple{typeof(x), Number}, x, k)
 
-LinearAlgebra.norm(x::oneStridedVecOrMat{<:Union{Float16,ComplexF16,onemklFloat}}) = nrm2(length(x), x)
+LinearAlgebra.norm(x::oneStridedVecOrDenseMat{<:Union{Float16,ComplexF16,onemklFloat}}) = nrm2(length(x), x)
 
 function LinearAlgebra.dot(x::oneStridedVector{T}, y::oneStridedVector{T}) where T<:Union{Float16, Float32, Float64}
     n = length(x)
@@ -39,31 +40,56 @@ function LinearAlgebra.:(*)(transx::Transpose{<:Any,<:oneStridedVector{T}}, y::o
     oneMKL.dotu(n, x, y)
 end
 
-LinearAlgebra.BLAS.asum(x::oneStridedVecOrMat{<:onemklFloat}) = asum(length(x), x)
+LinearAlgebra.BLAS.asum(x::oneStridedVecOrDenseMat{<:onemklFloat}) = asum(length(x), x)
 
 function LinearAlgebra.axpy!(alpha::Number, x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}) where T<:Union{onemklHalf,onemklFloat}
     length(x)==length(y) || throw(DimensionMismatch("axpy arguments have lengths $(length(x)) and $(length(y))"))
-    axpy!(length(x), alpha, x, y)
+    if x isa oneStridedVecOrDenseMat && y isa oneStridedVecOrDenseMat
+        axpy!(length(x), alpha, x, y)
+    else
+        vec(y) .+= vec(x) .* alpha
+    end
+    y
 end
 
 function LinearAlgebra.axpby!(alpha::Number, x::oneStridedVecOrMat{T}, beta::Number, y::oneStridedVecOrMat{T}) where T<:onemklFloat
     length(x)==length(y) || throw(DimensionMismatch("axpby arguments have lengths $(length(x)) and $(length(y))"))
-    axpby!(length(x), alpha, x, beta, y)
+    if x isa oneStridedVecOrDenseMat && y isa oneStridedVecOrDenseMat
+        axpby!(length(x), alpha, x, beta, y)
+    else
+        vec(y) .= vec(x) .* alpha .+ vec(y) .* beta
+    end
+    y
 end
 
 function LinearAlgebra.rotate!(x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}, c::Number, s::Number) where T<:onemklFloat
     nx = length(x)
     ny = length(y)
     nx==ny || throw(DimensionMismatch("rotate arguments have lengths $nx and $ny"))
-    rot!(nx, x, y, c, s)
+    if x isa oneStridedVecOrDenseMat && y isa oneStridedVecOrDenseMat
+        rot!(nx, x, y, c, s)
+    else
+        xv, yv = vec(x), vec(y)
+        t = c .* xv .+ s .* yv
+        yv .= c .* yv .- conj(s) .* xv
+        xv .= t
+    end
+    x, y
 end
 
 function LinearAlgebra.reflect!(x::oneStridedVecOrMat{T}, y::oneStridedVecOrMat{T}, c::Number, s::Number) where T<:onemklFloat
     nx = length(x)
     ny = length(y)
     nx==ny || throw(DimensionMismatch("reflect arguments have lengths $nx and $ny"))
-    rot!(nx, x, y, c, s)
-    scal!(ny, -one(real(T)), y)
+    if x isa oneStridedVecOrDenseMat && y isa oneStridedVecOrDenseMat
+        rot!(nx, x, y, c, s)
+        scal!(ny, -one(real(T)), y)
+    else
+        xv, yv = vec(x), vec(y)
+        t = c .* xv .+ s .* yv
+        yv .= conj(s) .* xv .- c .* yv
+        xv .= t
+    end
     x, y
 end
 
