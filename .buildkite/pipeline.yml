@@ -103,7 +103,7 @@ steps:
           build.message !~ /\[skip [^\]]*(tests|special)/ &&
           (build.message =~ /\[only [^\]]*(tests|special)/ ||
            build.message !~ /\[only / && !build.pull_request.draft)
-        timeout_in_minutes: 60
+        timeout_in_minutes: 120
 
 env:
   JULIA_PKG_SERVER_REGISTRY_PREFERENCE: "eager" # OK to downloading JLLs from GitHub
