@@ -19,6 +19,15 @@ mutable struct ZeCommandQueue
     # maintained by the scratch hedge (see `scratch_hedge!` in src/compiler/execution.jl)
     scratch_hwm::Int
 
+    # the command lists `execute!` submitted, oldest first, each with the fence signaling
+    # its completion, and those that are free to reuse. creating a list per submission and
+    # leaving its destruction to the GC piles up driver memory the GC doesn't know about.
+    # lists that failed to submit may still execute, so they are kept but never reused.
+    const lock::ReentrantLock
+    const submitted::Vector{Tuple{ZeCommandList, ze_fence_handle_t}}
+    const spare::Vector{Tuple{ZeCommandList, ze_fence_handle_t}}
+    const failed::Vector{Tuple{ZeCommandList, ze_fence_handle_t}}
+
     function ZeCommandQueue(ctx::ZeContext, dev::ZeDevice, ordinal=1, index=1;
                             flags=0,
                             mode::ze_command_queue_mode_t=ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -28,9 +37,11 @@ mutable struct ZeCommandQueue
         ))
         handle_ref = Ref{ze_command_queue_handle_t}()
         zeCommandQueueCreate(ctx, dev, desc_ref, handle_ref)
-        obj = new(handle_ref[], ctx, dev, ordinal, 0)
+        obj = new(handle_ref[], ctx, dev, ordinal, 0, ReentrantLock(), [], [], [])
         finalizer(obj) do obj
-            if LTS[]
+            # the fences of the lists `execute!` submitted have to be destroyed before the
+            # queue, and not while in use: drain the queue first if any may still execute.
+            if LTS[] || !isempty(obj.submitted) || !isempty(obj.failed)
                 # the queue may still have work in flight (nothing requires a task to
                 # synchronize before dying), and zeCommandQueueDestroy does not wait for
                 # it: on the LTS NEO stack the still-running work then faults as soon as
@@ -46,6 +57,9 @@ mutable struct ZeCommandQueue
                     @warn "Leaking a command queue still busy after $(FINALIZER_SYNC_TIMEOUT_NS ÷ 1_000_000_000)s to avoid blocking finalization (event-gated work whose event was never signaled?)" maxlog = 1
                     return
                 end
+            end
+            for (_, fence) in Iterators.flatten((obj.submitted, obj.spare, obj.failed))
+                zeFenceDestroy(fence)
             end
             zeCommandQueueDestroy(obj)
             if LTS[]
@@ -66,6 +80,69 @@ Base.hash(e::ZeCommandQueue, h::UInt) = hash(e.handle, h)
 
 synchronize(queue::ZeCommandQueue, timeout::Number=typemax(UInt64)) =
     zeCommandQueueSynchronize(queue, timeout)
+
+function execute!(queue::ZeCommandQueue, lists::Vector{ZeCommandList}, fence = nothing)
+    r = zeCommandQueueExecuteCommandLists(queue, length(lists), lists, something(fence, C_NULL))
+    sync_each_submission() && synchronize(queue)
+    return r
+end
+
+"""
+    execute!(queue::ZeCommandQueue, ...) do list
+        append_...!(list)
+    end
+
+Pass a do block that appends operations to a command list for the device that owns
+`queue`. The list is then closed and executed on the queue. Lists are reused once they have
+executed, unless a `fence` or keyword arguments for the list are passed.
+"""
+function execute!(f::Base.Callable, queue::ZeCommandQueue, fence=nothing; kwargs...)
+    if fence !== nothing || !isempty(kwargs)
+        list = ZeCommandList(f, queue.context, queue.device, queue.ordinal; kwargs...)
+        return execute!(queue, [list], fence)
+    end
+
+    list, fence = take_list!(queue)
+    try
+        f(list)
+        close(list)
+    catch
+        @lock queue.lock push!(queue.spare, (list, fence))
+        rethrow()
+    end
+    r = try
+        zeCommandQueueExecuteCommandLists(queue, 1, [list], fence)
+    catch
+        @lock queue.lock push!(queue.failed, (list, fence))
+        rethrow()
+    end
+    @lock queue.lock push!(queue.submitted, (list, fence))
+    sync_each_submission() && synchronize(queue)
+    return r
+end
+
+function take_list!(queue::ZeCommandQueue)
+    @lock queue.lock begin
+        while !isempty(queue.submitted)
+            _, fence = first(queue.submitted)
+            res = unchecked_zeFenceQueryStatus(fence)
+            res == RESULT_NOT_READY && break
+            res == RESULT_SUCCESS || throw_api_error(res)
+            push!(queue.spare, popfirst!(queue.submitted))
+        end
+        if !isempty(queue.spare)
+            list, fence = last(queue.spare)
+            reset(list)
+            zeFenceReset(fence)
+            return pop!(queue.spare)
+        end
+    end
+
+    list = ZeCommandList(queue.context, queue.device, queue.ordinal)
+    fence_ref = Ref{ze_fence_handle_t}()
+    zeFenceCreate(queue, Ref(ze_fence_desc_t()), fence_ref)
+    return list, fence_ref[]
+end
 
 
 ## groups
