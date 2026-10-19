@@ -169,6 +169,12 @@ function Adapt.adapt_storage(to::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
   oneDeviceArray{T,N,AS.CrossWorkgroup}(size(xs), ptr, xs.maxsize - xs.offset)
 end
 
+# CPU arrays would otherwise only be rejected by the compiler, with an error that dumps the
+# full argument type
+Adapt.adapt_storage(::KernelAdaptor, xs::Array) =
+    throw(ArgumentError("""cannot use a CPU array ($(typeof(xs))) in a oneAPI kernel.
+                           Convert it to a GPU array first, e.g. using `oneArray(x)`."""))
+
 # Base.RefValue isn't GPU compatible, so provide a compatible alternative.
 # TODO: port improvements from CUDA.jl
 struct ZeRefValue{T} <: Ref{T}
