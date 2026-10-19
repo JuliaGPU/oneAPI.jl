@@ -4,6 +4,14 @@
 const oneContiguousSubArray{T,N} = SubArray{T,N,<:oneArray,<:Tuple,true}
 const oneStridedVecOrDenseMat{T} = Union{oneStridedVector{T}, oneDenseArray{T}, oneContiguousSubArray{T}}
 
+# BLAS walks a vector with a negative increment backwards from its lowest address, while a
+# reversed view points at its first element, the highest one. Like LinearAlgebra.BLAS, pass
+# a pointer to the lowest address of the `n` elements accessed, along with the increment.
+function vec_pointer_stride(n::Integer, x::oneStridedVecOrDenseMat)
+    st = stride(x, 1)
+    pointer(x) + min(st, 0) * sizeof(eltype(x)) * (n - 1), st
+end
+
 ## (GE) general matrix-matrix multiplication batched
 for (fname, elty) in
         ((:onemklHgemm_batch, :Float16),
@@ -494,7 +502,11 @@ for (fname, elty) in
                        y::oneStridedVecOrDenseMat{$elty})
             queue = global_queue(context(x), device(x))
             alpha = $elty(alpha)
-            $fname(sycl_queue(queue), n, alpha, x, stride(x,1), y, stride(y,1))
+            GC.@preserve x y begin
+                px, incx = vec_pointer_stride(n, x)
+                py, incy = vec_pointer_stride(n, y)
+                $fname(sycl_queue(queue), n, alpha, px, incx, py, incy)
+            end
             y
         end
     end
@@ -515,7 +527,11 @@ for (fname, elty) in
             queue = global_queue(context(x), device(x))
             alpha = $elty(alpha)
             beta = $elty(beta)
-            $fname(sycl_queue(queue), n, alpha, x, stride(x,1), beta, y, stride(y,1))
+            GC.@preserve x y begin
+                px, incx = vec_pointer_stride(n, x)
+                py, incy = vec_pointer_stride(n, y)
+                $fname(sycl_queue(queue), n, alpha, px, incx, beta, py, incy)
+            end
             y
         end
     end
@@ -537,7 +553,11 @@ for (fname, elty, cty, sty, supty) in ((:onemklSrot,:Float32,:Float32,:Float32,:
             queue = global_queue(context(x), device(x))
             c = $cty(c)
             s = $sty(s)
-            $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1), c, s)
+            GC.@preserve x y begin
+                px, incx = vec_pointer_stride(n, x)
+                py, incy = vec_pointer_stride(n, y)
+                $fname(sycl_queue(queue), n, px, incx, py, incy, c, s)
+            end
             x, y
         end
     end
@@ -566,7 +586,10 @@ for (fname, elty) in
                        alpha::$elty,
                        x::oneStridedVecOrDenseMat{$elty})
             queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
+            GC.@preserve x begin
+                px, incx = vec_pointer_stride(n, x)
+                $fname(sycl_queue(queue), n, alpha, px, abs(incx))
+            end
             x
         end
     end
@@ -592,7 +615,10 @@ for (fname, elty, ret_type) in
         function nrm2(n::Integer, x::oneStridedVecOrDenseMat{$elty})
             queue = global_queue(context(x), device(x))
             result = scalar_result($ret_type)
-            $fname(sycl_queue(queue), n, x, stride(x,1), result)
+            GC.@preserve x begin
+                px, incx = vec_pointer_stride(n, x)
+                $fname(sycl_queue(queue), n, px, abs(incx), result)
+            end
             return result[1]
         end
     end
@@ -621,7 +647,11 @@ for (jname, fname, elty) in
                          y::oneStridedVecOrDenseMat{$elty})
             queue = global_queue(context(x), device(x))
             result = scalar_result($elty)
-            $fname(sycl_queue(queue), n, x, stride(x,1), y, stride(y,1), result)
+            GC.@preserve x y begin
+                px, incx = vec_pointer_stride(n, x)
+                py, incy = vec_pointer_stride(n, y)
+                $fname(sycl_queue(queue), n, px, incx, py, incy, result)
+            end
             return result[1]
         end
     end
@@ -679,7 +709,10 @@ for (fname, elty, celty) in ((:onemklCSscal, :Float32, :ComplexF32),
                        alpha::$elty,
                        x::oneStridedVecOrDenseMat{$celty})
             queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue), n, alpha, x, stride(x,1))
+            GC.@preserve x begin
+                px, incx = vec_pointer_stride(n, x)
+                $fname(sycl_queue(queue), n, alpha, px, abs(incx))
+            end
             x
         end
     end
@@ -790,7 +823,11 @@ for (fname, elty) in
                        x::oneStridedVecOrDenseMat{$elty},
                        y::oneStridedVecOrDenseMat{$elty})
             queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
+            GC.@preserve x y begin
+                px, incx = vec_pointer_stride(n, x)
+                py, incy = vec_pointer_stride(n, y)
+                $fname(sycl_queue(queue), n, px, incx, py, incy)
+            end
             y
         end
     end
@@ -811,7 +848,10 @@ for (fname, elty, ret_type) in
                       x::oneStridedVecOrDenseMat{$elty})
             result = scalar_result($ret_type)
             queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue), n, x, stride(x, 1), result)
+            GC.@preserve x begin
+                px, incx = vec_pointer_stride(n, x)
+                $fname(sycl_queue(queue), n, px, abs(incx), result)
+            end
             return result[1]
         end
     end
@@ -825,6 +865,9 @@ for (fname, elty) in
      (:onemklCiamax_64,:ComplexF32))
     @eval begin
         function iamax(x::oneStridedVecOrDenseMat{$elty})
+            # oneMKL rejects a negative increment, and walking the elements backwards
+            # would change which of several extrema is reported first
+            stride(x, 1) < 0 && return iamax(copy(x))
             n = length(x)
             queue = global_queue(context(x), device(x))
             result = scalar_result(Int64)
@@ -842,10 +885,11 @@ for (fname, elty) in
      (:onemklCiamin_64,:ComplexF32))
     @eval begin
         function iamin(x::oneStridedVecOrDenseMat{$elty})
+            stride(x, 1) < 0 && return iamin(copy(x))
             n = length(x)
             result = scalar_result(Int64)
             queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue),n, x, stride(x, 1), result, 'O')
+            $fname(sycl_queue(queue), n, x, stride(x, 1), result, 'O')
             return result[1]
         end
     end
@@ -862,7 +906,11 @@ for (fname, elty) in ((:onemklSswap,:Float32),
             y::oneStridedVecOrDenseMat{$elty})
             # Assuming both memory allocated on same device & context
             queue = global_queue(context(x), device(x))
-            $fname(sycl_queue(queue), n, x, stride(x, 1), y, stride(y, 1))
+            GC.@preserve x y begin
+                px, incx = vec_pointer_stride(n, x)
+                py, incy = vec_pointer_stride(n, y)
+                $fname(sycl_queue(queue), n, px, incx, py, incy)
+            end
             x, y
         end
     end

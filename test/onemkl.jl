@@ -182,6 +182,62 @@ end
     end
 end
 
+# BLAS walks a negative increment from the lowest address (#712)
+@testset "negative strides $T" for T in intersect(eltypes, [Float16, ComplexF16, Float32, Float64, ComplexF32, ComplexF64])
+    rev(a) = view(a, lastindex(a):-2:1)
+    fwd(a) = view(a, 1:2:lastindex(a))
+    x, y = rand(T, m), rand(T, m)
+    dx, dy = oneArray(x), oneArray(y)
+
+    @test norm(rev(dx)) ≈ norm(rev(x))
+    @test dot(rev(dx), fwd(dy)) ≈ dot(rev(x), fwd(y))
+    @test dot(rev(dx), rev(dy)) ≈ dot(rev(x), rev(y))
+    if T <: oneMKL.onemklFloat
+        @test BLAS.asum(rev(dx)) ≈ BLAS.asum(rev(x))
+        # BLAS compares |re| + |im|
+        @test oneMKL.iamax(rev(dx)) == argmax(abs.(real.(rev(x))) .+ abs.(imag.(rev(x))))
+        @test oneMKL.iamin(rev(dx)) == argmin(abs.(real.(rev(x))) .+ abs.(imag.(rev(x))))
+        # the first of several extrema, in the view's order, and 0 for an empty vector
+        ties = oneArray(T[9, 1, 9, 1])
+        @test oneMKL.iamax(view(ties, 4:-1:1)) == 2
+        @test oneMKL.iamin(view(ties, 4:-1:1)) == 1
+        @test oneMKL.iamax(view(ties, 1:-1:2)) == 0
+        @test oneMKL.iamin(view(ties, 1:-1:2)) == 0
+    end
+
+    # the LinearAlgebra methods for axpy! and rmul! don't cover ComplexF16
+    fs = Any[]
+    T <: Union{Float16, oneMKL.onemklFloat} && push!(fs, (x, y) -> axpy!(T(2), rev(x), fwd(y)),
+                                                        (x, y) -> axpy!(T(2), fwd(x), rev(y)),
+                                                        (x, y) -> rmul!(rev(y), T(3)))
+    if T <: oneMKL.onemklFloat
+        c, s = rand(real(T)), rand(T)
+        push!(fs, (x, y) -> axpby!(T(2), rev(x), T(3), rev(y)),
+                  (x, y) -> rotate!(rev(y), fwd(x), c, s),
+                  (x, y) -> reflect!(rev(y), fwd(x), c, s))
+    end
+    for f! in fs
+        a, b, da, db = copy(x), copy(y), copy(dx), copy(dy)
+        f!(a, b)
+        f!(da, db)
+        @test Array(da) ≈ a
+        @test Array(db) ≈ b
+    end
+
+    if T <: oneMKL.onemklFloat
+        a, da = copy(y), copy(dy)
+        copyto!(fwd(a), rev(x))
+        oneMKL.copy!(m ÷ 2, rev(dx), fwd(da))
+        @test Array(da) == a
+
+        a, b, da, db = copy(x), copy(y), copy(dx), copy(dy)
+        a[1:2:end], b[end:-2:1] = b[end:-2:1], a[1:2:end]
+        oneMKL.swap!(m ÷ 2, fwd(da), rev(db))
+        @test Array(da) == a
+        @test Array(db) == b
+    end
+end
+
 @testset "level 2" begin
     @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
         alpha = rand(T)
