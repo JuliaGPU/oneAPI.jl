@@ -16,9 +16,11 @@ mutable struct ZeCommandList <: AbstractZeCommandList
         ))
         handle_ref = Ref{ze_command_list_handle_t}()
         zeCommandListCreate(ctx, dev, desc_ref, handle_ref)
+        retain(ctx)
         obj = new(handle_ref[], ctx, dev)
         finalizer(obj) do obj
             zeCommandListDestroy(obj)
+            release(obj.context)
         end
         obj
     end
@@ -77,6 +79,7 @@ mutable struct ZeImmediateCommandList <: AbstractZeCommandList
         ))
         handle_ref = Ref{ze_command_list_handle_t}()
         zeCommandListCreateImmediate(ctx, dev, desc_ref, handle_ref)
+        retain(ctx)
         obj = new(handle_ref[], ctx, dev, ordinal)
         finalizer(obj) do obj
             # unlike a regular list, an immediate list can have work in flight at
@@ -89,6 +92,7 @@ mutable struct ZeImmediateCommandList <: AbstractZeCommandList
                 return
             end
             zeCommandListDestroy(obj)
+            release(obj.context)
             # mark destroyed: the stream registry can still reach this list, and
             # synchronizing a destroyed handle crashes in the driver
             obj.handle = ze_command_list_handle_t(C_NULL)

@@ -66,6 +66,24 @@ show(devnull, ctx)
 
 #status(ctx)
 
+# Julia may finalize a context before what was created in it
+ctx = ZeContext(drv)
+buf = device_alloc(ctx, dev, 1024)
+finalize(ctx)
+free(buf)
+
+ctx = ZeContext(drv)
+queue = ZeCommandQueue(ctx, dev)
+finalize(ctx)
+finalize(queue)
+
+# freeing memory not allocated through `device_alloc` and friends leaves the context alone
+ctx = ZeContext(drv)
+ptr_ref = Ref{Ptr{Cvoid}}()
+oneL0.zeMemAllocHost(ctx, Ref(oneL0.ze_host_mem_alloc_desc_t()), 1024, 1, ptr_ref)
+free(lookup_alloc(ctx, ptr_ref[]))
+free(host_alloc(ctx, 1024))
+
 end
 
 ctx = ZeContext(drv)

@@ -12,9 +12,11 @@ mutable struct ZeEventPool
         desc_ref = Ref(ze_event_pool_desc_t(; flags, count))
         handle_ref = Ref{ze_event_pool_handle_t}()
         zeEventPoolCreate(ctx, desc_ref, length(devs), isempty(devs) ? C_NULL : [devs...], handle_ref)
+        retain(ctx)
         obj = new(handle_ref[], ctx)
         finalizer(obj) do obj
             zeEventPoolDestroy(obj)
+            release(obj.context)
         end
         obj
     end

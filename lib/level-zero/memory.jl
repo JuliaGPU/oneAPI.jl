@@ -20,15 +20,32 @@ Base.unsafe_convert(P::Type{<:Union{Ptr,ZePtr}}, buf::AbstractBuffer) = convert(
 
 function free(buf::AbstractBuffer; policy=nothing)
     ctx = context(buf)
-    if policy === nothing
-        zeMemFree(ctx, buf)
-    else
-        desc_ref = Ref(ze_memory_free_ext_desc_t(; freePolicy=policy))
-        zeMemFreeExt(ctx, desc_ref, buf)
-        if policy == ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE
-            @atomic deferred_frees.context = WeakRef(ctx)
+    # untrack before freeing, as the address can be allocated again right after
+    ptr = reinterpret(Ptr{Cvoid}, pointer(buf))
+    tracked = with_allocations(allocs -> pop!(allocs, ptr, nothing), ctx) !== nothing
+    try
+        if policy === nothing
+            zeMemFree(ctx, buf)
+        else
+            desc_ref = Ref(ze_memory_free_ext_desc_t(; freePolicy=policy))
+            zeMemFreeExt(ctx, desc_ref, buf)
+            if policy == ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE
+                @atomic deferred_frees.context = WeakRef(ctx)
+            end
         end
+    catch
+        tracked && with_allocations(allocs -> push!(allocs, ptr), ctx)
+        rethrow()
     end
+    tracked && release(ctx)
+    return
+end
+
+# memory allocated here keeps its context alive, see `ZeContext`
+function track_alloc(ctx::ZeContext, ptr::Ptr{Cvoid})
+    retain(ctx)
+    with_allocations(allocs -> push!(allocs, ptr), ctx)
+    return
 end
 
 # Memory freed with the DEFER_FREE policy is released by the driver once the GPU is done
@@ -89,6 +106,7 @@ function device_alloc(ctx::ZeContext, dev::ZeDevice, bytesize::Integer,
 
         ptr_ref = Ref{Ptr{Cvoid}}()
         zeMemAllocDevice(ctx, desc_ref, bytesize, alignment, dev, ptr_ref)
+        track_alloc(ctx, ptr_ref[])
 
         return DeviceBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx, dev)
     end
@@ -130,6 +148,7 @@ function host_alloc(ctx::ZeContext, bytesize::Integer, alignment::Integer=1;
 
     ptr_ref = Ref{Ptr{Cvoid}}()
     zeMemAllocHost(ctx, desc_ref, bytesize, alignment, ptr_ref)
+    track_alloc(ctx, ptr_ref[])
 
     return HostBuffer(ptr_ref[], bytesize, ctx)
 end
@@ -181,6 +200,7 @@ function shared_alloc(ctx::ZeContext, dev::Union{Nothing,ZeDevice},
         ptr_ref = Ref{Ptr{Cvoid}}()
         zeMemAllocShared(ctx, device_desc_ref, host_desc_ref, bytesize, alignment,
                         something(dev, C_NULL), ptr_ref)
+        track_alloc(ctx, ptr_ref[])
 
         return SharedBuffer(reinterpret(ZePtr{Cvoid}, ptr_ref[]), bytesize, ctx, dev)
     end
