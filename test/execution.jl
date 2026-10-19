@@ -1089,8 +1089,7 @@ end
             # running when this thread is blocked
             watchdog = @async oneL0.cooperative_wait(gate; spin=false) do gate
                 watching[] = true
-                res = oneL0.@gcsafe_ccall oneL0.libze_loader.zeEventHostSynchronize(
-                    gate::oneL0.ze_event_handle_t, timeout::UInt64)::oneL0.ze_result_t
+                res = oneL0.unchecked_zeEventHostSynchronize(gate, timeout)
                 res == oneL0.RESULT_NOT_READY || return false
                 oneL0.signal(gate)
                 return true
