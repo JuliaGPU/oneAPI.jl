@@ -51,8 +51,6 @@ end
 const SKIPPED = Set{Tuple{String, DataType}}(
     if oneL0.LTS[]
         [
-            # llvm-spirv: `InvalidBitWidth: 63` — `_cpow` narrows an `Int` to `i63`
-            ("x^x", ComplexF16), ("x^x", ComplexF32), ("x^x", ComplexF64),
             # llvm-spirv: `Unexpected llvm intrinsic: llvm.smul.with.overflow`
             ("checked_mul", Int32), ("checked_mul", Int64),
         ]

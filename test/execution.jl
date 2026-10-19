@@ -650,6 +650,29 @@ end
     @oneapi f(oneArray(zeros(Float32, 1)))
 end
 
+@testset "#172: switch narrowed to an invalid integer" begin
+    # without native integer widths in the datalayout, InstCombine narrows this to a
+    # `switch i2`, which the Khronos translator rejects or crashes on
+    function f(out, x)
+        i = get_global_id()
+        v = x[i] & 3
+        if v == 1
+            out[i] = 10
+        elseif v == 2
+            out[i] = 20
+        elseif v == 3
+            out[i] = 30
+        else
+            out[i] = 0
+        end
+        return
+    end
+    x = oneArray(collect(0:7))
+    out = similar(x)
+    @oneapi items=8 f(out, x)
+    @test Array(out) == [0, 10, 20, 30, 0, 10, 20, 30]
+end
+
 @testset "#160: barrier intrinsincs should be convergent" begin
     # Solve L*x = r and store the result in r.
     function cpu(n::Int, r::Vector{Float32})
