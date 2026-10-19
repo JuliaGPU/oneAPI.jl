@@ -7,6 +7,19 @@ using LinearAlgebra: Transpose, Adjoint,
                      UpperTriangular, UnitUpperTriangular,
                      MulAddMul, wrap
 
+# oneMKL addresses a matrix, or a vector passed as one, through its leading dimension
+# `stride(X, 2)`, which must be at least the number of rows. Reversed views fail this.
+column_major(X::oneStridedVecOrMat) = stride(X, 1) == 1 && stride(X, 2) >= max(1, size(X, 1))
+
+# BLAS walks a vector with a negative increment backwards from its end, while a reversed
+# view points at its first element, so vector operands need a positive stride.
+blas_layout(x::oneStridedVector) = stride(x, 1) > 0
+blas_layout(A::oneStridedMatrix) = column_major(A)
+
+# run a oneMKL routine on contiguous copies of operands it can't address
+blas_input(X) = blas_layout(X) ? X : copy(X)
+blas_output(f, C) = blas_layout(C) ? f(C) : copyto!(C, f(similar(C)))
+
 #
 # BLAS 1
 #
@@ -96,7 +109,7 @@ end
 #
 # BLAS 2
 
-function LinearAlgebra.mul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, a::Number, b::Number)
+function LinearAlgebra.mul!(Y::oneStridedVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, a::Number, b::Number)
     mA, nA = tA == 'N' ? size(A) : reverse(size(A))
 
     if nA != length(B)
@@ -116,7 +129,8 @@ function LinearAlgebra.mul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix,
 
     alpha, beta = promote(a, b, zero(T))
     if alpha isa Union{Bool,T} && beta isa Union{Bool,T}
-        if T <: onemklFloat && eltype(A) == eltype(B) == T
+        if T <: onemklFloat && eltype(A) == eltype(B) == T &&
+           blas_layout(A) && blas_layout(B) && blas_layout(Y)
             if tA in ('N', 'T', 'C')
                 return gemv!(tA, alpha, A, B, beta, Y)
             elseif tA in ('S', 's') && T <: Real
@@ -137,10 +151,14 @@ end
 # triangular
 ## multiplication
 LinearAlgebra.generic_trimatmul!(c::oneStridedVector{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, b::oneStridedVector{T}) where {T<:onemklFloat} =
-    trmv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, A, c === b ? c : copyto!(c, b))
+    blas_output(c) do c
+        trmv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, blas_input(A), c === b ? c : copyto!(c, b))
+    end
 ## division
 LinearAlgebra.generic_trimatdiv!(C::oneStridedVector{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedVector{T}) where {T<:onemklFloat} =
-    trsv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, A, C === B ? C : copyto!(C, B))
+    blas_output(C) do C
+        trsv!(uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, blas_input(A), C === B ? C : copyto!(C, B))
+    end
 
 
 #
@@ -176,7 +194,8 @@ function LinearAlgebra.mul!(
         return iszero(beta) ? fill!(C, zero(T)) : rmul!(C, beta)
     end
 
-    if T <: Union{onemklFloat, onemklComplex, onemklHalf} &&
+    mkl_layout = column_major(A) && column_major(B) && column_major(C)
+    if mkl_layout && T <: Union{onemklFloat, onemklComplex, onemklHalf} &&
             alpha isa Union{Bool,T} && beta isa Union{Bool,T}
         # TODO: should the gemm part above be included in this branch?
         α, β = T(alpha), T(beta)
@@ -210,9 +229,9 @@ end
 # the old names, both the alpha/beta variants (1.12) and the ones taking a final MulAddMul
 # (1.10 and 1.11).
 @static if VERSION < v"1.13.0-rc4"
-    LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, alpha::Number, beta::Number) =
+    LinearAlgebra.generic_matvecmul!(Y::oneStridedVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, alpha::Number, beta::Number) =
         LinearAlgebra.mul!(Y, tA, A, B, alpha, beta)
-    LinearAlgebra.generic_matvecmul!(Y::oneVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul) =
+    LinearAlgebra.generic_matvecmul!(Y::oneStridedVector, tA::AbstractChar, A::oneStridedMatrix, B::oneStridedVector, _add::MulAddMul) =
         LinearAlgebra.mul!(Y, tA, A, B, _add.alpha, _add.beta)
     LinearAlgebra.generic_matmatmul!(C::oneStridedVecOrMat, tA, tB, A::oneStridedVecOrMat, B::oneStridedVecOrMat, alpha::Number, beta::Number) =
         LinearAlgebra.mul!(C, tA, tB, A, B, alpha, beta)
@@ -226,17 +245,25 @@ end
 # operand; that case stays on the in-place oneMKL routines. Otherwise the out-of-place
 # "variants" write straight into C without first copying the operand over.
 LinearAlgebra.generic_trimatmul!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
-    C === B ? trmm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, C) :
-              trmm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
+    blas_output(C) do C
+        C === B ? trmm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), blas_input(A), C) :
+                  trmm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), blas_input(A), blas_input(B), C)
+    end
 LinearAlgebra.generic_mattrimul!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
-    C === A ? trmm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, C) :
-              trmm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, A, C)
+    blas_output(C) do C
+        C === A ? trmm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), blas_input(B), C) :
+                  trmm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), blas_input(B), blas_input(A), C)
+    end
 LinearAlgebra.generic_trimatdiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
-    C === B ? trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, C) :
-              trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), A, B, C)
+    blas_output(C) do C
+        C === B ? trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), blas_input(A), C) :
+                  trsm!('L', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), blas_input(A), blas_input(B), C)
+    end
 LinearAlgebra.generic_mattridiv!(C::oneStridedMatrix{T}, uploc, isunitc, tfun::Function, A::oneStridedMatrix{T}, B::oneStridedMatrix{T}) where {T<:onemklFloat} =
-    C === A ? trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, C) :
-              trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), B, A, C)
+    blas_output(C) do C
+        C === A ? trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), blas_input(B), C) :
+                  trsm!('R', uploc, tfun === identity ? 'N' : tfun === transpose ? 'T' : 'C', isunitc, one(T), blas_input(B), blas_input(A), C)
+    end
 
 #
 # BLAS extensions

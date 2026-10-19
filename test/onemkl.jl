@@ -1065,6 +1065,101 @@ end
     end
 end
 
+# storage-level mul! only calls oneMKL for operands it can address (#700)
+@testset "storage-level mul! falls back where oneMKL can't go" begin
+    A = rand(Float32, 8, 6); B = rand(Float32, 6, 5); x = rand(Float32, 6)
+    dA, dB, dx = oneArray(A), oneArray(B), oneArray(x)
+
+    # columns that aren't contiguous (row step 2)
+    C = oneArray(zeros(Float32, 4, 5))
+    mul!(C, 'N', 'N', view(dA, 1:2:8, :), dB, true, false)
+    @test Array(C) ≈ A[1:2:8, :] * B
+    y = oneArray(zeros(Float32, 4))
+    mul!(y, 'N', view(dA, 1:2:8, :), dx, true, false)
+    @test Array(y) ≈ A[1:2:8, :] * x
+
+    # reversed views, which oneMKL would get as a negative leading dimension or increment
+    C = oneArray(zeros(Float32, 8, 5))
+    mul!(C, 'N', 'N', view(dA, :, 6:-1:1), dB, true, false)
+    @test Array(C) ≈ A[:, 6:-1:1] * B
+    y = oneArray(zeros(Float32, 8))
+    mul!(y, 'N', view(dA, :, 6:-1:1), dx, true, false)
+    @test Array(y) ≈ A[:, 6:-1:1] * x
+    mul!(y, 'N', dA, view(dx, 6:-1:1), true, false)
+    @test Array(y) ≈ A * reverse(x)
+    mul!(view(y, 8:-1:1), 'N', dA, dx, true, false)
+    @test Array(y) ≈ reverse(A * x)
+    S = rand(ComplexF32, 6, 6); dS = oneArray(S)
+    dBc, dxc = oneArray(ComplexF32.(B)), oneArray(ComplexF32.(x))
+    for (tA, wrapper) in (('S', Symmetric), ('H', Hermitian))
+        Cc = oneArray(zeros(ComplexF32, 6, 5))
+        mul!(Cc, tA, 'N', view(dS, :, 6:-1:1), dBc, true, false)
+        @test Array(Cc) ≈ wrapper(S[:, 6:-1:1]) * B
+        yc = oneArray(zeros(ComplexF32, 6))
+        mul!(yc, tA, dS, view(dxc, 6:-1:1), true, false)
+        @test Array(yc) ≈ wrapper(S) * reverse(x)
+    end
+
+    # element types oneMKL has no symm/hemm for
+    S16 = rand(Float16, 4, 4); B16 = rand(Float16, 2, 3)
+    C16 = oneArray(zeros(Float16, 2, 3))
+    mul!(C16, 'S', 'N', view(oneArray(S16), 1:2, 1:2), oneArray(B16), true, false)
+    @test Array(C16) ≈ Symmetric(S16[1:2, 1:2]) * B16
+    if Float64 in eltypes
+        S32 = rand(Float32, 4, 4); B64 = rand(Float64, 4, 3)
+        C64 = oneArray(zeros(Float64, 4, 3))
+        mul!(C64, 'S', 'N', oneArray(S32), oneArray(B64), true, false)
+        @test Array(C64) ≈ Symmetric(S32) * B64
+    end
+
+    # an empty inner dimension only scales C, which needn't be addressable by oneMKL
+    C = oneArray(fill(NaN32, 3, 2))
+    mul!(view(C, :, 2:-1:1), 'N', 'N', oneArray(zeros(Float32, 3, 0)), oneArray(zeros(Float32, 0, 2)), true, false)
+    @test all(iszero, Array(C))
+end
+
+@testset "triangular products and solves with reversed views" begin
+    S = rand(Float32, 4, 4) + 4I; B = rand(Float32, 4, 5); x = rand(Float32, 4)
+    dS = oneArray(S)
+    U, dU = UpperTriangular(S[:, 4:-1:1]), UpperTriangular(view(dS, :, 4:-1:1))
+
+    # reversed vectors
+    z = oneArray(x)
+    lmul!(UpperTriangular(dS), view(z, 4:-1:1))
+    @test Array(z) ≈ reverse(UpperTriangular(S) * reverse(x))
+    z = oneArray(x)
+    ldiv!(UpperTriangular(dS), view(z, 4:-1:1))
+    @test Array(z) ≈ reverse(UpperTriangular(S) \ reverse(x))
+
+    # reversed triangular matrix
+    z = oneArray(x)
+    @test Array(lmul!(dU, z)) ≈ U * x
+    z = oneArray(x)
+    @test Array(ldiv!(dU, z)) ≈ U \ x
+    Z = oneArray(B)
+    @test Array(lmul!(dU, Z)) ≈ U * B
+    Z = oneArray(B)
+    @test Array(ldiv!(dU, Z)) ≈ U \ B
+    Z = oneArray(copy(B'))
+    @test Array(rmul!(Z, dU)) ≈ B' * U
+    Z = oneArray(copy(B'))
+    @test Array(rdiv!(Z, dU)) ≈ B' / U
+
+    # reversed right-hand side
+    Z = oneArray(B)
+    lmul!(UpperTriangular(dS), view(Z, :, 5:-1:1))
+    @test Array(Z) ≈ (UpperTriangular(S) * B[:, 5:-1:1])[:, 5:-1:1]
+    Z = oneArray(B)
+    ldiv!(UpperTriangular(dS), view(Z, :, 5:-1:1))
+    @test Array(Z) ≈ (UpperTriangular(S) \ B[:, 5:-1:1])[:, 5:-1:1]
+    Z = oneArray(copy(B'))
+    rmul!(view(Z, 5:-1:1, :), UpperTriangular(dS))
+    @test Array(Z) ≈ (B'[5:-1:1, :] * UpperTriangular(S))[5:-1:1, :]
+    Z = oneArray(copy(B'))
+    rdiv!(view(Z, 5:-1:1, :), UpperTriangular(dS))
+    @test Array(Z) ≈ (B'[5:-1:1, :] / UpperTriangular(S))[5:-1:1, :]
+end
+
 @testset "Batch Primitives" begin
     @testset for T in intersect(eltypes, [Float16, Float32, Float64, ComplexF32, ComplexF64])
         alpha = rand(T)
