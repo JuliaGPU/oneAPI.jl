@@ -41,8 +41,7 @@ launches the kernel on the GPU.
 - `groups`: Number of workgroups (required). Can be an integer or tuple.
 - `items`: Number of work-items per workgroup (required). Can be an integer or tuple.
 - `queue=global_stream(...)`: Submission target — the task's `oneStream` by default. An
-  explicit `ZeCommandQueue` is also accepted and submits through a per-dispatch command
-  list.
+  explicit `ZeCommandQueue` is also accepted and submits each launch as a command list.
 
 # Examples
 
@@ -428,8 +427,7 @@ end
     return
 end
 
-# explicit-queue compatibility: `@oneapi queue=...` submits through a per-dispatch
-# command list, as it always has
+# explicit-queue compatibility: `@oneapi queue=...` submits each launch as a command list
 @inline function launch!(queue::ZeCommandQueue, kernel::ZeKernel, groups::ZeDim, roots=nothing)
     spill = oneL0.spill_mem_size(kernel)
     spill > queue.scratch_hwm && scratch_hedge!(queue, spill)

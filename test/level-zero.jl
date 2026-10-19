@@ -95,6 +95,26 @@ execute!(queue) do list
     @test list isa ZeCommandList
 end
 
+# lists are reused once they have executed
+synchronize(queue)
+handles = Set{oneL0.ze_command_list_handle_t}()
+for _ in 1:100
+    execute!(queue) do list
+        push!(handles, list.handle)
+    end
+    synchronize(queue)
+end
+@test length(handles) == 1
+
+# including when appending fails
+@test_throws ErrorException execute!(queue) do list
+    error("append failed")
+end
+execute!(queue) do list
+    @test list.handle in handles
+end
+synchronize(queue)
+
 end
 
 group = first(compute_groups(dev))
@@ -153,6 +173,22 @@ end
 # signal(timed_event) # FIXME: A kernel timestamp event can only be signaled from zeCommandListAppendLaunchKernel et al. functions
 # @test kernel_timestamp(timed_event).global.start != nothing
 # @test kernel_timestamp(timed_event).context.start != nothing
+
+# a command list that hasn't executed yet is not reused. this submits work that waits on an
+# event signaled afterwards, which the ONEAPI_SYNC_EACH_SUBMISSION workaround would deadlock
+event = ZeEventPool(ctx, 1)[1]
+oneL0.sync_each_submission(false) do
+    gated = Ref{oneL0.ze_command_list_handle_t}()
+    execute!(queue) do list
+        append_wait!(list, event)
+        gated[] = list.handle
+    end
+    execute!(queue) do list
+        @test list.handle != gated[]
+    end
+    signal(event)
+    synchronize(queue)
+end
 
 end
 
