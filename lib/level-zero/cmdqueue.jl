@@ -67,6 +67,25 @@ Base.hash(e::ZeCommandQueue, h::UInt) = hash(e.handle, h)
 synchronize(queue::ZeCommandQueue, timeout::Number=typemax(UInt64)) =
     zeCommandQueueSynchronize(queue, timeout)
 
+function execute!(queue::ZeCommandQueue, lists::Vector{ZeCommandList}, fence = nothing)
+    r = zeCommandQueueExecuteCommandLists(queue, length(lists), lists, something(fence, C_NULL))
+    sync_each_submission() && synchronize(queue)
+    return r
+end
+
+"""
+    execute!(queue::ZeCommandQueue, ...) do list
+        append_...!(list)
+    end
+
+Create a command list for the device that owns `queue`, passing in a do block that appends
+operations. The list is then closed and executed on the queue.
+"""
+function execute!(f::Base.Callable, queue::ZeCommandQueue, fence=nothing; kwargs...)
+    list = ZeCommandList(f, queue.context, queue.device, queue.ordinal; kwargs...)
+    execute!(queue, [list], fence)
+end
+
 
 ## groups
 

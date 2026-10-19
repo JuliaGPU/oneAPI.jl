@@ -122,8 +122,8 @@ function Base.showerror(io::IO, err::OutOfGPUMemoryError)
 end
 
 include("context.jl")
-include("cmdqueue.jl")
 include("cmdlist.jl")
+include("cmdqueue.jl")
 include("fence.jl")
 include("event.jl")
 include("synchronization.jl")
