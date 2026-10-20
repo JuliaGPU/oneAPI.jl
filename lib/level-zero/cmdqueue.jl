@@ -37,6 +37,7 @@ mutable struct ZeCommandQueue
         ))
         handle_ref = Ref{ze_command_queue_handle_t}()
         zeCommandQueueCreate(ctx, dev, desc_ref, handle_ref)
+        retain(ctx)
         obj = new(handle_ref[], ctx, dev, ordinal, 0, ReentrantLock(), [], [], [])
         finalizer(obj) do obj
             # the fences of the lists `execute!` submitted have to be destroyed before the
@@ -62,6 +63,7 @@ mutable struct ZeCommandQueue
                 zeFenceDestroy(fence)
             end
             zeCommandQueueDestroy(obj)
+            release(obj.context)
             if LTS[]
                 # mark the queue as destroyed: it can still be weakly reachable (e.g. from
                 # the stream registry used by `synchronize_all_streams`), and synchronizing a

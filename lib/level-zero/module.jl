@@ -58,9 +58,11 @@ mutable struct ZeModule
             throw_api_error(res)
         end
 
+        retain(ctx)
         obj = new(handle_ref[], ctx, dev)
         finalizer(obj) do obj
             zeModuleDestroy(obj)
+            release(obj.context)
         end
         return obj
     end
