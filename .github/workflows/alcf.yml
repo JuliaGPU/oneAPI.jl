@@ -39,13 +39,16 @@ jobs:
     runs-on: ubuntu-latest
     # PBS queue wait + 1 h walltime + build stage; generous but below the 6 h runner cap
     timeout-minutes: 330
+    # Temporarily disabled: ALCF GitLab jobs fail intermittently without producing any
+    # output, i.e. before they get to run. Drop the leading `false &&` to re-enable.
     if: >-
+      false && (
       github.event_name == 'push' ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event_name == 'pull_request_target' &&
        github.event.label.name == 'alcf-ci' &&
-       github.event.pull_request.head.repo.full_name != github.repository)
+       github.event.pull_request.head.repo.full_name != github.repository))
     env:
       GITLAB_HOST: gitlab-ci.alcf.anl.gov
       GITLAB_PROJECT: mschanen/oneAPI-jl
