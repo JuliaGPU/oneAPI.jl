@@ -139,6 +139,105 @@ end
     end
 end
 
+# BLAS-1 methods on a view of a matrix that skips rows cannot pass it to oneMKL as a
+# vector, and fall back to generic code (#712)
+@testset "views oneMKL can't address as a vector" begin
+    A, B = rand(Float32, 3, 4), rand(Float32, 3, 4)
+    dA, dB = oneArray(A), oneArray(B)
+    rows(X) = view(X, 1:2, :)
+    @test norm(rows(dA)) ≈ norm(rows(A))
+    for f! in ((x, y) -> rmul!(x, 2f0),
+               (x, y) -> axpy!(2f0, y, x),
+               (x, y) -> axpby!(2f0, y, 3f0, x),
+               (x, y) -> rotate!(x, y, 0.5f0, 0.25f0),
+               (x, y) -> reflect!(x, y, 0.5f0, 0.25f0))
+        a, b, da, db = copy(A), copy(B), copy(dA), copy(dB)
+        f!(vec(rows(a)), vec(rows(b)))
+        f!(rows(da), rows(db))
+        @test Array(da) ≈ a
+        @test Array(db) ≈ b
+    end
+
+    # BLAS pairs elements linearly, so the shapes needn't match: a contiguous view of a
+    # matrix with a vector, and a row-skipping view with a vector
+    C = rand(Float32, 2, 4); v = rand(Float32, 8)
+    dC, dv = oneArray(C), oneArray(v)
+    @test Array(axpy!(2f0, view(dC, :, :), copy(dv))) ≈ axpy!(2f0, vec(C), copy(v))
+    @test Array(axpy!(2f0, view(dA, 1:2, :), copy(dv))) ≈ axpy!(2f0, vec(A[1:2, :]), copy(v))
+    @test Array(axpby!(2f0, view(dA, 1:2, :), 3f0, copy(dv))) ≈ axpby!(2f0, vec(A[1:2, :]), 3f0, copy(v))
+    dst = view(copy(dA), 1:2, :)
+    @test axpy!(2f0, view(dC, 1:2, 1:4), dst) === dst
+    @test axpby!(2f0, view(dC, 1:2, 1:4), 3f0, dst) === dst
+
+    # ComplexF16 is computed in ComplexF32 and written back
+    if ComplexF16 in eltypes
+        x, y = rand(ComplexF16, m), rand(ComplexF16, m)
+        dx, dy = oneArray(x), oneArray(y)
+        oneMKL.axpy!(m ÷ 2, ComplexF16(2), view(dx, 1:2:m), view(dy, 1:2:m))
+        axpy!(ComplexF16(2), view(x, 1:2:m), view(y, 1:2:m))
+        @test Array(dy) ≈ y
+        oneMKL.scal!(m ÷ 2, 3f0, view(dx, 1:2:m))
+        rmul!(view(x, 1:2:m), 3f0)
+        @test Array(dx) ≈ x
+    end
+end
+
+# BLAS walks a negative increment from the lowest address (#712)
+@testset "negative strides $T" for T in intersect(eltypes, [Float16, ComplexF16, Float32, Float64, ComplexF32, ComplexF64])
+    rev(a) = view(a, lastindex(a):-2:1)
+    fwd(a) = view(a, 1:2:lastindex(a))
+    x, y = rand(T, m), rand(T, m)
+    dx, dy = oneArray(x), oneArray(y)
+
+    @test norm(rev(dx)) ≈ norm(rev(x))
+    @test dot(rev(dx), fwd(dy)) ≈ dot(rev(x), fwd(y))
+    @test dot(rev(dx), rev(dy)) ≈ dot(rev(x), rev(y))
+    if T <: oneMKL.onemklFloat
+        @test BLAS.asum(rev(dx)) ≈ BLAS.asum(rev(x))
+        # BLAS compares |re| + |im|
+        @test oneMKL.iamax(rev(dx)) == argmax(abs.(real.(rev(x))) .+ abs.(imag.(rev(x))))
+        @test oneMKL.iamin(rev(dx)) == argmin(abs.(real.(rev(x))) .+ abs.(imag.(rev(x))))
+        # the first of several extrema, in the view's order, and 0 for an empty vector
+        ties = oneArray(T[9, 1, 9, 1])
+        @test oneMKL.iamax(view(ties, 4:-1:1)) == 2
+        @test oneMKL.iamin(view(ties, 4:-1:1)) == 1
+        @test oneMKL.iamax(view(ties, 1:-1:2)) == 0
+        @test oneMKL.iamin(view(ties, 1:-1:2)) == 0
+    end
+
+    # the LinearAlgebra methods for axpy! and rmul! don't cover ComplexF16
+    fs = Any[]
+    T <: Union{Float16, oneMKL.onemklFloat} && push!(fs, (x, y) -> axpy!(T(2), rev(x), fwd(y)),
+                                                        (x, y) -> axpy!(T(2), fwd(x), rev(y)),
+                                                        (x, y) -> rmul!(rev(y), T(3)))
+    if T <: oneMKL.onemklFloat
+        c, s = rand(real(T)), rand(T)
+        push!(fs, (x, y) -> axpby!(T(2), rev(x), T(3), rev(y)),
+                  (x, y) -> rotate!(rev(y), fwd(x), c, s),
+                  (x, y) -> reflect!(rev(y), fwd(x), c, s))
+    end
+    for f! in fs
+        a, b, da, db = copy(x), copy(y), copy(dx), copy(dy)
+        f!(a, b)
+        f!(da, db)
+        @test Array(da) ≈ a
+        @test Array(db) ≈ b
+    end
+
+    if T <: oneMKL.onemklFloat
+        a, da = copy(y), copy(dy)
+        copyto!(fwd(a), rev(x))
+        oneMKL.copy!(m ÷ 2, rev(dx), fwd(da))
+        @test Array(da) == a
+
+        a, b, da, db = copy(x), copy(y), copy(dx), copy(dy)
+        a[1:2:end], b[end:-2:1] = b[end:-2:1], a[1:2:end]
+        oneMKL.swap!(m ÷ 2, fwd(da), rev(db))
+        @test Array(da) == a
+        @test Array(db) == b
+    end
+end
+
 @testset "level 2" begin
     @testset for T in intersect(eltypes, [Float32, Float64, ComplexF32, ComplexF64])
         alpha = rand(T)
@@ -964,6 +1063,101 @@ end
             @test C ≈ h_C2
         end
     end
+end
+
+# storage-level mul! only calls oneMKL for operands it can address (#700)
+@testset "storage-level mul! falls back where oneMKL can't go" begin
+    A = rand(Float32, 8, 6); B = rand(Float32, 6, 5); x = rand(Float32, 6)
+    dA, dB, dx = oneArray(A), oneArray(B), oneArray(x)
+
+    # columns that aren't contiguous (row step 2)
+    C = oneArray(zeros(Float32, 4, 5))
+    mul!(C, 'N', 'N', view(dA, 1:2:8, :), dB, true, false)
+    @test Array(C) ≈ A[1:2:8, :] * B
+    y = oneArray(zeros(Float32, 4))
+    mul!(y, 'N', view(dA, 1:2:8, :), dx, true, false)
+    @test Array(y) ≈ A[1:2:8, :] * x
+
+    # reversed views, which oneMKL would get as a negative leading dimension or increment
+    C = oneArray(zeros(Float32, 8, 5))
+    mul!(C, 'N', 'N', view(dA, :, 6:-1:1), dB, true, false)
+    @test Array(C) ≈ A[:, 6:-1:1] * B
+    y = oneArray(zeros(Float32, 8))
+    mul!(y, 'N', view(dA, :, 6:-1:1), dx, true, false)
+    @test Array(y) ≈ A[:, 6:-1:1] * x
+    mul!(y, 'N', dA, view(dx, 6:-1:1), true, false)
+    @test Array(y) ≈ A * reverse(x)
+    mul!(view(y, 8:-1:1), 'N', dA, dx, true, false)
+    @test Array(y) ≈ reverse(A * x)
+    S = rand(ComplexF32, 6, 6); dS = oneArray(S)
+    dBc, dxc = oneArray(ComplexF32.(B)), oneArray(ComplexF32.(x))
+    for (tA, wrapper) in (('S', Symmetric), ('H', Hermitian))
+        Cc = oneArray(zeros(ComplexF32, 6, 5))
+        mul!(Cc, tA, 'N', view(dS, :, 6:-1:1), dBc, true, false)
+        @test Array(Cc) ≈ wrapper(S[:, 6:-1:1]) * B
+        yc = oneArray(zeros(ComplexF32, 6))
+        mul!(yc, tA, dS, view(dxc, 6:-1:1), true, false)
+        @test Array(yc) ≈ wrapper(S) * reverse(x)
+    end
+
+    # element types oneMKL has no symm/hemm for
+    S16 = rand(Float16, 4, 4); B16 = rand(Float16, 2, 3)
+    C16 = oneArray(zeros(Float16, 2, 3))
+    mul!(C16, 'S', 'N', view(oneArray(S16), 1:2, 1:2), oneArray(B16), true, false)
+    @test Array(C16) ≈ Symmetric(S16[1:2, 1:2]) * B16
+    if Float64 in eltypes
+        S32 = rand(Float32, 4, 4); B64 = rand(Float64, 4, 3)
+        C64 = oneArray(zeros(Float64, 4, 3))
+        mul!(C64, 'S', 'N', oneArray(S32), oneArray(B64), true, false)
+        @test Array(C64) ≈ Symmetric(S32) * B64
+    end
+
+    # an empty inner dimension only scales C, which needn't be addressable by oneMKL
+    C = oneArray(fill(NaN32, 3, 2))
+    mul!(view(C, :, 2:-1:1), 'N', 'N', oneArray(zeros(Float32, 3, 0)), oneArray(zeros(Float32, 0, 2)), true, false)
+    @test all(iszero, Array(C))
+end
+
+@testset "triangular products and solves with reversed views" begin
+    S = rand(Float32, 4, 4) + 4I; B = rand(Float32, 4, 5); x = rand(Float32, 4)
+    dS = oneArray(S)
+    U, dU = UpperTriangular(S[:, 4:-1:1]), UpperTriangular(view(dS, :, 4:-1:1))
+
+    # reversed vectors
+    z = oneArray(x)
+    lmul!(UpperTriangular(dS), view(z, 4:-1:1))
+    @test Array(z) ≈ reverse(UpperTriangular(S) * reverse(x))
+    z = oneArray(x)
+    ldiv!(UpperTriangular(dS), view(z, 4:-1:1))
+    @test Array(z) ≈ reverse(UpperTriangular(S) \ reverse(x))
+
+    # reversed triangular matrix
+    z = oneArray(x)
+    @test Array(lmul!(dU, z)) ≈ U * x
+    z = oneArray(x)
+    @test Array(ldiv!(dU, z)) ≈ U \ x
+    Z = oneArray(B)
+    @test Array(lmul!(dU, Z)) ≈ U * B
+    Z = oneArray(B)
+    @test Array(ldiv!(dU, Z)) ≈ U \ B
+    Z = oneArray(copy(B'))
+    @test Array(rmul!(Z, dU)) ≈ B' * U
+    Z = oneArray(copy(B'))
+    @test Array(rdiv!(Z, dU)) ≈ B' / U
+
+    # reversed right-hand side
+    Z = oneArray(B)
+    lmul!(UpperTriangular(dS), view(Z, :, 5:-1:1))
+    @test Array(Z) ≈ (UpperTriangular(S) * B[:, 5:-1:1])[:, 5:-1:1]
+    Z = oneArray(B)
+    ldiv!(UpperTriangular(dS), view(Z, :, 5:-1:1))
+    @test Array(Z) ≈ (UpperTriangular(S) \ B[:, 5:-1:1])[:, 5:-1:1]
+    Z = oneArray(copy(B'))
+    rmul!(view(Z, 5:-1:1, :), UpperTriangular(dS))
+    @test Array(Z) ≈ (B'[5:-1:1, :] * UpperTriangular(S))[5:-1:1, :]
+    Z = oneArray(copy(B'))
+    rdiv!(view(Z, 5:-1:1, :), UpperTriangular(dS))
+    @test Array(Z) ≈ (B'[5:-1:1, :] / UpperTriangular(S))[5:-1:1, :]
 end
 
 @testset "Batch Primitives" begin
