@@ -459,6 +459,7 @@ end
         end
         oneL0._run_reclaim_callbacks()
         GC.gc(false)
+        oneL0.sweep_deferred_frees()
         Threads.atomic_add!(oneL0.SCRATCH_HEDGE_COUNT, 1)
     end
     target.scratch_hwm = spill

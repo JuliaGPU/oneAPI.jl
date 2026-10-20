@@ -48,6 +48,8 @@ function retry_reclaim(f, isfailed)
             else
                 break
             end
+            # finalizers may only have deferred freeing memory
+            sweep_deferred_frees()
             phase += 1
 
             ret = f()

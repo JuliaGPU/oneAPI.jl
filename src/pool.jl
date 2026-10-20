@@ -59,6 +59,8 @@ function _maybe_gc(dev, bytes)
     end
     # the memory of collected arrays only becomes available once their slabs are empty
     trim_pools!()
+    # and the driver may only have deferred freeing it (see `release`)
+    oneL0.sweep_deferred_frees()
     return
 end
 
@@ -288,7 +290,7 @@ function trim_pools!()
         end
         empty
     end
-    # waits for outstanding work on the memory (see `release`)
+    # on the LTS stack, this waits for outstanding work on the memory (see `release`)
     foreach(slab -> release(slab.buf), empty)
     return
 end
@@ -313,22 +315,24 @@ function release(buf::oneL0.AbstractBuffer)
     #    evict(ctx, dev, buf)
     #end
 
-    # NEO (at least the 25.18 LTS release) does not honor the BLOCKING_FREE/DEFER_FREE
-    # policies of zeMemFreeExt: it advertises ZE_extension_memory_free_policies but
-    # unmaps the allocation immediately, even with work in flight that references it.
-    # That turns a GC-driven free of a dead array whose last kernel/copy hasn't retired
-    # into a GPU pagefault, which gets the kernel context banned and makes every later
-    # submission fail with ZE_RESULT_ERROR_UNKNOWN. Synchronize the queues that could
-    # reference this buffer before freeing. (No-op on the rolling stack, which honors
-    # BLOCKING_FREE.)
     if oneL0.LTS[]
+        # NEO (at least the 25.18 LTS release) does not honor the BLOCKING_FREE/DEFER_FREE
+        # policies of zeMemFreeExt: it advertises ZE_extension_memory_free_policies but
+        # unmaps the allocation immediately, even with work in flight that references it.
+        # That turns a GC-driven free of a dead array whose last kernel/copy hasn't retired
+        # into a GPU pagefault, which gets the kernel context banned and makes every later
+        # submission fail with ZE_RESULT_ERROR_UNKNOWN. Synchronize the queues that could
+        # reference this buffer before freeing.
         synchronize_all_streams(oneL0.context(buf), oneL0.device(buf))
+        free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE)
+    else
+        # with kernels accessing memory indirectly, a blocking free waits for all work
+        # submitted so far, which stalls the thread and deadlocks when that work waits for
+        # a task on it (this is usually called from a finalizer). have the driver free the
+        # memory once that work has completed instead. NEO doesn't report the free policies
+        # it supports, so this relies on the rolling stack implementing DEFER_FREE.
+        free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE)
     end
-
-    free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE)
-
-    # TODO: queue-ordered free from non-finalizer tasks once we have
-    #       `zeMemFreeAsync(ptr, queue)`
 
     return
 end

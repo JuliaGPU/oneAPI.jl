@@ -1164,6 +1164,15 @@ end
     end
     @test Array(a) == fill(Int32(1), 64)
 
+    # freeing memory, e.g. from a finalizer, doesn't wait for the GPU
+    if !oneL0.LTS[]
+        b = oneArray{Int32}(undef, 2^20)    # too large to be sub-allocated
+        @test gated() do
+            oneAPI.unsafe_free!(b)
+            synchronize()
+        end
+    end
+
     @test gated() do
         oneL0.sync_each_submission(false) do
             @oneapi items=64 fill_kernel(a, Int32(2))

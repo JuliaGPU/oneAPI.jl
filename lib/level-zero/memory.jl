@@ -25,7 +25,37 @@ function free(buf::AbstractBuffer; policy=nothing)
     else
         desc_ref = Ref(ze_memory_free_ext_desc_t(; freePolicy=policy))
         zeMemFreeExt(ctx, desc_ref, buf)
+        if policy == ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE
+            @atomic deferred_frees.context = WeakRef(ctx)
+        end
     end
+end
+
+# Memory freed with the DEFER_FREE policy is released by the driver once the GPU is done
+# with it, but NEO only checks that when memory is freed again, so remember a context in
+# which that happened.
+mutable struct DeferredFrees
+    @atomic context::WeakRef
+end
+const deferred_frees = DeferredFrees(WeakRef())
+
+"""
+    sweep_deferred_frees()
+
+Have the driver release memory that was freed with the `DEFER_FREE` policy and that the
+GPU is done with, by freeing memory again. Best effort: this does not wait for the GPU.
+"""
+function sweep_deferred_frees()
+    ctx = (@atomic deferred_frees.context).value
+    ctx === nothing && return
+    # unchecked, as running out of memory here should not reclaim memory again
+    ptr_ref = Ref{Ptr{Cvoid}}()
+    res = unchecked_zeMemAllocHost(ctx, Ref(ze_host_mem_alloc_desc_t()), 64, 1, ptr_ref)
+    res == RESULT_SUCCESS || return
+    desc_ref = Ref(ze_memory_free_ext_desc_t(;
+        freePolicy=ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE))
+    unchecked_zeMemFreeExt(ctx, desc_ref, ptr_ref[])
+    return
 end
 
 

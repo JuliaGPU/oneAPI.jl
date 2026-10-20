@@ -328,6 +328,31 @@ ptr = convert(Ptr{Cvoid}, buf)
 @test lookup_alloc(ctx, ptr) isa typeof(buf)
 free(buf)
 
+# memory whose freeing was deferred is released once the GPU is done with it, and memory
+# is freed again. this submits work that waits on an event signaled afterwards, which the
+# ONEAPI_SYNC_EACH_SUBMISSION workaround would deadlock.
+if !oneL0.LTS[]
+    queue = ZeCommandQueue(ctx, dev)
+    event = ZeEventPool(ctx, 1)[1]
+    pattern = host_alloc(ctx, 1)
+    buf = device_alloc(ctx, dev, 1024)
+    oneL0.sync_each_submission(false) do
+        execute!(queue) do list
+            append_wait!(list, event)
+            append_fill!(list, pointer(buf), convert(Ptr{Cvoid}, pattern), 1, 1024)
+        end
+    end
+    free(buf; policy=oneL0.ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE)
+    oneL0.sweep_deferred_frees()    # doesn't wait for the GPU
+    @test properties(buf).type == oneL0.ZE_MEMORY_TYPE_DEVICE
+    signal(event)
+    synchronize(queue)
+    @test properties(buf).type == oneL0.ZE_MEMORY_TYPE_DEVICE
+    oneL0.sweep_deferred_frees()
+    @test properties(buf).type == oneL0.ZE_MEMORY_TYPE_UNKNOWN
+    free(pattern)
+end
+
 end
 
 
