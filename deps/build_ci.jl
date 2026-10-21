@@ -14,15 +14,11 @@ end
 Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
-using Git, Scratch, Dates
-
-oneAPI = Base.UUID("8f75cd03-7ff8-4ecb-9b8f-daf728133b1b")
-
-# get scratch directories
-support_dir = get_scratch!(oneAPI, "support")
+using Git, Dates
 
 # is this a full-fledged check-out?
-if isdir(joinpath(@__DIR__), "..", ".git")
+# Linked worktrees have a .git file rather than a directory.
+if ispath(joinpath(@__DIR__, "..", ".git"))
     # determine latest change to the wrappers
     deps_timestamp = parse(Int, read(`$(git()) -C $(@__DIR__) log -1 --format=%ct src`, String))
     @info "Latest change to the wrappers: $(unix2datetime(deps_timestamp))"
@@ -39,11 +35,7 @@ if isdir(joinpath(@__DIR__), "..", ".git")
 
     # compare to the JLL's tags
     jll_tags = mktempdir() do dir
-        if !isdir(joinpath(support_dir, ".git"))
-            run(`$(git()) clone -q https://github.com/JuliaBinaryWrappers/oneAPI_Support_jll.jl $dir`)
-        else
-            run(`$(git()) -C $dir fetch -q`)
-        end
+        run(`$(git()) clone -q https://github.com/JuliaBinaryWrappers/oneAPI_Support_jll.jl $dir`)
         tags = Dict{String,Int}()
         for line in eachline(`$(git()) -C $dir tag --format "%(refname:short) %(creatordate:unix)"`)
             tag, timestamp = split(line)
