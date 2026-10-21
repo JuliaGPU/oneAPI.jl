@@ -6,6 +6,10 @@
 #include <oneapi/mkl.hpp>
 #include <mkl_version.h>
 
+extern "C" uint32_t onemkl_sparse_wrapper_abi_version(void) noexcept {
+    return ONEMKL_SPARSE_WRAPPER_ABI_VERSION;
+}
+
 oneapi::mkl::transpose convert(onemklTranspose val) {
     switch (val) {
     case ONEMKL_TRANSPOSE_NONTRANS:
