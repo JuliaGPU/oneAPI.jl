@@ -1,0 +1,12 @@
+[general]
+library_name = "libpti_view"
+output_file_path = "../lib/pti/libpti.jl"
+prologue_file_path = "./libpti_prologue.jl"
+
+
+[codegen]
+use_ccall_macro = true
+
+[api]
+checked_rettypes = [ "pti_result" ]
+gcsafe = true

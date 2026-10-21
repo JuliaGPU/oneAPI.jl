@@ -77,6 +77,8 @@ include("random.jl")
 include("utils.jl")
 include("profile.jl")
 
+include("../lib/pti/PTI.jl")
+
 include("oneAPIKernels.jl")
 import .oneAPIKernels: oneAPIBackend
 export oneAPIBackend
