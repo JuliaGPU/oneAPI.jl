@@ -1667,6 +1667,40 @@ end
                 end
             end
 
+            @testset "products with HermOrSym operands (#718)" begin
+                # not symmetric, so that ignoring the wrapper changes the result
+                A = sprand(T, 10, 10, 0.5)
+                D = rand(T, 10, 10)
+                x = rand(T, 10)
+                B = rand(T, 10, 2)
+                dx = oneVector{T}(x)
+                dB = oneMatrix{T}(B)
+                dD = oneMatrix{T}(D)
+                @testset "$SparseMatrix" for SparseMatrix in coo_csr_csc_matrices
+                    dA = SparseMatrix(A)
+                    for wrap in (Symmetric, Hermitian), uplo in (:U, :L)
+                        Aw = Matrix(wrap(A, uplo))
+                        @test collect(sparse(wrap(dA, uplo))) ≈ Aw
+                        SparseMatrix == oneSparseMatrixCOO && continue
+
+                        @test collect(wrap(dA, uplo) * dx) ≈ Aw * x
+                        @test collect(wrap(dA, uplo) * dB) ≈ Aw * B
+                        alpha = rand(T)
+                        beta = rand(T)
+                        y = rand(T, 10)
+                        C = rand(T, 10, 2)
+                        @test alpha * Aw * x + beta * y ≈ collect(mul!(oneVector{T}(y), wrap(dA, uplo), dx, alpha, beta))
+                        @test alpha * Aw * B + beta * C ≈ collect(mul!(oneMatrix{T}(C), wrap(dA, uplo), dB, alpha, beta))
+
+                        # symmetric dense operand
+                        @test collect(dA * wrap(dD, uplo)) ≈ A * wrap(D, uplo)
+                        E = rand(T, 10, 10)
+                        @test alpha * Aw * wrap(D, uplo) + beta * E ≈
+                            collect(mul!(oneMatrix{T}(E), wrap(dA, uplo), wrap(dD, uplo), alpha, beta))
+                    end
+                end
+            end
+
         @testset "sparse symv" begin
                 @testset  "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     @testset "uplo = $uplo" for uplo in ('L', 'U')

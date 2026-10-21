@@ -12,7 +12,7 @@ using ..SYCL: syclQueue_t
 using GPUArrays
 
 using LinearAlgebra
-using LinearAlgebra: checksquare
+using LinearAlgebra: checksquare, HermOrSym
 using LinearAlgebra.LAPACK: chkargsok, chklapackerror, chktrans, chkside, chkdiag, chkuplo
 
 using SparseArrays

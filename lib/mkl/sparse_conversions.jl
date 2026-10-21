@@ -142,6 +142,30 @@ for op in (:+, :-), X in (:oneSparseMatrixCSR, :oneSparseMatrixCSC)
 end
 
 
+## symmetric and Hermitian wrappers
+
+# SparseArrays' fallback recurses forever on parents that aren't a `SparseMatrixCSC`, so
+# build the full matrix from the referenced triangle here
+function _sparse_symmherm(A::HermOrSym{Tv, <:oneAbstractSparseMatrix{Tv, Ti}}) where {Tv, Ti}
+    P = oneSparseMatrixCOO(parent(A))
+    rows, cols, vals = P.rowInd, P.colInd, P.nzVal
+    diag = rows .== cols
+    strict = A.uplo == 'U' ? rows .< cols : rows .> cols
+    diag_vals = A isa Hermitian ? Tv.(real.(vals[diag])) : vals[diag]
+    mirrored_vals = A isa Hermitian ? conj.(vals[strict]) : vals[strict]
+    return oneSparseMatrixCOO{Tv, Ti}(
+        vcat(rows[diag], rows[strict], cols[strict]),
+        vcat(cols[diag], cols[strict], rows[strict]),
+        vcat(diag_vals, vals[strict], mirrored_vals), size(A)
+    )
+end
+SparseArrays.sparse(A::HermOrSym{<:Any, <:oneSparseMatrixCSR}) = oneSparseMatrixCSR(_sparse_symmherm(A))
+SparseArrays.sparse(A::HermOrSym{<:Any, <:oneSparseMatrixCSC}) = oneSparseMatrixCSC(_sparse_symmherm(A))
+# via CSR so that the entries end up in row-major order
+SparseArrays.sparse(A::HermOrSym{<:Any, <:oneSparseMatrixCOO}) =
+    oneSparseMatrixCOO(oneSparseMatrixCSR(_sparse_symmherm(A)))
+
+
 ## structural operations on COO matrices
 #
 # GPUArrays implements triu/tril/kron/reshape/droptol! for CSR and CSC matrices by converting
