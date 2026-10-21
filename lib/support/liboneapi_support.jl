@@ -76,6 +76,10 @@ function syclEventDestroy(obj)
     @ccall liboneapi_support.syclEventDestroy(obj::syclEvent_t)::Cint
 end
 
+function onemkl_sparse_wrapper_abi_version()
+    @ccall liboneapi_support.onemkl_sparse_wrapper_abi_version()::UInt32
+end
+
 @cenum onemklTranspose::UInt32 begin
     ONEMKL_TRANSPOSE_NONTRANS = 0
     ONEMKL_TRANSPOSE_TRANS = 1
@@ -6429,16 +6433,19 @@ function onemklZunmqr_batch_scratchpad_size(device_queue, side, trans, m, n, k, 
 end
 
 function onemklXsparse_init_matrix_handle(p_spmat)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_init_matrix_handle(p_spmat::Ptr{matrix_handle_t})::Cint
 end
 
 function onemklXsparse_release_matrix_handle(device_queue, p_spmat)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_release_matrix_handle(device_queue::syclQueue_t,
                                                                  p_spmat::Ptr{matrix_handle_t})::Cint
 end
 
 function onemklSsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, index, row_ptr,
                                     col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_set_csr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
@@ -6450,6 +6457,7 @@ end
 
 function onemklSsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        row_ptr, col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_set_csr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
@@ -6461,6 +6469,7 @@ end
 
 function onemklDsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, index, row_ptr,
                                     col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_set_csr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
@@ -6472,6 +6481,7 @@ end
 
 function onemklDsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        row_ptr, col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_set_csr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
@@ -6483,6 +6493,7 @@ end
 
 function onemklCsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, index, row_ptr,
                                     col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_set_csr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
@@ -6494,6 +6505,7 @@ end
 
 function onemklCsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        row_ptr, col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_set_csr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
@@ -6505,6 +6517,7 @@ end
 
 function onemklZsparse_set_csr_data(device_queue, spmat, nrows, ncols, nnz, index, row_ptr,
                                     col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_set_csr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
@@ -6516,6 +6529,7 @@ end
 
 function onemklZsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        row_ptr, col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_set_csr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
@@ -6525,10 +6539,11 @@ function onemklZsparse_set_csr_data_64(device_queue, spmat, nrows, ncols, nnz, i
                                                            values::ZePtr{ComplexF64})::Cint
 end
 
-function onemklSsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, index, col_ptr,
+function onemklSsparse_set_csc_data(device_queue, spmat, nrows, ncols, nnz, index, col_ptr,
                                     row_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_set_csc_data(device_queue::syclQueue_t,
-                                                        spMat::matrix_handle_t,
+                                                        spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
                                                         nnz::Int64, index::onemklIndex,
                                                         col_ptr::Ptr{Int32},
@@ -6536,10 +6551,11 @@ function onemklSsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, inde
                                                         values::Ptr{Cfloat})::Cint
 end
 
-function onemklSsparse_set_csc_data_64(device_queue, spMat, nrows, ncols, nnz, index,
+function onemklSsparse_set_csc_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        col_ptr, row_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_set_csc_data_64(device_queue::syclQueue_t,
-                                                           spMat::matrix_handle_t,
+                                                           spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
                                                            nnz::Int64, index::onemklIndex,
                                                            col_ptr::Ptr{Int64},
@@ -6547,10 +6563,11 @@ function onemklSsparse_set_csc_data_64(device_queue, spMat, nrows, ncols, nnz, i
                                                            values::Ptr{Cfloat})::Cint
 end
 
-function onemklDsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, index, col_ptr,
+function onemklDsparse_set_csc_data(device_queue, spmat, nrows, ncols, nnz, index, col_ptr,
                                     row_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_set_csc_data(device_queue::syclQueue_t,
-                                                        spMat::matrix_handle_t,
+                                                        spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
                                                         nnz::Int64, index::onemklIndex,
                                                         col_ptr::Ptr{Int32},
@@ -6558,10 +6575,11 @@ function onemklDsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, inde
                                                         values::Ptr{Cdouble})::Cint
 end
 
-function onemklDsparse_set_csc_data_64(device_queue, spMat, nrows, ncols, nnz, index,
+function onemklDsparse_set_csc_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        col_ptr, row_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_set_csc_data_64(device_queue::syclQueue_t,
-                                                           spMat::matrix_handle_t,
+                                                           spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
                                                            nnz::Int64, index::onemklIndex,
                                                            col_ptr::Ptr{Int64},
@@ -6569,10 +6587,11 @@ function onemklDsparse_set_csc_data_64(device_queue, spMat, nrows, ncols, nnz, i
                                                            values::Ptr{Cdouble})::Cint
 end
 
-function onemklCsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, index, col_ptr,
+function onemklCsparse_set_csc_data(device_queue, spmat, nrows, ncols, nnz, index, col_ptr,
                                     row_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_set_csc_data(device_queue::syclQueue_t,
-                                                        spMat::matrix_handle_t,
+                                                        spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
                                                         nnz::Int64, index::onemklIndex,
                                                         col_ptr::Ptr{Int32},
@@ -6580,10 +6599,11 @@ function onemklCsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, inde
                                                         values::Ptr{ComplexF32})::Cint
 end
 
-function onemklCsparse_set_csc_data_64(device_queue, spMat, nrows, ncols, nnz, index,
+function onemklCsparse_set_csc_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        col_ptr, row_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_set_csc_data_64(device_queue::syclQueue_t,
-                                                           spMat::matrix_handle_t,
+                                                           spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
                                                            nnz::Int64, index::onemklIndex,
                                                            col_ptr::Ptr{Int64},
@@ -6591,10 +6611,11 @@ function onemklCsparse_set_csc_data_64(device_queue, spMat, nrows, ncols, nnz, i
                                                            values::Ptr{ComplexF32})::Cint
 end
 
-function onemklZsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, index, col_ptr,
+function onemklZsparse_set_csc_data(device_queue, spmat, nrows, ncols, nnz, index, col_ptr,
                                     row_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_set_csc_data(device_queue::syclQueue_t,
-                                                        spMat::matrix_handle_t,
+                                                        spmat::matrix_handle_t,
                                                         nrows::Int64, ncols::Int64,
                                                         nnz::Int64, index::onemklIndex,
                                                         col_ptr::Ptr{Int32},
@@ -6602,10 +6623,11 @@ function onemklZsparse_set_csc_data(device_queue, spMat, nrows, ncols, nnz, inde
                                                         values::Ptr{ComplexF32})::Cint
 end
 
-function onemklZsparse_set_csc_data_64(device_queue, spMat, nrows, ncols, nnz, index,
+function onemklZsparse_set_csc_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        col_ptr, row_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_set_csc_data_64(device_queue::syclQueue_t,
-                                                           spMat::matrix_handle_t,
+                                                           spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
                                                            nnz::Int64, index::onemklIndex,
                                                            col_ptr::Ptr{Int64},
@@ -6615,6 +6637,7 @@ end
 
 function onemklSsparse_set_coo_data(device_queue, spmat, nrows, ncols, nnz, index, row_ind,
                                     col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_set_coo_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int32, ncols::Int32,
@@ -6626,6 +6649,7 @@ end
 
 function onemklSsparse_set_coo_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        row_ind, col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_set_coo_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
@@ -6637,6 +6661,7 @@ end
 
 function onemklDsparse_set_coo_data(device_queue, spmat, nrows, ncols, nnz, index, row_ind,
                                     col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_set_coo_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int32, ncols::Int32,
@@ -6648,6 +6673,7 @@ end
 
 function onemklDsparse_set_coo_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        row_ind, col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_set_coo_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
@@ -6659,6 +6685,7 @@ end
 
 function onemklCsparse_set_coo_data(device_queue, spmat, nrows, ncols, nnz, index, row_ind,
                                     col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_set_coo_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int32, ncols::Int32,
@@ -6670,6 +6697,7 @@ end
 
 function onemklCsparse_set_coo_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        row_ind, col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_set_coo_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
@@ -6681,6 +6709,7 @@ end
 
 function onemklZsparse_set_coo_data(device_queue, spmat, nrows, ncols, nnz, index, row_ind,
                                     col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_set_coo_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         nrows::Int32, ncols::Int32,
@@ -6692,6 +6721,7 @@ end
 
 function onemklZsparse_set_coo_data_64(device_queue, spmat, nrows, ncols, nnz, index,
                                        row_ind, col_ind, values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_set_coo_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            nrows::Int64, ncols::Int64,
@@ -6704,6 +6734,7 @@ end
 function onemklSsparse_set_bsr_data(device_queue, spmat, blk_nrows, blk_ncols, blk_nnz,
                                     row_blk_size, col_blk_size, blk_layout, index,
                                     bsr_row_ptr, bsr_col_ind, bsr_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_set_bsr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         blk_nrows::Int64, blk_ncols::Int64,
@@ -6719,6 +6750,7 @@ end
 function onemklSsparse_set_bsr_data_64(device_queue, spmat, blk_nrows, blk_ncols, blk_nnz,
                                        row_blk_size, col_blk_size, blk_layout, index,
                                        bsr_row_ptr, bsr_col_ind, bsr_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_set_bsr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            blk_nrows::Int64,
@@ -6735,6 +6767,7 @@ end
 function onemklDsparse_set_bsr_data(device_queue, spmat, blk_nrows, blk_ncols, blk_nnz,
                                     row_blk_size, col_blk_size, blk_layout, index,
                                     bsr_row_ptr, bsr_col_ind, bsr_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_set_bsr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         blk_nrows::Int64, blk_ncols::Int64,
@@ -6750,6 +6783,7 @@ end
 function onemklDsparse_set_bsr_data_64(device_queue, spmat, blk_nrows, blk_ncols, blk_nnz,
                                        row_blk_size, col_blk_size, blk_layout, index,
                                        bsr_row_ptr, bsr_col_ind, bsr_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_set_bsr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            blk_nrows::Int64,
@@ -6766,6 +6800,7 @@ end
 function onemklCsparse_set_bsr_data(device_queue, spmat, blk_nrows, blk_ncols, blk_nnz,
                                     row_blk_size, col_blk_size, blk_layout, index,
                                     bsr_row_ptr, bsr_col_ind, bsr_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_set_bsr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         blk_nrows::Int64, blk_ncols::Int64,
@@ -6781,6 +6816,7 @@ end
 function onemklCsparse_set_bsr_data_64(device_queue, spmat, blk_nrows, blk_ncols, blk_nnz,
                                        row_blk_size, col_blk_size, blk_layout, index,
                                        bsr_row_ptr, bsr_col_ind, bsr_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_set_bsr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            blk_nrows::Int64,
@@ -6797,6 +6833,7 @@ end
 function onemklZsparse_set_bsr_data(device_queue, spmat, blk_nrows, blk_ncols, blk_nnz,
                                     row_blk_size, col_blk_size, blk_layout, index,
                                     bsr_row_ptr, bsr_col_ind, bsr_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_set_bsr_data(device_queue::syclQueue_t,
                                                         spmat::matrix_handle_t,
                                                         blk_nrows::Int64, blk_ncols::Int64,
@@ -6812,6 +6849,7 @@ end
 function onemklZsparse_set_bsr_data_64(device_queue, spmat, blk_nrows, blk_ncols, blk_nnz,
                                        row_blk_size, col_blk_size, blk_layout, index,
                                        bsr_row_ptr, bsr_col_ind, bsr_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_set_bsr_data_64(device_queue::syclQueue_t,
                                                            spmat::matrix_handle_t,
                                                            blk_nrows::Int64,
@@ -6826,80 +6864,94 @@ function onemklZsparse_set_bsr_data_64(device_queue, spmat, blk_nrows, blk_ncols
 end
 
 function onemklXsparse_init_matmat_descr(p_desc)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_init_matmat_descr(p_desc::Ptr{matmat_descr_t})::Cint
 end
 
 function onemklXsparse_release_matmat_descr(p_desc)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_release_matmat_descr(p_desc::Ptr{matmat_descr_t})::Cint
 end
 
 function onemklXsparse_init_omatconvert_descr(device_queue, p_descr)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_init_omatconvert_descr(device_queue::syclQueue_t,
                                                                   p_descr::Ptr{omatconvert_descr_t})::Cint
 end
 
 function onemklXsparse_release_omatconvert_descr(device_queue, descr)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_release_omatconvert_descr(device_queue::syclQueue_t,
                                                                      descr::omatconvert_descr_t)::Cint
 end
 
 function onemklXsparse_init_omatadd_descr(device_queue, p_omatadd_desc)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_init_omatadd_descr(device_queue::syclQueue_t,
                                                               p_omatadd_desc::Ptr{omatadd_descr_t})::Cint
 end
 
 function onemklXsparse_release_omatadd_descr(device_queue, omatadd_desc)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_release_omatadd_descr(device_queue::syclQueue_t,
                                                                  omatadd_desc::omatadd_descr_t)::Cint
 end
 
-function onemklXsparse_omatcopy(device_queue, transpose_val, spMat_in, spMat_out)
+function onemklXsparse_omatcopy(device_queue, transpose_val, spmat_in, spmat_out)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_omatcopy(device_queue::syclQueue_t,
                                                     transpose_val::onemklTranspose,
-                                                    spMat_in::matrix_handle_t,
-                                                    spMat_out::matrix_handle_t)::Cint
+                                                    spmat_in::matrix_handle_t,
+                                                    spmat_out::matrix_handle_t)::Cint
 end
 
-function onemklXsparse_sort_matrix(device_queue, spMat)
+function onemklXsparse_sort_matrix(device_queue, spmat)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_sort_matrix(device_queue::syclQueue_t,
-                                                       spMat::matrix_handle_t)::Cint
+                                                       spmat::matrix_handle_t)::Cint
 end
 
-function onemklSsparse_update_diagonal_values(device_queue, spMat, length, new_diag_values)
+function onemklSsparse_update_diagonal_values(device_queue, spmat, length, new_diag_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_update_diagonal_values(device_queue::syclQueue_t,
-                                                                  spMat::matrix_handle_t,
+                                                                  spmat::matrix_handle_t,
                                                                   length::Int64,
                                                                   new_diag_values::ZePtr{Cfloat})::Cint
 end
 
-function onemklDsparse_update_diagonal_values(device_queue, spMat, length, new_diag_values)
+function onemklDsparse_update_diagonal_values(device_queue, spmat, length, new_diag_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_update_diagonal_values(device_queue::syclQueue_t,
-                                                                  spMat::matrix_handle_t,
+                                                                  spmat::matrix_handle_t,
                                                                   length::Int64,
                                                                   new_diag_values::ZePtr{Cdouble})::Cint
 end
 
-function onemklCsparse_update_diagonal_values(device_queue, spMat, length, new_diag_values)
+function onemklCsparse_update_diagonal_values(device_queue, spmat, length, new_diag_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_update_diagonal_values(device_queue::syclQueue_t,
-                                                                  spMat::matrix_handle_t,
+                                                                  spmat::matrix_handle_t,
                                                                   length::Int64,
                                                                   new_diag_values::ZePtr{ComplexF32})::Cint
 end
 
-function onemklZsparse_update_diagonal_values(device_queue, spMat, length, new_diag_values)
+function onemklZsparse_update_diagonal_values(device_queue, spmat, length, new_diag_values)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_update_diagonal_values(device_queue::syclQueue_t,
-                                                                  spMat::matrix_handle_t,
+                                                                  spmat::matrix_handle_t,
                                                                   length::Int64,
                                                                   new_diag_values::ZePtr{ComplexF64})::Cint
 end
 
 function onemklXsparse_optimize_gemv(device_queue, opA, A)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_optimize_gemv(device_queue::syclQueue_t,
                                                          opA::onemklTranspose,
                                                          A::matrix_handle_t)::Cint
 end
 
 function onemklXsparse_optimize_trmv(device_queue, uplo_val, opA, diag_val, A)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_optimize_trmv(device_queue::syclQueue_t,
                                                          uplo_val::onemklUplo,
                                                          opA::onemklTranspose,
@@ -6908,6 +6960,7 @@ function onemklXsparse_optimize_trmv(device_queue, uplo_val, opA, diag_val, A)
 end
 
 function onemklXsparse_optimize_trsv(device_queue, uplo_val, opA, diag_val, A)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_optimize_trsv(device_queue::syclQueue_t,
                                                          uplo_val::onemklUplo,
                                                          opA::onemklTranspose,
@@ -6916,6 +6969,7 @@ function onemklXsparse_optimize_trsv(device_queue, uplo_val, opA, diag_val, A)
 end
 
 function onemklXsparse_optimize_gemm(device_queue, opA, A)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_optimize_gemm(device_queue::syclQueue_t,
                                                          opA::onemklTranspose,
                                                          A::matrix_handle_t)::Cint
@@ -6923,6 +6977,7 @@ end
 
 function onemklXsparse_optimize_gemm_advanced(device_queue, layout_val, opA, opB, A,
                                               columns)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_optimize_gemm_advanced(device_queue::syclQueue_t,
                                                                   layout_val::onemklLayout,
                                                                   opA::onemklTranspose,
@@ -6932,6 +6987,7 @@ function onemklXsparse_optimize_gemm_advanced(device_queue, layout_val, opA, opB
 end
 
 function onemklXsparse_optimize_trsm(device_queue, uplo_val, opA, diag_val, A)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_optimize_trsm(device_queue::syclQueue_t,
                                                          uplo_val::onemklUplo,
                                                          opA::onemklTranspose,
@@ -6941,6 +6997,7 @@ end
 
 function onemklXsparse_optimize_trsm_advanced(device_queue, layout_val, uplo_val, opA,
                                               diag_val, A, columns)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_optimize_trsm_advanced(device_queue::syclQueue_t,
                                                                   layout_val::onemklLayout,
                                                                   uplo_val::onemklUplo,
@@ -6951,6 +7008,7 @@ function onemklXsparse_optimize_trsm_advanced(device_queue, layout_val, uplo_val
 end
 
 function onemklSsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_gemv(device_queue::syclQueue_t,
                                                 opA::onemklTranspose, alpha::Ref{Cfloat},
                                                 A::matrix_handle_t, x::ZePtr{Cfloat},
@@ -6958,6 +7016,7 @@ function onemklSsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
 end
 
 function onemklDsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_gemv(device_queue::syclQueue_t,
                                                 opA::onemklTranspose, alpha::Ref{Cdouble},
                                                 A::matrix_handle_t, x::ZePtr{Cdouble},
@@ -6965,6 +7024,7 @@ function onemklDsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
 end
 
 function onemklCsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_gemv(device_queue::syclQueue_t,
                                                 opA::onemklTranspose,
                                                 alpha::Ref{ComplexF32}, A::matrix_handle_t,
@@ -6973,6 +7033,7 @@ function onemklCsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
 end
 
 function onemklZsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_gemv(device_queue::syclQueue_t,
                                                 opA::onemklTranspose,
                                                 alpha::Ref{ComplexF64}, A::matrix_handle_t,
@@ -6981,6 +7042,7 @@ function onemklZsparse_gemv(device_queue, opA, alpha, A, x, beta, y)
 end
 
 function onemklSsparse_gemvdot(device_queue, opA, alpha, A, x, beta, y, d)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_gemvdot(device_queue::syclQueue_t,
                                                    opA::onemklTranspose, alpha::Ref{Cfloat},
                                                    A::matrix_handle_t, x::ZePtr{Cfloat},
@@ -6989,6 +7051,7 @@ function onemklSsparse_gemvdot(device_queue, opA, alpha, A, x, beta, y, d)
 end
 
 function onemklDsparse_gemvdot(device_queue, opA, alpha, A, x, beta, y, d)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_gemvdot(device_queue::syclQueue_t,
                                                    opA::onemklTranspose,
                                                    alpha::Ref{Cdouble}, A::matrix_handle_t,
@@ -6998,6 +7061,7 @@ function onemklDsparse_gemvdot(device_queue, opA, alpha, A, x, beta, y, d)
 end
 
 function onemklCsparse_gemvdot(device_queue, opA, alpha, A, x, beta, y, d)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_gemvdot(device_queue::syclQueue_t,
                                                    opA::onemklTranspose,
                                                    alpha::Ref{ComplexF32},
@@ -7008,6 +7072,7 @@ function onemklCsparse_gemvdot(device_queue, opA, alpha, A, x, beta, y, d)
 end
 
 function onemklZsparse_gemvdot(device_queue, opA, alpha, A, x, beta, y, d)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_gemvdot(device_queue::syclQueue_t,
                                                    opA::onemklTranspose,
                                                    alpha::Ref{ComplexF64},
@@ -7018,6 +7083,7 @@ function onemklZsparse_gemvdot(device_queue, opA, alpha, A, x, beta, y, d)
 end
 
 function onemklSsparse_symv(device_queue, uplo_val, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_symv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, alpha::Ref{Cfloat},
                                                 A::matrix_handle_t, x::ZePtr{Cfloat},
@@ -7025,6 +7091,7 @@ function onemklSsparse_symv(device_queue, uplo_val, alpha, A, x, beta, y)
 end
 
 function onemklDsparse_symv(device_queue, uplo_val, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_symv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, alpha::Ref{Cdouble},
                                                 A::matrix_handle_t, x::ZePtr{Cdouble},
@@ -7032,6 +7099,7 @@ function onemklDsparse_symv(device_queue, uplo_val, alpha, A, x, beta, y)
 end
 
 function onemklCsparse_symv(device_queue, uplo_val, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_symv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo,
                                                 alpha::Ref{ComplexF32}, A::matrix_handle_t,
@@ -7040,6 +7108,7 @@ function onemklCsparse_symv(device_queue, uplo_val, alpha, A, x, beta, y)
 end
 
 function onemklZsparse_symv(device_queue, uplo_val, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_symv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo,
                                                 alpha::Ref{ComplexF64}, A::matrix_handle_t,
@@ -7048,6 +7117,7 @@ function onemklZsparse_symv(device_queue, uplo_val, alpha, A, x, beta, y)
 end
 
 function onemklSsparse_trmv(device_queue, uplo_val, opA, diag_val, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_trmv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, opA::onemklTranspose,
                                                 diag_val::onemklDiag, alpha::Ref{Cfloat},
@@ -7056,6 +7126,7 @@ function onemklSsparse_trmv(device_queue, uplo_val, opA, diag_val, alpha, A, x, 
 end
 
 function onemklDsparse_trmv(device_queue, uplo_val, opA, diag_val, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_trmv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, opA::onemklTranspose,
                                                 diag_val::onemklDiag, alpha::Ref{Cdouble},
@@ -7064,6 +7135,7 @@ function onemklDsparse_trmv(device_queue, uplo_val, opA, diag_val, alpha, A, x, 
 end
 
 function onemklCsparse_trmv(device_queue, uplo_val, opA, diag_val, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_trmv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, opA::onemklTranspose,
                                                 diag_val::onemklDiag,
@@ -7073,6 +7145,7 @@ function onemklCsparse_trmv(device_queue, uplo_val, opA, diag_val, alpha, A, x, 
 end
 
 function onemklZsparse_trmv(device_queue, uplo_val, opA, diag_val, alpha, A, x, beta, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_trmv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, opA::onemklTranspose,
                                                 diag_val::onemklDiag,
@@ -7082,6 +7155,7 @@ function onemklZsparse_trmv(device_queue, uplo_val, opA, diag_val, alpha, A, x, 
 end
 
 function onemklSsparse_trsv(device_queue, uplo_val, opA, diag_val, alpha, A, x, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_trsv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, opA::onemklTranspose,
                                                 diag_val::onemklDiag, alpha::Ref{Cfloat},
@@ -7090,6 +7164,7 @@ function onemklSsparse_trsv(device_queue, uplo_val, opA, diag_val, alpha, A, x, 
 end
 
 function onemklDsparse_trsv(device_queue, uplo_val, opA, diag_val, alpha, A, x, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_trsv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, opA::onemklTranspose,
                                                 diag_val::onemklDiag, alpha::Ref{Cdouble},
@@ -7098,6 +7173,7 @@ function onemklDsparse_trsv(device_queue, uplo_val, opA, diag_val, alpha, A, x, 
 end
 
 function onemklCsparse_trsv(device_queue, uplo_val, opA, diag_val, alpha, A, x, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_trsv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, opA::onemklTranspose,
                                                 diag_val::onemklDiag,
@@ -7107,6 +7183,7 @@ function onemklCsparse_trsv(device_queue, uplo_val, opA, diag_val, alpha, A, x, 
 end
 
 function onemklZsparse_trsv(device_queue, uplo_val, opA, diag_val, alpha, A, x, y)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_trsv(device_queue::syclQueue_t,
                                                 uplo_val::onemklUplo, opA::onemklTranspose,
                                                 diag_val::onemklDiag,
@@ -7117,6 +7194,7 @@ end
 
 function onemklSsparse_gemm(device_queue, layout_val, opA, opX, alpha, A, X, columns, ldx,
                             beta, Y, ldy)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_gemm(device_queue::syclQueue_t,
                                                 layout_val::onemklLayout,
                                                 opA::onemklTranspose, opX::onemklTranspose,
@@ -7128,6 +7206,7 @@ end
 
 function onemklDsparse_gemm(device_queue, layout_val, opA, opX, alpha, A, X, columns, ldx,
                             beta, Y, ldy)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_gemm(device_queue::syclQueue_t,
                                                 layout_val::onemklLayout,
                                                 opA::onemklTranspose, opX::onemklTranspose,
@@ -7139,6 +7218,7 @@ end
 
 function onemklCsparse_gemm(device_queue, layout_val, opA, opX, alpha, A, X, columns, ldx,
                             beta, Y, ldy)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_gemm(device_queue::syclQueue_t,
                                                 layout_val::onemklLayout,
                                                 opA::onemklTranspose, opX::onemklTranspose,
@@ -7150,6 +7230,7 @@ end
 
 function onemklZsparse_gemm(device_queue, layout_val, opA, opX, alpha, A, X, columns, ldx,
                             beta, Y, ldy)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_gemm(device_queue::syclQueue_t,
                                                 layout_val::onemklLayout,
                                                 opA::onemklTranspose, opX::onemklTranspose,
@@ -7161,6 +7242,7 @@ end
 
 function onemklSsparse_trsm(device_queue, layout_val, opA, opX, uplo_val, diag_val, alpha,
                             A, X, columns, ldx, Y, ldy)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_trsm(device_queue::syclQueue_t,
                                                 layout_val::onemklLayout,
                                                 opA::onemklTranspose, opX::onemklTranspose,
@@ -7173,6 +7255,7 @@ end
 
 function onemklDsparse_trsm(device_queue, layout_val, opA, opX, uplo_val, diag_val, alpha,
                             A, X, columns, ldx, Y, ldy)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_trsm(device_queue::syclQueue_t,
                                                 layout_val::onemklLayout,
                                                 opA::onemklTranspose, opX::onemklTranspose,
@@ -7185,6 +7268,7 @@ end
 
 function onemklCsparse_trsm(device_queue, layout_val, opA, opX, uplo_val, diag_val, alpha,
                             A, X, columns, ldx, Y, ldy)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_trsm(device_queue::syclQueue_t,
                                                 layout_val::onemklLayout,
                                                 opA::onemklTranspose, opX::onemklTranspose,
@@ -7197,6 +7281,7 @@ end
 
 function onemklZsparse_trsm(device_queue, layout_val, opA, opX, uplo_val, diag_val, alpha,
                             A, X, columns, ldx, Y, ldy)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_trsm(device_queue::syclQueue_t,
                                                 layout_val::onemklLayout,
                                                 opA::onemklTranspose, opX::onemklTranspose,
@@ -7208,6 +7293,7 @@ function onemklZsparse_trsm(device_queue, layout_val, opA, opX, uplo_val, diag_v
 end
 
 function onemklXsparse_set_matmat_data(descr, viewA, opA, viewB, opB, viewC)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_set_matmat_data(descr::matmat_descr_t,
                                                            viewA::onemklMatrixView,
                                                            opA::onemklTranspose,
@@ -7218,6 +7304,7 @@ end
 
 function onemklSsparse_matmatd(device_queue, c_layout, opA, opB, alpha, A, B, beta, C,
                                c_nrows, c_ncols, ldc)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklSsparse_matmatd(device_queue::syclQueue_t,
                                                    c_layout::onemklLayout,
                                                    opA::onemklTranspose,
@@ -7230,6 +7317,7 @@ end
 
 function onemklDsparse_matmatd(device_queue, c_layout, opA, opB, alpha, A, B, beta, C,
                                c_nrows, c_ncols, ldc)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklDsparse_matmatd(device_queue::syclQueue_t,
                                                    c_layout::onemklLayout,
                                                    opA::onemklTranspose,
@@ -7242,6 +7330,7 @@ end
 
 function onemklCsparse_matmatd(device_queue, c_layout, opA, opB, alpha, A, B, beta, C,
                                c_nrows, c_ncols, ldc)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklCsparse_matmatd(device_queue::syclQueue_t,
                                                    c_layout::onemklLayout,
                                                    opA::onemklTranspose,
@@ -7255,6 +7344,7 @@ end
 
 function onemklZsparse_matmatd(device_queue, c_layout, opA, opB, alpha, A, B, beta, C,
                                c_nrows, c_ncols, ldc)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklZsparse_matmatd(device_queue::syclQueue_t,
                                                    c_layout::onemklLayout,
                                                    opA::onemklTranspose,
@@ -7267,6 +7357,7 @@ function onemklZsparse_matmatd(device_queue, c_layout, opA, opB, alpha, A, B, be
 end
 
 function onemklXsparse_matmat(device_queue, A, B, C, req, descr, sizeTempBuffer, tempBuffer)
+    _check_sparse_abi()
     @ccall liboneapi_support.onemklXsparse_matmat(device_queue::syclQueue_t,
                                                   A::matrix_handle_t, B::matrix_handle_t,
                                                   C::matrix_handle_t,
@@ -7449,6 +7540,8 @@ end
 function onemklDftQueryParamIndices(out, n)
     @ccall liboneapi_support.onemklDftQueryParamIndices(out::Ptr{Int64}, n::Int64)::Cint
 end
+
+const ONEMKL_SPARSE_WRAPPER_ABI_VERSION = 2
 
 const ONEMKL_DFT_STATUS_SUCCESS = 0
 
