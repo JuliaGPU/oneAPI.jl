@@ -75,9 +75,11 @@ end
 include("broadcast.jl")
 include("random.jl")
 include("utils.jl")
-include("profile.jl")
 
+# profiling
 include("../lib/pti/PTI.jl")
+include("profiling.jl")
+include("profile.jl")
 
 include("oneAPIKernels.jl")
 import .oneAPIKernels: oneAPIBackend
