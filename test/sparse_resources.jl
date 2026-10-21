@@ -1,6 +1,28 @@
 using oneAPI,GPUArrays,SparseArrays,LinearAlgebra,Test
 using oneAPI.oneMKL: oneSparseMatrixCSR
 
+if haskey(ENV,"GPUARRAYS_V13_STACK_SUPPORT")
+    @testset "stack support native exception containment" begin
+        expected=ENV["GPUARRAYS_V13_STACK_SUPPORT"]
+        @test realpath(oneAPI.Support.liboneapi_support)==realpath(expected)
+        # Stop before the native probe if an artifact override was not applied:
+        # the old artifact aborts instead of reporting this unsupported operation.
+        realpath(oneAPI.Support.liboneapi_support)==realpath(expected) || error("wrong support library")
+        A=oneSparseMatrixCSR(sparse(Float32[2 0;1 3]))
+        B=oneArray(Float32[1 2;3 4]); C=similar(B)
+        owner=oneMKL.SparseHandleOwner(A)
+        try
+            @test_throws ErrorException oneMKL.sparse_transaction(owner,B,C) do h,q
+                oneMKL.native_sparse(Float32,Val(:gemm),q,'C','N','T',1f0,h,
+                    oneMKL.sparse_pointer(B),2,2,0f0,oneMKL.sparse_pointer(C),2)
+            end
+        finally
+            close(owner)
+        end
+        @test owner.closed
+    end
+end
+
 @testset "unsupported vendor layout preflight" begin
     A=oneSparseMatrixCSR(sparse(Float32[2 0;1 3]))
     B=oneArray(Float32[1 2;3 4]); C=oneArray(fill(7f0,2,2))
