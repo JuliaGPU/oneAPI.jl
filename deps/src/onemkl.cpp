@@ -5475,7 +5475,9 @@ extern "C" int64_t onemklZunmqr_batch_scratchpad_size(syclQueue_t device_queue, 
 
 // SPARSE
 extern "C" int onemklXsparse_init_matrix_handle(matrix_handle_t *p_spmat) {
-   oneapi::mkl::sparse::init_matrix_handle((oneapi::mkl::sparse::matrix_handle_t*) p_spmat);
+   try {
+      oneapi::mkl::sparse::init_matrix_handle((oneapi::mkl::sparse::matrix_handle_t*) p_spmat);
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5483,7 +5485,7 @@ extern "C" int onemklXsparse_release_matrix_handle(syclQueue_t device_queue, mat
    try {
       auto status = oneapi::mkl::sparse::release_matrix_handle(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t*) p_spmat, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5491,7 +5493,7 @@ extern "C" int onemklSsparse_set_csr_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5499,7 +5501,7 @@ extern "C" int onemklSsparse_set_csr_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5507,7 +5509,7 @@ extern "C" int onemklDsparse_set_csr_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5515,7 +5517,7 @@ extern "C" int onemklDsparse_set_csr_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5523,7 +5525,7 @@ extern "C" int onemklCsparse_set_csr_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5531,7 +5533,7 @@ extern "C" int onemklCsparse_set_csr_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5539,7 +5541,7 @@ extern "C" int onemklZsparse_set_csr_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5547,7 +5549,7 @@ extern "C" int onemklZsparse_set_csr_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_csr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ptr, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5555,7 +5557,7 @@ extern "C" int onemklSsparse_set_csc_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5563,7 +5565,7 @@ extern "C" int onemklSsparse_set_csc_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5571,7 +5573,7 @@ extern "C" int onemklDsparse_set_csc_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5579,7 +5581,7 @@ extern "C" int onemklDsparse_set_csc_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5587,7 +5589,7 @@ extern "C" int onemklCsparse_set_csc_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5595,7 +5597,7 @@ extern "C" int onemklCsparse_set_csc_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5603,7 +5605,7 @@ extern "C" int onemklZsparse_set_csc_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5611,7 +5613,7 @@ extern "C" int onemklZsparse_set_csc_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_csc_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), col_ptr, row_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5619,7 +5621,7 @@ extern "C" int onemklSsparse_set_coo_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5627,7 +5629,7 @@ extern "C" int onemklSsparse_set_coo_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5635,7 +5637,7 @@ extern "C" int onemklDsparse_set_coo_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5643,7 +5645,7 @@ extern "C" int onemklDsparse_set_coo_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5651,7 +5653,7 @@ extern "C" int onemklCsparse_set_coo_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5659,7 +5661,7 @@ extern "C" int onemklCsparse_set_coo_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<float>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5667,7 +5669,7 @@ extern "C" int onemklZsparse_set_coo_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5675,7 +5677,7 @@ extern "C" int onemklZsparse_set_coo_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_coo_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, nrows, ncols, nnz, convert(index), row_ind, col_ind, reinterpret_cast<std::complex<double>*>(values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5683,7 +5685,7 @@ extern "C" int onemklSsparse_set_bsr_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, bsr_values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5691,7 +5693,7 @@ extern "C" int onemklSsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, bsr_values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5699,7 +5701,7 @@ extern "C" int onemklDsparse_set_bsr_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, bsr_values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5707,7 +5709,7 @@ extern "C" int onemklDsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, bsr_values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5715,7 +5717,7 @@ extern "C" int onemklCsparse_set_bsr_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, reinterpret_cast<std::complex<float>*>(bsr_values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5723,7 +5725,7 @@ extern "C" int onemklCsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, reinterpret_cast<std::complex<float>*>(bsr_values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5731,7 +5733,7 @@ extern "C" int onemklZsparse_set_bsr_data(syclQueue_t device_queue, matrix_handl
    try {
       auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, reinterpret_cast<std::complex<double>*>(bsr_values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5739,17 +5741,21 @@ extern "C" int onemklZsparse_set_bsr_data_64(syclQueue_t device_queue, matrix_ha
    try {
       auto status = oneapi::mkl::sparse::set_bsr_data(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, blk_nrows, blk_ncols, blk_nnz, row_blk_size, col_blk_size, convert(blk_layout), convert(index), bsr_row_ptr, bsr_col_ind, reinterpret_cast<std::complex<double>*>(bsr_values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
 extern "C" int onemklXsparse_init_matmat_descr(matmat_descr_t *p_desc) {
-   oneapi::mkl::sparse::init_matmat_descr((oneapi::mkl::sparse::matmat_descr_t*) p_desc);
+   try {
+      oneapi::mkl::sparse::init_matmat_descr((oneapi::mkl::sparse::matmat_descr_t*) p_desc);
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
 extern "C" int onemklXsparse_release_matmat_descr(matmat_descr_t *p_desc) {
-   oneapi::mkl::sparse::release_matmat_descr((oneapi::mkl::sparse::matmat_descr_t*) p_desc);
+   try {
+      oneapi::mkl::sparse::release_matmat_descr((oneapi::mkl::sparse::matmat_descr_t*) p_desc);
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5757,7 +5763,7 @@ extern "C" int onemklXsparse_init_omatconvert_descr(syclQueue_t device_queue, om
    try {
       oneapi::mkl::sparse::init_omatconvert_descr(device_queue->val, (oneapi::mkl::sparse::omatconvert_descr_t*) p_descr);
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5765,7 +5771,7 @@ extern "C" int onemklXsparse_release_omatconvert_descr(syclQueue_t device_queue,
    try {
       auto status = oneapi::mkl::sparse::release_omatconvert_descr(device_queue->val, (oneapi::mkl::sparse::omatconvert_descr_t) descr, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5773,7 +5779,7 @@ extern "C" int onemklXsparse_init_omatadd_descr(syclQueue_t device_queue, omatad
    try {
       oneapi::mkl::sparse::init_omatadd_descr(device_queue->val, (oneapi::mkl::sparse::omatadd_descr_t*) p_omatadd_desc);
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5781,7 +5787,7 @@ extern "C" int onemklXsparse_release_omatadd_descr(syclQueue_t device_queue, oma
    try {
       auto status = oneapi::mkl::sparse::release_omatadd_descr(device_queue->val, (oneapi::mkl::sparse::omatadd_descr_t) omatadd_desc, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5789,7 +5795,7 @@ extern "C" int onemklXsparse_omatcopy(syclQueue_t device_queue, onemklTranspose 
    try {
       auto status = oneapi::mkl::sparse::omatcopy(device_queue->val, convert(transpose_val), (oneapi::mkl::sparse::matrix_handle_t) spmat_in, (oneapi::mkl::sparse::matrix_handle_t) spmat_out, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5797,7 +5803,7 @@ extern "C" int onemklXsparse_sort_matrix(syclQueue_t device_queue, matrix_handle
    try {
       auto status = oneapi::mkl::sparse::sort_matrix(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5805,7 +5811,7 @@ extern "C" int onemklSsparse_update_diagonal_values(syclQueue_t device_queue, ma
    try {
       auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, length, new_diag_values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5813,7 +5819,7 @@ extern "C" int onemklDsparse_update_diagonal_values(syclQueue_t device_queue, ma
    try {
       auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, length, new_diag_values, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5821,7 +5827,7 @@ extern "C" int onemklCsparse_update_diagonal_values(syclQueue_t device_queue, ma
    try {
       auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, length, reinterpret_cast<std::complex<float>*>(new_diag_values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5829,7 +5835,7 @@ extern "C" int onemklZsparse_update_diagonal_values(syclQueue_t device_queue, ma
    try {
       auto status = oneapi::mkl::sparse::update_diagonal_values(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) spmat, length, reinterpret_cast<std::complex<double>*>(new_diag_values), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5837,7 +5843,7 @@ extern "C" int onemklXsparse_optimize_gemv(syclQueue_t device_queue, onemklTrans
    try {
       auto status = oneapi::mkl::sparse::optimize_gemv(device_queue->val, convert(opA), (oneapi::mkl::sparse::matrix_handle_t) A, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5845,7 +5851,7 @@ extern "C" int onemklXsparse_optimize_trmv(syclQueue_t device_queue, onemklUplo 
    try {
       auto status = oneapi::mkl::sparse::optimize_trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5853,7 +5859,7 @@ extern "C" int onemklXsparse_optimize_trsv(syclQueue_t device_queue, onemklUplo 
    try {
       auto status = oneapi::mkl::sparse::optimize_trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5861,7 +5867,7 @@ extern "C" int onemklXsparse_optimize_gemm(syclQueue_t device_queue, onemklTrans
    try {
       auto status = oneapi::mkl::sparse::optimize_gemm(device_queue->val, convert(opA), (oneapi::mkl::sparse::matrix_handle_t) A, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5869,7 +5875,7 @@ extern "C" int onemklXsparse_optimize_gemm_advanced(syclQueue_t device_queue, on
    try {
       auto status = oneapi::mkl::sparse::optimize_gemm(device_queue->val, convert(layout_val), convert(opA), convert(opB), (oneapi::mkl::sparse::matrix_handle_t) A, columns, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5877,7 +5883,7 @@ extern "C" int onemklXsparse_optimize_trsm(syclQueue_t device_queue, onemklUplo 
    try {
       auto status = oneapi::mkl::sparse::optimize_trsm(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5885,7 +5891,7 @@ extern "C" int onemklXsparse_optimize_trsm_advanced(syclQueue_t device_queue, on
    try {
       auto status = oneapi::mkl::sparse::optimize_trsm(device_queue->val, convert(layout_val), convert(uplo_val), convert(opA), convert(diag_val), (oneapi::mkl::sparse::matrix_handle_t) A, columns, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5893,7 +5899,7 @@ extern "C" int onemklSsparse_gemv(syclQueue_t device_queue, onemklTranspose opA,
    try {
       auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(opA), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, *beta, y, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5901,7 +5907,7 @@ extern "C" int onemklDsparse_gemv(syclQueue_t device_queue, onemklTranspose opA,
    try {
       auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(opA), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, *beta, y, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5909,7 +5915,7 @@ extern "C" int onemklCsparse_gemv(syclQueue_t device_queue, onemklTranspose opA,
    try {
       auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(opA), *reinterpret_cast<std::complex<float>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), *reinterpret_cast<std::complex<float>*>(beta), reinterpret_cast<std::complex<float>*>(y), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5917,7 +5923,7 @@ extern "C" int onemklZsparse_gemv(syclQueue_t device_queue, onemklTranspose opA,
    try {
       auto status = oneapi::mkl::sparse::gemv(device_queue->val, convert(opA), *reinterpret_cast<std::complex<double>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), *reinterpret_cast<std::complex<double>*>(beta), reinterpret_cast<std::complex<double>*>(y), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5925,7 +5931,7 @@ extern "C" int onemklSsparse_gemvdot(syclQueue_t device_queue, onemklTranspose o
    try {
       auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(opA), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, *beta, y, d, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5933,7 +5939,7 @@ extern "C" int onemklDsparse_gemvdot(syclQueue_t device_queue, onemklTranspose o
    try {
       auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(opA), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, *beta, y, d, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5941,7 +5947,7 @@ extern "C" int onemklCsparse_gemvdot(syclQueue_t device_queue, onemklTranspose o
    try {
       auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(opA), *reinterpret_cast<std::complex<float>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), *reinterpret_cast<std::complex<float>*>(beta), reinterpret_cast<std::complex<float>*>(y), reinterpret_cast<std::complex<float>*>(d), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5949,7 +5955,7 @@ extern "C" int onemklZsparse_gemvdot(syclQueue_t device_queue, onemklTranspose o
    try {
       auto status = oneapi::mkl::sparse::gemvdot(device_queue->val, convert(opA), *reinterpret_cast<std::complex<double>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), *reinterpret_cast<std::complex<double>*>(beta), reinterpret_cast<std::complex<double>*>(y), reinterpret_cast<std::complex<double>*>(d), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5957,7 +5963,7 @@ extern "C" int onemklSsparse_symv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_val), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, *beta, y, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5965,7 +5971,7 @@ extern "C" int onemklDsparse_symv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_val), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, *beta, y, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5973,7 +5979,7 @@ extern "C" int onemklCsparse_symv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_val), *reinterpret_cast<std::complex<float>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), *reinterpret_cast<std::complex<float>*>(beta), reinterpret_cast<std::complex<float>*>(y), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5981,7 +5987,7 @@ extern "C" int onemklZsparse_symv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::symv(device_queue->val, convert(uplo_val), *reinterpret_cast<std::complex<double>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), *reinterpret_cast<std::complex<double>*>(beta), reinterpret_cast<std::complex<double>*>(y), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5989,7 +5995,7 @@ extern "C" int onemklSsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, *beta, y, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -5997,7 +6003,7 @@ extern "C" int onemklDsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, *beta, y, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6005,7 +6011,7 @@ extern "C" int onemklCsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), *reinterpret_cast<std::complex<float>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), *reinterpret_cast<std::complex<float>*>(beta), reinterpret_cast<std::complex<float>*>(y), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6013,7 +6019,7 @@ extern "C" int onemklZsparse_trmv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::trmv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), *reinterpret_cast<std::complex<double>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), *reinterpret_cast<std::complex<double>*>(beta), reinterpret_cast<std::complex<double>*>(y), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6021,7 +6027,7 @@ extern "C" int onemklSsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, y, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6029,7 +6035,7 @@ extern "C" int onemklDsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, x, y, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6037,7 +6043,7 @@ extern "C" int onemklCsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), *reinterpret_cast<std::complex<float>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(x), reinterpret_cast<std::complex<float>*>(y), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6045,7 +6051,7 @@ extern "C" int onemklZsparse_trsv(syclQueue_t device_queue, onemklUplo uplo_val,
    try {
       auto status = oneapi::mkl::sparse::trsv(device_queue->val, convert(uplo_val), convert(opA), convert(diag_val), *reinterpret_cast<std::complex<double>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(x), reinterpret_cast<std::complex<double>*>(y), {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6053,7 +6059,7 @@ extern "C" int onemklSsparse_gemm(syclQueue_t device_queue, onemklLayout layout_
    try {
       auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(layout_val), convert(opA), convert(opX), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, X, columns, ldx, *beta, Y, ldy, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6061,7 +6067,7 @@ extern "C" int onemklDsparse_gemm(syclQueue_t device_queue, onemklLayout layout_
    try {
       auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(layout_val), convert(opA), convert(opX), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, X, columns, ldx, *beta, Y, ldy, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6069,7 +6075,7 @@ extern "C" int onemklCsparse_gemm(syclQueue_t device_queue, onemklLayout layout_
    try {
       auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(layout_val), convert(opA), convert(opX), *reinterpret_cast<std::complex<float>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(X), columns, ldx, *reinterpret_cast<std::complex<float>*>(beta), reinterpret_cast<std::complex<float>*>(Y), ldy, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6077,7 +6083,7 @@ extern "C" int onemklZsparse_gemm(syclQueue_t device_queue, onemklLayout layout_
    try {
       auto status = oneapi::mkl::sparse::gemm(device_queue->val, convert(layout_val), convert(opA), convert(opX), *reinterpret_cast<std::complex<double>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(X), columns, ldx, *reinterpret_cast<std::complex<double>*>(beta), reinterpret_cast<std::complex<double>*>(Y), ldy, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6085,7 +6091,7 @@ extern "C" int onemklSsparse_trsm(syclQueue_t device_queue, onemklLayout layout_
    try {
       auto status = oneapi::mkl::sparse::trsm(device_queue->val, convert(layout_val), convert(opA), convert(opX), convert(uplo_val), convert(diag_val), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, X, columns, ldx, Y, ldy, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6093,7 +6099,7 @@ extern "C" int onemklDsparse_trsm(syclQueue_t device_queue, onemklLayout layout_
    try {
       auto status = oneapi::mkl::sparse::trsm(device_queue->val, convert(layout_val), convert(opA), convert(opX), convert(uplo_val), convert(diag_val), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, X, columns, ldx, Y, ldy, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6101,7 +6107,7 @@ extern "C" int onemklCsparse_trsm(syclQueue_t device_queue, onemklLayout layout_
    try {
       auto status = oneapi::mkl::sparse::trsm(device_queue->val, convert(layout_val), convert(opA), convert(opX), convert(uplo_val), convert(diag_val), *reinterpret_cast<std::complex<float>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<float>*>(X), columns, ldx, reinterpret_cast<std::complex<float>*>(Y), ldy, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6109,12 +6115,14 @@ extern "C" int onemklZsparse_trsm(syclQueue_t device_queue, onemklLayout layout_
    try {
       auto status = oneapi::mkl::sparse::trsm(device_queue->val, convert(layout_val), convert(opA), convert(opX), convert(uplo_val), convert(diag_val), *reinterpret_cast<std::complex<double>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, reinterpret_cast<std::complex<double>*>(X), columns, ldx, reinterpret_cast<std::complex<double>*>(Y), ldy, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
 extern "C" int onemklXsparse_set_matmat_data(matmat_descr_t descr, onemklMatrixView viewA, onemklTranspose opA, onemklMatrixView viewB, onemklTranspose opB, onemklMatrixView viewC) {
-   oneapi::mkl::sparse::set_matmat_data((oneapi::mkl::sparse::matmat_descr_t) descr, convert(viewA), convert(opA), convert(viewB), convert(opB), convert(viewC));
+   try {
+      oneapi::mkl::sparse::set_matmat_data((oneapi::mkl::sparse::matmat_descr_t) descr, convert(viewA), convert(opA), convert(viewB), convert(opB), convert(viewC));
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6122,7 +6130,7 @@ extern "C" int onemklSsparse_matmatd(syclQueue_t device_queue, onemklLayout c_la
    try {
       auto status = oneapi::mkl::sparse::matmatd(device_queue->val, convert(c_layout), convert(opA), convert(opB), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, (oneapi::mkl::sparse::matrix_handle_t) B, *beta, C, c_nrows, c_ncols, ldc, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6130,7 +6138,7 @@ extern "C" int onemklDsparse_matmatd(syclQueue_t device_queue, onemklLayout c_la
    try {
       auto status = oneapi::mkl::sparse::matmatd(device_queue->val, convert(c_layout), convert(opA), convert(opB), *alpha, (oneapi::mkl::sparse::matrix_handle_t) A, (oneapi::mkl::sparse::matrix_handle_t) B, *beta, C, c_nrows, c_ncols, ldc, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6138,7 +6146,7 @@ extern "C" int onemklCsparse_matmatd(syclQueue_t device_queue, onemklLayout c_la
    try {
       auto status = oneapi::mkl::sparse::matmatd(device_queue->val, convert(c_layout), convert(opA), convert(opB), *reinterpret_cast<std::complex<float>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, (oneapi::mkl::sparse::matrix_handle_t) B, *reinterpret_cast<std::complex<float>*>(beta), reinterpret_cast<std::complex<float>*>(C), c_nrows, c_ncols, ldc, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6146,13 +6154,15 @@ extern "C" int onemklZsparse_matmatd(syclQueue_t device_queue, onemklLayout c_la
    try {
       auto status = oneapi::mkl::sparse::matmatd(device_queue->val, convert(c_layout), convert(opA), convert(opB), *reinterpret_cast<std::complex<double>*>(alpha), (oneapi::mkl::sparse::matrix_handle_t) A, (oneapi::mkl::sparse::matrix_handle_t) B, *reinterpret_cast<std::complex<double>*>(beta), reinterpret_cast<std::complex<double>*>(C), c_nrows, c_ncols, ldc, {});
       device_queue->val.wait_and_throw();
-   } catch (const sycl::exception& e) { return -1; }
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
 extern "C" int onemklXsparse_matmat(syclQueue_t device_queue, matrix_handle_t A, matrix_handle_t B, matrix_handle_t C, onemklMatmatRequest req, matmat_descr_t descr, int64_t *sizeTempBuffer, void *tempBuffer) {
-   auto status = oneapi::mkl::sparse::matmat(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) A, (oneapi::mkl::sparse::matrix_handle_t) B, (oneapi::mkl::sparse::matrix_handle_t) C, convert(req), (oneapi::mkl::sparse::matmat_descr_t) descr, sizeTempBuffer, tempBuffer, {});
-   device_queue->val.wait_and_throw();
+   try {
+      auto status = oneapi::mkl::sparse::matmat(device_queue->val, (oneapi::mkl::sparse::matrix_handle_t) A, (oneapi::mkl::sparse::matrix_handle_t) B, (oneapi::mkl::sparse::matrix_handle_t) C, convert(req), (oneapi::mkl::sparse::matmat_descr_t) descr, sizeTempBuffer, tempBuffer, {});
+      device_queue->val.wait_and_throw();
+   } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
    return 0;
 }
 
@@ -6163,6 +6173,8 @@ extern "C" int onemklXsparse_matmat(syclQueue_t device_queue, matrix_handle_t A,
 // to manually wipe the device cache when we're destroying queues.
 
 extern "C" int onemklDestroy() {
+    try {
     mkl_free_buffers();
     return 0;
+    } catch (const std::exception& e) { return -1; } catch (...) { return -1; }
 }

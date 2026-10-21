@@ -483,6 +483,11 @@ function cpp_wrapper(header, name, version, type_routine, template, library)
     # Build catch clause: LAPACK functions also catch computation_error for info
     lapack_catch = "catch (const oneapi::mkl::lapack::computation_error& e) { return e.info(); } catch (const sycl::exception& e) { return -1; }"
     sycl_catch = "catch (const sycl::exception& e) { return -1; }"
+    # oneMKL sparse errors such as `unimplemented` are not SYCL exceptions.
+    # No C++ exception may cross the C ABI into Julia.
+    if library == "sparse"
+      sycl_catch = "catch (const std::exception& e) { return -1; } catch (...) { return -1; }"
+    end
 
     body = IOBuffer()
     if template
@@ -520,7 +525,13 @@ function cpp_wrapper(header, name, version, type_routine, template, library)
           write(body, "      device_queue->val.wait_and_throw();\n")
           write(body, "   } $sycl_catch\n")
         else
-          write(body, "   oneapi::mkl::$library::$variant$name($parameters);\n")
+          if library == "sparse"
+            write(body, "   try {\n")
+            write(body, "      oneapi::mkl::$library::$variant$name($parameters);\n")
+            write(body, "   } $sycl_catch\n")
+          else
+            write(body, "   oneapi::mkl::$library::$variant$name($parameters);\n")
+          end
         end
       end
     end
