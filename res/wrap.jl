@@ -105,6 +105,11 @@ function rewriter!(ctx, options)
             if rettyp isa Symbol && String(rettyp) in checked_types
                 node.exprs[1] = Expr(:macrocall, Symbol("@checked"), nothing, expr)
             end
+
+            # Qualified raw sparse calls need the same artifact gate as resource owners.
+            if occursin(r"^onemkl[A-Z]sparse_", fn)
+                pushfirst!(expr.args[2].args, :(_check_sparse_abi()))
+            end
         end
     end
 end
