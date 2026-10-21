@@ -657,6 +657,8 @@ end
 
 
 ## resizing
+GPUArrays.supports_resize(::oneVector) = true
+
 
 """
   resize!(a::oneVector, n::Integer)
