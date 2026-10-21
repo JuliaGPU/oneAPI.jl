@@ -9,6 +9,14 @@
 extern "C" {
 #endif
 
+// Version 2 includes the wide sparse signatures and catch-all exception boundary.
+#define ONEMKL_SPARSE_WRAPPER_ABI_VERSION 2
+#ifdef __cplusplus
+uint32_t onemkl_sparse_wrapper_abi_version(void) noexcept;
+#else
+uint32_t onemkl_sparse_wrapper_abi_version(void);
+#endif
+
 // BLAS types
 typedef enum {
     ONEMKL_TRANSPOSE_NONTRANS,

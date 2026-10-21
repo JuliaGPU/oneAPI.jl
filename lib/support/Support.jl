@@ -21,23 +21,31 @@ for n in names(@__MODULE__; all=true)
     end
 end
 
-# The sparse wrappers were regenerated with a wider ABI: the onemklX sparse_set_{csr,csc,coo}
-# setters gained a 64-bit `nnz` argument and 64-bit dims, and new set_csc_data / set_bsr_data
-# entry points were added. These only match a liboneapi_support built from the updated
-# onemkl.cpp/onemkl.h. The oneAPI_Support_jll 0.9.2 binary shipped in the registry predates
-# them, so calling a sparse setter against it shifts every pointer one slot and MKL
-# dereferences garbage -> segfault or silently corrupted sparse data. `deps/build_local.jl`
-# rebuilds a matching binary; a plain `Pkg.add` / CI `julia-buildpkg` does not. Probe once at
-# load for a symbol that only the rebuilt binary exports and turn the crash into a clear error.
+# A CSC symbol alone does not establish exception containment: older wide-ABI artifacts
+# expose it but can abort on an unsupported native operation. Version 2 also promises
+# the catch-all boundary. Probe the loaded library, without disabling unrelated dense APIs.
+const _sparse_wrapper_abi_version = UInt32(2)
 const _sparse_abi_ok = Ref(false)
+const _sparse_abi_error = Ref("support library has not been checked")
+
+function _sparse_wrapper_error(lookup)
+    marker = lookup(:onemkl_sparse_wrapper_abi_version)
+    marker === nothing && return "missing sparse wrapper version marker"
+    version = ccall(marker, UInt32, ())
+    version == _sparse_wrapper_abi_version ||
+        return "expected sparse wrapper version $(_sparse_wrapper_abi_version), found $version"
+    lookup(:onemklSsparse_set_csc_data) === nothing && return "missing wide CSC entrypoint"
+    return nothing
+end
 
 function _check_sparse_abi()
     _sparse_abi_ok[] && return
     error(
-        "The loaded oneAPI_Support_jll binary predates the current sparse wrappers and has an " *
-        "incompatible ABI; calling sparse routines against it would corrupt memory or crash. " *
+        "The loaded oneAPI support library $(liboneapi_support) is not safe for sparse calls: " *
+        "$(_sparse_abi_error[]). Required wrapper version 2 includes wide signatures and " *
+        "native exception containment. " *
         "Rebuild the support library from source with `julia --project deps/build_local.jl` " *
-        "(or install a oneAPI_Support_jll built from the updated onemkl.cpp)."
+        "before using sparse operations."
     )
 end
 
@@ -50,12 +58,17 @@ function __init__()
         return
     end
 
-    # Probe the loaded support binary for a symbol that only the regenerated (wide-ABI)
-    # sparse wrappers export; `_check_sparse_abi` gates the affected calls on the result.
+    _sparse_abi_ok[] = false
+    _sparse_abi_error[] = "support library could not be loaded"
     handle = Libdl.dlopen(oneAPI_Support_jll.liboneapi_support; throw_error = false)
     if handle !== nothing
-        _sparse_abi_ok[] =
-            Libdl.dlsym(handle, :onemklSsparse_set_csc_data; throw_error = false) !== nothing
+        try
+            reason = _sparse_wrapper_error(name -> Libdl.dlsym(handle, name; throw_error=false))
+            _sparse_abi_ok[] = reason === nothing
+            _sparse_abi_error[] = something(reason, "")
+        finally
+            Libdl.dlclose(handle)
+        end
     end
 end
 
