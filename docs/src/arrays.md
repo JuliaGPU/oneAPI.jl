@@ -45,6 +45,10 @@ d_a = oneArray(h_a)
 h_a = Array(d_a)
 ```
 
+Copies to the GPU return as soon as the host array can be modified again. On integrated
+GPUs, small ones, up to 1 MiB, are staged in host memory and don't wait for work queued
+earlier. Copies to the host wait for the data to arrive.
+
 ## Backend Agnostic Programming
 
 To write code that works on both CPU and GPU (and other backends like CUDA), use the generic array interfaces provided by `GPUArrays.jl`. Avoid hardcoding `oneArray` in your functions; instead, accept `AbstractArray` and let the dispatch system handle the specific implementation.

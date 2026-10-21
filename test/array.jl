@@ -312,6 +312,117 @@ end
   @test all(i -> Array(xs[i]) == fill(Float32(i), i), 2:2:300)
 end
 
+# run `f(gate)`, with a host event `gate` that is signaled once `f` returns, or else after
+# `timeout` seconds. `f` may block its thread until the gate opens, so a timeout signaled
+# by a task (or a `Timer`) that has to run on that thread never would: it's signaled from
+# an OS thread of its own.
+mutable struct GateSignaller
+  gate::oneL0.ZeEvent
+  deadline::Float64
+  @atomic done::Bool
+end
+function signal_gate(p::Ptr{Cvoid})
+  s = unsafe_pointer_to_objref(p)::GateSignaller
+  while !(@atomic s.done) && time() < s.deadline
+    ccall(:usleep, Cint, (Cuint,), 10_000)
+    GC.safepoint()
+  end
+  oneL0.unchecked_zeEventHostSignal(s.gate)
+  return C_NULL
+end
+function with_gate(f; timeout=10)
+  gate = oneL0.ZeEventPool(context(), 1)[1]
+  s = GateSignaller(gate, time() + timeout, false)
+  thread = Ref{UInt}(0)
+  GC.enable(false)  # freeing memory may wait for the gated stream on some stacks
+  try
+    GC.@preserve s begin
+      cb = @cfunction(signal_gate, Ptr{Cvoid}, (Ptr{Cvoid},))
+      err = ccall(:pthread_create, Cint, (Ptr{UInt}, Ptr{Cvoid}, Ptr{Cvoid}, Any),
+                  thread, C_NULL, cb, s)
+      err == 0 || error("pthread_create failed: $(Libc.strerror(err))")
+      try
+        f(gate)
+      finally
+        @atomic s.done = true
+        oneL0.signal(gate)
+        ccall(:pthread_join, Cint, (UInt, Ptr{Cvoid}), thread[], C_NULL)
+      end
+    end
+  finally
+    GC.enable(true)
+  end
+end
+
+# https://github.com/JuliaGPU/oneAPI.jl/issues/719: on integrated devices, small uploads
+# copy their source and return without waiting for the GPU, larger ones wait for the copy
+@testset "uploads" begin
+  stream = oneAPI.global_stream(context(), device())
+  staged = oneAPI.stages_uploads(device())
+
+  # with the stream held up on an event, an upload can only finish before it's signaled
+  # if it doesn't wait for the stream. on the LTS workaround, every submission would.
+  staged && oneL0.sync_each_submission(false) do
+    for len in (1, 1024, oneAPI.MAX_STAGED ÷ sizeof(Float32))
+      src = rand(Float32, len)
+      expected = copy(src)
+      a = oneArray{Float32}(undef, len)
+      with_gate() do gate
+        oneL0.execute!(list -> oneL0.append_wait!(list, gate), stream)
+        copyto!(a, src)
+        @test !Base.isdone(gate)
+        fill!(src, 0)
+      end
+      @test Array(a) == expected
+    end
+  end
+
+  # sources changed right after uploading them while the GPU is busy, with more uploads
+  # than the ring and its events hold at once
+  n = 100_000
+  function upload_all(lens)
+    busy = oneArray(zeros(Float32, 1024))
+    as = oneArray{Float32}[]
+    expected = Vector{Float32}[]
+    for len in lens
+      @oneapi items=256 groups=4 slow_increment!(busy, n)
+      src = rand(Float32, len)
+      push!(expected, copy(src))
+      push!(as, oneArray(src))
+      fill!(src, 0)
+    end
+    map(Array, as) == expected
+  end
+  @test upload_all(repeat([1, 3, 1000, 100_000], 50))
+  @test upload_all(fill(oneAPI.MAX_STAGED ÷ sizeof(Float32), 10))
+
+  # also when not staged
+  @test upload_all([oneAPI.MAX_STAGED ÷ sizeof(Float32) + 1])
+
+  # and from several tasks at once, sharing the ring
+  @test all(fetch.([Threads.@spawn upload_all(repeat([1, 1000, 100_000], 20)) for _ in 1:4]))
+
+  # a stream held up on an event doesn't hold up staged uploads from other tasks. once
+  # their uploads fill the ring, the synchronizing fallback can: the driver may run all
+  # streams on one engine, in order. reading them back may wait for copies queued on other
+  # streams too, so only do that once the gate is open.
+  staged && oneL0.sync_each_submission(false) do
+    b = oneArray{Float32}(undef, 1)
+    as = with_gate() do gate
+      wait(@async begin
+        oneL0.execute!(list -> oneL0.append_wait!(list, gate),
+                       oneAPI.global_stream(context(), device()))
+        copyto!(b, [42f0])
+      end)
+      as = [oneArray(fill(Float32(i), 1000)) for i in 1:oneAPI.MAX_STAGED_COPIES÷2]
+      @test !Base.isdone(gate)
+      as
+    end
+    @test all(i -> Array(as[i]) == fill(Float32(i), 1000), eachindex(as))
+    @test Array(b) == [42f0]
+  end
+end
+
 # https://github.com/JuliaGPU/oneAPI.jl/issues/661: kernels have to declare indirect access,
 # or an allocation that reuses the address of a freed one isn't visible to them. Whether a
 # reused shared allocation reads as zeros depends on allocator state, so churn through
