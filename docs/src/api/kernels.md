@@ -20,6 +20,8 @@ launches the kernel on the GPU.
 - `kernel::Bool=false`: Whether to compile as a kernel or device function
 - `name::Union{String,Nothing}=nothing`: Explicit name for the kernel
 - `always_inline::Bool=false`: Whether to always inline device functions
+- `debug_level::Int`: How much to report about exceptions thrown by the kernel (defaults to
+  Julia's `-g` level)
 
 **Launch Keywords (runtime):**
 - `groups`: Number of workgroups (required). Can be an integer or tuple.

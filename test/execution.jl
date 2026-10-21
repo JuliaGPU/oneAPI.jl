@@ -5,6 +5,11 @@ using StaticArrays
 
 dummy() = return
 
+function store_checked(a, i)
+    a[i] = 1
+    return
+end
+
 @testset "@oneapi" begin
 
 @test_throws UndefVarError @oneapi undefined()
@@ -55,6 +60,15 @@ end
         @test Array(a)[1] == sub_group_size
     end
     @test_throws ArgumentError @oneapi sub_group_size=maximum(sizes)+1 dummy()
+end
+
+@testset "debug level" begin
+    T = Tuple{oneDeviceVector{Int, oneAPI.AS.CrossWorkgroup}, Int}
+    ir(level) = sprint(io -> oneAPI.code_llvm(io, store_checked, T; kernel = true,
+                                              debug_level = level))
+    @test !occursin("report_exception", ir(0))
+    @test occursin("report_exception", ir(1)) && !occursin("report_exception_frame", ir(1))
+    @test occursin("report_exception_frame", ir(2))
 end
 
 

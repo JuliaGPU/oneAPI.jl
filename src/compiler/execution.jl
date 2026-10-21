@@ -4,7 +4,7 @@ export @oneapi, zefunction, kernel_convert
 ## high-level @oneapi interface
 
 const MACRO_KWARGS = [:launch]
-const COMPILER_KWARGS = [:kernel, :name, :always_inline, :atomics, :sub_group_size]
+const COMPILER_KWARGS = [:kernel, :name, :always_inline, :atomics, :sub_group_size, :debug_level]
 const LAUNCH_KWARGS = [:groups, :items, :queue]
 
 """
@@ -36,6 +36,8 @@ launches the kernel on the GPU.
 - `sub_group_size::Union{Int,Nothing}=nothing`: The sub-group size the kernel has to be
   compiled for, one of the device's `oneL0.compute_properties(dev).subGroupSizes`. By
   default, the compiler chooses one.
+- `debug_level::Int`: How much to report about exceptions thrown by the kernel. Defaults to
+  Julia's debug level (the `-g` option).
 
 ## Launch Keywords (runtime)
 - `groups`: Number of workgroups (required). Can be an integer or tuple.
