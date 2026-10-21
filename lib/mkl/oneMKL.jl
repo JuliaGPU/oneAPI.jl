@@ -26,16 +26,14 @@ include("array.jl")
 include("utils.jl")
 include("wrappers_blas.jl")
 include("wrappers_lapack.jl")
+include("sparse_resources.jl")
 include("wrappers_sparse.jl")
-include("sparse_conversions.jl")
 include("linalg.jl")
-include("interfaces.jl")
+# Sparse high-level integration lives in GPUArrays' oneMKL extension.
 include("fft.jl")
 
-# Register deferred sparse handle flush as a memory reclaim callback so that OOM
-# recovery (retry_reclaim) and proactive GC (_maybe_gc) can free MKL internal buffers
-# associated with sparse matrix handles that were deferred from finalizer threads.
-oneL0.register_reclaim_callback!(flush_deferred_sparse_releases)
+# Blocking sparse disposal runs at explicit close and before sparse preparation, not
+# from allocator reclaim callbacks: those can already hold unrelated allocation locks.
 
 function version()
     major = Ref{Int64}()
