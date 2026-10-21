@@ -107,6 +107,7 @@ end
 function sparse_gemm!(trans::Char,transB::Char,alpha::Number,input::SparseOperand,
                       B::oneStridedMatrix,beta::Number,C::oneStridedMatrix)
     check_sparse_parameters(trans); check_sparse_parameters(transB)
+    transB=='N' || throw(ArgumentError("oneMKL sparse GEMM requires a nontransposed dense operand"))
     A = sparse_matrix(input)
     alpha,beta = convert(eltype(A),alpha),convert(eltype(A),beta)
     A isa oneSparseMatrixCOO && throw(ArgumentError("oneMKL sparse GEMM requires CSR or CSC"))
@@ -267,6 +268,7 @@ function sparse_optimize_gemm!(trans::Char,A::oneAbstractSparseMatrix)
         check_sparse_status(onemklXsparse_optimize_gemm(q,op,h),:optimize_gemm))
 end
 function sparse_optimize_gemm!(trans::Char,transB::Char,nrhs::Int,A::oneAbstractSparseMatrix)
+    transB=='N' || throw(ArgumentError("oneMKL sparse GEMM requires a nontransposed dense operand"))
     check_sparse_parameters(trans); check_sparse_parameters(transB)
     A isa oneSparseMatrixCOO && throw(ArgumentError("oneMKL sparse GEMM requires CSR or CSC"))
     nrhs>=0 || throw(ArgumentError("negative right-hand-side count"))

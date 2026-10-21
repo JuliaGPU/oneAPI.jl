@@ -1,6 +1,18 @@
 using oneAPI,GPUArrays,SparseArrays,LinearAlgebra,Test
 using oneAPI.oneMKL: oneSparseMatrixCSR
 
+@testset "unsupported vendor layout preflight" begin
+    A=oneSparseMatrixCSR(sparse(Float32[2 0;1 3]))
+    B=oneArray(Float32[1 2;3 4]); C=oneArray(fill(7f0,2,2))
+    for trans in ('T','C')
+        @test_throws ArgumentError GPUArrays.spmm!(C,'N',trans,A,B,1f0,0f0;algorithm=GPUArrays.Vendor())
+        @test Array(C)==fill(7f0,2,2)
+        @test_throws ArgumentError oneMKL.sparse_gemm!('N',trans,1f0,A,B,0f0,C)
+        @test Array(C)==fill(7f0,2,2)
+        @test_throws ArgumentError oneMKL.sparse_optimize_gemm!('N',trans,2,A)
+    end
+end
+
 @testset "explicit sparse resource lifetime" begin
     host=sparse(Float32[2 0 3; 0 4 0; 1 0 5])
     A=oneSparseMatrixCSR(host)
@@ -68,6 +80,64 @@ using oneAPI.oneMKL: oneSparseMatrixCSR
     finally
         P.owner.signature=signature
         close(P)
+    end
+end
+
+@testset "prepared operation value refresh" begin
+    host=sparse(ComplexF32[2 0 3im;0 4 0;1+im 0 5])
+    x=oneArray(ComplexF32[1,2,3]); B=oneArray(reshape(ComplexF32.(1:6),3,2))
+    for S in (oneMKL.oneSparseMatrixCSR,oneMKL.oneSparseMatrixCSC), trans in ('N','T','C')
+        A=S(host)
+        P=oneMKL.sparse_optimize_gemv!(trans,A)
+        y=similar(x)
+        original=copy(nonzeros(A))
+        try
+            for scale in (1f0,2f0)
+                nonzeros(A) .= scale.*original
+                oneMKL.sparse_gemv!(trans,1f0,P,x,0f0,y)
+                @test Array(y) ≈ scale.*(LinearAlgebra.wrap(host,trans)*Array(x))
+            end
+        finally
+            close(P)
+        end
+        A=S(host)
+        P=oneMKL.sparse_optimize_gemm!(trans,'N',2,A)
+        C=similar(B)
+        original=copy(nonzeros(A))
+        try
+            for scale in (1f0,2f0)
+                nonzeros(A) .= scale.*original
+                oneMKL.sparse_gemm!(trans,'N',1f0,P,B,0f0,C)
+                @test Array(C) ≈ scale.*(LinearAlgebra.wrap(host,trans)*Array(B))
+            end
+        finally
+            close(P)
+        end
+    end
+    host=sparse(Float32[2 0 0;1 4 0;3 1 5])
+    A=oneMKL.oneSparseMatrixCSR(host)
+    x=oneArray(Float32[1,2,3]); B=oneArray(reshape(Float32.(1:6),3,2))
+    for kind in (:trsv,:trsm)
+        original=copy(nonzeros(A))
+        P=kind===:trsv ? oneMKL.sparse_optimize_trsv!('L','N','N',A) :
+                        oneMKL.sparse_optimize_trsm!('L','N','N',2,A)
+        try
+            for scale in (1f0,2f0)
+                nonzeros(A) .= scale.*original
+                if kind===:trsv
+                    y=similar(x)
+                    oneMKL.sparse_trsv!('L','N','N',1f0,P,x,y)
+                    @test Array(y) ≈ LowerTriangular(scale.*host)\Array(x)
+                else
+                    C=similar(B)
+                    oneMKL.sparse_trsm!('L','N','N','N',1f0,P,B,C)
+                    @test Array(C) ≈ LowerTriangular(scale.*host)\Array(B)
+                end
+            end
+        finally
+            close(P)
+            copyto!(nonzeros(A),original)
+        end
     end
 end
 
