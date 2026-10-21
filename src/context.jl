@@ -253,6 +253,12 @@ function batching_supported(ctx::ZeContext, dev::ZeDevice)
     end
 end
 
+# a stream's exception report, see `allocate_report_slot`
+struct ReportSlot
+    report::Ptr{ExceptionReport}    # in host memory
+    claim::ZePtr{UInt32}            # in device memory
+end
+
 # The per-task submission target. `immediate` is where Julia-side work (kernels, copies,
 # fills) is submitted: an in-order asynchronous immediate command list. Kernel launches are
 # mostly recorded in batches first, see above.
@@ -289,6 +295,9 @@ mutable struct oneStream
     # stream, maintained by the scratch hedge (see src/compiler/execution.jl)
     scratch_hwm::Int
     const priority::oneL0.ze_command_queue_priority_t
+
+    # where kernels report exceptions, see `check_exception!`
+    const exceptions::ReportSlot
 end
 
 function create_stream(ctx::ZeContext, dev::ZeDevice,
@@ -312,9 +321,11 @@ function create_stream(ctx::ZeContext, dev::ZeDevice,
               "with $(err.code)")
     end
     batching = BATCHING[] && batching_supported(ctx, dev)
+    slot = allocate_report_slot(ctx, dev, list)
     s = oneStream(ctx, dev, list, ReentrantLock(),
                   batching, nothing, Batch[], Batch[], 0, nothing, true, nothing, DataRef[],
-                  Batch[], nothing, nothing, false, 0, priority)
+                  Batch[], nothing, nothing, false, 0, priority, slot)
+    finalizer(release_report_slot, s)
     return register_stream!(ctx, dev, s)
 end
 
@@ -666,7 +677,7 @@ function oneL0.synchronize(s::oneStream; blocking::Bool=false)
     return
 end
 
-# synchronize a stream, returning the error of a failed submission
+# synchronize a stream, returning the error of a failed submission or of a kernel
 function synchronize_stream!(s::oneStream; blocking::Bool=false)
     sync = blocking ? oneL0.synchronize : oneL0.nonblocking_synchronize
     # a failed submission is recorded in `s.error`, and reported below
@@ -686,7 +697,8 @@ function synchronize_stream!(s::oneStream; blocking::Bool=false)
         maybe_unregister_batching!(s)
         err = s.error
         s.error = nothing
-        err
+        # a kernel exception stays pending while there's a submission error to report
+        err === nothing ? check_exception!(s) : err
     end
     return err
 end

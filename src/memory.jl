@@ -82,8 +82,9 @@ end
 
 Base.sizeof(managed::Managed) = sizeof(managed.mem)
 
-# wait for all work on a stream, possibly from another task. unlike `synchronize`, this
-# leaves `mkl_dirty` alone, which only the stream's own task may modify.
+# wait for all work on a stream, possibly from another task, throwing exceptions its
+# kernels threw: whoever waits for memory is about to use what they computed. unlike
+# `synchronize`, this leaves `mkl_dirty` alone, which only the stream's own task may modify.
 function drain(s::oneStream)
     @lock s.lock begin
         check_error(s)
@@ -92,10 +93,12 @@ function drain(s::oneStream)
     oneL0.nonblocking_synchronize(s.immediate)
     q = Base.@atomic s.queue
     q === nothing || oneL0.nonblocking_synchronize(q)
-    @lock s.lock begin
+    err = @lock s.lock begin
         retire!(s)
         s.idle = true
+        check_exception!(s)
     end
+    err === nothing || throw(err)
     return
 end
 drain(q::ZeCommandQueue) = oneL0.nonblocking_synchronize(q)

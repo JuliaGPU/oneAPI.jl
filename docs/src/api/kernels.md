@@ -21,14 +21,21 @@ launches the kernel on the GPU.
 - `name::Union{String,Nothing}=nothing`: Explicit name for the kernel
 - `always_inline::Bool=false`: Whether to always inline device functions
 - `debug_level::Int`: How much to report about exceptions thrown by the kernel (defaults to
-  Julia's `-g` level)
+  Julia's `-g` level; see `KernelException`)
 
 **Launch Keywords (runtime):**
 - `groups`: Number of workgroups (required). Can be an integer or tuple.
 - `items`: Number of work-items per workgroup (required). Can be an integer or tuple.
 - `queue::Union{oneStream,ZeCommandQueue}`: Submission target (defaults to the task's
   `global_stream`). An explicit `ZeCommandQueue` submits through a per-dispatch command
-  list and is not ordered with respect to the task's stream.
+  list and is not ordered with respect to the task's stream. Exceptions thrown by such
+  kernels are not reported.
+
+### `KernelException`
+
+Thrown when synchronizing a stream on which a kernel threw an exception. It carries the
+exception's `name` and `reason` (from debug level 1), and the `work_item` and `work_group`
+that threw it along with a `backtrace` (from debug level 2).
 
 ### `zefunction(f, tt; kwargs...)`
 
