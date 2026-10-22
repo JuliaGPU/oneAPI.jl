@@ -467,13 +467,23 @@ Base.copyto!(dest::oneDenseArray{T}, src::oneDenseArray{T}) where {T} =
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T}, doffs, src::Array{T}, soffs, n) where T
   stream = global_stream(ctx, dev)
+  bytes = n * sizeof(T)
   GC.@preserve src dest begin
-    with_ownership(stream, Managed[dest.data[]]) do
-      unsafe_copyto!(ctx, dev, device_pointer(dest, doffs), pointer(src, soffs), n)
+    # the copy reads the source when it executes, by which time the source may have
+    # changed or been freed. small uploads copy it first if the device stages them and
+    # there's room, others wait for the copy.
+    staged = 0 < bytes <= MAX_STAGED && stages_uploads(dev) &&
+             with_ownership(stream, Managed[dest.data[]]) do
+      execute!(stream) do list
+        stage_upload!(list, ctx, dev, device_pointer(dest, doffs), pointer(src, soffs), bytes)
+      end
     end
-
-    # Keep pageable host memory alive until the queued copy completes.
-    synchronize(stream)
+    if !staged
+      with_ownership(stream, Managed[dest.data[]]) do
+        unsafe_copyto!(ctx, dev, device_pointer(dest, doffs), pointer(src, soffs), n)
+      end
+      synchronize(stream)
+    end
   end
   if Base.isbitsunion(T)
     # copy selector bytes

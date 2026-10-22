@@ -336,3 +336,103 @@ function release(buf::oneL0.AbstractBuffer)
 
     return
 end
+
+
+## upload staging
+
+# A copy reads its source when it executes, not when it is appended, and NEO only stages
+# pageable memory on some devices, and not reliably. An upload from host memory that may
+# change as soon as it returns therefore either waits for the copy, or first copies its
+# source to host USM. Uploads of up to `MAX_STAGED` bytes do the latter, through a ring
+# buffer shared by all streams: each one occupies the bytes after the previous one, until
+# the event its copy signals is done. The ring is freed up from its oldest upload on. An
+# upload that finds it full, or all its events in use, synchronizes instead: the oldest
+# upload may be another task's, held up by work this task shouldn't wait for.
+#
+# The ring isn't per stream, as every task has its own: a task doing a single upload would
+# have to allocate and make resident a ring of its own, which stays around until the task
+# is collected.
+#
+# Only integrated devices stage uploads. On discrete ones, NEO copies uploads of up to a few
+# MB from pageable memory (and of up to 50 KB from host USM) on the CPU, through a mapping of
+# device memory, after waiting for the queue itself. Staging can't avoid that wait for small
+# uploads, and is slower than the CPU copy when the queue is idle.
+
+const STAGING_SIZE = 2^21
+const MAX_STAGED = 2^20
+const MAX_STAGED_COPIES = 64
+
+struct StagedCopy
+    event::oneL0.ZeEvent
+    start::Int
+    stop::Int
+end
+
+struct Staging
+    buf::oneL0.HostBuffer
+    free::Vector{oneL0.ZeEvent}
+    pending::Vector{StagedCopy}     # in submission order
+end
+
+function Staging(ctx::ZeContext, dev::ZeDevice)
+    buf = allocate(oneL0.HostBuffer, ctx, dev, STAGING_SIZE, 64)
+    pool = oneL0.ZeEventPool(ctx, MAX_STAGED_COPIES, dev;
+                             flags = oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    events = [oneL0.ZeEvent(pool, i; signal = oneL0.ZE_EVENT_SCOPE_FLAG_HOST,
+                            wait = oneL0.ZE_EVENT_SCOPE_FLAG_HOST)
+              for i in 1:MAX_STAGED_COPIES]
+    return Staging(buf, events, StagedCopy[])
+end
+
+const stagings = Dict{Tuple{ZeContext, ZeDevice}, Staging}()
+const staging_lock = ReentrantLock()
+const staged_devices = Dict{ZeDevice, Bool}()
+
+stages_uploads(dev::ZeDevice) =
+    @lock staging_lock get!(() -> is_integrated(dev), staged_devices, dev)
+
+function reclaim!(st::Staging)
+    while !isempty(st.pending) && Base.isdone(first(st.pending).event)
+        c = popfirst!(st.pending)
+        reset(c.event)
+        push!(st.free, c.event)
+    end
+    return
+end
+
+# where in the ring `bytes` fit, if they do
+function ring_offset(st::Staging, bytes::Int)
+    isempty(st.pending) && return 0
+    head = last(st.pending).stop
+    tail = first(st.pending).start
+    if head > tail
+        # in use from `tail` to `head`: fit after it, or wrap around
+        head + bytes <= STAGING_SIZE && return head
+        bytes <= tail && return 0
+    else
+        # in use from `tail` to the end, and from the start to `head`
+        head + bytes <= tail && return head
+    end
+    return nothing
+end
+
+# copy `bytes` from `src` to `dst`, appending the copy to `list`, the immediate list of a
+# stream on `dev`, through the ring so that the source can change as soon as this returns.
+# returns `false` if the ring has no room.
+function stage_upload!(list, ctx::ZeContext, dev::ZeDevice, dst::ZePtr, src::Ptr,
+                       bytes::Int)
+    padded = cld(bytes, 64) * 64
+    @lock staging_lock begin
+        st = get!(() -> Staging(ctx, dev), stagings, (ctx, dev))
+        reclaim!(st)
+        offset = ring_offset(st, padded)
+        (offset === nothing || isempty(st.free)) && return false
+        ptr = pointer(st.buf) + offset
+        unsafe_copyto!(convert(Ptr{UInt8}, ptr), convert(Ptr{UInt8}, src), bytes)
+        # if this fails, the copy may still execute and signal the event, so drop it
+        event = pop!(st.free)
+        oneL0.append_copy!(list, dst, ptr, bytes, event)
+        push!(st.pending, StagedCopy(event, offset, offset + padded))
+        return true
+    end
+end
