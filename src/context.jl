@@ -282,7 +282,7 @@ mutable struct oneStream
     nbatches::Int
     events::Union{Nothing, oneL0.ZeEventPool}
     idle::Bool                      # submit the next launch directly
-    recorder::Union{Nothing, Task}  # the last task to record a launch, if registered
+    recorder::Union{Nothing, WeakRef}  # the last task to launch a kernel, if registered
     const retired::Vector{DataRef}  # roots of executed batches, still to be released
     const failed::Vector{Batch}     # possibly submitted, so never released
     # a failed submission, reported by the next synchronization
@@ -460,53 +460,65 @@ function release_retired!(s::oneStream)
     return
 end
 
-# streams that recorded launches since they were last synchronized, so that `synchronize`
-# can submit what tasks recorded before finishing. the stream is referenced strongly, so
-# that it doesn't get destroyed with work recorded. a stream's lock is taken before this
-# one, and the stream's `recorder` is the task last to record on it.
-const batching_streams = Base.IdSet{oneStream}()
-const batching_streams_lock = ReentrantLock()
+# streams that launched kernels since they were last synchronized, so that `synchronize`
+# can submit what tasks recorded before finishing, and report exceptions their kernels threw.
+# the stream is referenced strongly, so that it doesn't get destroyed with work recorded. a
+# stream's lock is taken before this one, and the stream's `recorder` is the task last to
+# launch on it, referenced weakly so that finished tasks and their results can be collected.
+const pending_streams = Base.IdSet{oneStream}()
+const pending_streams_lock = ReentrantLock()
 
-function register_batching!(s::oneStream)
-    @lock batching_streams_lock push!(batching_streams, s)
-    s.recorder = current_task()
+function register_pending!(s::oneStream)
+    task = current_task()
+    r = s.recorder
+    r !== nothing && r.value === task && return
+    @lock pending_streams_lock push!(pending_streams, s)
+    s.recorder = WeakRef(task)
     return
 end
 
-# forget a stream once nothing it recorded is still to execute. streams with batches that
-# failed to submit, which may still execute, are kept around.
-function maybe_unregister_batching!(s::oneStream)
+# Take the error to report once a stream was waited for: a failed submission, or else an
+# exception a kernel threw. The latter stays pending while there's a submission error. A
+# stream with nothing left to execute or report is forgotten by `adopt_orphans!`; one with
+# batches that failed to submit, which may still execute, is kept around.
+# The caller must hold `s.lock`.
+function take_error!(s::oneStream)
+    retire!(s)
+    s.idle = true
+    s.error === nothing || return s.error
+    # Kernels may still write the report while the stream is busy. That is only the case
+    # after waiting for it if another task submitted work in the meantime, in which case the
+    # next synchronization reports the exception.
+    oneL0.unchecked_zeCommandListHostSynchronize(s.immediate, 0) == oneL0.RESULT_SUCCESS ||
+        return nothing
+    err = check_exception!(s)
     if s.recorder !== nothing && s.batch === nothing && isempty(s.submitted) &&
        isempty(s.failed)
-        @lock batching_streams_lock delete!(batching_streams, s)
+        @lock pending_streams_lock delete!(pending_streams, s)
         s.recorder = nothing
     end
-    return
+    return err
 end
 
-# wait for the streams on which tasks that have finished were the last to record. other
-# tasks' streams are left alone: their tasks synchronize them.
+# whether the task last to launch on a stream has finished. the caller must hold `s.lock`.
+function orphaned(s::oneStream)
+    r = s.recorder
+    return r !== nothing && (r.value === nothing || istaskdone(r.value))
+end
+
+# wait for the streams on which tasks that have finished were the last to launch, reporting
+# what they left behind. other tasks' streams are left alone: their tasks synchronize them.
 function adopt_orphans!(ctx::ZeContext, dev::ZeDevice)
-    streams = @lock batching_streams_lock collect(batching_streams)
+    streams = @lock pending_streams_lock collect(pending_streams)
     for s in streams
         (s.ctx == ctx && s.dev == dev) || continue
-        orphaned = @lock s.lock begin
-            task = s.recorder
-            task !== nothing && istaskdone(task)
-        end
-        orphaned || continue
-        err = nothing
         try
-            drain(s)
-        catch e
-            err = e
-        end
-        @lock s.lock begin
+            drain(s; orphan=true)
+        catch err
             # reported here, as the task that would have isn't around anymore
-            err === nothing || (s.error = nothing)
-            maybe_unregister_batching!(s)
+            @lock s.lock s.error === err && (s.error = nothing)
+            rethrow()
         end
-        err === nothing || throw(err)
     end
     return
 end
@@ -692,13 +704,9 @@ function synchronize_stream!(s::oneStream; blocking::Bool=false)
         s.mkl_dirty = false
     end
     err = @lock s.lock begin
-        retire!(s)
-        s.idle = true
-        maybe_unregister_batching!(s)
-        err = s.error
+        err = take_error!(s)
         s.error = nothing
-        # a kernel exception stays pending while there's a submission error to report
-        err === nothing ? check_exception!(s) : err
+        err
     end
     return err
 end

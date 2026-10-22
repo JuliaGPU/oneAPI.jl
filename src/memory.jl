@@ -85,8 +85,10 @@ Base.sizeof(managed::Managed) = sizeof(managed.mem)
 # wait for all work on a stream, possibly from another task, throwing exceptions its
 # kernels threw: whoever waits for memory is about to use what they computed. unlike
 # `synchronize`, this leaves `mkl_dirty` alone, which only the stream's own task may modify.
-function drain(s::oneStream)
+# with `orphan`, only do so while the stream is orphaned (see `adopt_orphans!`).
+function drain(s::oneStream; orphan::Bool=false)
     @lock s.lock begin
+        orphan && !orphaned(s) && return
         check_error(s)
         flush_batch!(s)
     end
@@ -94,9 +96,9 @@ function drain(s::oneStream)
     q = Base.@atomic s.queue
     q === nothing || oneL0.nonblocking_synchronize(q)
     err = @lock s.lock begin
-        retire!(s)
-        s.idle = true
-        check_exception!(s)
+        # a task that launched in the meantime reports what's left itself
+        orphan && !orphaned(s) && return
+        take_error!(s)
     end
     err === nothing || throw(err)
     return

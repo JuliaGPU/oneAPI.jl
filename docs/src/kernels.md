@@ -109,6 +109,8 @@ For more details, run Julia with `-g2`, or launch the kernel with `@oneapi debug
 The amount of detail depends on the debug level the kernel is compiled with, which defaults
 to Julia's `-g` level. At level 0 only the fact that an exception was thrown is reported; at
 level 1 (the default) also its type and reason; at level 2 also the work-item that threw it
-and a backtrace. Only one exception is reported per synchronization. Exceptions in kernels
-launched on an explicitly created `ZeCommandQueue` are not reported.
+and a backtrace. Only one exception is reported per synchronization. If the task that
+launched the kernel finishes without synchronizing, the exception is reported by the next
+`synchronize()` of another task, unless something waited for the kernel's results first.
+Exceptions in kernels launched on an explicitly created `ZeCommandQueue` are not reported.
 

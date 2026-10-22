@@ -976,7 +976,7 @@ end
         take!(done)
     end
     stream = take!(streams)
-    batching && @test stream.recorder === owner
+    @test stream.recorder.value === owner
     wait(@async begin
         for _ in 1:3
             @oneapi queue=stream ptr_increment_kernel(ptr)
@@ -1096,7 +1096,7 @@ end
         end
         oneAPI.global_stream(context(), device()).error = err
     end)
-    @test try synchronize(); nothing catch e; e end === (batching ? err : nothing)
+    @test try synchronize(); nothing catch e; e end === err
     @test try synchronize(); nothing catch e; e end === nothing
 end
 
@@ -1472,14 +1472,77 @@ end
     @test kernel_exception() === nothing
 
     # and of tasks that finished without synchronizing, by whoever adopts their stream
-    batching = oneAPI.global_stream(context(), device()).batching &&
-               !oneL0.sync_each_submission()
+    adopted() = try synchronize(); nothing catch err; err end
+    wait(@async @oneapi store_checked(a, 2))
+    @test adopted() isa KernelException
     wait(@async begin
         @oneapi store_checked(a, 1)
         @oneapi store_checked(a, 2)
     end)
-    err = try synchronize(); nothing catch err; err end
-    @test batching ? err isa KernelException : err === nothing
+    @test adopted() isa KernelException
+    @test adopted() === nothing
+    # unless something waited for their results first
+    wait(@async @oneapi store_checked(a, 2))
+    @test_throws KernelException Array(a)
+    @test adopted() === nothing
+    task = @async begin
+        @oneapi store_checked(a, 2)
+        try Array(a); nothing catch err; err end
+    end
+    @test fetch(task) isa KernelException
+    @test adopted() === nothing
+    # a failed submission is reported first, the exception by the next synchronization
+    err = ErrorException("submission failed")
+    wait(@async begin
+        @oneapi store_checked(a, 2)
+        oneAPI.global_stream(context(), device()).error = err
+    end)
+    @test adopted() === err
+    @test adopted() isa KernelException
+    @test adopted() === nothing
+    # but not once a task that is still running launched on their stream, while adopting
+    ctx, dev = context(), device()
+    pool = oneL0.ZeEventPool(ctx, 1, dev; flags=oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    gate = pool[1]
+    # nothing may wait for the GPU while the gate is closed, as freeing memory does
+    GC.gc(true)
+    gc_enabled = GC.enable(false)
+    try
+        # the adopter's own stream is created first: doing so while the gate is closed
+        # makes other streams look idle on some stacks
+        ready, go = Channel{Nothing}(1), Channel{Nothing}(1)
+        adopter = @async begin
+            synchronize()
+            put!(ready, nothing)
+            take!(go)
+            adopted()
+        end
+        take!(ready)
+        # (with a kernel after the wait, as waits alone don't keep a stream busy)
+        stream = fetch(@async begin
+            oneL0.sync_each_submission(false) do
+                oneL0.execute!(oneAPI.global_stream(ctx, dev)) do list
+                    oneL0.append_wait!(list, gate)
+                end
+                @oneapi store_checked(a, 1)
+            end
+            oneAPI.global_stream(ctx, dev)
+        end)
+        put!(go, nothing)
+        for _ in 1:100
+            yield()
+        end
+        oneL0.sync_each_submission(false) do
+            @oneapi queue=stream store_checked(a, 2)
+            oneAPI.flush!(stream)
+        end
+        oneL0.signal(gate)
+        @test fetch(adopter) === nothing
+    finally
+        oneL0.signal(gate)
+        GC.enable(gc_enabled)
+    end
+    @test kernel_exception(stream) isa KernelException
 
     # explicitly created queues have no report
     queue = oneL0.ZeCommandQueue(context(), device();

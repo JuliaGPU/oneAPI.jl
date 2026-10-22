@@ -81,7 +81,7 @@ Block the host thread until all operations on the global stream for the current 
 and device have completed: both the immediate command list and, if one has been created,
 the companion command queue. `synchronize(stream::oneStream)` does the same for an
 explicit stream. `synchronize()` also submits and waits for the work of tasks that
-finished without synchronizing.
+finished without synchronizing, and reports exceptions their kernels threw.
 
 ### Command batching
 

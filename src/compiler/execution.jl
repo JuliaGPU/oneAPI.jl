@@ -422,13 +422,13 @@ end
         check_error(s)
         direct |= !s.batching || s.idle || oneL0.sync_each_submission()
         batch = direct ? nothing : open_batch!(s)
+        register_pending!(s)
         if batch === nothing
             flush_batch!(s)
             append_launch!(s.immediate, kernel, groups)
             s.idle = false
         else
             append_launch!(batch.list, kernel, groups)
-            s.recorder === current_task() || register_batching!(s)
             root!(batch, roots)
             batch.launches += 1
             batch.launches == BATCH_SIZE && flush_batch!(s)

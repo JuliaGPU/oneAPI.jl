@@ -182,14 +182,8 @@ function release_report_slot(s::oneStream)
 end
 
 # Check whether a kernel on `s` threw an exception, returning it after resetting the report.
-# The caller must hold `s.lock`.
+# The caller must hold `s.lock`, and have checked that the stream is idle.
 function check_exception!(s::oneStream)
-    # Kernels may still write the report while the stream is busy. That is only the case
-    # after waiting for it if another task submitted work in the meantime, in which case the
-    # next synchronization reports the exception.
-    oneL0.unchecked_zeCommandListHostSynchronize(s.immediate, 0) == oneL0.RESULT_SUCCESS ||
-        return nothing
-
     slot = s.exceptions
     unsafe_load(convert(Ptr{Int32}, slot.report)) == 0 && return nothing    # `status`
     report = unsafe_load(slot.report)
