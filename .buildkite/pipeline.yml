@@ -105,6 +105,26 @@ steps:
            build.message !~ /\[only / && !build.pull_request.draft)
         timeout_in_minutes: 120
 
+      # drivers without `zeCommandListImmediateAppendCommandListsExp` don't batch, so check
+      # that the core functionality behaves the same. not tested on pull requests.
+      - label: "Without batching"
+        plugins:
+          - JuliaCI/julia#v1:
+              version: "1.13"
+          - JuliaCI/julia-test#v1:
+              test_args: "--quickfail execution array"
+        command: |
+          julia --project=deps deps/build_ci.jl
+        env:
+          ONEAPI_COMMAND_BATCHING: '0'
+        agents:
+          queue: "oneapi"
+        if: |
+          build.message !~ /\[skip [^\]]*(tests|special)/ &&
+          (build.message =~ /\[only [^\]]*(tests|special)/ ||
+           build.message !~ /\[only / && build.pull_request.id == null)
+        timeout_in_minutes: 60
+
 env:
   JULIA_PKG_SERVER_REGISTRY_PREFERENCE: "eager" # OK to downloading JLLs from GitHub
   SECRET_CODECOV_TOKEN: "OYpS8fj3vGhj7iZf9vLAeapyxQNSOEW6mApcSvGboL9AlS+0nfOSFjFrIBNnIU0prxQQy1gR9AwR/JO1m2OFWeRhjYtkQPPhk4xVtSKmv0LLTL0snA8IohUopqfu722i7zLrPcz/A0LFIFsb0ey+oReJs2xnGOshNIJu4FDowUV3wmZvfKWNsSK4cGN+HFQ3387Ow4SsmiUr7oqh0iMBQNqaY8oZ2BY1dFOgPaOegIp70YEFRdJ8DKaLd7WGxFLY9oQEhZZdmx/zx0xo56/NGtDwVYkDPa4qPhJczDBoIn5XvcRiIW0VJ/MaRARxnpenBX5H6gwdcZYUGtjXWIRXBw==;U2FsdGVkX1/bZy1Bp4/dBH5scPpWqLKusXGvSkRGUa+1F7hi4P4Cu5a6GcfNIEvQr+bBj2VlZvqhNW0FAqN3QQ=="
