@@ -19,6 +19,8 @@ using Core: LLVMPtr
 
 import Libdl
 
+import IntelITT
+
 # Load both SPIR-V codegen back-ends: GPUCompiler resolves the tool from the target's
 # `backend` field (`:khronos` -> translator, `:llvm` -> LLVM back-end) via a LazyModule that
 # looks the JLL up in `Base.loaded_modules`, so both must be loaded for either path to work.
@@ -73,6 +75,7 @@ end
 include("broadcast.jl")
 include("random.jl")
 include("utils.jl")
+include("profile.jl")
 
 include("oneAPIKernels.jl")
 import .oneAPIKernels: oneAPIBackend
