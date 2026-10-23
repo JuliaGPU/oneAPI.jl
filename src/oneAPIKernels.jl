@@ -175,7 +175,11 @@ end
 end
 
 @device_override @inline function KA.__index_Global_Linear(ctx)
-    return get_global_id()
+    # The hardware global id only equals the linear index into `ndrange` when the work-group
+    # size evenly divides every dimension of it; otherwise KernelAbstractions pads the range,
+    # and the id has to be mapped through the iteration space (as the CPU back-end does).
+    I = @inbounds KA.expand(KA.__iterspace(ctx), get_group_id(), get_local_id())
+    return @inbounds LinearIndices(KA.__ndrange(ctx))[I]
 end
 
 @device_override @inline function KA.__index_Local_Cartesian(ctx)
