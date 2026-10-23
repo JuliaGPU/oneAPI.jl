@@ -287,7 +287,7 @@ Base.show(io::IO, mime::MIME"text/plain", a::oneDeviceArray) = show(io, a)
 end
 
 function Base.reinterpret(::Type{T}, a::oneDeviceArray{S,N,A}) where {T,S,N,A}
-  err = _reinterpret_exception(T, a)
+  err = GPUArrays._reinterpret_exception(T, a)
   err === nothing || throw(err)
 
   if sizeof(T) == sizeof(S) # fast case
