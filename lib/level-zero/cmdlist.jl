@@ -91,11 +91,12 @@ mutable struct ZeImmediateCommandList <: AbstractZeCommandList
                 @warn "Leaking an immediate command list still busy after $(FINALIZER_SYNC_TIMEOUT_NS ÷ 1_000_000_000)s to avoid blocking finalization" maxlog = 1
                 return
             end
-            zeCommandListDestroy(obj)
-            release(obj.context)
-            # mark destroyed: the stream registry can still reach this list, and
-            # synchronizing a destroyed handle crashes in the driver
+            # mark the list as destroyed before destroying it: it can still be reached and
+            # synchronized (see `destroyed`), which crashes in the driver on a destroyed handle
+            handle = obj.handle
             obj.handle = ze_command_list_handle_t(C_NULL)
+            zeCommandListDestroy(handle)
+            release(obj.context)
         end
         obj
     end
