@@ -75,6 +75,10 @@ end
 include("broadcast.jl")
 include("random.jl")
 include("utils.jl")
+
+# profiling
+include("../lib/pti/PTI.jl")
+include("profiling.jl")
 include("profile.jl")
 
 include("oneAPIKernels.jl")

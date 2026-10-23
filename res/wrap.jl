@@ -115,6 +115,7 @@ end
 #
 
 using oneAPI_Level_Zero_Headers_jll
+using PTI_jll
 
 function main()
     wrap("ze", oneAPI_Level_Zero_Headers_jll.ze_api)
@@ -126,6 +127,9 @@ function main()
             dependents=false,
             include_dirs=[dirname(dirname(oneAPI_Level_Zero_Headers_jll.ze_api))]
         )
+    pti_include = joinpath(PTI_jll.artifact_dir, "include")
+    wrap("pti", (joinpath(pti_include, "pti", "$name.h") for name in ("pti", "pti_version", "pti_view"))...;
+         dependents=false, include_dirs=[pti_include])
 end
 
 isinteractive() || main()
