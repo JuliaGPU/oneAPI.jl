@@ -44,6 +44,8 @@ See also: [`oneArray`](@ref), [`oneLocalArray`](@ref), [`@oneapi`](@ref)
 """
 struct oneDeviceArray{T,N,A} <: DenseArray{T,N}
     ptr::LLVMPtr{T,A}
+    # distance from `ptr` to the selector bytes of an array of isbits unions (see
+    # `typetagdata`); the size of the data for an array that starts at its memory
     maxsize::Int
 
     dims::Dims{N}
@@ -52,7 +54,7 @@ struct oneDeviceArray{T,N,A} <: DenseArray{T,N}
     # inner constructors, fully parameterized, exact types (ie. Int not <:Integer)
     # TODO: deprecate; put `ptr` first like oneArray
     oneDeviceArray{T,N,A}(dims::Dims{N}, ptr::LLVMPtr{T,A},
-                          maxsize::Int=prod(dims)*sizeof(T)) where {T,A,N} =
+                          maxsize::Int=prod(dims)*aligned_sizeof(T)) where {T,A,N} =
         new(ptr, maxsize, dims, prod(dims))
 end
 
@@ -76,7 +78,7 @@ oneDeviceVector{T,A}(len::Integer,               p::LLVMPtr{T,A}) where {T,A}   
 
 ## array interface
 
-Base.elsize(::Type{<:oneDeviceArray{T}}) where {T} = sizeof(T)
+Base.elsize(::Type{<:oneDeviceArray{T}}) where {T} = aligned_sizeof(T)
 
 Base.size(g::oneDeviceArray) = g.dims
 Base.sizeof(x::oneDeviceArray) = Base.elsize(x) * length(x)
@@ -90,6 +92,7 @@ Base.pointer(x::oneDeviceArray{T,<:Any,A}) where {T,A} = Base.unsafe_convert(LLV
     Base.unsafe_convert(LLVMPtr{T,A}, x) + Base._memory_offset(x, i)
 end
 
+# the selector byte of element `i` of an array of isbits unions
 typetagdata(a::oneDeviceArray{<:Any,<:Any,A}, i=1) where {A} =
   reinterpret(LLVMPtr{UInt8,A}, a.ptr + a.maxsize) + i - one(i)
 
@@ -121,10 +124,10 @@ end
     #@boundscheck checkbounds(A, index)
     @boundscheck index <= length(A) || Base.throw_boundserror(A, index)
 
-    if isbitstype(T)
-        arrayref_bits(A, index)
-    else #if isbitsunion(T)
+    if Base.isbitsunion(T)
         arrayref_union(A, index)
+    else
+        arrayref_bits(A, index)
     end
 end
 
@@ -166,10 +169,10 @@ end
     #@boundscheck checkbounds(A, index)
     @boundscheck index <= length(A) || Base.throw_boundserror(A, index)
 
-    if isbitstype(T)
-        arrayset_bits(A, x, index)
-    else #if isbitsunion(T)
+    if Base.isbitsunion(T)
         arrayset_union(A, x, index)
+    else
+        arrayset_bits(A, x, index)
     end
     return A
 end
@@ -207,8 +210,12 @@ end
     #@boundscheck checkbounds(A, index)
     @boundscheck index <= length(A) || Base.throw_boundserror(A, index)
 
-    align = alignment(A)
-    unsafe_cached_load(pointer(A), index, Val(align))
+    if Base.isbitsunion(T)
+        arrayref_union(A, index)
+    else
+        align = alignment(A)
+        unsafe_cached_load(pointer(A), index, Val(align))
+    end
 end
 
 

@@ -23,7 +23,7 @@ See also: [`copyto!`](@ref), [`oneArray`](@ref)
 """
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice, dst::Union{Ptr{T},ZePtr{T}},
                              src::Union{Ptr{T},ZePtr{T}}, N::Integer) where T
-    bytes = N*sizeof(T)
+    bytes = N*aligned_sizeof(T)
     bytes==0 && return
     execute!(global_stream(ctx, dev)) do list
         append_copy!(list, dst, src, bytes)

@@ -36,6 +36,15 @@ include("../lib/level-zero/oneL0.jl")
 using .oneL0
 functional() = oneL0.functional[]
 
+# the size of an array element. this differs from `sizeof` for isbits unions whose size isn't
+# a multiple of their alignment, e.g., `Union{Int64,NTuple{3,Int32}}` (12 vs. 16 bytes).
+@static if VERSION >= v"1.11"
+    import Base: aligned_sizeof
+else
+    # Julia 1.10's doesn't fold to a constant in device code
+    @generated aligned_sizeof(::Type{T}) where {T} = :($(Base.aligned_sizeof(T)))
+end
+
 # device functionality
 import SPIRVIntrinsics
 SPIRVIntrinsics.@import_all

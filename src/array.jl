@@ -65,7 +65,6 @@ end
 
 function check_eltype(T)
   Base.allocatedinline(T) || error("oneArray only supports element types that are stored inline")
-  Base.isbitsunion(T) && error("oneArray does not yet support isbits-union arrays")
   support = eltype_support()
   if !support.float16
     contains_eltype(T, Float16) && error("Float16 is not supported on this device")
@@ -87,7 +86,7 @@ end
 N-dimensional dense array type for Intel GPU programming using oneAPI and Level Zero.
 
 # Type Parameters
-- `T`: Element type (must be stored inline, no isbits-unions)
+- `T`: Element type (must be stored inline)
 - `N`: Number of dimensions
 - `B`: Buffer type, one of:
   - `oneL0.DeviceBuffer`: GPU device memory (default, not CPU-accessible)
@@ -124,23 +123,21 @@ See also: [`oneVector`](@ref), [`oneMatrix`](@ref), [`is_device`](@ref), [`is_sh
 mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
   data::DataRef{Managed{B}}
 
-  maxsize::Int  # maximum data size; excluding any selector bytes
+  # size of the data in the buffer, in bytes. arrays of isbits unions keep one selector byte
+  # per element past the data; for those, this is where the array's first selector byte
+  # is (see `typetagdata`).
+  maxsize::Int
   offset::Int   # offset of the data in the buffer, in bytes
   dims::Dims{N}
 
   function oneArray{T,N,B}(::UndefInitializer, dims::Dims{N}) where {T,N,B}
     check_eltype(T)
-    maxsize = prod(dims) * sizeof(T)
-    bufsize = if Base.isbitsunion(T)
-      # type tag array past the data
-      maxsize + prod(dims)
-    else
-      maxsize
-    end
+    maxsize = prod(dims) * aligned_sizeof(T)
+    bufsize = Base.isbitsunion(T) ? maxsize + prod(dims) : maxsize
 
     ctx = context()
     dev = device()
-    alignment = Base.datatype_alignment(T)
+    alignment = element_alignment(T)
     data = GPUArrays.cached_alloc((oneArray, B, ctx, dev, bufsize, alignment)) do
         DataRef(release, alloc_managed(B, ctx, dev, bufsize, alignment))
     end
@@ -149,11 +146,13 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
   end
 
   function oneArray{T,N}(data::DataRef{Managed{B}}, dims::Dims{N};
-                         maxsize::Int=prod(dims) * sizeof(T), offset::Int=0) where {T,N,B}
+                         maxsize::Int=prod(dims) * aligned_sizeof(T),
+                         offset::Int=0) where {T,N,B}
     check_eltype(T)
     if sizeof(T) == 0
       offset == 0 || error("Singleton arrays cannot have a nonzero offset")
-      maxsize == 0 || error("Singleton arrays cannot have a size")
+      # (a union of singletons still needs `maxsize` to find its selector bytes)
+      Base.isbitsunion(T) || maxsize == 0 || error("Singleton arrays cannot have a size")
     end
     obj = new{T,N,B}(copy(data), maxsize, offset, dims)
     finalizer(unsafe_free!, obj)
@@ -161,6 +160,10 @@ mutable struct oneArray{T,N,B} <: AbstractGPUArray{T,N}
 end
 
 GPUArrays.storage(a::oneArray) = a.data
+
+# the alignment of the elements of an array of `T`
+element_alignment(::Type{T}) where {T} =
+  Base.isbitsunion(T) ? Base.uniontype_layout(T)[3] : Base.datatype_alignment(T)
 
 
 ## alias detection
@@ -235,7 +238,7 @@ end
 
 ## array interface
 
-Base.elsize(::Type{<:oneArray{T}}) where {T} = sizeof(T)
+Base.elsize(::Type{<:oneArray{T}}) where {T} = aligned_sizeof(T)
 
 Base.size(x::oneArray) = x.dims
 Base.sizeof(x::oneArray) = Base.elsize(x) * length(x)
@@ -392,13 +395,23 @@ device_pointer(x::oneArray{T}, i::Integer=1) where {T} =
 
 # Host-accessible arrays can be indexed from CPU, bypassing GPUArrays restrictions.
 # Taking the host pointer waits for outstanding work on the memory.
-function Base.getindex(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, I::Int)
+function Base.getindex(x::oneArray{T, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, I::Int) where {T}
     @boundscheck checkbounds(x, I)
+    if Base.isbitsunion(T)
+        # a union can't be loaded from a pointer; copy the element and its selector byte
+        y = Array{T}(undef, 1)
+        copyto!(y, 1, x, I, 1)
+        return y[1]
+    end
     return unsafe_load(pointer(x, I; type = oneL0.HostBuffer))
 end
 
-function Base.setindex!(x::oneArray{<:Any, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, v, I::Int)
+function Base.setindex!(x::oneArray{T, <:Any, <:Union{oneL0.HostBuffer, oneL0.SharedBuffer}}, v, I::Int) where {T}
     @boundscheck checkbounds(x, I)
+    if Base.isbitsunion(T)
+        copyto!(x, I, T[v], 1, 1)
+        return x
+    end
     return unsafe_store!(pointer(x, I; type = oneL0.HostBuffer), v)
 end
 
@@ -413,12 +426,30 @@ end
 
 ## memory copying
 
+# arrays of isbits unions keep one selector byte per element past the data, like `Array`
+# does: the zero-based index of the element's type in `Base.uniontypes(T)`.
+
+@static if VERSION >= v"1.11.0-DEV.753"
+function typetagdata(a::Array, i=1)
+  # for memory of isbits unions, the reference holds the offset of the data in elements
+  ptr_or_offset = Int(a.ref.ptr_or_offset)
+  @ccall(jl_genericmemory_typetagdata(a.ref.mem::Any)::Ptr{UInt8}) + ptr_or_offset + i - 1
+end
+else
 typetagdata(a::Array, i=1) = ccall(:jl_array_typetagdata, Ptr{UInt8}, (Any,), a) + i - 1
-function typetagdata(a::oneArray, i=1)
-  # for zero-size element types (e.g. singleton unions), the byte offset
-  # is always zero, so the corresponding element offset is also zero
-  elem_offset = iszero(Base.elsize(a)) ? 0 : a.offset ÷ Base.elsize(a)
-  return convert(ZePtr{UInt8}, a.data[].mem) + a.maxsize + elem_offset + i - 1
+end
+
+# the selector byte of element `i`. the host pointer of a host-accessible array doesn't wait
+# for outstanding work, unlike `pointer`.
+function typetagdata(a::oneArray, i=1; type=oneL0.DeviceBuffer)
+  PT = if type == oneL0.DeviceBuffer
+    ZePtr{UInt8}
+  elseif type == oneL0.HostBuffer
+    Ptr{UInt8}
+  else
+    error("unknown memory type")
+  end
+  return convert(PT, a.data[].mem) + a.maxsize + i - 1
 end
 
 function Base.copyto!(dest::oneArray{T}, doffs::Integer, src::Array{T}, soffs::Integer,
@@ -467,12 +498,13 @@ Base.copyto!(dest::oneDenseArray{T}, src::oneDenseArray{T}) where {T} =
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T}, doffs, src::Array{T}, soffs, n) where T
   stream = global_stream(ctx, dev)
-  bytes = n * sizeof(T)
+  bytes = n * aligned_sizeof(T)
   GC.@preserve src dest begin
     # the copy reads the source when it executes, by which time the source may have
     # changed or been freed. small uploads copy it first if the device stages them and
-    # there's room, others wait for the copy.
-    staged = 0 < bytes <= MAX_STAGED && stages_uploads(dev) &&
+    # there's room, others wait for the copy. (unions aren't staged, as their selector
+    # bytes would need a staged copy of their own.)
+    staged = 0 < bytes <= MAX_STAGED && !Base.isbitsunion(T) && stages_uploads(dev) &&
              with_ownership(stream, Managed[dest.data[]]) do
       execute!(stream) do list
         stage_upload!(list, ctx, dev, device_pointer(dest, doffs), pointer(src, soffs), bytes)
@@ -481,13 +513,12 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
     if !staged
       with_ownership(stream, Managed[dest.data[]]) do
         unsafe_copyto!(ctx, dev, device_pointer(dest, doffs), pointer(src, soffs), n)
+        if Base.isbitsunion(T)
+          unsafe_copyto!(ctx, dev, typetagdata(dest, doffs), typetagdata(src, soffs), n)
+        end
       end
       synchronize(stream)
     end
-  end
-  if Base.isbitsunion(T)
-    # copy selector bytes
-    error("oneArray does not yet support isbits-union arrays")
   end
 
   return dest
@@ -499,11 +530,10 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
   GC.@preserve src dest begin
     with_ownership(stream, Managed[src.data[]]) do
       unsafe_copyto!(ctx, dev, pointer(dest, doffs), device_pointer(src, soffs), n)
+      if Base.isbitsunion(T)
+        unsafe_copyto!(ctx, dev, typetagdata(dest, doffs), typetagdata(src, soffs), n)
+      end
     end
-  end
-  if Base.isbitsunion(T)
-    # copy selector bytes
-    error("oneArray does not yet support isbits-union arrays")
   end
 
   # copies to the host are synchronizing
@@ -517,11 +547,10 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
   GC.@preserve src dest begin
     with_ownership(global_stream(ctx, dev), Managed[dest.data[], src.data[]]) do
       unsafe_copyto!(ctx, dev, device_pointer(dest, doffs), device_pointer(src, soffs), n)
+      if Base.isbitsunion(T)
+        unsafe_copyto!(ctx, dev, typetagdata(dest, doffs), typetagdata(src, soffs), n)
+      end
     end
-  end
-  if Base.isbitsunion(T)
-    # copy selector bytes
-    error("oneArray does not yet support isbits-union arrays")
   end
   return dest
 end
@@ -530,14 +559,13 @@ end
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, doffs, src::Array{T}, soffs, n) where T
-  if Base.isbitsunion(T)
-    # copy selector bytes
-    error("oneArray does not yet support isbits-union arrays")
-  end
   # the host pointer waits for outstanding work; hold the lock so that no new work is
   # submitted while copying
   GC.@preserve src dest with_managed_locks(Managed[dest.data[]]) do
     unsafe_copyto!(pointer(dest, doffs; type=oneL0.HostBuffer), pointer(src, soffs), n)
+    if Base.isbitsunion(T)
+      unsafe_copyto!(typetagdata(dest, doffs; type=oneL0.HostBuffer), typetagdata(src, soffs), n)
+    end
   end
 
   return dest
@@ -545,14 +573,13 @@ end
 
 function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
                              dest::Array{T}, doffs, src::oneDenseArray{T,<:Any,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}, soffs, n) where T
-  if Base.isbitsunion(T)
-    # copy selector bytes
-    error("oneArray does not yet support isbits-union arrays")
-  end
   # the host pointer waits for outstanding work; hold the lock so that no new work is
   # submitted while copying
   GC.@preserve src dest with_managed_locks(Managed[src.data[]]) do
     unsafe_copyto!(pointer(dest, doffs), pointer(src, soffs; type=oneL0.HostBuffer), n)
+    if Base.isbitsunion(T)
+      unsafe_copyto!(typetagdata(dest, doffs), typetagdata(src, soffs; type=oneL0.HostBuffer), n)
+    end
   end
 
   return dest
@@ -605,11 +632,15 @@ function GPUArrays.derive(::Type{T}, a::oneArray, dims::Dims{N}, offset::Int) wh
   if sizeof(T) == 0
     Base.elsize(a) == 0 || error("Cannot derive a singleton array from non-singleton inputs")
   end
-  offset = a.offset + offset * sizeof(T)
+  # the selector bytes are indexed by element, so advance them here: the byte offset can't
+  # tell how many elements of zero size (like unions of singletons) were skipped. arrays of
+  # unions only derive arrays of the same element type, as `reinterpret` rejects them.
+  maxsize = Base.isbitsunion(T) ? a.maxsize + offset : a.maxsize
+  offset = a.offset + offset * aligned_sizeof(T)
   # The derived array constructor copies `a.data`, but merely loading that field does not
   # keep `a` alive. Without this preserve, `a` may be finalized between the field load and
   # the DataRef copy, causing its finalizer to mark the reference as freed.
-  GC.@preserve a oneArray{T,N}(a.data, dims; a.maxsize, offset)
+  GC.@preserve a oneArray{T,N}(a.data, dims; maxsize, offset)
 end
 
 
@@ -625,7 +656,7 @@ function Base.unsafe_convert(::Type{ZePtr{T}}, V::SubArray{T,N,P,<:Tuple{Vararg{
 end
 function Base.unsafe_convert(::Type{ZePtr{T}}, V::SubArray{T,N,P,<:Tuple{Vararg{Union{Base.RangeIndex,Base.ReshapedUnitRange}}}}) where {T,N,P}
    return Base.unsafe_convert(ZePtr{T}, parent(V)) +
-          (Base.first_index(V)-1)*sizeof(T)
+          (Base.first_index(V)-1)*aligned_sizeof(T)
 end
 
 
@@ -659,6 +690,9 @@ a shared buffer (as created by `oneArray{T}(undef, ...)`) or a host buffer.
 """
 function Base.unsafe_wrap(::Type{Array},
                           arr::oneArray{T,N,<:Union{oneL0.SharedBuffer,oneL0.HostBuffer}}) where {T,N}
+  # an `Array` keeps its selector bytes elsewhere than a `oneArray` does
+  Base.isbitsunion(T) && throw(ArgumentError(
+    "unsafe_wrap(Array, ...) does not support isbits-union element types like $T"))
   # TODO: can we make this more convenient by increasing the buffer's refcount and using
   #       a finalizer on the Array? does that work when taking views etc of the Array?
   ptr = pointer(arr; type=oneL0.HostBuffer)
@@ -677,24 +711,23 @@ guaranteed to be initialized.
 """
 function Base.resize!(a::oneVector{T}, n::Integer) where {T}
     # TODO: add additional space to allow for quicker resizing
-    maxsize = n * sizeof(T)
-    bufsize = if isbitstype(T)
-        maxsize
-    else
-        # type tag array past the data
-        maxsize + n
-    end
+    maxsize = n * aligned_sizeof(T)
+    bufsize = Base.isbitsunion(T) ? maxsize + n : maxsize
 
     # replace the data with a new one. this 'unshares' the array.
     # as a result, we can safely support resizing unowned buffers.
     ctx = context(a)
     dev = device(a)
     new_data = DataRef(release, alloc_managed(buftype(a), ctx, dev, bufsize,
-                                              Base.datatype_alignment(T)))
+                                              element_alignment(T)))
     m = min(length(a), n)
     if m > 0
         with_ownership(global_stream(ctx, dev), Managed[new_data[], a.data[]]) do
             unsafe_copyto!(ctx, dev, convert(ZePtr{T}, new_data[].mem), device_pointer(a), m)
+            if Base.isbitsunion(T)
+                unsafe_copyto!(ctx, dev, convert(ZePtr{UInt8}, new_data[].mem) + maxsize,
+                               typetagdata(a), m)
+            end
         end
     end
     unsafe_free!(a)
