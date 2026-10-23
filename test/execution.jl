@@ -1345,3 +1345,24 @@ end
     @oneapi count_until_wrap(out, flags, typemax(UInt64) - 3)
     @test Array(out) == [typemax(UInt64) - 2]
 end
+
+@testset "sub-group shuffle of a mixed-width tuple" begin
+    # The shuffle packs the Bool, Int8 and Float16 into one word and unpacks them again. On
+    # Gen12LP, IGC could place the byte that receives the Int8 at byte 3 of a dword, which
+    # the hardware doesn't write, returning 0 for the Int8 (intel/intel-graphics-compiler#456,
+    # fixed in libigc_jll 2.41.5+2). The pointers avoid bounds checks, whose throw paths
+    # change the register allocation, and thus whether the bug shows.
+    function shuffle_kernel(out, a, lane)
+        i = get_local_id()
+        val = oneAPI.KernelInterface.shfl(unsafe_load(pointer(a), i), lane)
+        unsafe_store!(pointer(out), val, i)
+        return
+    end
+    T = Tuple{Bool, Int8, Float16, UInt16}
+    for n in (1, 8)
+        a = T[(isodd(i), -i % Int8, Float16(i), UInt16(1000i)) for i in 1:n]
+        out = oneArray{T}(undef, n)
+        @oneapi items=n shuffle_kernel(out, oneArray(a), 1)
+        @test Array(out) == fill(a[1], n)
+    end
+end
