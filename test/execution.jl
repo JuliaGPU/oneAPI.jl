@@ -1625,3 +1625,21 @@ end
         @test Array(out) == fill(a[1], n)
     end
 end
+
+@testset "device-side reinterpret to a stronger alignment" begin
+    # SPIR-V can't abort a kernel: the work-item that throws exits without storing
+    function kernel(y, a, offset)
+        ptr = reinterpret(Core.LLVMPtr{Int32,AS.CrossWorkgroup}, pointer(a)) + offset
+        x = oneDeviceArray{Int32,1,AS.CrossWorkgroup}((2,), ptr)
+        b = reinterpret(Int64, x)
+        @inbounds y[1] = b[1]
+        return
+    end
+    a = oneArray([1, 2])
+    y = oneAPI.zeros(Int, 1)
+    @oneapi kernel(y, a, 8)
+    @test Array(y)[] == 2
+    y = oneAPI.zeros(Int, 1)
+    @oneapi kernel(y, a, 4)
+    @test Array(y)[] == 0
+end
