@@ -4,7 +4,7 @@ export @oneapi, zefunction, kernel_convert
 ## high-level @oneapi interface
 
 const MACRO_KWARGS = [:launch]
-const COMPILER_KWARGS = [:kernel, :name, :always_inline, :atomics, :sub_group_size]
+const COMPILER_KWARGS = [:kernel, :name, :always_inline, :atomics, :sub_group_size, :debug_level]
 const LAUNCH_KWARGS = [:groups, :items, :queue]
 
 """
@@ -36,12 +36,15 @@ launches the kernel on the GPU.
 - `sub_group_size::Union{Int,Nothing}=nothing`: The sub-group size the kernel has to be
   compiled for, one of the device's `oneL0.compute_properties(dev).subGroupSizes`. By
   default, the compiler chooses one.
+- `debug_level::Int`: How much to report about exceptions thrown by the kernel (see
+  [`KernelException`](@ref)). Defaults to Julia's debug level (the `-g` option).
 
 ## Launch Keywords (runtime)
 - `groups`: Number of workgroups (required). Can be an integer or tuple.
 - `items`: Number of work-items per workgroup (required). Can be an integer or tuple.
 - `queue=global_stream(...)`: Submission target — the task's `oneStream` by default. An
-  explicit `ZeCommandQueue` is also accepted and submits each launch as a command list.
+  explicit `ZeCommandQueue` is also accepted and submits each launch as a command list;
+  exceptions thrown by such launches are not reported.
 
 # Examples
 
@@ -219,7 +222,9 @@ kernel_convert(arg, refs=nothing) = adapt(KernelAdaptor(refs), arg)
 
 abstract type AbstractKernel{F,TT} end
 
-@inline @generated function call(kernel::AbstractKernel{F,TT}, args::Tuple; call_kwargs...) where {F,TT}
+@inline @generated function call(kernel::AbstractKernel{F,TT}, args::Tuple;
+                                 queue=global_stream(context(), device()),
+                                 call_kwargs...) where {F,TT}
     sig = Tuple{F, TT.parameters...}    # Base.signature_type with a function type
     args = (:(kernel.f), (:( args[$i] ) for i in 1:fieldcount(args))...)
 
@@ -239,13 +244,13 @@ abstract type AbstractKernel{F,TT} end
 
     # Match GPUCompiler's hidden state argument. Keep onecall usable for foreign kernels.
     pushfirst!(call_t, KernelState)
-    pushfirst!(call_args, :(KernelState()))
+    pushfirst!(call_args, :(KernelState(queue)))
 
     # finalize types
     call_tt = Base.to_tuple_type(call_t)
 
     quote
-        onecall(kernel.fun, $call_tt, ($(call_args...),); call_kwargs...)
+        onecall(kernel.fun, $call_tt, ($(call_args...),); queue, call_kwargs...)
     end
 end
 
@@ -417,13 +422,13 @@ end
         check_error(s)
         direct |= !s.batching || s.idle || oneL0.sync_each_submission()
         batch = direct ? nothing : open_batch!(s)
+        register_pending!(s)
         if batch === nothing
             flush_batch!(s)
             append_launch!(s.immediate, kernel, groups)
             s.idle = false
         else
             append_launch!(batch.list, kernel, groups)
-            s.recorder === current_task() || register_batching!(s)
             root!(batch, roots)
             batch.launches += 1
             batch.launches == BATCH_SIZE && flush_batch!(s)

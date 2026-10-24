@@ -201,7 +201,8 @@ function _atomics_capabilities(dev, properties; supports_fp16, supports_fp64)
 end
 
 @noinline function _compiler_config(dev; kernel=true, name=nothing, always_inline=false,
-                                    sub_group_size=nothing, kwargs...)
+                                    sub_group_size=nothing,
+                                    debug_level=Base.JLOptions().debug_level, kwargs...)
     properties = oneL0.module_properties(dev)
     support = eltype_support(dev)
     supports_fp16 = support.float16
@@ -245,7 +246,7 @@ end
                                    supports_fp16, supports_fp64, supports_bfloat16,
                                    driver = :intel, kwargs...)
     params = oneAPICompilerParams(; sub_group_size)
-    CompilerConfig(target, params; kernel, name, always_inline)
+    CompilerConfig(target, params; kernel, name, always_inline, debug_level)
 end
 
 # run inference + LLVM codegen + SPIR-V emission. returns `(image, entry)`, both

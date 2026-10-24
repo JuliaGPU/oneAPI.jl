@@ -5,6 +5,11 @@ using StaticArrays
 
 dummy() = return
 
+function store_checked(a, i)
+    a[i] = 1
+    return
+end
+
 @testset "@oneapi" begin
 
 @test_throws UndefVarError @oneapi undefined()
@@ -55,6 +60,16 @@ end
         @test Array(a)[1] == sub_group_size
     end
     @test_throws ArgumentError @oneapi sub_group_size=maximum(sizes)+1 dummy()
+end
+
+
+@testset "debug level" begin
+    T = Tuple{oneDeviceVector{Int, oneAPI.AS.CrossWorkgroup}, Int}
+    ir(level) = sprint(io -> oneAPI.code_llvm(io, store_checked, T; kernel = true,
+                                              debug_level = level))
+    @test !occursin("report_exception", ir(0))
+    @test occursin("report_exception", ir(1)) && !occursin("report_exception_frame", ir(1))
+    @test occursin("report_exception_frame", ir(2))
 end
 
 
@@ -961,7 +976,7 @@ end
         take!(done)
     end
     stream = take!(streams)
-    batching && @test stream.recorder === owner
+    @test stream.recorder.value === owner
     wait(@async begin
         for _ in 1:3
             @oneapi queue=stream ptr_increment_kernel(ptr)
@@ -1081,7 +1096,7 @@ end
         end
         oneAPI.global_stream(context(), device()).error = err
     end)
-    @test try synchronize(); nothing catch e; e end === (batching ? err : nothing)
+    @test try synchronize(); nothing catch e; e end === err
     @test try synchronize(); nothing catch e; e end === nothing
 end
 
@@ -1270,10 +1285,11 @@ end
     @oneapi items = 256 loop_kernel(a, fits)
     @test Array(a) == Float32.(1:256) .+ 2 * fits
     a = oneArray(Float32[1])
-    _, out = @grab_output begin
+    err, out = @grab_output begin
         @oneapi loop_kernel(a, fits + 1)
-        synchronize()
+        try synchronize(); nothing catch err; err end
     end
+    @test err isa KernelException
     @test occursin("Out of dynamic GPU memory", out)
     @test Array(a) == [1]
 
@@ -1317,6 +1333,249 @@ end
     T = Tuple{oneDeviceVector{Float32, oneAPI.AS.CrossWorkgroup}}
     @test occursin(r"%heap\d* = alloca", sprint(io -> oneAPI.code_llvm(io, ref_kernel, T; kernel = true)))
     @test !occursin(r"%heap\d* = alloca", sprint(io -> oneAPI.code_llvm(io, plain_kernel, T; kernel = true)))
+end
+
+# the exception a kernel threw, as reported by synchronizing `stream`
+function kernel_exception(stream=oneAPI.global_stream(context(), device()))
+    try
+        synchronize(stream)
+        return nothing
+    catch err
+        err isa KernelException || rethrow()
+        return err
+    end
+end
+
+function div_kernel(a, d)
+    a[1] = div(a[1], d)
+    return
+end
+
+@testset "exceptions" begin
+    a = oneArray([0])
+
+    # at debug level 0, only that an exception was thrown
+    @oneapi debug_level=0 store_checked(a, 2)
+    err = kernel_exception()
+    @test err isa KernelException
+    @test err.name == "" && err.reason == "" && isempty(err.backtrace)
+    @test err.work_item == err.work_group == (0, 0, 0)
+    @test kernel_exception() === nothing
+
+    # at level 1, also the exception's type and reason, as passed to `@gputhrow`
+    @oneapi debug_level=1 store_checked(a, 2)
+    err = kernel_exception()
+    @test err.name == "BoundsError"
+    @test err.reason == "Out-of-bounds array access"
+    @test err.work_item == (0, 0, 0) && isempty(err.backtrace)
+    @test occursin("A BoundsError was thrown on", sprint(showerror, err))
+    # or as derived by GPUCompiler
+    @oneapi debug_level=1 div_kernel(a, 0)
+    err = kernel_exception()
+    @test err.name == "exception" && err.reason == ""
+
+    # at level 2, also the position of the work-item, and a backtrace
+    @oneapi debug_level=2 items=4 groups=3 store_checked(a, 2)
+    err = kernel_exception()
+    @test err.name == "BoundsError"
+    @test all(1 .<= err.work_item .<= (4, 1, 1))
+    @test all(1 .<= err.work_group .<= (3, 1, 1))
+    @test endswith(err.backtrace[1][1], "throw_boundserror")
+    @test err.backtrace[end][1] == "store_checked"
+    @test endswith(err.backtrace[end][2], "execution.jl")
+    @test occursin(r"thrown by work-item \d×1×1 in work-group \d×1×1", sprint(showerror, err))
+    @oneapi debug_level=2 div_kernel(a, 0)
+    err = kernel_exception()
+    @test err.name == "exception"
+    @test err.backtrace[end][1] == "div_kernel"
+
+    # strings are reported by address, which the host only reads if it is valid
+    stream = oneAPI.global_stream(context(), device())
+    @oneapi debug_level=2 store_checked(a, 2)
+    oneAPI.flush!(stream)
+    oneL0.synchronize(stream.immediate)
+    report = convert(Ptr{UInt8}, stream.exceptions.report)
+    field(T, name) = report + fieldoffset(T, Base.fieldindex(T, name))
+    unsafe_store!(convert(Ptr{UInt64}, field(oneAPI.ExceptionReport, :name)),
+                  0x00000deadbeef000)
+    unsafe_store!(convert(Ptr{UInt64}, field(oneAPI.ExceptionReport, :frames)),
+                  typemax(UInt64))
+    err = kernel_exception()
+    @test err.name == "" && err.reason == "Out-of-bounds array access"
+    @test err.backtrace[1][1] == "" && err.backtrace[end][1] == "store_checked"
+    @test kernel_exception() === nothing
+
+    # the stream remains usable, and other work-items keep running
+    function partially_oob_kernel(a)
+        i = get_global_id()
+        a[i + 1] = i
+        return
+    end
+    a = oneArray(zeros(Int, 256))
+    @oneapi items=256 partially_oob_kernel(a)
+    @test kernel_exception() isa KernelException
+    @test Array(a)[2:end] == 1:255
+    @oneapi store_checked(a, 1)
+    @test kernel_exception() === nothing
+    @test Array(a)[1] == 1
+
+    # an exception is reported by the synchronization following it, also from a batch
+    a = oneArray([0])
+    for i in 1:10
+        @oneapi store_checked(a, i == 5 ? 2 : 1)
+    end
+    @test kernel_exception() isa KernelException
+    @test kernel_exception() === nothing
+
+    # and by host accesses that synchronize
+    @oneapi store_checked(a, 2)
+    @test_throws KernelException Array(a)
+    b = oneArray{Int, 1, oneL0.SharedBuffer}([0])
+    @oneapi store_checked(b, 2)
+    @test_throws KernelException b[1]
+    # also when the memory is another task's, which the host waits for
+    wait(@async @oneapi store_checked(a, 2))
+    @test_throws KernelException Array(a)
+    @test kernel_exception() === nothing
+
+    # kernels that use the device heap too
+    function heap_oob_kernel(a, i)
+        x = heap_consume(Ref(a[1]))
+        a[i] = x
+        return
+    end
+    a = oneArray(Float32[1])
+    @oneapi debug_level=1 heap_oob_kernel(a, 2)
+    @test kernel_exception().name == "BoundsError"
+    @oneapi debug_level=1 heap_oob_kernel(a, 1)
+    @test kernel_exception() === nothing
+    @test Array(a) == [2]
+
+    # every stream reports the exceptions of its own kernels
+    a = oneArray([0])
+    launched = Channel{Nothing}(1)
+    checked = Channel{Nothing}(1)
+    owner = @async begin
+        @oneapi store_checked(a, 2)
+        put!(launched, nothing)
+        take!(checked)
+        kernel_exception()
+    end
+    take!(launched)
+    @test kernel_exception() === nothing
+    put!(checked, nothing)
+    @test fetch(owner) isa KernelException
+    # also when launching on another task's stream
+    stream = fetch(@async oneAPI.global_stream(context(), device()))
+    @oneapi queue=stream store_checked(a, 2)
+    @test kernel_exception(stream) isa KernelException
+    @test kernel_exception() === nothing
+
+    # and of tasks that finished without synchronizing, by whoever adopts their stream
+    adopted() = try synchronize(); nothing catch err; err end
+    wait(@async @oneapi store_checked(a, 2))
+    @test adopted() isa KernelException
+    wait(@async begin
+        @oneapi store_checked(a, 1)
+        @oneapi store_checked(a, 2)
+    end)
+    @test adopted() isa KernelException
+    @test adopted() === nothing
+    # unless something waited for their results first
+    wait(@async @oneapi store_checked(a, 2))
+    @test_throws KernelException Array(a)
+    @test adopted() === nothing
+    task = @async begin
+        @oneapi store_checked(a, 2)
+        try Array(a); nothing catch err; err end
+    end
+    @test fetch(task) isa KernelException
+    @test adopted() === nothing
+    # a failed submission is reported first, the exception by the next synchronization
+    err = ErrorException("submission failed")
+    wait(@async begin
+        @oneapi store_checked(a, 2)
+        oneAPI.global_stream(context(), device()).error = err
+    end)
+    @test adopted() === err
+    @test adopted() isa KernelException
+    @test adopted() === nothing
+    # but not once a task that is still running launched on their stream, while adopting
+    ctx, dev = context(), device()
+    pool = oneL0.ZeEventPool(ctx, 1, dev; flags=oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    gate = pool[1]
+    # nothing may wait for the GPU while the gate is closed, as freeing memory does
+    GC.gc(true)
+    gc_enabled = GC.enable(false)
+    try
+        # the adopter's own stream is created first: doing so while the gate is closed
+        # makes other streams look idle on some stacks
+        ready, go = Channel{Nothing}(1), Channel{Nothing}(1)
+        adopter = @async begin
+            synchronize()
+            put!(ready, nothing)
+            take!(go)
+            adopted()
+        end
+        take!(ready)
+        # (with a kernel after the wait, as waits alone don't keep a stream busy)
+        stream = fetch(@async begin
+            oneL0.sync_each_submission(false) do
+                oneL0.execute!(oneAPI.global_stream(ctx, dev)) do list
+                    oneL0.append_wait!(list, gate)
+                end
+                @oneapi store_checked(a, 1)
+            end
+            oneAPI.global_stream(ctx, dev)
+        end)
+        put!(go, nothing)
+        for _ in 1:100
+            yield()
+        end
+        oneL0.sync_each_submission(false) do
+            @oneapi queue=stream store_checked(a, 2)
+            oneAPI.flush!(stream)
+        end
+        oneL0.signal(gate)
+        @test fetch(adopter) === nothing
+    finally
+        oneL0.signal(gate)
+        GC.enable(gc_enabled)
+    end
+    @test kernel_exception(stream) isa KernelException
+
+    # explicitly created queues have no report
+    queue = oneL0.ZeCommandQueue(context(), device();
+                                 flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER)
+    k = @oneapi launch=false store_checked(a, 2)
+    k(a, 2; queue)
+    oneL0.synchronize(queue)
+    @test kernel_exception() === nothing
+
+    # collected streams return their report, unless their work may still use it
+    ctx, dev = context(), device()
+    pool = oneL0.ZeEventPool(ctx, 1, dev; flags=oneL0.ZE_EVENT_POOL_FLAG_HOST_VISIBLE)
+    gate = pool[1]
+    busy, idle = oneAPI.create_stream(ctx, dev), oneAPI.create_stream(ctx, dev)
+    oneL0.sync_each_submission(false) do
+        oneL0.execute!(busy) do list
+            oneL0.append_wait!(list, gate)
+        end
+    end
+    free = oneAPI.free_report_slots[(ctx, dev)]
+    finalize(busy)
+    @test !(busy.exceptions in free)
+    oneL0.signal(gate)
+    oneL0.synchronize(busy)
+    oneL0.synchronize(idle)
+    finalize(idle)
+    @test idle.exceptions in free
+
+    # reporting needs no per-work-item memory, which would slow down every kernel
+    for level in 0:2
+        k = @oneapi launch=false debug_level=level store_checked(a, 2)
+        @test oneL0.properties(k.fun).privateMemSize == 0
+    end
 end
 
 @testset "loop exiting on counter wrap-around" begin

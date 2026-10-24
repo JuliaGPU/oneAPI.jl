@@ -1,11 +1,3 @@
-# throw a device-side exception of type `name`, printing the type and `reason`
-macro gputhrow(name::String, reason::String)
-    quote
-        @println "ERROR: " $name ": " $reason "."
-        throw(nothing)
-    end
-end
-
 # math.jl
 @device_override @noinline Base.Math.throw_complex_domainerror(f::Symbol, x) =
     @gputhrow "DomainError" "This operation requires a complex input to return a complex result"

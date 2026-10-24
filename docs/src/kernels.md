@@ -71,8 +71,8 @@ private to each work-item. Each allocation is rounded up to 16 bytes, and memory
 reclaimed when the work-item exits. Allocated objects must not be shared with other
 work-items or retained across kernel launches.
 
-When the heap is exhausted, the work-item prints an error and exits without completing
-its work. This does not raise a host-side exception, and kernel output may be incomplete:
+When the heap is exhausted, the work-item prints an error and throws an exception (see
+[Exceptions](@ref)), so kernel output may be incomplete:
 
 ```
 ERROR: Out of dynamic GPU memory (trying to allocate 4 bytes)
@@ -82,3 +82,35 @@ Kernels without remaining allocations do not reserve an arena. The device compil
 optimize away some heap storage, but allocations can increase private-memory use and
 reduce performance. Avoid repeated allocations in loops: even short-lived objects consume
 heap space until the work-item exits.
+
+
+## Exceptions
+
+A work-item that throws an exception, e.g. on an out-of-bounds access, exits without
+completing its work. The other work-items keep running. The exception is reported as a
+`KernelException` when the stream the kernel was launched on is synchronized, e.g. by
+`synchronize()` or by copying an array to the host:
+
+```julia
+julia> function kernel(a)
+           a[get_global_id() + 1] = 1
+           return
+       end
+
+julia> a = oneArray{Int}(undef, 1);
+
+julia> @oneapi kernel(a)
+
+julia> synchronize()
+ERROR: KernelException: A BoundsError was thrown on Intel(R) Arc(TM) A770 Graphics: Out-of-bounds array access
+For more details, run Julia with `-g2`, or launch the kernel with `@oneapi debug_level=2`.
+```
+
+The amount of detail depends on the debug level the kernel is compiled with, which defaults
+to Julia's `-g` level. At level 0 only the fact that an exception was thrown is reported; at
+level 1 (the default) also its type and reason; at level 2 also the work-item that threw it
+and a backtrace. Only one exception is reported per synchronization. If the task that
+launched the kernel finishes without synchronizing, the exception is reported by the next
+`synchronize()` of another task, unless something waited for the kernel's results first.
+Exceptions in kernels launched on an explicitly created `ZeCommandQueue` are not reported.
+
