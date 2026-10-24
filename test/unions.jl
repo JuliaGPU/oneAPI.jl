@@ -160,6 +160,31 @@ end
     @test Array(map(u -> u.x isa Int, d)) == [true, false, true, false]
 end
 
+@testset "local memory" begin
+    function kernel_localmemory!(out)
+        i = get_local_id()
+        tmp = oneLocalArray(Union{Int64,NTuple{3,Int32}}, 4)
+        tmp[i] = isodd(i) ? Int64(i) : (Int32(i), Int32(i), Int32(i))
+        barrier(oneAPI.LOCAL_MEM_FENCE)
+        val = tmp[5 - i]
+        out[i] = val isa Int64 ? val : Int64(val[1]) + 100
+        return
+    end
+
+    out = oneArray(zeros(Int64, 4))
+    # The elements have size 12 but stride 16: reserve 64 data bytes and 4 selectors.
+    # Checking the allocation catches undersizing even if the out-of-bounds accesses
+    # happen to produce the expected result on a particular driver.
+    ir = sprint() do io
+        @device_code_llvm io=io dump_module=true @oneapi launch=false kernel_localmemory!(out)
+    end
+    local_sizes = [parse(Int, m[1]) for m in
+                   eachmatch(r"addrspace\(3\) global \[(\d+) x i8\]", ir)]
+    @test local_sizes == [68]
+    @oneapi items=4 groups=1 kernel_localmemory!(out)
+    @test Array(out) == [104, 3, 102, 1]
+end
+
 @testset "array operations" begin
     x = oneArray(Union{Missing,Bool}[missing, true, false])
     @test isequal(Array(x .| false), [missing, true, false])
