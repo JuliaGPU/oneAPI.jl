@@ -486,6 +486,9 @@ function take_error!(s::oneStream)
     retire!(s)
     s.idle = true
     s.error === nothing || return s.error
+    # A collected stream can still be waited for (see `oneL0.destroyed`). It has nothing
+    # left to report, and its report slot was released with it, possibly to another stream.
+    oneL0.destroyed(s.immediate) && return nothing
     # Kernels may still write the report while the stream is busy. That is only the case
     # after waiting for it if another task submitted work in the meantime, in which case the
     # next synchronization reports the exception.
