@@ -62,14 +62,12 @@ mutable struct ZeCommandQueue
             for (_, fence) in Iterators.flatten((obj.submitted, obj.spare, obj.failed))
                 zeFenceDestroy(fence)
             end
-            zeCommandQueueDestroy(obj)
+            # mark the queue as destroyed before destroying it: it can still be reached and
+            # synchronized (see `destroyed`), which crashes in the driver on a destroyed handle
+            handle = obj.handle
+            obj.handle = ze_command_queue_handle_t(C_NULL)
+            zeCommandQueueDestroy(handle)
             release(obj.context)
-            if LTS[]
-                # mark the queue as destroyed: it can still be weakly reachable (e.g. from
-                # the stream registry used by `synchronize_all_streams`), and synchronizing a
-                # destroyed handle crashes in the driver.
-                obj.handle = ze_command_queue_handle_t(C_NULL)
-            end
         end
         obj
     end

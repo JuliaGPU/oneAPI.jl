@@ -313,6 +313,20 @@ end
   synchronize()
   @test Array(b) == ones(Float32, n_chunk)
 
+  # memory last used by a task that's done is collected together with that task's stream,
+  # whose command list then gets destroyed, and can be reused regardless. (the task is
+  # created in a function, as the testset would keep it alive.)
+  upload_in_task() = fetch(@async oneAPI.device_pointer(oneArray(ones(Float32, n_chunk))))
+  ptr = upload_in_task()
+  GC.gc(true)
+  ys = []
+  for _ in 1:64
+    push!(ys, oneArray(fill(2f0, n_chunk)))
+    oneAPI.device_pointer(last(ys)) == ptr && break
+  end
+  oneAPI.POOL[] && @test oneAPI.device_pointer(last(ys)) == ptr
+  @test all(y -> Array(y) == fill(2f0, n_chunk), ys)
+
   # many small arrays keep their contents, also when unused memory is given back
   xs = [oneArray(fill(Float32(i), i)) for i in 1:300]
   for i in 1:2:300

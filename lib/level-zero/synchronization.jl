@@ -22,15 +22,23 @@ function check_done(res::ze_result_t)
         throw_api_error(res)
     end
 end
+# Lists and queues are only destroyed by their finalizers, which first wait for their work
+# where the driver doesn't. They can still be waited for afterwards: an object finalized in the same GC cycle as one
+# of them can make it reachable again (e.g. memory freed then recording its last user), and
+# synchronizing a destroyed handle crashes in the driver.
+destroyed(obj::Union{ZeImmediateCommandList, ZeCommandQueue}) = obj.handle == C_NULL
+
 Base.isdone(list::ZeImmediateCommandList) =
-    check_done(unchecked_zeCommandListHostSynchronize(list, 0))
+    destroyed(list) || check_done(unchecked_zeCommandListHostSynchronize(list, 0))
 Base.isdone(queue::ZeCommandQueue) =
-    check_done(unchecked_zeCommandQueueSynchronize(queue, 0))
+    destroyed(queue) || check_done(unchecked_zeCommandQueueSynchronize(queue, 0))
 
 # the blocking synchronization (GC-safe, like all Level Zero calls)
 gcsafe_synchronize(list::ZeImmediateCommandList) =
+    destroyed(list) ? RESULT_SUCCESS :
     unchecked_zeCommandListHostSynchronize(list, typemax(UInt64))
 gcsafe_synchronize(queue::ZeCommandQueue) =
+    destroyed(queue) ? RESULT_SUCCESS :
     unchecked_zeCommandQueueSynchronize(queue, typemax(UInt64))
 gcsafe_synchronize(event::ZeEvent) =
     unchecked_zeEventHostSynchronize(event, typemax(UInt64))
