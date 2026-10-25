@@ -5,6 +5,7 @@ Pkg.develop(PackageSpec(path=joinpath(dirname(@__FILE__), "..")))
 Pkg.instantiate()
 using Documenter
 using Documenter.Remotes
+using DocumenterCodeBlocks: CodeBlocks
 using oneAPI
 
 # Informational only; the docs build runs on GPU-less hosted runners, where loading
@@ -17,6 +18,9 @@ end
 
 makedocs(
     sitename = "oneAPI.jl",
+    plugins = [
+        CodeBlocks(; line_counter = :named),
+    ],
     format = Documenter.HTML(
         prettyurls = Base.get(ENV, "CI", nothing) == "true",
         canonical = "https://juliagpu.github.io/oneAPI.jl/stable/",
