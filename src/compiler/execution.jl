@@ -326,7 +326,11 @@ end
 const zefunction_lock = ReentrantLock()
 
 function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
-    fun = zefunction_link(methodinstance(F, tt); kwargs...)
+    # the kernel also depends on the task's context and device, see `zefunction_link`
+    kw = values(kwargs)
+    fun = GPUCompiler.cached_lookup(ZeKernel, F, tt, (context(), device(), kw)) do
+        zefunction_link(methodinstance(F, tt); kw...)
+    end
     return HostKernel{F,tt}(f, fun)
 end
 
