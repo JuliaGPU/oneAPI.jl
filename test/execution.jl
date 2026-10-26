@@ -1648,3 +1648,26 @@ end
         @test Array(out) == fill(a[1], n)
     end
 end
+
+@testset "device-side reinterpret to a stronger alignment" begin
+    function kernel(y, a, offset)
+        ptr = reinterpret(Core.LLVMPtr{Int32,AS.CrossWorkgroup}, pointer(a)) + offset
+        x = oneDeviceArray{Int32,1,AS.CrossWorkgroup}((2,), ptr)
+        b = reinterpret(Int64, x)
+        @inbounds y[1] = b[1]
+        return
+    end
+    a = oneArray([1, 2])
+    y = oneAPI.zeros(Int, 1)
+    @oneapi kernel(y, a, 8)
+    @test kernel_exception() === nothing
+    @test Array(y)[] == 2
+    # the work-item that throws exits without storing
+    y = oneAPI.zeros(Int, 1)
+    @oneapi debug_level=1 kernel(y, a, 4)
+    err = kernel_exception()
+    @test err isa KernelException
+    @test err.name == "ArgumentError"
+    @test occursin("not aligned", err.reason)
+    @test Array(y)[] == 0
+end

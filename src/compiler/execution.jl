@@ -167,6 +167,7 @@ Adapt.adapt_storage(to::KernelAdaptor, p::ZePtr{T}) where {T} =
 # convert oneAPI host arrays to device arrays
 function Adapt.adapt_storage(to::KernelAdaptor, xs::oneArray{T,N}) where {T,N}
   to.refs === nothing || push!(to.refs, xs.data)
+  check_alignment(xs, device_pointer(xs))
   ptr = reinterpret(LLVMPtr{T,AS.CrossWorkgroup}, device_pointer(xs))
   oneDeviceArray{T,N,AS.CrossWorkgroup}(size(xs), ptr, xs.maxsize - xs.offset)
 end
