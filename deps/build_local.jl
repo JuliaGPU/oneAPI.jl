@@ -75,11 +75,15 @@ Conda.list(conda_dir)
 include_dir = joinpath(oneAPI_Level_Zero_Headers_jll.artifact_dir, "include")
 
 # build and install
+# use the Conda compiler and libraries explicitly: a bare `icpx` resolves to a system
+# oneAPI installation when one is on PATH (e.g. a site module), which then links against
+# that installation's libsycl/oneMKL instead of the Conda toolkit the RPATH points at.
 withenv("PATH"=>"$(ENV["PATH"]):$(Conda.bin_dir(conda_dir))",
-        "LD_LIBRARY_PATH"=>Conda.lib_dir(conda_dir)) do
+        "LD_LIBRARY_PATH"=>Conda.lib_dir(conda_dir),
+        "LIBRARY_PATH"=>Conda.lib_dir(conda_dir)) do
     cmake() do cmake_path
     ninja() do ninja_path
-        run(```$cmake_path -DCMAKE_CXX_COMPILER="icpx"
+        run(```$cmake_path -DCMAKE_CXX_COMPILER="$(Conda.bin_dir(conda_dir))/icpx"
                            -DCMAKE_CXX_FLAGS="-fsycl -isystem $(conda_dir)/include -isystem $include_dir -fdiagnostics-color=always"
                            -DCMAKE_INSTALL_RPATH=$(Conda.lib_dir(conda_dir))
                            -DCMAKE_INSTALL_PREFIX=$install_dir
