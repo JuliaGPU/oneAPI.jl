@@ -13,6 +13,7 @@ GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 GPUCompiler = "61eb1bfa-7361-4325-ad38-22787b887f55"
 GPUToolbox = "096a3bc2-3ced-46d0-87f4-dd12716f4bfc"
 IntelITT = "c9b2f978-7543-4802-ae44-75068f23ee64"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 KernelInterface = "4ee993da-d684-4d17-a7dd-4e58e78d92bf"
 LLVM = "929cbde3-209d-540e-8aea-75f648917ca0"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -34,12 +35,6 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 oneAPI_Level_Zero_Headers_jll = "f4bc562b-d309-54f8-9efb-476e56f0410d"
 oneAPI_Level_Zero_Loader_jll = "13eca655-d68d-5b81-8367-6d99d727ab01"
 oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
-
-[weakdeps]
-KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
-
-[extensions]
-KernelAbstractionsExt = "KernelAbstractions"
 
 [compat]
 AbstractFFTs = "1.5.0"
