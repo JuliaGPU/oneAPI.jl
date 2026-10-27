@@ -223,33 +223,38 @@ kernel_convert(arg, refs=nothing) = adapt(KernelAdaptor(refs), arg)
 
 abstract type AbstractKernel{F,TT} end
 
-@inline @generated function call(kernel::AbstractKernel{F,TT}, args::Tuple;
-                                 queue=global_stream(context(), device()),
-                                 call_kwargs...) where {F,TT}
-    sig = Tuple{F, TT.parameters...}    # Base.signature_type with a function type
-    args = (:(kernel.f), (:( args[$i] ) for i in 1:fieldcount(args))...)
+# Build the types and expressions `call` passes to `onecall`. Use vectors in a separate
+# helper so argument handling compiles once for all argument counts.
+function call_arguments(@nospecialize(F), @nospecialize(TT), nargs::Int)
+    params = Any[F, TT.parameters...]    # Base.signature_type with a function type
+    exprs = Any[:(kernel.f); Any[:(args[$i]) for i in 1:nargs]]
 
-    # filter out ghost arguments that shouldn't be passed
-    predicate = dt -> isghosttype(dt) || Core.Compiler.isconstType(dt)
-    to_pass = map(!predicate, sig.parameters)
-    call_t =                  Type[x[1] for x in zip(sig.parameters,  to_pass) if x[2]]
-    call_args = Union{Expr,Symbol}[x[1] for x in zip(args, to_pass)            if x[2]]
+    # Add GPUCompiler's hidden state argument here so `onecall` can also call foreign kernels.
+    call_t = Type[KernelState]
+    call_args = Any[:(KernelState(queue))]
 
-    # replace non-isbits arguments (they should be unused, or compilation would have failed)
-    for (i,dt) in enumerate(call_t)
-        if !isbitstype(dt)
-            call_t[i] = Ptr{Any}
-            call_args[i] = :C_NULL
+    for (dt, ex) in zip(params, exprs)
+        # filter out ghost arguments that shouldn't be passed
+        (isghosttype(dt) || Core.Compiler.isconstType(dt)) && continue
+
+        # replace non-isbits arguments (they should be unused, or compilation would have
+        # failed)
+        if isbitstype(dt)
+            push!(call_t, dt)
+            push!(call_args, ex)
+        else
+            push!(call_t, Ptr{Any})
+            push!(call_args, :C_NULL)
         end
     end
 
-    # Match GPUCompiler's hidden state argument. Keep onecall usable for foreign kernels.
-    pushfirst!(call_t, KernelState)
-    pushfirst!(call_args, :(KernelState(queue)))
+    return Base.to_tuple_type(call_t), call_args
+end
 
-    # finalize types
-    call_tt = Base.to_tuple_type(call_t)
-
+@inline @generated function call(kernel::AbstractKernel{F,TT}, args::Tuple;
+                                 queue=global_stream(context(), device()),
+                                 call_kwargs...) where {F,TT}
+    call_tt, call_args = call_arguments(F, TT, fieldcount(args))
     quote
         onecall(kernel.fun, $call_tt, ($(call_args...),); queue, call_kwargs...)
     end
