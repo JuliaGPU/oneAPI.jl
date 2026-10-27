@@ -156,6 +156,7 @@ function __init__()
         # slabs and device handles are process-local
         empty!(pools)
         empty!(eltype_support_cache)
+        Base.@atomic oneAPIKernels.device_limits_cache.limits = oneAPIKernels.DeviceLimitsDict()
         POOL[] = oneL0.parse_env_bool("ONEAPI_MEMORY_POOL", true)
         BATCHING[] = oneL0.parse_env_bool("ONEAPI_COMMAND_BATCHING", true)
 
