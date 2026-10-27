@@ -3,6 +3,7 @@ module oneAPIKernels
 using ..oneAPI
 using ..oneAPI: @device_override, SPIRVIntrinsics, method_table, kernel_convert, zefunction
 
+import KernelAbstractions as KA
 import KernelInterface as KI
 
 import Adapt
@@ -211,6 +212,19 @@ function KI.multiprocessor_count(::oneAPIBackend)::Int
     props = oneAPI.oneL0.properties(device())
     return props.numSlices * props.numSubslicesPerSlice
 end
+
+
+## KernelAbstractions
+
+Adapt.adapt_storage(::KA.CPU, a::oneArray) = convert(Array, a)
+
+# sparse arrays (oneMKL is only available on Linux)
+@static if Sys.islinux()
+    import SparseArrays
+    Adapt.adapt_storage(::KA.CPU, a::oneAPI.oneMKL.oneAbstractSparseMatrix) = SparseArrays.SparseMatrixCSC(a)
+end
+
+Adapt.adapt_storage(to::KA.ConstAdaptor, a::oneDeviceArray) = Base.Experimental.Const(a)
 
 
 ## Indexing Functions
