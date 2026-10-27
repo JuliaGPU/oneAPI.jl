@@ -201,6 +201,15 @@ init_code = quote
            ..@grab_output, ..@on_device, ..sink
 end
 
+# captured variables that get boxed (`Core.Box`) lose their type
+using Test
+if isdefined(Test, :detect_closure_boxes)
+    testsuite["closure boxes"] = quote
+        import KernelAbstractions
+        @test Test.detect_closure_boxes(oneAPI, Base.get_extension(oneAPI, :KernelAbstractionsExt)) == []
+    end
+end
+
 # Retry test failures once to give a chance to memory-pressure related failures to pass
 runtests(oneAPI, args; testsuite, init_code, init_worker_code, env = worker_env,
     recycle_on_failure = true, retries = 1
