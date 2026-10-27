@@ -23,24 +23,30 @@ if _precompile_lts ? SPIRV_LLVM_Translator_jll.is_available() :
             # Build a device-independent compiler config. `_compiler_config` normally derives
             # these knobs from the device; here we use conservative, portable defaults (the
             # workload only exercises the pipeline, it does not target a specific device).
-            target = SPIRVCompilerTarget(;
-                backend = (_precompile_lts ? :khronos : :llvm),
-                extensions = "", supports_fp16 = true,
-                supports_fp64 = true, supports_bfloat16 = false, driver = :intel,
-            )
-            params = oneAPICompilerParams()
-            config = CompilerConfig(target, params; kernel=true, name=nothing,
-                                    always_inline=false)
+            # Cover both Float64 settings: each gives inference a different method table
+            # type (see `method_tables`).
+            for supports_fp64 in (true, false)
+                target = SPIRVCompilerTarget(;
+                    backend = (_precompile_lts ? :khronos : :llvm),
+                    extensions = "", supports_fp16 = true,
+                    supports_fp64, supports_bfloat16 = false, driver = :intel,
+                )
+                params = oneAPICompilerParams()
+                config = CompilerConfig(target, params; kernel=true, name=nothing,
+                                        always_inline=false)
 
-            tt = Tuple{oneDeviceArray{Float32,1,AS.CrossWorkgroup}}
-            source = methodinstance(typeof(_precompile_kernel), tt)
-            job = CompilerJob(source, config)
+                tt = Tuple{oneDeviceArray{Float32,1,AS.CrossWorkgroup}}
+                source = methodinstance(typeof(_precompile_kernel), tt)
+                job = CompilerJob(source, config)
 
-            # On Julia < 1.12, driving GPU compilation during precompilation can leak foreign
-            # MethodInstances into host native compilation; only run the full compile on 1.12+.
-            @static if VERSION >= v"1.12-"
-                # Exercise the launch-side cache path and serialize its portable SPIR-V image.
-                compile_or_lookup(job)
+                # On Julia < 1.12, driving GPU compilation during precompilation can leak
+                # foreign MethodInstances into host native compilation; only run the full
+                # compile on 1.12+.
+                @static if VERSION >= v"1.12-"
+                    # Exercise the launch-side cache path and serialize its portable SPIR-V
+                    # image.
+                    compile_or_lookup(job)
+                end
             end
         end
     end
