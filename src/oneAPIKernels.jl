@@ -160,7 +160,8 @@ function KI.max_work_group_size(kernel::KI.Kernel{oneAPIBackend})::Int
     fun = kernel.kern.host.fun
     max_group_size = oneAPI.oneL0.max_group_size(fun)
     # without the MAX_GROUP_SIZE extension, the device limit is all we know
-    return coalesce(max_group_size, device_limits(fun.mod.device).max_work_group_size)
+    max_group_size === missing || return max_group_size
+    return device_limits(fun.mod.device).max_work_group_size
 end
 function KI.launch_configuration(
         kernel::KI.Kernel{oneAPIBackend}; nitems::Union{Integer, Nothing} = nothing,
@@ -177,16 +178,31 @@ function KI.launch_configuration(
     end
     return (; workgroupsize = Int(items))
 end
-# querying the device allocates, so cache what every launch needs
+# Cache device limits to avoid allocating on each launch. Cached lookups need no lock;
+# adding a device replaces the immutable dictionary under a lock.
 const DeviceLimits = @NamedTuple{
     max_work_group_size::Int, max_work_group_dims::NTuple{3, Int}, max_num_groups::NTuple{3, Int},
     sub_group_size::Int, supports_float16::Bool, supports_float64::Bool,
 }
+const DeviceLimitsDict = Base.ImmutableDict{oneAPI.oneL0.ZeDevice, DeviceLimits}
+mutable struct DeviceLimitsCache
+    @atomic limits::DeviceLimitsDict
+end
+const device_limits_cache = DeviceLimitsCache(DeviceLimitsDict())
+const device_limits_lock = ReentrantLock()
+
 function device_limits(dev::oneAPI.oneL0.ZeDevice = device())
-    limits = get!(task_local_storage(), :oneAPIDeviceLimits) do
-        Dict{oneAPI.oneL0.ZeDevice, DeviceLimits}()
-    end::Dict{oneAPI.oneL0.ZeDevice, DeviceLimits}
-    get!(limits, dev) do
+    limits = get((@atomic :acquire device_limits_cache.limits), dev, nothing)
+    limits === nothing || return limits
+    return add_device_limits(dev)
+end
+
+@noinline function add_device_limits(dev::oneAPI.oneL0.ZeDevice)
+    @lock device_limits_lock begin
+        cache = @atomic :acquire device_limits_cache.limits
+        limits = get(cache, dev, nothing)
+        limits === nothing || return limits
+
         props = oneAPI.oneL0.compute_properties(dev)
         module_props = oneAPI.oneL0.module_properties(dev)
         # the sub-group width that `kernel_function` compiles for: 32, like a CUDA warp, if
@@ -194,12 +210,14 @@ function device_limits(dev::oneAPI.oneL0.ZeDevice = device())
         # 64, so that `KI.sub_group_ballot` (a `UInt64` mask) covers every lane.
         sg_sizes = filter(<=(64), props.subGroupSizes)
         sub_group_size = 32 in sg_sizes ? 32 : maximum(sg_sizes; init = 0)
-        (; max_work_group_size = props.maxTotalGroupSize,
-           max_work_group_dims = (props.maxGroupSizeX, props.maxGroupSizeY, props.maxGroupSizeZ),
-           max_num_groups = (props.maxGroupCountX, props.maxGroupCountY, props.maxGroupCountZ),
-           sub_group_size,
-           supports_float16 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP16 != 0,
-           supports_float64 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0)
+        limits = (; max_work_group_size = props.maxTotalGroupSize,
+                    max_work_group_dims = (props.maxGroupSizeX, props.maxGroupSizeY, props.maxGroupSizeZ),
+                    max_num_groups = (props.maxGroupCountX, props.maxGroupCountY, props.maxGroupCountZ),
+                    sub_group_size,
+                    supports_float16 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP16 != 0,
+                    supports_float64 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0)::DeviceLimits
+        @atomic :release device_limits_cache.limits = DeviceLimitsDict(cache, dev, limits)
+        return limits
     end
 end
 KI.max_work_group_size(::oneAPIBackend)::Int = device_limits().max_work_group_size
