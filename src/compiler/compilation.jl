@@ -214,24 +214,19 @@ end
             throw(ArgumentError("Sub-group size $sub_group_size is not supported by this device, which supports $(join(sizes, ", "))"))
     end
 
-    # SPIR-V codegen path. The Aurora LTS NEO/IGC runtime only accepts SPIR-V from the
-    # Khronos translator; the rolling stack uses the LLVM SPIR-V back-end. GPUCompiler picks
-    # the tool from the target's `backend` field and loads the JLL lazily, so both can be
-    # listed as deps and the choice is made here at compile time. Either way the extensions
-    # below have to be declared explicitly; the ones that atomics need are added by
-    # GPUCompiler based on `atomics`.
+    # The extensions below have to be declared explicitly; the ones that atomics need are
+    # added by GPUCompiler based on `atomics`.
     # TODO: emit printf format strings in constant memory
     extensions = String[
         "SPV_EXT_relaxed_printf_string_address_space",
     ]
+    backend = :llvm
     if oneL0.LTS[]
-        backend = :khronos
         # The LTS SPIR-V stack cannot codegen native bfloat in generic kernels (clamp! ->
         # InvalidIRError, and SPV_KHR_bfloat16 segfaults NEO), so keep bf16 off entirely on
         # this path; the test suite gates bf16 eltypes on `!oneL0.LTS[]` to match.
         supports_bfloat16 = false
     else
-        backend = :llvm
         supports_bfloat16 = _driver_supports_bfloat16_spirv(dev)
         if supports_bfloat16
             push!(extensions, "SPV_KHR_bfloat16")
