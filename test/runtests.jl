@@ -22,6 +22,12 @@ for name in keys(TestSuite.tests)
     testsuite["gpuarrays/$name"] = :(TestSuite.tests[$name](oneArray))
 end
 
+# sysimage builds compile methods for the host, which must not reach device-only code
+testsuite["host leaks"] = quote
+    import GPUToolbox
+    @test isempty(GPUToolbox.Overlays.host_leaks(oneAPI))
+end
+
 args = parse_args(ARGS)
 
 # Optional: spread test workers across all available GPUs, one worker per device
