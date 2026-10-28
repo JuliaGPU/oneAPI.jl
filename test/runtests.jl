@@ -205,8 +205,7 @@ end
 using Test
 if isdefined(Test, :detect_closure_boxes)
     testsuite["closure boxes"] = quote
-        import KernelAbstractions
-        @test Test.detect_closure_boxes(oneAPI, Base.get_extension(oneAPI, :KernelAbstractionsExt)) == []
+        @test Test.detect_closure_boxes(oneAPI) == []
     end
 end
 
