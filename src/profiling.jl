@@ -83,7 +83,7 @@ function profile_internally(@nospecialize(f); trace::Bool=false, raw::Bool=false
         @warn "The profiler could not allocate memory for its records; some activity is missing from the results"
     end
 
-    seconds(t) = relative_seconds(t, t_start)
+    seconds = Base.Fix2(relative_seconds, t_start)
     device = (; records.device.kind, records.device.name, records.device.id,
               records.device.bytes, start=seconds.(records.device.start),
               stop=seconds.(records.device.stop))

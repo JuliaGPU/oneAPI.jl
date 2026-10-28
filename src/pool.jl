@@ -276,7 +276,7 @@ end
 
 # Free slabs none of whose chunks are in use. Also run when the driver runs out of memory.
 function trim_pools!()
-    empty = with_pool_lock() do
+    slabs = with_pool_lock() do
         empty = Slab[]
         for pool in values(pools)
             for (base, slab) in collect(pool.slabs)
@@ -291,7 +291,7 @@ function trim_pools!()
         empty
     end
     # on the LTS stack, this waits for outstanding work on the memory (see `release`)
-    foreach(slab -> release(slab.buf), empty)
+    foreach(slab -> release(slab.buf), slabs)
     return
 end
 oneL0.register_reclaim_callback!(trim_pools!)
