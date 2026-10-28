@@ -7,6 +7,14 @@ if oneL0.NEO_jll.is_available()
 end
 
 
+@testset "precompilation probe" begin
+    # what the precompilation workload found isn't kept in the package image, so it doesn't
+    # decide for other precompilation processes, and only applies while precompiling
+    @test oneAPI.precompile_probe[] === nothing
+    @test !oneAPI.can_precompile()
+end
+
+
 @testset "driver" begin
 
 drvs = drivers()

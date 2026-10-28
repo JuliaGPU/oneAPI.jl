@@ -95,7 +95,46 @@ include("oneAPIKernels.jl")
 import .oneAPIKernels: oneAPIBackend
 export oneAPIBackend
 
-# precompilation workload (warms up the SPIR-V compilation pipeline)
+# whether precompilation workloads can use the GPU, also those of downstream packages like
+# AcceleratedKernels' oneAPI extension. precompilation processes don't initialize the
+# driver when loading oneAPI, so this does, once and without reporting why the GPU can't
+# be used. disabled with the `precompile` preference.
+const precompile_probe = Ref{Union{Nothing,Bool}}(nothing)
+const precompile_probe_lock = ReentrantLock()
+function can_precompile()
+    ccall(:jl_generating_output, Cint, ()) == 1 || return false
+    Preferences.@load_preference("precompile", true) || return false
+    @lock precompile_probe_lock begin
+        if precompile_probe[] === nothing
+            precompile_probe[] = probe_runtime()
+        end
+        return precompile_probe[]::Bool
+    end
+end
+
+# whether the runtime can be used: the SPIR-V tool for the selected codegen path (see
+# `_compiler_config`), and a device supporting the in-order immediate command lists that
+# streams require (see `create_stream`)
+function probe_runtime()
+    oneL0.initialize(; quiet=true)
+    functional() || return false
+    tool = oneL0.LTS[] ? SPIRV_LLVM_Translator_jll : SPIRV_LLVM_Backend_jll
+    tool.is_available() || return false
+    drv = first(drivers())
+    devs = devices(drv)
+    isempty(devs) && return false
+    try
+        oneL0.ZeImmediateCommandList(ZeContext(drv), first(devs);
+                                     flags = oneL0.ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+                                     mode = oneL0.ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS)
+    catch err
+        err isa oneL0.ZeError || rethrow()
+        return false
+    end
+    return true
+end
+
+# precompilation workloads (warming up the SPIR-V compilation pipeline, and the runtime)
 include("compiler/precompile.jl")
 
 # Work around a deadlock in Pkg's parallel precompilation on Julia 1.10, where it does
