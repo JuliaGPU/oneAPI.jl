@@ -1893,6 +1893,38 @@ end
             @test B ≈ collect(d_B)
         end
 
+        @testset "LAPACK.potrf! info -- cholesky" begin
+            A = rand(elty, n, n)
+            A = A*A' + n*I
+            d_A, info = LAPACK.potrf!('L', oneArray(A))
+            @test info == 0
+            @test tril(collect(d_A)) ≈ tril(LAPACK.potrf!('L', copy(A))[1])
+            C = cholesky(Hermitian(oneArray(A), :L))
+            @test issuccess(C)
+            @test tril(collect(C.factors)) ≈ cholesky(Hermitian(A, :L)).L
+
+            # not positive definite at column j: info == j, as LAPACK
+            N = 100
+            G = rand(elty, N, N)
+            H = Matrix(Hermitian(G*G' + N*I))
+            for j in (1, 17, 32)
+                Hj = copy(H); Hj[j, j] = -one(elty)
+                @test LAPACK.potrf!('L', oneArray(Hj))[2] == j
+                @test LAPACK.potrf!('U', oneArray(Hj))[2] == j
+                @test !issuccess(cholesky(Hermitian(oneArray(Hj), :L); check = false))
+            end
+            # oneMKL (2026.1, Intel Data Center GPU Max) names the failing column relative to
+            # its 32-wide panel beyond column 32 (column 50 comes back as 18, or as 1042 for
+            # complex types); the factor's diagonal still holds the failed pivot at column j
+            for j in (33, 50, N)
+                Hj = copy(H); Hj[j, j] = -one(elty)
+                d_Hj, info = LAPACK.potrf!('L', oneArray(Hj))
+                @test_broken info == j
+                d = real.(diag(collect(d_Hj)))
+                @test findfirst(x -> !(isfinite(x) && x > 0), d) == j
+            end
+        end
+
         # @testset "sytrf!" begin
         #     A = rand(elty,n,n)
         #     A = A + A'
@@ -1915,6 +1947,24 @@ end
             d_A = oneMKL.getri!(d_A, d_ipiv)
             h_A = LAPACK.getri!(h_A, ipiv)
             @test h_A ≈ Array(d_A)
+        end
+
+        @testset "LAPACK.getrf! info -- lu" begin
+            A = rand(elty, m, m) + m*I
+            d_A, d_ipiv, info = LAPACK.getrf!(oneArray(A))
+            h_A, ipiv, h_info = LAPACK.getrf!(copy(A))
+            @test info == h_info == 0
+            @test collect(d_A) ≈ h_A
+            @test collect(d_ipiv) == ipiv
+            F = lu(oneArray(A))
+            @test issuccess(F)
+            @test collect(F.factors) ≈ h_A
+            @test collect(F.ipiv) == ipiv
+
+            # exactly singular: info is the zero pivot, as LAPACK
+            S = copy(A); S[:, 3] .= 0
+            @test LAPACK.getrf!(oneArray(S))[3] == LAPACK.getrf!(copy(S))[3] == 3
+            @test !issuccess(lu(oneArray(S); check = false))
         end
 
         @testset "getrf_batched! -- getri_batched!" begin
