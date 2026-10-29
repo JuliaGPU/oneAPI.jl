@@ -6,8 +6,6 @@ using Adapt
 using GPUCompiler
 import GPUToolbox
 
-import ExprTools
-
 using SpecialFunctions
 
 import Preferences

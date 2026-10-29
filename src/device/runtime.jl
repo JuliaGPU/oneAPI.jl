@@ -19,7 +19,7 @@ KernelState(exception_report::UInt64=UInt64(0), exception_claim::UInt64=UInt64(0
     KernelState(reinterpret(LLVMPtr{UInt8, AS.Function}, C_NULL),
                 exception_report, exception_claim)
 
-@inline @generated kernel_state() = GPUCompiler.kernel_state_value(KernelState)
+@device_function @inline @generated kernel_state() = GPUCompiler.kernel_state_value(KernelState)
 
 
 ## dynamic memory allocation
@@ -41,7 +41,7 @@ const HEAP_ALIGNMENT = 16
 # Two 64-bit words keep the payload aligned to HEAP_ALIGNMENT.
 const HEAP_HEADER = 2 * sizeof(Csize_t)
 
-function malloc(sz::Csize_t)
+@device_function function malloc(sz::Csize_t)
     heap = kernel_state().heap
     heap == reinterpret(LLVMPtr{UInt8, AS.Function}, C_NULL) && return C_NULL
 
@@ -157,7 +157,7 @@ end
 # Claim the report, returning whether this work-item owns it. Idempotent, so that every
 # reporting function can check ownership with it. The owner sets the report's status before
 # exiting, which keeps work-items with the same id in later kernels from claiming it too.
-@inline function claim_report!()
+@device_function @inline function claim_report!()
     claim = kernel_state().exception_claim
     claim == 0 && return false
     # A relaxed claim suffices: the host only reads the report once the kernel has completed.
@@ -179,7 +179,7 @@ string_address(str::CString) = reinterpret(UInt64, str)
 
 # Record the exception's name and reason, unless one was recorded already: `@gputhrow` comes
 # first, and knows a more specific name than GPUCompiler derives from the throw.
-@inline function record_exception!(name::CString, reason::Union{CString, Nothing}=nothing)
+@device_function @inline function record_exception!(name::CString, reason::Union{CString, Nothing}=nothing)
     reporting_call(claim_report!) || return false
     name_ptr = report_field(Val(:name))
     if unsafe_load(name_ptr) == 0
@@ -213,7 +213,7 @@ function report_exception_frame(idx, func, file, line)
     return
 end
 
-function signal_exception()
+@device_function function signal_exception()
     # At debug level 0 this is the only reporting function, and claims the report.
     reporting_call(claim_report!) && unsafe_store!(report_field(Val(:status)), 1 % Int32)
     return
