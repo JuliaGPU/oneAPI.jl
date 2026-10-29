@@ -164,8 +164,16 @@ function parse_env_bool(name::AbstractString, default::Bool)
 end
 
 function __init__()
+    # precompilation processes only initialize the driver when a workload asks for it (see
+    # `oneAPI.can_precompile`)
     precompiling = ccall(:jl_generating_output, Cint, ()) != 0
     precompiling && return
+    initialize()
+end
+
+# initialize the driver, setting `functional`. `quiet` doesn't report why it isn't functional.
+function initialize(; quiet::Bool=false)
+    functional[] = false
 
     # Driver handles are process-local, so nothing keyed on one may survive into another
     # process through a precompiled image.
@@ -179,18 +187,18 @@ function __init__()
 
     if Sys.iswindows()
         if Libdl.dlopen(libze_loader; throw_error=false) === nothing
-            @error "The oneAPI Level Zero loader was not found. Please ensure the Intel GPU drivers are installed."
+            quiet || @error "The oneAPI Level Zero loader was not found. Please ensure the Intel GPU drivers are installed."
             return
         end
     else
         if !oneAPI_Level_Zero_Loader_jll.is_available()
-            @error """No oneAPI Level Zero loader found for your platform. Currently, only Linux x86 is supported.
+            quiet || @error """No oneAPI Level Zero loader found for your platform. Currently, only Linux x86 is supported.
                       If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
             return
         end
 
         if !NEO_jll.is_available()
-            @error """No oneAPI driver found for your platform. Currently, only Linux x86_64 is supported.
+            quiet || @error """No oneAPI driver found for your platform. Currently, only Linux x86_64 is supported.
                       If you have a local oneAPI toolchain, you can use that; refer to the documentation for more details."""
             return
         end
@@ -211,7 +219,7 @@ function __init__()
             return
         end
         # For other errors, still report them as errors
-        @error "Failed to initialize oneAPI" exception=(err,catch_backtrace())
+        quiet || @error "Failed to initialize oneAPI" exception=(err,catch_backtrace())
         functional[] = false
         return
     end
@@ -221,22 +229,22 @@ function __init__()
         drv_count = Ref{UInt32}(0)
         zeDriverGet(drv_count, C_NULL)
         if drv_count[] == 0
-            @info "oneAPI initialized but no drivers found. oneAPI.jl will not be functional."
+            quiet || @info "oneAPI initialized but no drivers found. oneAPI.jl will not be functional."
             functional[] = false
             return
         end
     catch err
-        @error "Failed to enumerate oneAPI drivers" exception = (err, catch_backtrace())
+        quiet || @error "Failed to enumerate oneAPI drivers" exception = (err, catch_backtrace())
         functional[] = false
         return
     end
 
-    functional[] = true
-
     validation_layer[] = parse(Bool, get(ENV, "ZE_ENABLE_VALIDATION_LAYER", "false"))
     parameter_validation[] = parse(Bool, get(ENV, "ZE_ENABLE_PARAMETER_VALIDATION", "false"))
     SCRATCH_HEDGE[] = parse_env_bool("ONEAPI_SCRATCH_HEDGE", true)
-    return sync_each_submission!(parse_env_bool("ONEAPI_SYNC_EACH_SUBMISSION", false))
+    sync_each_submission!(parse_env_bool("ONEAPI_SYNC_EACH_SUBMISSION", false))
+    functional[] = true
+    return
 end
 
 end
