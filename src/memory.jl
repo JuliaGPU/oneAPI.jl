@@ -134,8 +134,10 @@ function maybe_synchronize(managed::Managed)
 end
 
 # lock the given allocations in a stable order, avoiding deadlocks between tasks that
-# submit operations involving the same allocations
-function with_managed_locks(f, managed::Vector{Managed})
+# submit operations involving the same allocations. not specialized on `f`, which is a
+# different closure for every operation, e.g. for every kernel that is launched.
+Base.@nospecializeinfer function with_managed_locks(@nospecialize(f),
+                                                  managed::Vector{Managed})
     locked = sort!(unique!(managed); by=objectid)
     nlocked = 0
     ret = try
@@ -153,11 +155,20 @@ function with_managed_locks(f, managed::Vector{Managed})
 end
 
 # submit an operation using the memory of `managed` to `owner`, as a single transaction
-function with_ownership(f, owner, managed::Vector{Managed})
-    with_managed_locks(managed) do
-        for m in managed
-            take_ownership!(m, owner)
-        end
-        f()
+Base.@nospecializeinfer with_ownership(@nospecialize(f),
+                                       owner::Union{oneStream, ZeCommandQueue},
+                                       managed::Vector{Managed}) =
+    with_managed_locks(OwnershipTransfer(f, owner, managed), managed)
+
+# (a struct rather than a closure, whose type would depend on that of `f`)
+struct OwnershipTransfer
+    f::Any
+    owner::Union{oneStream, ZeCommandQueue}
+    managed::Vector{Managed}
+end
+function (t::OwnershipTransfer)()
+    for m in t.managed
+        take_ownership!(m, t.owner)
     end
+    t.f()
 end

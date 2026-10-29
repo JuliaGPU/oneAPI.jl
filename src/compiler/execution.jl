@@ -333,11 +333,20 @@ const zefunction_lock = ReentrantLock()
 function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
     # the kernel also depends on the task's context and device, see `zefunction_link`
     kw = values(kwargs)
-    fun = GPUCompiler.cached_lookup(ZeKernel, F, tt, (context(), device(), kw)) do
-        zefunction_link(methodinstance(F, tt); kw...)
-    end
+    fun = GPUCompiler.cached_lookup(KernelLinker(F, tt, kw), ZeKernel, F, tt,
+                                    (context(), device(), kw))
     return HostKernel{F,tt}(f, fun)
 end
+
+# What `zefunction` calls when the kernel isn't cached: a callable struct rather than a
+# closure, whose type would depend on the kernel's, compiling it (and the inlined
+# `methodinstance`) again for every kernel.
+struct KernelLinker{K}
+    ft::Type
+    tt::Type
+    kw::K
+end
+(l::KernelLinker)() = zefunction_link(methodinstance(l.ft, l.tt); l.kw...)
 
 # the parts of `zefunction` that don't depend on the type of the function, kept separate so
 # that they are compiled once rather than for every kernel
