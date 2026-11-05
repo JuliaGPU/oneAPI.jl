@@ -523,7 +523,7 @@ function Base.unsafe_copyto!(ctx::ZeContext, dev::ZeDevice,
       execute!(stream) do list
         stage_upload!(list, ctx, dev, device_pointer(dest, doffs), pointer(src, soffs), bytes)
       end
-    end
+    end::Bool
     if !staged
       with_ownership(stream, Managed[dest.data[]]) do
         unsafe_copyto!(ctx, dev, device_pointer(dest, doffs), pointer(src, soffs), n)

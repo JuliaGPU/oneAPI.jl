@@ -109,7 +109,9 @@ end
 
     # creating and launching a kernel mostly doesn't depend on its signature, so launching
     # kernels with new signatures shouldn't compile that again
-    shared = (oneAPI.zefunction_link, oneAPI.launch_kernel, oneL0.set_argument_value!)
+    shared = (oneAPI.zefunction_link, oneAPI.launch_kernel, oneL0.set_argument_value!,
+              oneAPI.KernelLinker(Nothing, Tuple{}, (;)), oneAPI.with_managed_locks,
+              oneAPI.with_ownership)
     nspecializations() =
         sum(f -> sum(m -> length(collect(Base.specializations(m))), methods(f)), shared)
     before = nspecializations()
