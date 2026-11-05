@@ -40,9 +40,10 @@ const MKLFFT_INVERSE = false
 # so an unreachable descriptor is not in use and can be destroyed without synchronizing.
 mutable struct Descriptor
     handle::onemklDftDescriptor_t
+    workspace::Int
 
     function Descriptor(handle::onemklDftDescriptor_t)
-        desc = new(handle)
+        desc = new(handle, 0)
         finalizer(_defer_destroy, desc)
     end
 end
@@ -73,8 +74,33 @@ function flush_deferred_dft_releases()
     end
     for desc in descs
         st = onemklDftDestroy(desc)
-        st == 0 || @warn "Error destroying oneMKL DFT descriptor (status $st)"
+        if st == 0
+            Threads.atomic_sub!(oneAPI._allocated_bytes, Int64(desc.workspace))
+        else
+            @warn "Error destroying oneMKL DFT descriptor (status $st)"
+        end
         desc.handle = C_NULL
+    end
+    return
+end
+
+# The workspace that committing allocates is invisible to both garbage collectors, so a
+# loop making plans and little else would fill the device before any of them is collected.
+# Account for it like an allocation instead, so that the pool's proactive GC collects
+# plans as the device fills up. Its size is only known after committing; before that,
+# oneMKL gives a (generous) estimate.
+function _commit!(desc::Descriptor, queue)
+    bytes = Ref{Int64}(0)
+    onemklDftGetValueInt64(desc, ONEMKL_DFT_PARAM_WORKSPACE_ESTIMATE_BYTES, bytes)
+    oneAPI._maybe_gc(oneAPI.device(), Int(bytes[]))
+    flush_deferred_dft_releases()
+
+    st = onemklDftCommit(desc, queue)
+    st == 0 || error("commit failed ($st)")
+
+    if onemklDftGetValueInt64(desc, ONEMKL_DFT_PARAM_WORKSPACE_EXTERNAL_BYTES, bytes) == 0
+        desc.workspace = bytes[]
+        Threads.atomic_add!(oneAPI._allocated_bytes, Int64(desc.workspace))
     end
     return
 end
@@ -233,7 +259,7 @@ function _plan_cfft(X::oneAPI.oneArray{T, N}, region, K::Bool, inplace::Bool) wh
         onemklDftSetValueInt64(desc, ONEMKL_DFT_PARAM_BWD_DISTANCE, Int64(dist))
     end
 
-    stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
+    _commit!(desc, q)
     return cMKLFFTPlan{T, K, inplace, N, R, Nothing}(desc, q, sz, sz, false, reg, nloop, loopstride, nothing, nothing)
 end
 
@@ -310,7 +336,7 @@ function _plan_rfft_1d(X::oneAPI.oneArray{T,N}, reg::NTuple{1,Int}) where {T<:Un
         onemklDftSetValueInt64(desc, ONEMKL_DFT_PARAM_BWD_DISTANCE, Int64(ydims[1]))
     end
 
-    stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
+    _commit!(desc, q)
     R = length(reg)
     rMKLFFTPlan{T,MKLFFT_FORWARD,false,N,R,typeof(buffer)}(desc,q,xdims,ydims,:rfft,reg,buffer,nothing)
 end
@@ -412,7 +438,7 @@ function _plan_brfft_1d(X::oneAPI.oneArray{T,N}, d::Integer, reg::NTuple{1,Int})
         @info "Batched real inverse FFTs not yet supported by oneMKL - please use loop-based approach or 1D arrays"
     end
 
-    stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
+    _commit!(desc, q)
     R = length(reg)
     rMKLFFTPlan{T,MKLFFT_INVERSE,false,N,R,typeof(buffer)}(desc,q,xdims,ydims,:brfft,reg,buffer,nothing)
 end

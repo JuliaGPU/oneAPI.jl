@@ -195,4 +195,18 @@ end
     cmp(q1 * Y, X)
     cmp(q2 * Y, X)
 end
+
+@testset "descriptor workspace accounting" begin
+    # the workspace of a descriptor counts towards the pool's proactive GC
+    FFTm = oneAPI.oneMKL.FFT
+    dX = gpu(rand(ComplexF32, 4096, 16))
+    GC.gc(true); FFTm.flush_deferred_dft_releases()
+    before = oneAPI._allocated_bytes[]
+    # in a function, so that the plan isn't kept alive by this scope
+    workspace = (@noinline dX -> AbstractFFTs.plan_fft!(dX, 1).handle.workspace)(dX)
+    @test workspace > 0
+    @test oneAPI._allocated_bytes[] == before + workspace
+    GC.gc(true); FFTm.flush_deferred_dft_releases()
+    @test oneAPI._allocated_bytes[] == before
+end
 end
