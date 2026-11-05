@@ -782,6 +782,11 @@ end
             D = alpha*A*B + beta*C
             @test D ≈ h_C
             @test B == Array(dB)
+
+            # with beta = 0, the contents of C must not matter
+            dC = oneArray(fill(T(NaN), m, n))
+            oneMKL.trmm!('L','U','N','N',alpha,dA,dB,dC)
+            @test alpha*A*B ≈ Array(dC)
         end
 
         @testset "right trmm!" begin
@@ -833,6 +838,11 @@ end
             D = alpha*(A\B) + beta*C
             @test D ≈ h_C
             @test B == Array(dB)
+
+            # with beta = 0, the contents of C must not matter
+            dC = oneArray(fill(T(NaN), m, n))
+            oneMKL.trsm!('L','U','N','N',alpha,dA,dB,dC)
+            @test alpha*(A\B) ≈ Array(dC)
         end
 
         @testset "left trsm" begin
@@ -1116,6 +1126,16 @@ end
     C = oneArray(fill(NaN32, 3, 2))
     mul!(view(C, :, 2:-1:1), 'N', 'N', oneArray(zeros(Float32, 3, 0)), oneArray(zeros(Float32, 0, 2)), true, false)
     @test all(iszero, Array(C))
+end
+
+@testset "triangular products and solves into uninitialized outputs" begin
+    S = rand(Float32, 4, 4) + 4I; B = rand(Float32, 4, 5)
+    dS, dB = oneArray(S), oneArray(B)
+    for (f, g) in ((mul!, *), (ldiv!, \))
+        C = oneArray(fill(NaN32, 4, 5))
+        f(C, UpperTriangular(dS), dB)
+        @test Array(C) ≈ g(UpperTriangular(S), B)
+    end
 end
 
 @testset "triangular products and solves with reversed views" begin
