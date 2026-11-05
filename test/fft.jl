@@ -165,4 +165,34 @@ end
     Z = abs.(Y)
     cmp(Z, abs.(fft(hX .* 2f0)))
 end
+
+@testset "descriptor lifetime" begin
+    FFTm = oneAPI.oneMKL.FFT
+    X = rand(ComplexF32, 64, 8)
+    dX = gpu(X)
+
+    # the descriptors of collected plans are destroyed (the plans are kept alive until
+    # all have been created, as creating one destroys those collected before)
+    GC.gc(true); FFTm.flush_deferred_dft_releases()
+    (@noinline function (dX, dXr)
+        plans = []
+        for _ in 1:10
+            push!(plans, AbstractFFTs.plan_fft(dX, 1), AbstractFFTs.plan_bfft(dX, 1),
+                  AbstractFFTs.plan_rfft(dXr, 1))
+        end
+    end)(dX, gpu(rand(Float32, 64, 8)))
+    GC.gc(true)
+    @test length(FFTm.deferred_descriptors) >= 30
+    FFTm.flush_deferred_dft_releases()
+    @test isempty(FFTm.deferred_descriptors)
+
+    # inverse plans share the descriptor, and keep it alive without the forward plan
+    q1, q2 = let p = AbstractFFTs.plan_fft(dX, 1)
+        inv(p), inv(p)
+    end
+    GC.gc(true); FFTm.flush_deferred_dft_releases()
+    Y = gpu(fft(X, 1))
+    cmp(q1 * Y, X)
+    cmp(q2 * Y, X)
+end
 end

@@ -31,8 +31,56 @@ is_inplace(::MKLFFTPlan{<:Any,<:Any,inplace}) where inplace = inplace
 const MKLFFT_FORWARD = true
 const MKLFFT_INVERSE = false
 
-mutable struct cMKLFFTPlan{T,K,inplace,N,R,B} <: MKLFFTPlan{T,K,inplace}
+# A oneMKL DFT descriptor. Committing one allocates device memory outside the pool (tens of
+# MiB for long transforms), so it has to be destroyed once no plan uses it any more; plans
+# and the inverse plans made from them share one. Finalizers can't call into oneMKL, so
+# like sparse handles, collected descriptors are queued and destroyed on a regular task:
+# when creating a descriptor, and when memory is reclaimed. Compute calls wait for their
+# work and pass the descriptor itself, which keeps it alive for the duration of the call,
+# so an unreachable descriptor is not in use and can be destroyed without synchronizing.
+mutable struct Descriptor
     handle::onemklDftDescriptor_t
+
+    function Descriptor(handle::onemklDftDescriptor_t)
+        desc = new(handle)
+        finalizer(_defer_destroy, desc)
+    end
+end
+
+Base.unsafe_convert(::Type{onemklDftDescriptor_t}, desc::Descriptor) = desc.handle
+
+const deferred_descriptors = Descriptor[]
+# Never held across anything that can yield, and with finalizers disabled on regular tasks.
+const deferred_descriptors_lock = Threads.SpinLock()
+
+function _defer_destroy(desc::Descriptor)
+    lock(deferred_descriptors_lock) do
+        push!(deferred_descriptors, desc)
+    end
+    return
+end
+
+function flush_deferred_dft_releases()
+    GC.enable_finalizers(false)
+    descs = try
+        lock(deferred_descriptors_lock) do
+            descs = copy(deferred_descriptors)
+            empty!(deferred_descriptors)
+            descs
+        end
+    finally
+        GC.enable_finalizers(true)
+    end
+    for desc in descs
+        st = onemklDftDestroy(desc)
+        st == 0 || @warn "Error destroying oneMKL DFT descriptor (status $st)"
+        desc.handle = C_NULL
+    end
+    return
+end
+
+mutable struct cMKLFFTPlan{T,K,inplace,N,R,B} <: MKLFFTPlan{T,K,inplace}
+    handle::Descriptor
     queue::syclQueue_t
     sz::NTuple{N,Int}
     osz::NTuple{N,Int}
@@ -48,7 +96,7 @@ end
 
 # Real transforms use separate struct (mirroring AMDGPU style) for buffer staging
 mutable struct rMKLFFTPlan{T,K,inplace,N,R,B} <: MKLFFTPlan{T,K,inplace}
-    handle::onemklDftDescriptor_t
+    handle::Descriptor
     queue::syclQueue_t
     sz::NTuple{N,Int}
     osz::NTuple{N,Int}
@@ -96,6 +144,7 @@ end
 function _create_descriptor(sz::NTuple{N,Int}, T::Type, complex::Bool) where {N}
     prec = T<:Float64 || T<:ComplexF64 ? ONEMKL_DFT_PRECISION_DOUBLE : ONEMKL_DFT_PRECISION_SINGLE
     dom = complex ? ONEMKL_DFT_DOMAIN_COMPLEX : ONEMKL_DFT_DOMAIN_REAL
+    flush_deferred_dft_releases()
     desc_ref = Ref{onemklDftDescriptor_t}()
     # Create descriptor for the full array dimensions. `lengths` must stay rooted
     # across the ccall: oneMKL copies the dimensions out of `pointer(lengths)`, and
@@ -106,7 +155,7 @@ function _create_descriptor(sz::NTuple{N,Int}, T::Type, complex::Bool) where {N}
         onemklDftCreate1D(desc_ref, prec, dom, lengths[1]) :
         onemklDftCreateND(desc_ref, prec, dom, length(lengths), pointer(lengths)))
     st == 0 || error("onemkl DFT create failed (status $st)")
-    desc = desc_ref[]
+    desc = Descriptor(desc_ref[])
     # Do not program descriptor scaling; we'll perform inverse normalization manually.
     # Set placement explicitly based on plan type later
     # Use the task-local cached SYCL queue wrapping the global Level Zero queue, like the
