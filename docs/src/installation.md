@@ -60,6 +60,27 @@ LLVM's SPIR-V back-end. See [Intel LTS Driver Stack](lts.md) for what else chang
 it costs. The switch does not install an LTS driver — combine it with the system-library
 configuration below.
 
+## Precompilation
+
+When a GPU can be used while oneAPI.jl is precompiled, the precompilation workload also
+allocates memory and launches kernels on it, so that doing so for the first time in a
+session doesn't have to compile host code. Without a usable GPU, e.g. on a login node,
+precompilation leaves that out. To leave it out regardless, disable the `precompile`
+preference before oneAPI.jl is loaded (loading it may precompile it), e.g. in
+`LocalPreferences.toml`:
+
+```toml
+[oneAPI]
+precompile = false
+```
+
+or with Preferences.jl, by oneAPI.jl's UUID:
+
+```julia
+using Preferences, UUIDs
+set_preferences!(UUID("8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"), "precompile" => false)
+```
+
 ## Using System Libraries (Advanced)
 
 !!! warning
