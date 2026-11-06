@@ -1,11 +1,20 @@
+# LAPACK status of the support library: `computation_error`'s info (> 0, e.g. the
+# order of the leading minor that is not positive definite), 0, or -1 when a SYCL
+# exception was caught. A SYCL failure is thrown; the factorization info is returned
+# by the `LinearAlgebra.LAPACK` methods below, which `cholesky!`/`lu!` destructure.
+function chklapackinfo(info, name)
+    info < 0 && throw(ArgumentError("oneMKL $name failed with a SYCL exception (status $info)"))
+    return Int64(info)
+end
+
 # potrf
 for (bname, fname, elty) in ((:onemklSpotrf_scratchpad_size, :onemklSpotrf, :Float32),
                              (:onemklDpotrf_scratchpad_size, :onemklDpotrf, :Float64),
                              (:onemklCpotrf_scratchpad_size, :onemklCpotrf, :ComplexF32),
                              (:onemklZpotrf_scratchpad_size, :onemklZpotrf, :ComplexF64))
     @eval begin
-        function potrf!(uplo::Char,
-                        A::oneStridedMatrix{$elty})
+        function _potrf!(uplo::Char,
+                         A::oneStridedMatrix{$elty})
             chkuplo(uplo)
             n = checksquare(A)
             lda = max(1, stride(A, 2))
@@ -13,10 +22,13 @@ for (bname, fname, elty) in ((:onemklSpotrf_scratchpad_size, :onemklSpotrf, :Flo
             queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), uplo, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
-            $fname(sycl_queue(queue), uplo, n, A, lda, scratchpad, scratchpad_size)
+            info = $fname(sycl_queue(queue), uplo, n, A, lda, scratchpad, scratchpad_size)
+            unsafe_free!(scratchpad)
 
-            return A
+            return A, chklapackinfo(info, "potrf")
         end
+
+        potrf!(uplo::Char, A::oneStridedMatrix{$elty}) = first(_potrf!(uplo, A))
     end
 end
 
@@ -76,9 +88,9 @@ for (bname, fname, elty) in ((:onemklSsytrf_scratchpad_size, :onemklSsytrf, :Flo
                              (:onemklCsytrf_scratchpad_size, :onemklCsytrf, :ComplexF32),
                              (:onemklZsytrf_scratchpad_size, :onemklZsytrf, :ComplexF64))
     @eval begin
-        function sytrf!(uplo::Char,
-                        A::oneStridedMatrix{$elty},
-                        ipiv::oneStridedVector{Int64})
+        function _sytrf!(uplo::Char,
+                         A::oneStridedMatrix{$elty},
+                         ipiv::oneStridedVector{Int64})
             chkuplo(uplo)
             n = checksquare(A)
             lda = max(1, stride(A, 2))
@@ -86,16 +98,21 @@ for (bname, fname, elty) in ((:onemklSsytrf_scratchpad_size, :onemklSsytrf, :Flo
             queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), uplo, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
-            $fname(sycl_queue(queue), uplo, n, A, lda, ipiv, scratchpad, scratchpad_size)
+            info = $fname(sycl_queue(queue), uplo, n, A, lda, ipiv, scratchpad, scratchpad_size)
+            unsafe_free!(scratchpad)
 
-            return A, ipiv
+            return A, ipiv, chklapackinfo(info, "sytrf")
         end
 
-        function sytrf!(uplo::Char, A::oneStridedMatrix{$elty})
+        function _sytrf!(uplo::Char, A::oneStridedMatrix{$elty})
             n = checksquare(A)
             ipiv = oneVector{Int64}(undef, n)
-            sytrf!(uplo, A, ipiv)
+            _sytrf!(uplo, A, ipiv)
         end
+
+        sytrf!(uplo::Char, A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64}) =
+            _sytrf!(uplo, A, ipiv)[1:2]
+        sytrf!(uplo::Char, A::oneStridedMatrix{$elty}) = _sytrf!(uplo, A)[1:2]
     end
 end
 
@@ -105,23 +122,27 @@ for (bname, fname, elty) in ((:onemklSgetrf_scratchpad_size, :onemklSgetrf, :Flo
                              (:onemklCgetrf_scratchpad_size, :onemklCgetrf, :ComplexF32),
                              (:onemklZgetrf_scratchpad_size, :onemklZgetrf, :ComplexF64))
     @eval begin
-        function getrf!(A::oneStridedMatrix{$elty})
+        function _getrf!(A::oneStridedMatrix{$elty})
             m, n = size(A)
             ipiv = oneVector{Int64}(undef, min(m, n))
-            getrf!(A, ipiv)
+            _getrf!(A, ipiv)
         end
 
-        function getrf!(A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64})
+        function _getrf!(A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64})
             m,n = size(A)
             lda = max(1, stride(A, 2))
 
             queue = global_queue(context(A), device())
             scratchpad_size = $bname(sycl_queue(queue), m, n, lda)
             scratchpad = oneVector{$elty}(undef, scratchpad_size)
-            $fname(sycl_queue(queue), m, n, A, lda, ipiv, scratchpad, scratchpad_size)
+            info = $fname(sycl_queue(queue), m, n, A, lda, ipiv, scratchpad, scratchpad_size)
+            unsafe_free!(scratchpad)
 
-            return A, ipiv
+            return A, ipiv, chklapackinfo(info, "getrf")
         end
+
+        getrf!(A::oneStridedMatrix{$elty}) = _getrf!(A)[1:2]
+        getrf!(A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64}) = _getrf!(A, ipiv)[1:2]
     end
 end
 
@@ -608,14 +629,17 @@ end
 # LAPACK
 for elty in (:Float32, :Float64, :ComplexF32, :ComplexF64)
     @eval begin
-        LinearAlgebra.LAPACK.potrf!(uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL.potrf!(uplo, A)
+        # the stdlib's return shapes, with the info that `cholesky!`, `lu!` and
+        # `bunchkaufman!` destructure; `check` (finite input) is not applied on the device
+        LinearAlgebra.LAPACK.potrf!(uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL._potrf!(uplo, A)
         LinearAlgebra.LAPACK.potrs!(uplo::Char, A::oneStridedMatrix{$elty}, B::oneStridedVecOrMat{$elty}) = oneMKL.potrs!(uplo, A, B)
-        LinearAlgebra.LAPACK.sytrf!(uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL.sytrf!(uplo, A)
-        LinearAlgebra.LAPACK.sytrf!(uplo::Char, A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64}) = oneMKL.sytrf!(uplo, A, ipiv)
+        LinearAlgebra.LAPACK.sytrf!(uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL._sytrf!(uplo, A)
+        LinearAlgebra.LAPACK.sytrf!(uplo::Char, A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64}) = oneMKL._sytrf!(uplo, A, ipiv)
         LinearAlgebra.LAPACK.geqrf!(A::oneStridedMatrix{$elty}) = oneMKL.geqrf!(A)
         LinearAlgebra.LAPACK.geqrf!(A::oneStridedMatrix{$elty}, tau::oneStridedVector{$elty}) = oneMKL.geqrf!(A, tau)
-        LinearAlgebra.LAPACK.getrf!(A::oneStridedMatrix{$elty}) = oneMKL.getrf!(A)
-        LinearAlgebra.LAPACK.getrf!(A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64}) = oneMKL.getrf!(A, ipiv)
+        LinearAlgebra.LAPACK.getrf!(A::oneStridedMatrix{$elty}; check::Bool = true) = oneMKL._getrf!(A)
+        LinearAlgebra.LAPACK.getrf!(A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64}; check::Bool = true) =
+            oneMKL._getrf!(A, ipiv)
         LinearAlgebra.LAPACK.getrs!(trans::Char, A::oneStridedMatrix{$elty}, ipiv::oneStridedVector{Int64}, B::oneStridedVecOrMat{$elty}) = oneMKL.getrs!(trans, A, ipiv, B)
         LinearAlgebra.LAPACK.ormqr!(side::Char, trans::Char, A::oneStridedMatrix{$elty}, tau::oneStridedVector{$elty}, C::oneStridedVecOrMat{$elty}) = oneMKL.ormqr!(side, trans, A, tau, C)
         LinearAlgebra.LAPACK.orgqr!(A::oneStridedMatrix{$elty}, tau::oneStridedVector{$elty}) = oneMKL.orgqr!(A, tau)
