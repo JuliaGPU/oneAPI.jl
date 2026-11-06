@@ -40,13 +40,17 @@ y = dA * x
 ```
 
 Three storage formats are available: `oneSparseMatrixCSR`, `oneSparseMatrixCSC` and
-`oneSparseMatrixCOO`. They are subtypes of the corresponding GPUArrays.jl abstract types
-(`AbstractGPUSparseMatrixCSR`, `AbstractGPUSparseMatrixCSC`, `AbstractGPUSparseMatrixCOO`), so the
-generic sparse functionality of GPUArrays.jl is available: broadcasting (zero-preserving functions
-return a sparse matrix, others a dense `oneArray`), `sum`/`mapreduce` (also along a dimension),
-`norm`/`opnorm`, `findnz`, `triu`/`tril`/`kron`, `iszero`, and scalar indexing under
-`GPUArrays.@allowscalar`. Matrices can be converted between the three formats, transposed and
-added on the device, and `adapt(oneArray, A)` of a `SparseMatrixCSC` yields a `oneSparseMatrixCSC`.
+`oneSparseMatrixCOO`, plus `oneSparseVector`. They are aliases of GPUArrays.jl's sparse types
+with `oneVector` storage (e.g. `oneSparseMatrixCSR{Tv,Ti}` is a `GPUSparseMatrixCSR` whose
+buffers are `oneVector`s), so the generic sparse functionality of GPUArrays.jl is available:
+broadcasting (zero-preserving functions return a sparse matrix, others a dense `oneArray`),
+`sum`/`mapreduce` (also along a dimension), `norm`/`opnorm`, `findnz`, `triu`/`tril`/`kron`,
+indexing with ranges, sparse × sparse products, and scalar indexing under
+`GPUArrays.@allowscalar`. Matrices can be converted between the formats, transposed and added
+on the device, and `adapt(oneArray, A)` of a `SparseMatrixCSC` yields a `oneSparseMatrixCSC`
+with the same element and index types. Constructing a matrix from its buffers
+(`oneSparseMatrixCSR(rowPtr, colVal, nzVal, dims)`) borrows them; see the GPUArrays.jl
+documentation for the rules on sharing and mutating buffers.
 
 ```julia
 dA = oneSparseMatrixCSR(sprand(Float32, 100, 100, 0.1))
@@ -57,11 +61,26 @@ dAt = oneSparseMatrixCSC(dA)        # format conversion, on the device
 dS = dA + transpose(dA)             # sparse addition
 ```
 
-Any element type can be stored in these matrices, but the oneMKL operations (`*`, `mul!`, the
-triangular solves, and the `sparse_*!` wrappers) require `Float32`, `Float64`, `ComplexF32` or
-`ComplexF64` values with `Int32` or `Int64` indices. The oneMKL matrix handle is created lazily
-when such an operation is first invoked; it refers to the storage vectors of the matrix, which
-therefore must not be modified in place afterwards (use `copyto!` or create a new matrix instead).
+Any element type can be stored in these matrices. Products (`*`, `mul!`) use oneMKL for
+`Float32`, `Float64`, `ComplexF32` or `ComplexF64` CSR and CSC matrices with `Int32` or `Int64`
+indices, and GPUArrays' generic implementation otherwise (e.g. for COO matrices, other element
+types, or transposed dense operands). The triangular solves and the `oneMKL.sparse_*!` wrappers
+require these types.
+
+The arrays themselves hold no oneMKL state: every operation describes the matrix to oneMKL for
+the duration of the call. For repeated operations with the same matrix, prepare a
+`oneMKL.oneSparseMatrixHandle` instead, which `sparse_optimize_*!` returns, and pass it to the
+`sparse_*!` wrappers in place of the matrix. The handle refers to the buffers of the matrix,
+which must not be modified, resized or freed until the handle is closed:
+
+```julia
+P = oneMKL.sparse_optimize_gemv!('N', dA)
+try
+    oneMKL.sparse_gemv!('N', 1f0, P, x, 0f0, y)
+finally
+    close(P)
+end
+```
 
 oneMKL's sparse back-end is CSR-based, and a `oneSparseMatrixCSC` is therefore handed to oneMKL as
 the CSR representation of its transpose (this requires oneMKL 2025.3 or later). As a consequence

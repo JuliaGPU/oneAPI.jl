@@ -1360,7 +1360,8 @@ end
                     C = oneSparseMatrixCSR(B.rowPtr, B.colVal, B.nzVal, size(B))
                     A3 = SparseMatrixCSC(C)
                     @test A == A3
-                    D = oneSparseMatrixCSR(oneVector(S[]), oneVector(S[]), oneVector(T[]), (0, 0)) # empty matrix
+                    D = oneSparseMatrixCSR(oneVector(S[1]), oneVector(S[]), oneVector(T[]), (0, 0)) # empty matrix
+                    @test size(@test_deprecated(oneSparseMatrixCSR(oneVector(S[]), oneVector(S[]), oneVector(T[]), (0, 0)))) == (0, 0)
             end
         end
 
@@ -1374,7 +1375,8 @@ end
                     C = oneSparseMatrixCSC(A.colptr |> oneVector, A.rowval |> oneVector, A.nzval |> oneVector, size(A))
                     A3 = SparseMatrixCSC(C)
                     @test A == A3
-                    D = oneSparseMatrixCSC(oneVector(S[]), oneVector(S[]), oneVector(T[]), (0, 0)) # empty matrix
+                    D = oneSparseMatrixCSC(oneVector(S[1]), oneVector(S[]), oneVector(T[]), (0, 0)) # empty matrix
+                    @test size(@test_deprecated(oneSparseMatrixCSC(oneVector(S[]), oneVector(S[]), oneVector(T[]), (0, 0)))) == (0, 0)
                 end
             end
 
@@ -1414,7 +1416,7 @@ end
                     @test similar(B, Float32, 3, 4) isa SparseMatrix{Float32, Int32}
                     @test size(similar(B, Float32, (3, 4))) == (3, 4)
                     @test SparseMatrixCSC(similar(B, (3, 4))) == spzeros(T, 3, 4)
-                    @test similar(B, T, (5,)) isa oneVector{T}
+                    @test similar(B, T, (5,)) isa GPUArrays.GPUSparseVector{T}
                     @test SparseMatrixCSC(SparseMatrix(sparsevec(A[:, 1]))) == A[:, 1:1]
                     @test SparseMatrix{T, Int64}(A) isa SparseMatrix{T, Int64}
                     @test SparseMatrix{T}(SparseMatrixCSC{T, Int64}(A)) isa SparseMatrix{T, Int64}
@@ -1447,8 +1449,8 @@ end
                     end
                     @testset "transpose $SparseMatrix" for SparseMatrix in sparse_matrices
                         B = SparseMatrix(A)
-                        @test SparseMatrixCSC(GPUArrays._sptranspose(B)) == transpose(A)
-                        @test SparseMatrixCSC(GPUArrays._spadjoint(B)) == adjoint(A)
+                        @test SparseMatrixCSC(copy(transpose(B))) == transpose(A)
+                        @test SparseMatrixCSC(copy(adjoint(B))) == adjoint(A)
                         @test SparseMatrixCSC(SparseMatrix(transpose(B))) == transpose(A)
                         @test SparseMatrixCSC(SparseMatrix(adjoint(B))) == adjoint(A)
                         @test SparseMatrixCSC(SparseMatrix(transpose(A))) == transpose(A)
@@ -1494,37 +1496,82 @@ end
                 end
             end
 
-            @testset "lazy oneMKL handles" begin
+            @testset "compatibility with oneAPI 2.10" begin
+                A = SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.3))
+                x = oneArray(rand(T, 10))
+                @testset "$SparseMatrix" for SparseMatrix in sparse_matrices
+                    # untyped constructors keep the index type, typed ones convert
+                    @test SparseMatrix(A) isa SparseMatrix{T, Int32}
+                    @test SparseMatrix(SparseMatrixCSC{T, Int64}(A)) isa SparseMatrix{T, Int64}
+                    @test SparseMatrix{T, Int64}(A) isa SparseMatrix{T, Int64}
+                    B = SparseMatrix(A)
+                    @test (@test_deprecated B.nnz) === Int32(nnz(A))
+                    @test (@test_deprecated B.handle) === nothing
+                    @test :nnz in propertynames(B)
+                    # typed buffer constructors
+                    C = SparseMatrix{T, Int32}(GPUArrays.sparse_buffers(B)..., size(B))
+                    @test C isa SparseMatrix{T, Int32}
+                    @test SparseMatrixCSC(C) == A
+                end
+                @test oneSparseMatrixCOO(Diagonal(T[1, 2])) isa oneSparseMatrixCOO{T, Int}
+                @test adapt(oneArray, A) isa oneSparseMatrixCSC{T, Int32}
+                @test oneSparseMatrixCSR(A) isa GPUArrays.AbstractGPUSparseMatrixCSR{T, Int32}
+                # handles: optimizing a matrix still works when the result is ignored
+                B = oneSparseMatrixCSR(A)
+                oneMKL.sparse_optimize_gemv!('N', B)
+                y = oneArray(zeros(T, 20))
+                oneMKL.sparse_gemv!('N', one(T), B, x, zero(T), y)
+                @test Array(y) ≈ A * Array(x)
+                P = @test_deprecated oneMKL.sparse_matrix_handle(B)
+                @test P isa oneMKL.oneSparseMatrixHandle
+                close(P)
+            end
+
+            @testset "oneMKL handles" begin
                 A = SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.3))
                 x = oneArray(rand(T, 10))
                 @testset "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     B = SparseMatrix(A)
-                    @test B.handle === nothing
                     @test Array(B * x) ≈ A * Array(x)
-                    @test B.handle !== nothing
+                    # an explicitly prepared handle
+                    P = oneMKL.sparse_optimize_gemv!('N', B)
+                    @test P isa oneMKL.oneSparseMatrixHandle
+                    y = similar(x, 20)
+                    try
+                        oneMKL.sparse_gemv!('N', one(T), P, x, zero(T), y)
+                        @test Array(y) ≈ A * Array(x)
+                    finally
+                        close(P)
+                    end
+                    close(P)
+                    @test_throws ArgumentError oneMKL.sparse_gemv!('N', one(T), P, x, zero(T), y)
                     # matrices produced by generic code
                     C = B .* T(2)
                     @test Array(C * x) ≈ (A .* T(2)) * Array(x)
                     @test Array(SparseMatrix(oneSparseMatrixCOO(A)) * x) ≈ A * Array(x)
-                    # copyto! replaces the storage, so the handle must be recreated
                     copyto!(C, B)
-                    @test C.handle === nothing
                     @test Array(C * x) ≈ A * Array(x)
                     # empty matrices do not need a handle
                     E = similar(B, T, 20, 10)
                     @test Array(E * x) == zeros(T, 20)
                     y = oneArray(ones(T, 20))
                     @test Array(mul!(y, E, x, true, T(2))) == fill(T(2), 20)
-                    oneAPI.unsafe_free!(B)
-                    @test B.handle === nothing
+                    close(oneMKL.sparse_optimize_gemv!('N', E))
+                    # handles that are not closed are released after they are collected
+                    oneMKL.sparse_optimize_gemv!('N', B)
+                    GC.gc(true)
+                    oneMKL.flush_deferred_sparse_releases()
+                    @test Array(B * x) ≈ A * Array(x)
                 end
                 if !csc_supported
-                    @test_throws ErrorException oneSparseMatrixCSC(A) * x
+                    # products fall back to the generic implementation
+                    @test Array(oneSparseMatrixCSC(A) * x) ≈ A * Array(x)
                 end
                 # any element type can be stored, but oneMKL only operates on BLAS types
                 F = oneSparseMatrixCSR(sprand(Float16, 10, 10, 0.3))
                 @test F isa oneSparseMatrixCSR{Float16, Int}
-                @test_throws ArgumentError oneMKL.sparse_matrix_handle(F)
+                @test_throws ArgumentError oneMKL.sparse_optimize_gemv!('N', F)
+                @test_throws ArgumentError oneMKL.oneSparseMatrixHandle(F)
             end
 
             @testset "shared storage" begin
@@ -1533,12 +1580,12 @@ end
                 @testset "$SparseMatrix" for SparseMatrix in csr_csc_matrices
                     B = SparseMatrix(A)
                     @test Array(B * x) ≈ A * Array(x)
-                    # a single-input broadcast reuses the pointer array of its input
+                    # broadcasts allocate their own buffers
                     C = B .* T(2)
                     oneAPI.unsafe_free!(C)
                     @test SparseMatrixCSC(B) == A
                     @test Array(B * x) ≈ A * Array(x)
-                    # converting the index type reuses the values
+                    # and so do conversions
                     D = SparseMatrix{T, Int64}(B)
                     oneAPI.unsafe_free!(D)
                     @test SparseMatrixCSC(B) == A
@@ -1554,16 +1601,11 @@ end
                 @testset "$SparseMatrix" for SparseMatrix in coo_csr_csc_matrices
                     src = SparseMatrix(A)
                     dst = SparseMatrix(SparseMatrixCSC{T, Int32}(sprand(T, 20, 10, 0.1)))
-                    matvec(dst, x) # create a handle
-                    shared = typeof(dst)(oneMKL._storage(dst)..., size(dst))
-                    expected = SparseMatrixCSC(shared)
+                    matvec(dst, x)
                     copyto!(dst, src)
                     @test dst isa SparseMatrix{T, Int32}
-                    @test dst.handle === nothing
                     @test SparseMatrixCSC(dst) == A
                     @test Array(matvec(dst, x)) ≈ A * Array(x)
-                    # matrices sharing the old storage are left untouched
-                    @test SparseMatrixCSC(shared) == expected
                 end
             end
 
@@ -1629,8 +1671,12 @@ end
 
                     alpha = rand(T)
                     beta = rand(T)
-                    oneMKL.sparse_optimize_gemv!(transa, dA)
-                    oneMKL.sparse_gemv!(transa, alpha, dA, dx, beta, dy)
+                    P = oneMKL.sparse_optimize_gemv!(transa, dA)
+                    try
+                        oneMKL.sparse_gemv!(transa, alpha, P, dx, beta, dy)
+                    finally
+                        close(P)
+                    end
                         @test alpha * opa(A) * x + beta * y ≈ collect(dy)
                 end
             end
@@ -1651,11 +1697,15 @@ end
 
                             alpha = rand(T)
                             beta = rand(T)
-                            oneMKL.sparse_optimize_gemm!(transa, dA)
-                            oneMKL.sparse_gemm!(transa, transb, alpha, dA, dB, beta, dC)
+                            P = oneMKL.sparse_optimize_gemm!(transa, dA)
+                            try
+                                oneMKL.sparse_gemm!(transa, transb, alpha, P, dB, beta, dC)
+                            finally
+                                close(P)
+                            end
 
                             @test alpha * opa(A) * opb(B) + beta * C ≈ collect(dC)
-                            oneMKL.sparse_optimize_gemm!(transa, transb, 2, dA)
+                            close(oneMKL.sparse_optimize_gemm!(transa, transb, 2, dA))
                         end
                 end
             end
@@ -1767,8 +1817,12 @@ end
                                 @test_throws ArgumentError oneMKL.sparse_optimize_trmv!(uplo, transa, diag, dA)
                                 @test_throws ArgumentError oneMKL.sparse_trmv!(uplo, transa, diag, alpha, dA, dx, beta, dy)
                             else
-                                oneMKL.sparse_optimize_trmv!(uplo, transa, diag, dA)
-                                oneMKL.sparse_trmv!(uplo, transa, diag, alpha, dA, dx, beta, dy)
+                                P = oneMKL.sparse_optimize_trmv!(uplo, transa, diag, dA)
+                                try
+                                    oneMKL.sparse_trmv!(uplo, transa, diag, alpha, P, dx, beta, dy)
+                                finally
+                                    close(P)
+                                end
                                 @test alpha * wrapper(opa(A)) * x + beta * y ≈ collect(dy)
                             end
                         end
@@ -1800,8 +1854,12 @@ end
                                 @test_throws ArgumentError oneMKL.sparse_optimize_trsv!(uplo, transa, diag, dA)
                                 @test_throws ArgumentError oneMKL.sparse_trsv!(uplo, transa, diag, alpha, dA, dx, dy)
                             else
-                                oneMKL.sparse_optimize_trsv!(uplo, transa, diag, dA)
-                                oneMKL.sparse_trsv!(uplo, transa, diag, alpha, dA, dx, dy)
+                                P = oneMKL.sparse_optimize_trsv!(uplo, transa, diag, dA)
+                                try
+                                    oneMKL.sparse_trsv!(uplo, transa, diag, alpha, P, dx, dy)
+                                finally
+                                    close(P)
+                                end
                                 y = wrapper(opa(A)) \ (alpha * x)
                                 @test y ≈ collect(dy)
                             end
@@ -1838,12 +1896,16 @@ end
                                     @test_throws ArgumentError oneMKL.sparse_trsm!(uplo, transa, transx, diag, alpha, dA, dX, dY)
                                     @test_throws ArgumentError oneMKL.sparse_optimize_trsm!(uplo, transa, diag, 4, dA)
                                 else
-                                    oneMKL.sparse_optimize_trsm!(uplo, transa, diag, dA)
-                                    oneMKL.sparse_trsm!(uplo, transa, transx, diag, alpha, dA, dX, dY)
+                                    P = oneMKL.sparse_optimize_trsm!(uplo, transa, diag, dA)
+                                    try
+                                        oneMKL.sparse_trsm!(uplo, transa, transx, diag, alpha, P, dX, dY)
+                                    finally
+                                        close(P)
+                                    end
                                     Y = wrapper(opa(A)) \ (alpha * opx(X))
                                     @test Y ≈ collect(dY)
 
-                                    oneMKL.sparse_optimize_trsm!(uplo, transa, diag, 4, dA)
+                                    close(oneMKL.sparse_optimize_trsm!(uplo, transa, diag, 4, dA))
                                 end
                             end
                     end
