@@ -1214,6 +1214,9 @@ for (mmname_variant, smname_variant, elty) in
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
+            # the variant reads C regardless of beta (unlike gemm), and trsm leaks NaNs
+            # from an uninitialized C into the result
+            iszero(beta) && fill!(C, zero($elty))
             queue = global_queue(context(A), device(A))
             $mmname_variant(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
             C
@@ -1236,6 +1239,9 @@ for (mmname_variant, smname_variant, elty) in
             lda = max(1,stride(A,2))
             ldb = max(1,stride(B,2))
             ldc = max(1,stride(C,2))
+            # the variant reads C regardless of beta (unlike gemm), and trsm leaks NaNs
+            # from an uninitialized C into the result
+            iszero(beta) && fill!(C, zero($elty))
             queue = global_queue(context(A), device(A))
             $smname_variant(sycl_queue(queue), side, uplo, transa, diag, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
             C
