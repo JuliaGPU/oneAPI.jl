@@ -36,6 +36,8 @@ include("fft.jl")
 # recovery (retry_reclaim) and proactive GC (_maybe_gc) can free MKL internal buffers
 # associated with sparse matrix handles that were deferred from finalizer threads.
 oneL0.register_reclaim_callback!(flush_deferred_sparse_releases)
+# Likewise for FFT plan descriptors, which hold device memory outside the pool.
+oneL0.register_reclaim_callback!(FFT.flush_deferred_dft_releases)
 
 function version()
     major = Ref{Int64}()

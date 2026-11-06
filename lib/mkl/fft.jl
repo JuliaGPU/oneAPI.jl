@@ -19,9 +19,6 @@ export MKLFFTPlan
 # Import DFT enums and constants from Support module
 using ..Support
 
-# Allow implicit conversion of SYCL queue object to raw handle when storing/passing
-Base.convert(::Type{syclQueue_t}, q::SYCL.syclQueue) = Base.unsafe_convert(syclQueue_t, q)
-
 abstract type MKLFFTPlan{T,K,inplace} <: AbstractFFTs.Plan{T} end
 
 Base.eltype(::MKLFFTPlan{T}) where T = T
@@ -31,9 +28,108 @@ is_inplace(::MKLFFTPlan{<:Any,<:Any,inplace}) where inplace = inplace
 const MKLFFT_FORWARD = true
 const MKLFFT_INVERSE = false
 
-mutable struct cMKLFFTPlan{T,K,inplace,N,R,B} <: MKLFFTPlan{T,K,inplace}
+# A oneMKL DFT descriptor. Committing one allocates device memory outside the pool (tens of
+# MiB for long transforms), so it has to be destroyed once no plan uses it any more; plans
+# and the inverse plans made from them share one. Finalizers can't call into oneMKL, so
+# like sparse handles, collected descriptors are queued and destroyed on a regular task:
+# when creating a descriptor, and when memory is reclaimed. Compute calls wait for their
+# work and pass the descriptor itself, which keeps it alive for the duration of the call,
+# so an unreachable descriptor is not in use and can be destroyed without synchronizing.
+mutable struct Descriptor
     handle::onemklDftDescriptor_t
-    queue::syclQueue_t
+    queue::SYCL.syclQueue
+    workspace::Int
+
+    function Descriptor(handle::onemklDftDescriptor_t, queue::SYCL.syclQueue)
+        desc = new(handle, queue, 0)
+        _retain(queue)
+        finalizer(_defer_destroy, desc)
+    end
+end
+
+# A descriptor executes on the queue it was committed to, the creating task's SYCL queue.
+# That queue, and the SYCL context and Level Zero queue under it, are kept in task-local
+# storage, so plans can outlive them. Keep them alive until the descriptor is destroyed,
+# which a field of the descriptor doesn't: once the task, its plans and its queue are
+# collected together, their finalizers run in no particular order.
+const descriptor_queues = IdDict{SYCL.syclQueue,Int}()
+const descriptor_queues_lock = ReentrantLock()
+
+function _retain(queue::SYCL.syclQueue)
+    @lock descriptor_queues_lock begin
+        descriptor_queues[queue] = get(descriptor_queues, queue, 0) + 1
+    end
+    return
+end
+
+function _release(queue::SYCL.syclQueue)
+    @lock descriptor_queues_lock begin
+        n = descriptor_queues[queue] - 1
+        n == 0 ? delete!(descriptor_queues, queue) : (descriptor_queues[queue] = n)
+    end
+    return
+end
+
+Base.unsafe_convert(::Type{onemklDftDescriptor_t}, desc::Descriptor) = desc.handle
+
+const deferred_descriptors = Descriptor[]
+# Never held across anything that can yield, and with finalizers disabled on regular tasks.
+const deferred_descriptors_lock = Threads.SpinLock()
+
+function _defer_destroy(desc::Descriptor)
+    lock(deferred_descriptors_lock) do
+        push!(deferred_descriptors, desc)
+    end
+    return
+end
+
+function flush_deferred_dft_releases()
+    GC.enable_finalizers(false)
+    descs = try
+        lock(deferred_descriptors_lock) do
+            descs = copy(deferred_descriptors)
+            empty!(deferred_descriptors)
+            descs
+        end
+    finally
+        GC.enable_finalizers(true)
+    end
+    for desc in descs
+        st = onemklDftDestroy(desc)
+        if st == 0
+            Threads.atomic_sub!(oneAPI._allocated_bytes, Int64(desc.workspace))
+            _release(desc.queue)
+        else
+            @warn "Error destroying oneMKL DFT descriptor (status $st)"
+        end
+        desc.handle = C_NULL
+    end
+    return
+end
+
+# The workspace that committing allocates is invisible to both garbage collectors, so a
+# loop making plans and little else would fill the device before any of them is collected.
+# Account for it like an allocation instead, so that the pool's proactive GC collects
+# plans as the device fills up. Its size is only known after committing; before that,
+# oneMKL gives a (generous) estimate.
+function _commit!(desc::Descriptor)
+    bytes = Ref{Int64}(0)
+    onemklDftGetValueInt64(desc, ONEMKL_DFT_PARAM_WORKSPACE_ESTIMATE_BYTES, bytes)
+    oneAPI._maybe_gc(oneAPI.device(), Int(bytes[]))
+    flush_deferred_dft_releases()
+
+    st = onemklDftCommit(desc, desc.queue)
+    st == 0 || error("commit failed ($st)")
+
+    if onemklDftGetValueInt64(desc, ONEMKL_DFT_PARAM_WORKSPACE_EXTERNAL_BYTES, bytes) == 0
+        desc.workspace = bytes[]
+        Threads.atomic_add!(oneAPI._allocated_bytes, Int64(desc.workspace))
+    end
+    return
+end
+
+mutable struct cMKLFFTPlan{T,K,inplace,N,R,B} <: MKLFFTPlan{T,K,inplace}
+    handle::Descriptor
     sz::NTuple{N,Int}
     osz::NTuple{N,Int}
     realdomain::Bool
@@ -48,8 +144,7 @@ end
 
 # Real transforms use separate struct (mirroring AMDGPU style) for buffer staging
 mutable struct rMKLFFTPlan{T,K,inplace,N,R,B} <: MKLFFTPlan{T,K,inplace}
-    handle::onemklDftDescriptor_t
-    queue::syclQueue_t
+    handle::Descriptor
     sz::NTuple{N,Int}
     osz::NTuple{N,Int}
     xtype::Symbol
@@ -65,23 +160,23 @@ function normalization_factor(sz, region)
 end
 
 function plan_inv(p::cMKLFFTPlan{T,MKLFFT_FORWARD,inplace,N,R,B}) where {T,inplace,N,R,B}
-    q = cMKLFFTPlan{T, MKLFFT_INVERSE, inplace, N, R, B}(p.handle, p.queue, p.sz, p.osz, p.realdomain, p.region, p.nloop, p.loopstride, p.buffer, p)
+    q = cMKLFFTPlan{T, MKLFFT_INVERSE, inplace, N, R, B}(p.handle, p.sz, p.osz, p.realdomain, p.region, p.nloop, p.loopstride, p.buffer, p)
     p.pinv = q
     ScaledPlan(q, 1/normalization_factor(p.sz, p.region))
 end
 function plan_inv(p::cMKLFFTPlan{T,MKLFFT_INVERSE,inplace,N,R,B}) where {T,inplace,N,R,B}
-    q = cMKLFFTPlan{T, MKLFFT_FORWARD, inplace, N, R, B}(p.handle, p.queue, p.sz, p.osz, p.realdomain, p.region, p.nloop, p.loopstride, p.buffer, p)
+    q = cMKLFFTPlan{T, MKLFFT_FORWARD, inplace, N, R, B}(p.handle, p.sz, p.osz, p.realdomain, p.region, p.nloop, p.loopstride, p.buffer, p)
     p.pinv = q
     ScaledPlan(q, 1/normalization_factor(p.sz, p.region))
 end
 
 function plan_inv(p::rMKLFFTPlan{T,MKLFFT_FORWARD,inplace,N,R,B}) where {T,inplace,N,R,B}
-    q = rMKLFFTPlan{T,MKLFFT_INVERSE,inplace,N,R,B}(p.handle,p.queue,p.sz,p.osz,:brfft,p.region,p.buffer,p)
+    q = rMKLFFTPlan{T,MKLFFT_INVERSE,inplace,N,R,B}(p.handle,p.sz,p.osz,:brfft,p.region,p.buffer,p)
     p.pinv = q
     ScaledPlan(q, 1/normalization_factor(p.sz, p.region))
 end
 function plan_inv(p::rMKLFFTPlan{T,MKLFFT_INVERSE,inplace,N,R,B}) where {T,inplace,N,R,B}
-    q = rMKLFFTPlan{T,MKLFFT_FORWARD,inplace,N,R,B}(p.handle,p.queue,p.sz,p.osz,:rfft,p.region,p.buffer,p)
+    q = rMKLFFTPlan{T,MKLFFT_FORWARD,inplace,N,R,B}(p.handle,p.sz,p.osz,:rfft,p.region,p.buffer,p)
     p.pinv = q
     ScaledPlan(q, 1/normalization_factor(p.sz, p.region))
 end
@@ -96,6 +191,14 @@ end
 function _create_descriptor(sz::NTuple{N,Int}, T::Type, complex::Bool) where {N}
     prec = T<:Float64 || T<:ComplexF64 ? ONEMKL_DFT_PRECISION_DOUBLE : ONEMKL_DFT_PRECISION_SINGLE
     dom = complex ? ONEMKL_DFT_DOMAIN_COMPLEX : ONEMKL_DFT_DOMAIN_REAL
+    flush_deferred_dft_releases()
+    # Use the task-local cached SYCL queue wrapping the global Level Zero queue, like the
+    # other oneMKL wrappers do. Creating fresh syclContext/syclQueue objects per plan is
+    # unsound: once they become garbage their finalizers (syclQueueDestroy etc.) tear down
+    # SYCL runtime state for the still-in-use underlying queue, corrupting later DFT
+    # commits and crashing at process exit.
+    ze_ctx = oneAPI.context(); ze_dev = oneAPI.device()
+    q = oneAPI.sycl_queue(oneAPI.global_queue(ze_ctx, ze_dev))
     desc_ref = Ref{onemklDftDescriptor_t}()
     # Create descriptor for the full array dimensions. `lengths` must stay rooted
     # across the ccall: oneMKL copies the dimensions out of `pointer(lengths)`, and
@@ -106,17 +209,9 @@ function _create_descriptor(sz::NTuple{N,Int}, T::Type, complex::Bool) where {N}
         onemklDftCreate1D(desc_ref, prec, dom, lengths[1]) :
         onemklDftCreateND(desc_ref, prec, dom, length(lengths), pointer(lengths)))
     st == 0 || error("onemkl DFT create failed (status $st)")
-    desc = desc_ref[]
     # Do not program descriptor scaling; we'll perform inverse normalization manually.
     # Set placement explicitly based on plan type later
-    # Use the task-local cached SYCL queue wrapping the global Level Zero queue, like the
-    # other oneMKL wrappers do. Creating fresh syclContext/syclQueue objects per plan is
-    # unsound: once they become garbage their finalizers (syclQueueDestroy etc.) tear down
-    # SYCL runtime state for the still-in-use underlying queue, corrupting later DFT
-    # commits and crashing at process exit.
-    ze_ctx = oneAPI.context(); ze_dev = oneAPI.device()
-    q = oneAPI.sycl_queue(oneAPI.global_queue(ze_ctx, ze_dev))
-    return desc, q
+    return Descriptor(desc_ref[], q)
 end
 
 # Normalize a user-provided region (integer, tuple, range, vector) to a sorted tuple.
@@ -148,7 +243,7 @@ function _plan_cfft(X::oneAPI.oneArray{T, N}, region, K::Bool, inplace::Bool) wh
     trail = prod(sz[(k + 1):N])   # batch count after the region (1 if k == N)
     tlen = prod(sz[j:k])        # elements per transform block
 
-    desc, q = _create_descriptor(ntuple(i -> sz[j + i - 1], R), T, true)
+    desc = _create_descriptor(ntuple(i -> sz[j + i - 1], R), T, true)
     onemklDftSetValueConfigValue(
         desc, ONEMKL_DFT_PARAM_PLACEMENT,
         inplace ? ONEMKL_DFT_VALUE_INPLACE : ONEMKL_DFT_VALUE_NOT_INPLACE
@@ -184,8 +279,8 @@ function _plan_cfft(X::oneAPI.oneArray{T, N}, region, K::Bool, inplace::Bool) wh
         onemklDftSetValueInt64(desc, ONEMKL_DFT_PARAM_BWD_DISTANCE, Int64(dist))
     end
 
-    stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
-    return cMKLFFTPlan{T, K, inplace, N, R, Nothing}(desc, q, sz, sz, false, reg, nloop, loopstride, nothing, nothing)
+    _commit!(desc)
+    return cMKLFFTPlan{T, K, inplace, N, R, Nothing}(desc, sz, sz, false, reg, nloop, loopstride, nothing, nothing)
 end
 
 plan_fft(X::oneAPI.oneArray{T, N}, region) where {T <: Union{ComplexF32, ComplexF64}, N} =
@@ -244,7 +339,7 @@ end
 # Single-dimension real FFT using oneMKL (optimized path)
 function _plan_rfft_1d(X::oneAPI.oneArray{T,N}, reg::NTuple{1,Int}) where {T<:Union{Float32,Float64},N}
     # Create 1D descriptor for the transform dimension
-    desc,q = _create_descriptor((size(X, reg[1]),), T, false)
+    desc = _create_descriptor((size(X, reg[1]),), T, false)
     xdims = size(X)
     # output along first dim becomes N/2+1
     ydims = Base.setindex(xdims, div(xdims[1],2)+1, 1)
@@ -261,9 +356,9 @@ function _plan_rfft_1d(X::oneAPI.oneArray{T,N}, reg::NTuple{1,Int}) where {T<:Un
         onemklDftSetValueInt64(desc, ONEMKL_DFT_PARAM_BWD_DISTANCE, Int64(ydims[1]))
     end
 
-    stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
+    _commit!(desc)
     R = length(reg)
-    rMKLFFTPlan{T,MKLFFT_FORWARD,false,N,R,typeof(buffer)}(desc,q,xdims,ydims,:rfft,reg,buffer,nothing)
+    rMKLFFTPlan{T,MKLFFT_FORWARD,false,N,R,typeof(buffer)}(desc,xdims,ydims,:rfft,reg,buffer,nothing)
 end
 
 # Multi-dimensional real FFT using complex FFT approach
@@ -351,7 +446,7 @@ function _plan_brfft_1d(X::oneAPI.oneArray{T,N}, d::Integer, reg::NTuple{1,Int})
     RT = T.parameters[1]
 
     # Create 1D descriptor for the transform dimension
-    desc,q = _create_descriptor((d,), RT, false)
+    desc = _create_descriptor((d,), RT, false)
     xdims = size(X)
     ydims = Base.setindex(xdims, d, 1)
     buffer = oneAPI.oneArray{T}(undef, xdims) # copy for safety
@@ -363,9 +458,9 @@ function _plan_brfft_1d(X::oneAPI.oneArray{T,N}, d::Integer, reg::NTuple{1,Int})
         @info "Batched real inverse FFTs not yet supported by oneMKL - please use loop-based approach or 1D arrays"
     end
 
-    stc = onemklDftCommit(desc, q); stc == 0 || error("commit failed ($stc)")
+    _commit!(desc)
     R = length(reg)
-    rMKLFFTPlan{T,MKLFFT_INVERSE,false,N,R,typeof(buffer)}(desc,q,xdims,ydims,:brfft,reg,buffer,nothing)
+    rMKLFFTPlan{T,MKLFFT_INVERSE,false,N,R,typeof(buffer)}(desc,xdims,ydims,:brfft,reg,buffer,nothing)
 end
 
 # Multi-dimensional real inverse FFT using complex FFT approach

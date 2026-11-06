@@ -135,12 +135,11 @@ end
     # Plans must share the single cached task-local SYCL queue rather than each owning a
     # throwaway one (whose finalizer would tear down shared SYCL/oneMKL state). Assert the
     # shared handle deterministically, independent of whether a stale queue would crash.
-    cached_handle = Base.unsafe_convert(oneAPI.oneMKL.syclQueue_t,
-        oneAPI.sycl_queue(oneAPI.global_queue(oneAPI.context(), oneAPI.device())))
+    cached_queue = oneAPI.sycl_queue(oneAPI.global_queue(oneAPI.context(), oneAPI.device()))
 
     dX1 = gpu(rand(ComplexF32, 8))
     p1 = AbstractFFTs.plan_fft(dX1)
-    @test p1.queue == cached_handle
+    @test p1.handle.queue === cached_queue
     dY1 = p1 * dX1
     p1i = AbstractFFTs.plan_ifft(dX1)
     p1i * dY1
@@ -150,7 +149,7 @@ end
     X2 = rand(ComplexF32, 8, 32)
     dX2 = gpu(X2)
     p2 = AbstractFFTs.plan_fft(dX2)
-    @test p2.queue == cached_handle
+    @test p2.handle.queue === cached_queue
     cmp(p2 * dX2, fft(X2))
 end
 
@@ -164,5 +163,63 @@ end
     Y = fft(X)
     Z = abs.(Y)
     cmp(Z, abs.(fft(hX .* 2f0)))
+end
+
+@testset "descriptor lifetime" begin
+    FFTm = oneAPI.oneMKL.FFT
+    X = rand(ComplexF32, 64, 8)
+    dX = gpu(X)
+
+    # the descriptors of collected plans are destroyed (the plans are kept alive until
+    # all have been created, as creating one destroys those collected before)
+    GC.gc(true); FFTm.flush_deferred_dft_releases()
+    (@noinline function (dX, dXr)
+        plans = []
+        for _ in 1:10
+            push!(plans, AbstractFFTs.plan_fft(dX, 1), AbstractFFTs.plan_bfft(dX, 1),
+                  AbstractFFTs.plan_rfft(dXr, 1))
+        end
+    end)(dX, gpu(rand(Float32, 64, 8)))
+    GC.gc(true)
+    @test length(FFTm.deferred_descriptors) >= 30
+    FFTm.flush_deferred_dft_releases()
+    @test isempty(FFTm.deferred_descriptors)
+
+    # inverse plans share the descriptor, and keep it alive without the forward plan
+    q1, q2 = let p = AbstractFFTs.plan_fft(dX, 1)
+        inv(p), inv(p)
+    end
+    GC.gc(true); FFTm.flush_deferred_dft_releases()
+    Y = gpu(fft(X, 1))
+    cmp(q1 * Y, X)
+    cmp(q2 * Y, X)
+
+    # plans keep the SYCL queue they execute on alive, even though it's task-local,
+    ps = [fetch(@async AbstractFFTs.plan_fft(dX, 1)) for _ in 1:4]
+    GC.gc(true)
+    for p in ps
+        cmp(p * dX, fft(X, 1))
+    end
+    # and so do their descriptors until they are destroyed
+    FFTm.flush_deferred_dft_releases()
+    (@noinline dX -> wait(@async (AbstractFFTs.plan_fft(dX, 1); nothing)))(dX)
+    GC.gc(true)
+    @test !isempty(FFTm.deferred_descriptors)
+    @test all(desc -> desc.queue.ze_queue.handle != C_NULL, FFTm.deferred_descriptors)
+    FFTm.flush_deferred_dft_releases()
+end
+
+@testset "descriptor workspace accounting" begin
+    # the workspace of a descriptor counts towards the pool's proactive GC
+    FFTm = oneAPI.oneMKL.FFT
+    dX = gpu(rand(ComplexF32, 4096, 16))
+    GC.gc(true); FFTm.flush_deferred_dft_releases()
+    before = oneAPI._allocated_bytes[]
+    # in a function, so that the plan isn't kept alive by this scope
+    workspace = (@noinline dX -> AbstractFFTs.plan_fft!(dX, 1).handle.workspace)(dX)
+    @test workspace > 0
+    @test oneAPI._allocated_bytes[] == before + workspace
+    GC.gc(true); FFTm.flush_deferred_dft_releases()
+    @test oneAPI._allocated_bytes[] == before
 end
 end
