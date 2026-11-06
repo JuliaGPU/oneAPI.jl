@@ -144,12 +144,6 @@ init_worker_code = quote
         if oneL0.LTS[] && test === TestSuite.test_accumulate
             filter!(!=(ComplexF32), typs)
         end
-        # The LTS IGC (2.11) miscompiles the ComplexF16 accumulator of GPUArrays' sparse
-        # reductions with Julia 1.13, corrupting the real parts. Fixed upstream in IGC 2.26
-        # (intel/intel-graphics-compiler@15614f2), not in the LTS line; see docs/src/lts.md.
-        if oneL0.LTS[] && test === TestSuite.test_sparse
-            filter!(!=(ComplexF16), typs)
-        end
         return typs
     end
 
