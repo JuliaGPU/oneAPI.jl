@@ -1673,3 +1673,48 @@ end
     @test occursin("not aligned", err.reason)
     @test Array(y)[] == 0
 end
+
+@testset "spills past 128 KB of scratch" begin
+    # Each work-item keeps V vectors of 16 values live until the stores (`out` may alias
+    # `inp`), so at SIMD32 IGC spills them, above a table of P values per work-item that it
+    # keeps in private memory. On Gen12LP, these spills used to be corrupted (fixed in
+    # libigc_jll 2.41.5+4):
+    # - (16, 300): HWord scratch offsets past 128 KB wrapped around
+    #   (https://github.com/intel/intel-graphics-compiler/issues/469);
+    # - (8, 640): with at least 60% of 128 KB of private memory, IGC spills with OWord
+    #   messages, which the post-RA spill/fill propagation corrupted
+    #   (https://github.com/intel/intel-graphics-compiler/issues/471).
+    function spill_kernel(out, inp, tab, ::Val{V}, ::Val{P}) where {V, P}
+        g = get_global_id() - 1
+        n = get_global_size()
+        vs = ntuple(Val(V)) do a
+            ntuple(l -> unsafe_load(pointer(inp), ((a - 1) * n + g) * 16 + l), Val(16))
+        end
+        t = ntuple(j -> unsafe_load(pointer(tab), (j - 1) * n + g + 1), Val(P))
+        ntuple(Val(V)) do a
+            x = @inbounds t[(3 * (a - 1) + g) % P + 1]
+            for l in 1:16
+                unsafe_store!(pointer(out), @inbounds(vs[a][l]) + x, ((V - a) * n + g) * 16 + l)
+            end
+        end
+        return
+    end
+    if 32 in oneL0.compute_properties(device()).subGroupSizes
+        N = 256
+        for (nv, np) in ((16, 300), (8, 640))
+            inp = rand(UInt32, 16 * nv * N)
+            tab = rand(UInt32, np * N)
+            out = oneArray{UInt32}(undef, 16 * nv * N)
+            @oneapi items=32 groups=N÷32 sub_group_size=32 spill_kernel(
+                out, oneArray(inp), oneArray(tab), Val(nv), Val(np))
+            want = similar(inp)
+            for i in 1:nv, j in 0:N-1, k in 1:16
+                want[((nv - i) * N + j) * 16 + k] =
+                    inp[((i - 1) * N + j) * 16 + k] + tab[((3 * (i - 1) + j) % np) * N + j + 1]
+            end
+            @test Array(out) == want
+        end
+    else
+        @test_skip "sub-group size 32 is not supported"
+    end
+end
