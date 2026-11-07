@@ -155,20 +155,11 @@ This workaround is independent of `ONEAPI_LTS` and can be enabled on its own.
   `cumsum` are unaffected. It is not reproducible on Xe-LP hardware with the same NEO 25.18 /
   IGC 2.11 user-mode driver, so it looks specific to IGC's PVC code generation. There is no
   workaround in oneAPI.jl yet.
-- **`ComplexF16` sparse reductions.** With Julia 1.13, `sum(A; dims)` and other reductions
-  along a dimension of a `ComplexF16` sparse matrix return wrong real parts; the imaginary
-  parts are correct. IGC's load/store combining packs the complex accumulator into a layout
-  struct, and copying that struct emits a stray move that overwrites the real field with
-  another lane's data. This is not specific to PVC: the LTS IGC 2.11.7 produces the same
-  wrong results on DG2. It was fixed upstream in IGC 2.26.0 (and 2.25.10) by
-  [intel/intel-graphics-compiler@15614f2](https://github.com/intel/intel-graphics-compiler/commit/15614f288101c71739ff41d4e21cef6e4dad3e8e),
-  which has not been backported to the 2.11 LTS line (checked up to 2.11.54). Building the
-  module with `-igc_opts 'EnableLdStCombine=0'` avoids it.
 
 ## Running the test suite
 
 The test suite reads the same switch and skips the cases the LTS stack cannot support (the
-`BFloat16` element type, the BFloat16 example, `ComplexF32` in the accumulate tests, `ComplexF16` in the sparse tests). On a multi-tile node, pinning each test
+`BFloat16` element type, the BFloat16 example, `ComplexF32` in the accumulate tests). On a multi-tile node, pinning each test
 worker to its own tile avoids the oversubscription that provokes the dropped-tail
 corruption:
 
