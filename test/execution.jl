@@ -1690,10 +1690,44 @@ end
     a = oneArray([0//1])
     @oneapi construct!(a, 1, -2)
     @test Array(a) == [-1//2]
+    # Julia 1.10 throws an ArgumentError, later versions an OverflowError from negating the
+    # denominator, which is only reported as an exception
     @oneapi debug_level=1 construct!(a, 1, typemin(Int))
     err = kernel_exception()
     @test err isa KernelException
+    if isdefined(Base, :__throw_rational_argerror_typemin)
+        @test err.name == "ArgumentError"
+        @test err.reason == "invalid rational: denominator can't be typemin"
+        @test occursin("An ArgumentError was thrown on", sprint(showerror, err))
+    end
     @test Array(a) == [-1//2]
+end
+
+# GPUToolbox's shared overrides report their exceptions like `@gputhrow` does
+@testset "shared override exceptions" begin
+    throwing() = (oneAPI.GPUToolbox.Overlays.device_throw(ArgumentError,
+                                                          Val(Symbol("shared reason")));
+                  return)
+    @oneapi debug_level=0 throwing()
+    err = kernel_exception()
+    @test err isa KernelException
+    @test err.name == ""
+    @oneapi debug_level=1 throwing()
+    err = kernel_exception()
+    @test err.name == "ArgumentError"
+    @test err.reason == "shared reason"
+    msg = sprint(showerror, err)
+    @test occursin("An ArgumentError was thrown on", msg)
+    @test occursin(": shared reason", msg)
+
+    if VERSION < v"1.12-"
+        negate!(a) = (@inbounds a[1] = -a[1]; return)
+        a = oneArray([typemin(Int)//1])
+        @oneapi debug_level=1 negate!(a)
+        err = kernel_exception()
+        @test err.name == "OverflowError"
+        @test err.reason == "rational numerator is typemin"
+    end
 end
 
 @testset "spills past 128 KB of scratch" begin
