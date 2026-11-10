@@ -35,15 +35,18 @@ GPUCompiler.runtime_module(::oneAPICompilerJob) = oneAPI
 
 GPUCompiler.kernel_state_type(::oneAPICompilerJob) = KernelState
 
-# SPIR-V doesn't support 128-bit integers, so keep 64-bit integer math (e.g. `Rational`
-# comparisons) that Base computes with them out of Int128
+# - SPIR-V doesn't support 128-bit integers, so keep 64-bit integer math (e.g. `Rational`
+#   comparisons) that Base computes with them out of Int128
+# - replace Base helpers that format their error message at run time, which can't be
+#   compiled, with ones that throw with a constant message
 function GPUCompiler.method_tables(job::oneAPICompilerJob)
     if job.config.target.supports_fp64
-        (method_table, SPIRVIntrinsics.method_table, GPUToolbox.Overlays.int128_overrides)
+        (method_table, SPIRVIntrinsics.method_table, GPUToolbox.Overlays.int128_overrides,
+         GPUToolbox.Overlays.throw_overrides)
     else
         # keep single-precision math that Base computes in Float64 out of double precision
         (method_table, SPIRVIntrinsics.method_table, GPUToolbox.Overlays.float64_overrides,
-         GPUToolbox.Overlays.int128_overrides)
+         GPUToolbox.Overlays.int128_overrides, GPUToolbox.Overlays.throw_overrides)
     end
 end
 
