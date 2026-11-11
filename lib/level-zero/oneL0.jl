@@ -171,6 +171,37 @@ function __init__()
     initialize()
 end
 
+const INTEL_VENDOR_ID = "0x8086"
+const R_OK_W_OK = Cint(6) # access(2) mode: read and write permission
+
+"""
+    device_access_hint(; dri="/dev/dri", sysfs="/sys/class/drm")
+
+On Linux, a sentence on how to get access to the Intel GPUs' render nodes when there are
+such nodes but none of them can be opened for reading and writing, which makes the driver
+find no device. `nothing` otherwise, including on machines without an Intel GPU.
+"""
+function device_access_hint(; dri::AbstractString="/dev/dri", sysfs::AbstractString="/sys/class/drm")
+    Sys.islinux() || return nothing
+    nodes = try
+        filter(startswith("renderD"), readdir(dri))
+    catch
+        return nothing
+    end
+    vendor(node) = try
+        strip(read(joinpath(sysfs, node, "device", "vendor"), String))
+    catch
+        ""
+    end
+    intel = [joinpath(dri, node) for node in nodes if vendor(node) == INTEL_VENDOR_ID]
+    isempty(intel) && return nothing
+    any(path -> ccall(:access, Cint, (Cstring, Cint), path, R_OK_W_OK) == 0, intel) && return nothing
+    return "You do not have read and write access to the Intel GPU's device node " *
+           "($(join(intel, ", "))). Add your user to the group that owns it " *
+           "(usually `render`, or `video` on older systems), " *
+           "for example with `sudo usermod -aG render \$USER`, then log out and back in."
+end
+
 # initialize the driver, setting `functional`. `quiet` doesn't report why it isn't functional.
 function initialize(; quiet::Bool=false)
     functional[] = false
@@ -215,11 +246,16 @@ function initialize(; quiet::Bool=false)
     catch err
         # Handle the specific case where no oneAPI device is available
         if err isa ZeError && err.code == RESULT_ERROR_UNINITIALIZED
+            # Stay quiet on machines without an Intel GPU, but not when there is one the
+            # driver cannot open.
+            hint = device_access_hint()
+            quiet || hint === nothing || @warn "oneAPI found no usable device. $hint"
             functional[] = false
             return
         end
         # For other errors, still report them as errors
-        quiet || @error "Failed to initialize oneAPI" exception=(err,catch_backtrace())
+        hint = something(device_access_hint(), "")
+        quiet || @error "Failed to initialize oneAPI. $hint" exception=(err,catch_backtrace())
         functional[] = false
         return
     end
@@ -229,7 +265,8 @@ function initialize(; quiet::Bool=false)
         drv_count = Ref{UInt32}(0)
         zeDriverGet(drv_count, C_NULL)
         if drv_count[] == 0
-            quiet || @info "oneAPI initialized but no drivers found. oneAPI.jl will not be functional."
+            hint = something(device_access_hint(), "")
+            quiet || @info "oneAPI initialized but no drivers found. oneAPI.jl will not be functional. $hint"
             functional[] = false
             return
         end
