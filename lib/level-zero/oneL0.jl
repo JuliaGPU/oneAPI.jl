@@ -171,6 +171,62 @@ function __init__()
     initialize()
 end
 
+const INTEL_VENDOR_ID = "0x8086"
+const R_OK_W_OK = Cint(6) # access(2) mode: read and write permission
+
+"""
+    device_access_hint(; dri="/dev/dri", sysfs="/sys/class/drm")
+
+On Linux, a sentence on how to get access to the Intel GPUs' render nodes when there are
+such nodes but none of them can be opened for reading and writing, which makes the driver
+find no device. `nothing` otherwise, including on machines without an Intel GPU.
+"""
+function device_access_hint(; dri::AbstractString = "/dev/dri", sysfs::AbstractString = "/sys/class/drm")
+    Sys.islinux() || return nothing
+    nodes = try
+        filter(startswith("renderD"), readdir(dri))
+    catch
+        return nothing
+    end
+    vendor(node) = try
+        strip(read(joinpath(sysfs, node, "device", "vendor"), String))
+    catch
+        ""
+    end
+    intel = [joinpath(dri, node) for node in nodes if vendor(node) == INTEL_VENDOR_ID]
+    isempty(intel) && return nothing
+    any(path -> ccall(:access, Cint, (Cstring, Cint), path, R_OK_W_OK) == 0, intel) && return nothing
+    groups = unique!([node_group(path) for path in intel])
+    group = length(groups) == 1 && groups[1] !== nothing ? groups[1] : nothing
+    advice = if group === nothing
+        "Add your user to the group that owns it (usually `render`, or `video` on older " *
+            "systems), for example with `sudo usermod -aG render \$USER`"
+    else
+        "Add your user to the `$group` group that owns it, " *
+            "for example with `sudo usermod -aG $group \$USER`"
+    end
+    return "You do not have read and write access to the Intel GPU's device node " *
+        "($(join(intel, ", "))). $advice, then log out and back in."
+end
+
+# name of the group owning `path`, or `nothing` if it cannot be determined or isn't
+# one to join
+function node_group(path)
+    return try
+        gr = Libc.getgrgid(stat(path).gid, false)
+        # don't suggest joining `root` on misconfigured systems
+        gr === nothing || gr.groupname in ("", "root") ? nothing : gr.groupname
+    catch
+        nothing
+    end
+end
+
+# `msg`, followed by the device access hint if there is one
+function with_access_hint(msg)
+    hint = device_access_hint()
+    return hint === nothing ? msg : "$msg. $hint"
+end
+
 # initialize the driver, setting `functional`. `quiet` doesn't report why it isn't functional.
 function initialize(; quiet::Bool=false)
     functional[] = false
@@ -215,11 +271,17 @@ function initialize(; quiet::Bool=false)
     catch err
         # Handle the specific case where no oneAPI device is available
         if err isa ZeError && err.code == RESULT_ERROR_UNINITIALIZED
+            # Stay quiet on machines without an Intel GPU, but not when there is one the
+            # driver cannot open.
+            if !quiet
+                hint = device_access_hint()
+                hint === nothing || @warn "oneAPI found no usable device. $hint"
+            end
             functional[] = false
             return
         end
         # For other errors, still report them as errors
-        quiet || @error "Failed to initialize oneAPI" exception=(err,catch_backtrace())
+        quiet || @error with_access_hint("Failed to initialize oneAPI") exception = (err, catch_backtrace())
         functional[] = false
         return
     end
@@ -229,7 +291,7 @@ function initialize(; quiet::Bool=false)
         drv_count = Ref{UInt32}(0)
         zeDriverGet(drv_count, C_NULL)
         if drv_count[] == 0
-            quiet || @info "oneAPI initialized but no drivers found. oneAPI.jl will not be functional."
+            quiet || @info with_access_hint("oneAPI initialized but no drivers found. oneAPI.jl will not be functional")
             functional[] = false
             return
         end

@@ -7,6 +7,46 @@ if oneL0.NEO_jll.is_available()
 end
 
 
+@testset "device access hint" begin
+    # a fake /dev/dri and /sys/class/drm, with render nodes of the given vendors
+    function fake_nodes(f, vendors...)
+        mktempdir() do root
+            dri, sysfs = mkpath(joinpath(root, "dri")), joinpath(root, "drm")
+            for (i, vendor) in enumerate(vendors)
+                node = "renderD$(127 + i)"
+                touch(joinpath(dri, node))
+                write(joinpath(mkpath(joinpath(sysfs, node, "device")), "vendor"), vendor * "\n")
+            end
+            f(dri, sysfs)
+        end
+    end
+    hint(dri, sysfs) = oneL0.device_access_hint(; dri, sysfs)
+
+    fake_nodes("0x8086") do dri, sysfs
+        @test hint(dri, sysfs) === nothing             # accessible
+        if Sys.islinux() && ccall(:getuid, Cuint, ()) != 0 # root can open anything
+            chmod(joinpath(dri, "renderD128"), 0o000)
+            h = hint(dri, sysfs)
+            @test h isa String && occursin("renderD128", h)
+            # names the group owning the node (a temporary file's group here)
+            group = oneL0.node_group(joinpath(dri, "renderD128"))
+            if group !== nothing
+                @test occursin("`$group` group", h) && occursin("usermod -aG $group", h)
+            else
+                @test occursin("usermod -aG render", h)
+            end
+        end
+    end
+    fake_nodes("0x10de") do dri, sysfs                  # another vendor's GPU only
+        chmod(joinpath(dri, "renderD128"), 0o000)
+        @test hint(dri, sysfs) === nothing
+    end
+    fake_nodes() do dri, sysfs                          # no GPU at all
+        @test hint(dri, sysfs) === nothing
+    end
+    @test hint("/nonexistent/dri", "/nonexistent/drm") === nothing
+end
+
 @testset "precompilation probe" begin
     # what the precompilation workload found isn't kept in the package image, so it doesn't
     # decide for other precompilation processes, and only applies while precompiling
