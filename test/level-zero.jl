@@ -27,7 +27,14 @@ end
         if Sys.islinux() && ccall(:getuid, Cuint, ()) != 0 # root can open anything
             chmod(joinpath(dri, "renderD128"), 0o000)
             h = hint(dri, sysfs)
-            @test h isa String && occursin("renderD128", h) && occursin("render", h)
+            @test h isa String && occursin("renderD128", h)
+            # names the group owning the node (a temporary file's group here)
+            group = oneL0.node_group(joinpath(dri, "renderD128"))
+            if group !== nothing
+                @test occursin("`$group` group", h) && occursin("usermod -aG $group", h)
+            else
+                @test occursin("usermod -aG render", h)
+            end
         end
     end
     fake_nodes("0x10de") do dri, sysfs                  # another vendor's GPU only
