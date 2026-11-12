@@ -75,3 +75,19 @@ end
     KI.@launch oneAPIBackend(; prefer_blocks=true) ndrange=length(A) ki_store_index!(A)
     @test Array(A) == 1:1024
 end
+
+KA.@kernel function copy_large_arg!(out, t)
+    i = KA.@index(Global, Linear)
+    @inbounds out[i] = t[i]
+end
+
+@testset "large arguments" begin
+    # passed through memory when they exceed the device's limit (#497)
+    backend = oneAPIBackend()
+    for N in (512, 2048)
+        t = ntuple(i -> Float64(i) - 0.25, N)
+        out = oneAPI.zeros(Float64, N)
+        copy_large_arg!(backend, 256)(out, t; ndrange=N)
+        @test Array(out) == collect(t)
+    end
+end

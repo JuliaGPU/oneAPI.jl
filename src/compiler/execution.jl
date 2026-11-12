@@ -271,11 +271,15 @@ struct HostKernel{F,TT} <: AbstractKernel{F,TT}
     # only set on the kernels `@oneapi launch=false` returns, as the cached ones are shared
     # by every callable that converts to `f`.
     source::Any
+
+    # which arguments `fun` takes through memory, as they are too large to pass by value
+    # (see `ArgumentSpill`)
+    spill::Union{Nothing, ArgumentSpill}
 end
-HostKernel{F,TT}(f, fun::ZeKernel) where {F,TT} = HostKernel{F,TT}(f, fun, nothing)
+HostKernel{F,TT}(f, fun::ZeKernel) where {F,TT} = HostKernel{F,TT}(f, fun, nothing, nothing)
 
 with_source(kernel::HostKernel{F,TT}, source) where {F,TT} =
-    HostKernel{F,TT}(kernel.f, kernel.fun, source)
+    HostKernel{F,TT}(kernel.f, kernel.fun, source, kernel.spill)
 
 # Upper bound on the spill (scratch) memory a single work-group may require, in bytes.
 #
@@ -333,9 +337,10 @@ const zefunction_lock = ReentrantLock()
 function zefunction(f::F, tt::TT=Tuple{}; kwargs...) where {F,TT}
     # the kernel also depends on the task's context and device, see `zefunction_link`
     kw = values(kwargs)
-    fun = GPUCompiler.cached_lookup(KernelLinker(F, tt, kw), ZeKernel, F, tt,
-                                    (context(), device(), kw))
-    return HostKernel{F,tt}(f, fun)
+    fun, spill = GPUCompiler.cached_lookup(KernelLinker(F, tt, kw),
+                                           Tuple{ZeKernel, Union{Nothing, ArgumentSpill}},
+                                           F, tt, (context(), device(), kw))
+    return HostKernel{F,tt}(f, fun, nothing, spill)
 end
 
 # What `zefunction` calls when the kernel isn't cached: a callable struct rather than a
@@ -346,11 +351,40 @@ struct KernelLinker{K}
     tt::Type
     kw::K
 end
-(l::KernelLinker)() = zefunction_link(methodinstance(l.ft, l.tt); l.kw...)
+function (l::KernelLinker)()
+    limit = oneL0.module_properties(device()).maxArgumentsSize
+    spill = argument_spill(l.ft, l.tt, limit)
+    if spill === nothing
+        source = methodinstance(l.ft, l.tt)
+        # IGC can also fail to fit arguments below the limit into registers ("Kernel inputs
+        # exceed total register size"), e.g. a 2 KB tuple that is indexed dynamically. if
+        # the arguments are large, retry building with the larger ones through memory.
+        fallback = argument_spill(l.ft, l.tt, limit ÷ 2; strict=false)
+        fallback === nothing && return (zefunction_link(source; l.kw...), nothing)
+        try
+            return (zefunction_link(source, false; l.kw...), nothing)
+        catch err
+            err isa oneL0.ZeError &&
+                err.code == oneL0.ZE_RESULT_ERROR_MODULE_BUILD_FAILURE || rethrow()
+            spill = fallback
+        end
+    end
+
+    # compile the wrapper that loads the spilled arguments, under the name the kernel
+    # would have had
+    ft, tt = spilled_signature(l.ft, l.tt, spill)
+    kw = l.kw
+    if get(kw, :name, nothing) === nothing
+        kw = merge(kw, (; name = GPUCompiler.mangle_sig(Tuple{l.ft, l.tt.parameters...})))
+    end
+    @debug "Passing $(count(spill.mask)) arguments of kernel $(kw.name) through memory, as they don't fit by value (the device's limit is $limit bytes)"
+    return (zefunction_link(methodinstance(ft, tt); kw...), spill)
+end
 
 # the parts of `zefunction` that don't depend on the type of the function, kept separate so
-# that they are compiled once rather than for every kernel
-function zefunction_link(source::Core.MethodInstance; kwargs...)
+# that they are compiled once rather than for every kernel. `log` is whether to report the
+# build log of a module that fails to build.
+function zefunction_link(source::Core.MethodInstance, log::Bool=true; kwargs...)
     Base.@lock zefunction_lock begin
         ctx = context()
         dev = device()
@@ -369,7 +403,7 @@ function zefunction_link(source::Core.MethodInstance; kwargs...)
             end
         end
         if fun === nothing
-            fun = link_kernel(res.image::Vector{UInt8}, res.entry::String, ctx, dev)
+            fun = link_kernel(res.image::Vector{UInt8}, res.entry::String, ctx, dev; log)
             # Don't cache session-local kernel handles while precompiling: the results
             # struct is serialized into the package image along with its CodeInstance,
             # and the handles would come back dangling.
@@ -508,6 +542,8 @@ end
     refs = DataRef[]
     source === nothing || kernel_convert(source, refs)
     converted = map(arg -> kernel_convert(arg, refs), args)
+    kernel.spill === nothing ||
+        return launch_spilled(kernel, source, args, converted, refs, queue, values(kwargs))
     managed = Managed[ref[] for ref in refs]
     ret = GC.@preserve source args with_ownership(queue, managed) do
         call(kernel, converted; queue, roots=refs, kwargs...)

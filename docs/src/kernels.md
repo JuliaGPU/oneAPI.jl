@@ -84,6 +84,24 @@ reduce performance. Avoid repeated allocations in loops: even short-lived object
 heap space until the work-item exits.
 
 
+## Large Arguments
+
+Kernel arguments are passed by value, and Level Zero limits their total size to the
+device's `oneL0.module_properties(device()).maxArgumentsSize`, 2048 bytes on current Intel
+GPUs. When a kernel's arguments exceed it, the largest ones are passed through memory
+instead: each launch passes a pointer to a copy of the value in device memory, which the
+kernel loads before running. The kernel sees the same values either way. Copies are cached
+by content, so launching a kernel again with the same value doesn't copy it again; copying
+a new value waits for the task's queue to finish its work on discrete GPUs. Kernels whose
+arguments fit are not affected. If the arguments don't fit even then, e.g. with many small
+ones, compiling the kernel throws an `ArgumentError` that lists their sizes.
+
+A kernel that indexes such a value dynamically, or passes it to a function that isn't
+inlined, keeps a copy of it in private memory for each work-item. That counts against the
+scratch space a kernel can use; a kernel that needs more than the device supports fails to
+build with "total scratch space exceeds HW supported limit".
+
+
 ## Exceptions
 
 A work-item that throws an exception, e.g. on an out-of-bounds access, exits without

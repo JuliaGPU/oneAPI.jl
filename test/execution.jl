@@ -788,6 +788,131 @@ end
 
 ############################################################################################
 
+# Arguments whose total size exceeds the device's `maxArgumentsSize` (2048 bytes on current
+# Intel GPUs, which IGC refuses to build kernels beyond) are passed through memory (#497).
+# Every element is read back, so that a truncated or garbled argument is detected.
+function large_arg_copy!(out, t)
+    i = get_global_id()
+    if i <= length(t)
+        @inbounds out[i] = t[i]
+    end
+    return
+end
+function large_arg_add!(out, a, b)
+    i = get_global_id()
+    if i <= length(out)
+        @inbounds out[i] = a[i] + b[i]
+    end
+    return
+end
+function large_arg_column!(out, t, j)
+    i = get_global_id()
+    if i <= length(t)
+        @inbounds out[i, j] = t[i]
+    end
+    return
+end
+struct LargeArgWithArray{A}
+    data::NTuple{512, Float64}
+    out::A
+end
+Adapt.@adapt_structure LargeArgWithArray
+function large_arg_through_struct!(s)
+    i = get_global_id()
+    if i <= length(s.data)
+        @inbounds s.out[i] = 2 * s.data[i]
+    end
+    return
+end
+large_arg_many(args...) = return
+function large_arg_sum!(out, t)
+    s = 0
+    for i in 1:length(t)
+        s += t[i]
+    end
+    out[1] = s
+    return
+end
+
+@testset "large arguments" begin
+    limit = oneL0.module_properties(device()).maxArgumentsSize
+    launch(f, n, args...) = @oneapi items=min(n, 256) groups=cld(n, 256) f(args...)
+
+    # small arguments are passed by value
+    out = oneArray(zeros(Float64, 4))
+    k = @oneapi launch=false large_arg_copy!(out, (1.0, 2.0, 3.0, 4.0))
+    @test k.spill === nothing
+
+    # around the limit, after the hidden kernel state and the output vector. (arguments
+    # that fit can still be spilled, if IGC fails to fit them in registers.)
+    vec_size = sizeof(typeof(oneAPI.kernel_convert(out)))
+    fitting = (limit - sizeof(oneAPI.KernelState) - vec_size) ÷ sizeof(Float64)
+    for N in (fitting, fitting + 1, 512, 2048, 8192)
+        t = ntuple(i -> Float64(i) + 0.5, N)
+        out = oneArray(zeros(Float64, N))
+        k = @oneapi launch=false large_arg_copy!(out, t)
+        N > fitting && @test k.spill !== nothing
+        launch(large_arg_copy!, N, out, t)
+        @test Array(out) == collect(t)
+    end
+
+    # several large arguments, only spilling as many as needed
+    a = ntuple(i -> Float64(i), 512)
+    b = ntuple(i -> Float64(-2i), 512)
+    out = oneArray(zeros(Float64, 512))
+    k = @oneapi launch=false large_arg_add!(out, a, b)
+    @test k.spill.mask == [false, false, true, true]
+    launch(large_arg_add!, 512, out, a, b)
+    @test Array(out) == collect(a) .+ collect(b)
+    c = ntuple(i -> Float64(3i), 180)
+    out = oneArray(zeros(Float64, 180))
+    k = @oneapi launch=false large_arg_add!(out, a, c)
+    @test k.spill.mask == [false, false, true, false]
+    launch(large_arg_add!, 180, out, a, c)
+    @test Array(out) == collect(a)[1:180] .+ collect(c)
+
+    # a large struct holding an array that the kernel writes to
+    t = ntuple(i -> Float64(i) / 4, 512)
+    out = oneArray(zeros(Float64, 512))
+    launch(large_arg_through_struct!, 512, LargeArgWithArray(t, out))
+    @test Array(out) == 2 .* collect(t)
+
+    # a closure capturing a large value
+    let captured = ntuple(i -> Float64(7i), 1024)
+        out = oneArray(zeros(Float64, 1024))
+        f = function (o)
+            i = get_global_id()
+            @inbounds o[i] = captured[i]
+            return
+        end
+        @oneapi items=256 groups=4 f(out)
+        @test Array(out) == collect(captured)
+    end
+
+    # arguments below the limit that IGC fails to fit in registers ("Kernel inputs exceed
+    # total register size" on PVC) are passed through memory when the build fails
+    t = ntuple(i -> UInt8(i % 7), 1976)
+    out = oneArray(zeros(Int, 1))
+    @oneapi large_arg_sum!(out, t)
+    @test Array(out)[] == sum(Int, t)
+
+    # launches with different values, and the same ones again, without waiting for the
+    # previous launches: each must see its own value
+    n, m = 512, 64
+    out = oneArray(zeros(Float64, n, m))
+    vals = [ntuple(i -> Float64(i + 1000 * (j % 8)), n) for j in 1:m]
+    for j in 1:m
+        launch(large_arg_column!, n, out, vals[j], j)
+    end
+    @test Array(out) == reduce(hcat, collect.(vals))
+
+    # arguments that don't fit, also when passing the large ones through memory
+    nargs = cld(limit, sizeof(Int))
+    @test_throws "exceeds the device's limit" @oneapi launch=false large_arg_many(ntuple(identity, nargs)...)
+end
+
+############################################################################################
+
 # A chain of N live accumulators forces the register allocator to spill once N exceeds
 # the register file (256 spills on both PVC and DG2); the reversed index in the update
 # keeps every element live across the chain, and everything is unrolled through Val so
