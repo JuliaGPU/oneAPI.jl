@@ -8,6 +8,8 @@ using Printf
 
 using Libdl
 
+using GPUCompiler: ExceptionSite
+
 if Sys.iswindows()
     const libze_loader = "ze_loader"
 else

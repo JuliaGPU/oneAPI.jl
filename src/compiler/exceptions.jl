@@ -8,15 +8,14 @@ export KernelException
 An exception thrown by a kernel on device `dev`, reported when synchronizing the stream it
 was launched on (e.g. by `synchronize()`, or a copy to the host such as `Array(x)`).
 
-What is known about the exception depends on the debug level the kernel was compiled with
-(Julia's `-g` level, or `@oneapi debug_level=...`):
+The position of the work-item that threw is always known (`work_item` is its local id,
+`work_group` the id of its work-group). What else is known depends on the debug level the
+kernel was compiled with (Julia's `-g` level, or `@oneapi debug_level=...`):
 
 - `0`: only that an exception was thrown;
 - `1`: also the `name` of its type and the `reason`, for exceptions thrown by Julia's
   runtime (e.g. bounds errors, or domain errors in math functions);
-- `2`: also the position of the work-item that threw (`work_item` is its local id,
-  `work_group` the id of its work-group), and its `backtrace` as `(function, file, line)`
-  tuples.
+- `2`: also the `backtrace` of the throw, as `(function, file, line)` tuples.
 
 Fields that were not recorded are empty, or zero. Only one exception is reported per
 synchronization, and the other work-items of the kernel keep running.
@@ -41,7 +40,7 @@ function Base.showerror(io::IO, err::KernelException)
     end
     print(io, " on ", oneL0.properties(err.dev).name)
     isempty(err.reason) || print(io, ": ", err.reason)
-    if err.work_item == (0, 0, 0)
+    if isempty(err.backtrace)
         print(io, "\nFor more details, run Julia with `-g2`, or launch the kernel with `@oneapi debug_level=2`.")
     else
         print(io, "\nStacktrace:")
@@ -52,55 +51,6 @@ function Base.showerror(io::IO, err::KernelException)
     end
 end
 
-const EXCEPTION_STRING_MAX = 4096
-
-# buffers that copies may still be writing to, as their list could not be synchronized
-const unsynchronized_string_buffers = Any[]
-const unsynchronized_string_buffers_lock = ReentrantLock()
-
-# Read the strings at `addresses`, as reported by a kernel, returning a dictionary that maps
-# the addresses that could be read to their contents. The addresses come from memory the
-# kernel could have corrupted, so they are only read if they fall within an allocation,
-# such as a module's constants, and only up to the end of it. Freed modules are not read.
-function read_device_strings(list, ctx::ZeContext, addresses)
-    buffers = Dict{UInt64, Vector{UInt8}}()
-    for address in addresses
-        (address == 0 || haskey(buffers, address)) && continue
-        base = Ref{Ptr{Cvoid}}()
-        size = Ref{Csize_t}()
-        res = oneL0.unchecked_zeMemGetAddressRange(ctx, Ptr{Cvoid}(address), base, size)
-        res == oneL0.RESULT_SUCCESS || continue
-        available = UInt64(UInt(base[]) + size[]) - address
-        available > 0 || continue
-        buffers[address] = Vector{UInt8}(undef, min(available, EXCEPTION_STRING_MAX))
-    end
-    isempty(buffers) && return Dict{UInt64, String}()
-    copied = false
-    GC.@preserve buffers try
-        for (address, buffer) in buffers
-            append_copy!(list, pointer(buffer), ZePtr{UInt8}(address), length(buffer))
-        end
-        copied = true
-    catch err
-        bt = catch_backtrace()
-        @error "Failed to read the strings of a kernel exception" exception=(err, bt)
-    finally
-        # copies appended before a failure still write to the buffers
-        if oneL0.unchecked_zeCommandListHostSynchronize(list, typemax(UInt64)) !=
-           oneL0.RESULT_SUCCESS
-            @lock unsynchronized_string_buffers_lock begin
-                push!(unsynchronized_string_buffers, buffers)
-            end
-            copied = false
-        end
-    end
-    copied || return Dict{UInt64, String}()
-    return Dict(address => String(buffer[1:something(findfirst(iszero, buffer),
-                                                      length(buffer) + 1) - 1])
-                for (address, buffer) in buffers)
-end
-
-
 ## per-stream report
 
 # Reports are carved out of slabs shared by a device's streams, as kernels access memory
@@ -109,10 +59,24 @@ const REPORTS_PER_SLAB = 64
 
 const free_report_slots = Dict{Tuple{ZeContext, ZeDevice}, Vector{ReportSlot}}()
 
-KernelState(s::oneStream) = KernelState(UInt(s.exceptions.report) % UInt64,
-                                        UInt(s.exceptions.claim) % UInt64)
+KernelState(s::oneStream, kernel::ZeKernel) =
+    KernelState(UInt(s.exceptions.report) % UInt64, UInt(s.exceptions.claim) % UInt64,
+                kernel_id(kernel))
 # explicitly created queues have no report
-KernelState(::ZeCommandQueue) = KernelState()
+KernelState(::ZeCommandQueue, ::ZeKernel) = KernelState()
+
+# how a launch identifies its kernel in the report. the stream keeps the kernels it launched
+# alive until it has checked the report (see `note_launch!`), so the id is not reused.
+kernel_id(kernel::ZeKernel) = UInt(pointer_from_objref(kernel)) % UInt64
+
+# Remember that `kernel` was launched on `s`, to look up the exceptions it reports. The
+# caller must hold `s.lock`.
+@inline function note_launch!(s::oneStream, kernel::ZeKernel)
+    s.last_launched === kernel && return
+    push!(s.launched, kernel)
+    s.last_launched = kernel
+    return
+end
 
 # the pattern resetting a claim; a global, as Level Zero does not specify how long a fill's
 # pattern has to remain valid
@@ -185,23 +149,47 @@ end
 # The caller must hold `s.lock`, and have checked that the stream is idle.
 function check_exception!(s::oneStream)
     slot = s.exceptions
-    unsafe_load(convert(Ptr{Int32}, slot.report)) == 0 && return nothing    # `status`
+    if unsafe_load(convert(Ptr{Int32}, slot.report)) == 0    # `status`
+        forget_launches!(s)
+        return nothing
+    end
     report = unsafe_load(slot.report)
 
     # reset the claim first: if that fails, the exception is still reported later
     reset_claim!(s.immediate, slot)
     clear_report!(slot)
 
-    nframes = clamp(Int(report.num_frames), 0, EXCEPTION_MAX_FRAMES)
-    frames = report.frames[1:nframes]
-    strings = read_device_strings(s.immediate, s.ctx,
-                                  [report.name; report.reason;
-                                   [frame.func for frame in frames];
-                                   [frame.file for frame in frames]])
-    str(address) = get(strings, address, "")
-    backtrace = Tuple{String, String, Int}[(str(frame.func), str(frame.file),
-                                            Int(frame.line)) for frame in frames]
-    return KernelException(s.dev, str(report.name), str(report.reason),
+    # the report was written by the device, so it is only trusted to identify a kernel
+    # launched since the last check, and a site in that kernel's table
+    kernel = nothing
+    for k in s.launched
+        if kernel_id(k) == report.kernel
+            kernel = k
+            break
+        end
+    end
+    forget_launches!(s)
+    sites = kernel === nothing ? GPUCompiler.ExceptionSite[] : kernel.exception_sites
+    site = get(sites, Int(report.site), nothing)
+    name, reason, backtrace = if site === nothing
+        "", "", Tuple{String, String, Int}[]
+    else
+        site.name, site.reason,
+        Tuple{String, String, Int}[(frame.func, frame.file, frame.line)
+                                   for frame in site.frames]
+    end
+    return KernelException(s.dev, name, reason,
                            Int.(report.work_item[1:3]), Int.(report.work_group[1:3]),
                            backtrace)
+end
+
+# Forget the kernels launched on `s`, once the report was checked, unless some may still
+# execute: those recorded in a batch, or in batches that failed to submit. The caller must
+# hold `s.lock`, and have checked that the stream is idle.
+function forget_launches!(s::oneStream)
+    if s.batch === nothing && isempty(s.failed)
+        empty!(s.launched)
+        s.last_launched = nothing
+    end
+    return
 end

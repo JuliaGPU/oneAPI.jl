@@ -65,11 +65,10 @@ end
 
 @testset "debug level" begin
     T = Tuple{oneDeviceVector{Int, oneAPI.AS.CrossWorkgroup}, Int}
-    ir(level) = sprint(io -> oneAPI.code_llvm(io, store_checked, T; kernel = true,
-                                              debug_level = level))
-    @test !occursin("report_exception", ir(0))
-    @test occursin("report_exception", ir(1)) && !occursin("report_exception_frame", ir(1))
-    @test occursin("report_exception_frame", ir(2))
+    sites(level) = zefunction(store_checked, T; debug_level = level).fun.exception_sites
+    @test isempty(sites(0))
+    @test !isempty(sites(1)) && all(site -> isempty(site.frames), sites(1))
+    @test !isempty(sites(2)) && all(site -> !isempty(site.frames), sites(2))
 end
 
 
@@ -1382,27 +1381,37 @@ end
 @testset "exceptions" begin
     a = oneArray([0])
 
-    # at debug level 0, only that an exception was thrown
-    @oneapi debug_level=0 store_checked(a, 2)
+    # at debug level 0, only that an exception was thrown, and by which work-item
+    @oneapi debug_level=0 items=4 groups=3 store_checked(a, 2)
     err = kernel_exception()
     @test err isa KernelException
     @test err.name == "" && err.reason == "" && isempty(err.backtrace)
-    @test err.work_item == err.work_group == (0, 0, 0)
+    @test all(1 .<= err.work_item .<= (4, 1, 1))
+    @test all(1 .<= err.work_group .<= (3, 1, 1))
     @test kernel_exception() === nothing
 
     # at level 1, also the exception's type and reason, as passed to `@gputhrow`
-    @oneapi debug_level=1 store_checked(a, 2)
+    @oneapi debug_level=1 items=4 groups=3 store_checked(a, 2)
     err = kernel_exception()
     @test err.name == "BoundsError"
     @test err.reason == "Out-of-bounds array access"
-    @test err.work_item == (0, 0, 0) && isempty(err.backtrace)
-    @test occursin("A BoundsError was thrown on", sprint(showerror, err))
+    @test all(1 .<= err.work_item .<= (4, 1, 1))
+    @test all(1 .<= err.work_group .<= (3, 1, 1))
+    @test isempty(err.backtrace)
+    @test occursin(r"A BoundsError was thrown by work-item \d×1×1 in work-group \d×1×1 on .*: Out-of-bounds array access\nFor more details",
+                   sprint(showerror, err))
     # or as derived by GPUCompiler
     @oneapi debug_level=1 div_kernel(a, 0)
     err = kernel_exception()
     @test err.name == "exception" && err.reason == ""
+    # looked up in the table of the kernel that threw, of all those launched
+    @oneapi debug_level=1 store_checked(a, 1)
+    @oneapi debug_level=1 div_kernel(a, 0)
+    @oneapi debug_level=1 store_checked(a, 1)
+    err = kernel_exception()
+    @test err.name == "exception"
 
-    # at level 2, also the position of the work-item, and a backtrace
+    # at level 2, also a backtrace
     @oneapi debug_level=2 items=4 groups=3 store_checked(a, 2)
     err = kernel_exception()
     @test err.name == "BoundsError"
@@ -1417,21 +1426,19 @@ end
     @test err.name == "exception"
     @test err.backtrace[end][1] == "div_kernel"
 
-    # strings are reported by address, which the host only reads if it is valid
+    # the host only trusts the report to identify a kernel it launched, and a site of it
     stream = oneAPI.global_stream(context(), device())
-    @oneapi debug_level=2 store_checked(a, 2)
-    oneAPI.flush!(stream)
-    oneL0.synchronize(stream.immediate)
     report = convert(Ptr{UInt8}, stream.exceptions.report)
     field(T, name) = report + fieldoffset(T, Base.fieldindex(T, name))
-    unsafe_store!(convert(Ptr{UInt64}, field(oneAPI.ExceptionReport, :name)),
-                  0x00000deadbeef000)
-    unsafe_store!(convert(Ptr{UInt64}, field(oneAPI.ExceptionReport, :frames)),
-                  typemax(UInt64))
-    err = kernel_exception()
-    @test err.name == "" && err.reason == "Out-of-bounds array access"
-    @test err.backtrace[1][1] == "" && err.backtrace[end][1] == "store_checked"
-    @test kernel_exception() === nothing
+    for (name, T, val) in ((:kernel, UInt64, 0x00000deadbeef000), (:site, Int32, Int32(1000)))
+        @oneapi debug_level=2 store_checked(a, 2)
+        oneAPI.flush!(stream)
+        oneL0.synchronize(stream.immediate)
+        unsafe_store!(convert(Ptr{T}, field(oneAPI.ExceptionReport, name)), val)
+        err = kernel_exception()
+        @test err.name == "" && isempty(err.backtrace)
+        @test kernel_exception() === nothing
+    end
 
     # the stream remains usable, and other work-items keep running
     function partially_oob_kernel(a)

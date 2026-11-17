@@ -91,13 +91,16 @@ mutable struct ZeKernel
     # MAX_GROUP_SIZE extension. Read on every KernelInterface launch.
     max_group_size::Int
 
+    # the throw sites of the kernel's code, which the exceptions it reports refer to
+    exception_sites::Vector{ExceptionSite}
+
     function ZeKernel(mod, name)
         GC.@preserve name begin
             desc_ref = Ref(ze_kernel_desc_t(; pKernelName=pointer(name)))
             handle_ref = Ref{ze_kernel_handle_t}()
             zeKernelCreate(mod, desc_ref, handle_ref)
         end
-        obj = new(mod, handle_ref[], ReentrantLock(), -1, -1)
+        obj = new(mod, handle_ref[], ReentrantLock(), -1, -1, ExceptionSite[])
 
         finalizer(obj) do obj
             zeKernelDestroy(obj)

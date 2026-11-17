@@ -231,7 +231,7 @@ function call_arguments(@nospecialize(F), @nospecialize(TT), nargs::Int)
 
     # Add GPUCompiler's hidden state argument here so `onecall` can also call foreign kernels.
     call_t = Type[KernelState]
-    call_args = Any[:(KernelState(queue))]
+    call_args = Any[:(KernelState(queue, kernel.fun))]
 
     for (dt, ex) in zip(params, exprs)
         # filter out ghost arguments that shouldn't be passed
@@ -369,7 +369,8 @@ function zefunction_link(source::Core.MethodInstance; kwargs...)
             end
         end
         if fun === nothing
-            fun = link_kernel(res.image::Vector{UInt8}, res.entry::String, ctx, dev)
+            fun = link_kernel(res.image::Vector{UInt8}, res.entry::String,
+                              res.exception_sites, ctx, dev)
             # Don't cache session-local kernel handles while precompiling: the results
             # struct is serialized into the package image along with its CodeInstance,
             # and the handles would come back dangling.
@@ -399,6 +400,7 @@ end
         res = @something res GPUCompiler.cached_results(oneAPIResults, job)
         res.image = compiled.image
         res.entry = compiled.entry
+        res.exception_sites = compiled.exception_sites
     end
     return res
 end
@@ -442,6 +444,7 @@ end
         direct |= !s.batching || s.idle || oneL0.sync_each_submission()
         batch = direct ? nothing : open_batch!(s)
         register_pending!(s)
+        note_launch!(s, kernel)
         if batch === nothing
             flush_batch!(s)
             append_launch!(s.immediate, kernel, groups)

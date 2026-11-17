@@ -34,8 +34,8 @@ launches the kernel on the GPU.
 ### `KernelException`
 
 Thrown when synchronizing a stream on which a kernel threw an exception. It carries the
-exception's `name` and `reason` (from debug level 1), and the `work_item` and `work_group`
-that threw it along with a `backtrace` (from debug level 2).
+`work_item` and `work_group` that threw it, the exception's `name` and `reason` (from debug
+level 1), and a `backtrace` (from debug level 2).
 
 ### `zefunction(f, tt; kwargs...)`
 
