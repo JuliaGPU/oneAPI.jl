@@ -65,3 +65,14 @@ end
         return checkindex(Bool, eachindex(IndexLinear(), v), i)
     end
 end
+
+# GPUToolbox's shared overrides throw through `device_throw`, with a constant exception type
+# and reason; report them like `@gputhrow` does
+@device_override @noinline function GPUToolbox.Overlays.device_throw(
+        ::Type{E}, ::Val{reason}) where {E<:Exception, reason}
+    if kernel_debug_level() >= 1
+        reporting_call(record_exception!, string_pointer(Val(nameof(E))),
+                       string_pointer(Val(reason)))
+    end
+    throw(nothing)
+end
