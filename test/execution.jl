@@ -112,8 +112,11 @@ end
     shared = (oneAPI.zefunction_link, oneAPI.launch_kernel, oneL0.set_argument_value!,
               oneAPI.KernelLinker(Nothing, Tuple{}, (;)), oneAPI.with_managed_locks,
               oneAPI.with_ownership)
+    # only count compiled specializations: Julia 1.15 also creates method instances,
+    # without code, for the argument types of calls to `@nospecialize` methods
     nspecializations() =
-        sum(f -> sum(m -> length(collect(Base.specializations(m))), methods(f)), shared)
+        sum(f -> sum(m -> count(mi -> isdefined(mi, :cache), Base.specializations(m)),
+                     methods(f)), shared)
     before = nspecializations()
     for T in (Int32, Int16, UInt8)
         b = oneArray(zeros(T, 1))
