@@ -262,6 +262,120 @@ function compile_to_obj(@nospecialize(job::CompilerJob))
     end
 end
 
+# Whether a SPIR-V module can tell the sub-group width it is compiled for: it uses sub-group
+# operations or built-in variables, or synchronizes or communicates at sub-group scope.
+# Modules that can't behave the same at any width, which leaves the choice free (see
+# `zefunction_link`). Anything that isn't known not to involve sub-groups counts: missing a
+# use would let a kernel run at a width it doesn't expect. So every capability has to be one
+# that adds no sub-group functionality, and the instructions that the remaining ones allow
+# to take a scope have to use a constant one other than `Subgroup`.
+function observes_sub_group_width(image::Vector{UInt8})
+    length(image) % 4 == 0 || return true
+    words = reinterpret(UInt32, image)
+    length(words) >= 5 && words[1] == 0x07230203 || return true
+    constants = Dict{UInt32, UInt32}()
+    scopes = UInt32[]
+    i = 6   # after the header
+    while i <= length(words)
+        count = Int(words[i] >> 16)
+        opcode = words[i] & 0xffff
+        count == 0 && return true
+        i + count - 1 <= length(words) || return true
+        operands = @view words[i+1:i+count-1]
+        n = length(operands)
+        if opcode == SpvOpCapability
+            n >= 1 && operands[1] in width_agnostic_capabilities || return true
+        elseif opcode == SpvOpDecorate
+            n >= 2 || return true
+            operands[2] == SpvDecorationBuiltIn &&
+                (n < 3 || operands[3] in sub_group_builtins) && return true
+        elseif opcode == SpvOpMemberDecorate
+            n >= 3 || return true
+            operands[3] == SpvDecorationBuiltIn &&
+                (n < 4 || operands[4] in sub_group_builtins) && return true
+        elseif opcode == SpvOpExecutionMode || opcode == SpvOpExecutionModeId
+            n >= 2 && !(operands[2] in sub_group_execution_modes) || return true
+        elseif opcode == SpvOpConstant
+            n >= 3 || return true
+            constants[operands[2]] = operands[3]
+        elseif opcode in sub_group_queries
+            return true
+        else
+            for pos in get(scope_operands, opcode, ())
+                pos <= n || return true
+                push!(scopes, operands[pos])
+            end
+        end
+        i += count
+    end
+    # a scope that isn't a constant could be anything
+    return any(scope -> get(constants, scope, SpvScopeSubgroup) == SpvScopeSubgroup, scopes)
+end
+
+const SpvOpExecutionMode = 16
+const SpvOpCapability = 17
+const SpvOpConstant = 43
+const SpvOpDecorate = 71
+const SpvOpMemberDecorate = 72
+const SpvOpExecutionModeId = 331
+const SpvDecorationBuiltIn = 11
+const SpvScopeSubgroup = 3
+
+# Capabilities that kernels use without sub-groups. `SubgroupDispatch` is the one that the
+# required sub-group size itself needs; the instructions and execution modes it adds are
+# checked separately.
+const width_agnostic_capabilities = (
+    4,      # Addresses
+    5,      # Linkage
+    6,      # Kernel
+    7,      # Vector16
+    8,      # Float16Buffer
+    9,      # Float16
+    10,     # Float64
+    11,     # Int64
+    12,     # Int64Atomics
+    22,     # Int16
+    38,     # GenericPointer
+    39,     # Int8
+    58,     # SubgroupDispatch
+    5116,   # BFloat16TypeKHR
+    5612,   # AtomicFloat32MinMaxEXT
+    5613,   # AtomicFloat64MinMaxEXT
+    5616,   # AtomicFloat16MinMaxEXT
+    5629,   # ExpectAssumeKHR
+    6033,   # AtomicFloat32AddEXT
+    6034,   # AtomicFloat64AddEXT
+    6095,   # AtomicFloat16AddEXT
+    6115,   # BFloat16ConversionINTEL
+)
+
+# SubgroupSize, SubgroupMaxSize, NumSubgroups, NumEnqueuedSubgroups, SubgroupId,
+# SubgroupLocalInvocationId, and Subgroup{Eq,Ge,Gt,Le,Lt}Mask
+const sub_group_builtins = (36, 37, 38, 39, 40, 41, 4416, 4417, 4418, 4419, 4420)
+
+# SubgroupsPerWorkgroup and SubgroupsPerWorkgroupId
+const sub_group_execution_modes = (36, 37)
+
+# The instructions that `SubgroupDispatch` allows, and the device-side enqueue ones that it
+# implies, which include queries of a kernel's sub-group and preferred work-group sizes
+const sub_group_queries = (35, 37, 291:304..., 325, 326)
+
+# The (1-based) operands that are a scope, of the instructions the capabilities above allow
+const scope_operands = Dict{UInt32, Tuple{Vararg{Int}}}(
+    224 => (1, 2),      # OpControlBarrier
+    225 => (1,),        # OpMemoryBarrier
+    227 => (4,),        # OpAtomicLoad
+    228 => (2,),        # OpAtomicStore
+    (op => (4,) for op in 229:242)...,  # OpAtomicExchange through OpAtomicXor
+    259 => (3,),        # OpGroupAsyncCopy
+    260 => (1,),        # OpGroupWaitEvents
+    318 => (4,),        # OpAtomicFlagTestAndSet
+    319 => (2,),        # OpAtomicFlagClear
+    5614 => (4,),       # OpAtomicFMinEXT
+    5615 => (4,),       # OpAtomicFMaxEXT
+    6035 => (4,),       # OpAtomicFAddEXT
+)
+
 # link the SPIR-V bytes into a session-local `ZeKernel` on the given context and device.
 function link_kernel(image::Vector{UInt8}, entry::String, ctx::ZeContext, dev::ZeDevice)
     mod = ZeModule(ctx, dev, image)
