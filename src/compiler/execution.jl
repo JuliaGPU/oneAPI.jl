@@ -349,37 +349,67 @@ end
 (l::KernelLinker)() = zefunction_link(methodinstance(l.ft, l.tt); l.kw...)
 
 # the parts of `zefunction` that don't depend on the type of the function, kept separate so
-# that they are compiled once rather than for every kernel
-function zefunction_link(source::Core.MethodInstance; kwargs...)
+# that they are compiled once rather than for every kernel.
+#
+# With `narrow_on_spill`, a kernel that spills at its `sub_group_size` is compiled again for a
+# sub-group size of 16, unless it can observe its width. Narrower sub-groups need fewer
+# registers per hardware thread, which avoids (or reduces) spilling at the cost of
+# throughput: a register-blocked matrix multiplication that spills at SIMD32 runs 1.6-5x
+# faster at SIMD16 on Xe-LP and Xe-HPG, while kernels that don't spill are faster at the
+# wider width (JuliaGPU/oneAPI.jl#772). Without a required size, IGC instead picks SIMD8 for
+# such kernels on those GPUs, which is slower, and keeps a spilling SIMD32 on Xe-HPC.
+function zefunction_link(source::Core.MethodInstance; narrow_on_spill::Bool=false, kwargs...)
     Base.@lock zefunction_lock begin
         ctx = context()
         dev = device()
-        config = compiler_config(dev; kwargs...)::oneAPICompilerConfig
-        job = CompilerJob(source, config)
+        fun, res = link_job(source, ctx, dev; kwargs...)
 
-        res = compile_or_lookup(job)::oneAPIResults
-
-        # Resolve the ZeKernel for the active context and device. Linear scan over the
-        # session-local cache; almost always n=1, so this is one `===`/`==` compare.
-        fun = nothing
-        @inbounds for (cached_ctx, cached_dev, cached_kernel) in res.kernels
-            if cached_ctx == ctx && cached_dev == dev
-                fun = cached_kernel
-                break
-            end
-        end
-        if fun === nothing
-            fun = link_kernel(res.image::Vector{UInt8}, res.entry::String, ctx, dev)
-            # Don't cache session-local kernel handles while precompiling: the results
-            # struct is serialized into the package image along with its CodeInstance,
-            # and the handles would come back dangling.
-            if ccall(:jl_generating_output, Cint, ()) != 1
-                push!(res.kernels, (ctx, dev, fun))
+        sub_group_size = get(kwargs, :sub_group_size, nothing)
+        if narrow_on_spill && sub_group_size !== nothing && sub_group_size > 16 &&
+           16 in oneL0.compute_properties(dev).subGroupSizes &&
+           oneL0.spill_mem_size(fun) > 0 && !observes_sub_group_width(res.image::Vector{UInt8})
+            narrow, _ = link_job(source, ctx, dev; kwargs..., sub_group_size = 16)
+            if narrow_kernel_fits(oneL0.max_group_size(fun), oneL0.max_group_size(narrow))
+                fun = narrow
             end
         end
 
-        return fun::ZeKernel
+        return fun
     end
+end
+
+# With a large register file, the driver can limit narrower kernels to smaller work-groups;
+# keep the wider one then, so that work-group sizes that worked keep working. Drivers without
+# the MAX_GROUP_SIZE extension still enforce such a limit, but don't report it.
+narrow_kernel_fits(wide_limit, narrow_limit) =
+    wide_limit !== missing && narrow_limit !== missing && narrow_limit >= wide_limit
+
+function link_job(source::Core.MethodInstance, ctx::ZeContext, dev::ZeDevice; kwargs...)
+    config = compiler_config(dev; kwargs...)::oneAPICompilerConfig
+    job = CompilerJob(source, config)
+
+    res = compile_or_lookup(job)::oneAPIResults
+
+    # Resolve the ZeKernel for the active context and device. Linear scan over the
+    # session-local cache; almost always n=1, so this is one `===`/`==` compare.
+    fun = nothing
+    @inbounds for (cached_ctx, cached_dev, cached_kernel) in res.kernels
+        if cached_ctx == ctx && cached_dev == dev
+            fun = cached_kernel
+            break
+        end
+    end
+    if fun === nothing
+        fun = link_kernel(res.image::Vector{UInt8}, res.entry::String, ctx, dev)
+        # Don't cache session-local kernel handles while precompiling: the results
+        # struct is serialized into the package image along with its CodeInstance,
+        # and the handles would come back dangling.
+        if ccall(:jl_generating_output, Cint, ()) != 1
+            push!(res.kernels, (ctx, dev, fun))
+        end
+    end
+
+    return fun::ZeKernel, res
 end
 
 # Look up cached compile artifacts for `job`, compiling on miss. Storage is managed

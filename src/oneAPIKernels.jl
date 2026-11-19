@@ -115,13 +115,15 @@ struct oneAPIKernel{F, H <: oneAPI.HostKernel}
 end
 
 function KI.kernel_function(backend::oneAPIBackend, f::F, tt::TT=Tuple{}; name = nothing, kwargs...) where {F,TT}
-    # compile for the sub-group width that `KI.sub_group_size` promises
+    # compile for the sub-group width that `KI.sub_group_size` promises. Kernels that can't
+    # tell the width may get a narrower one, if that avoids spilling (see `zefunction_link`).
     sub_group_size = KI.sub_group_size(backend)
     if get(kwargs, :sub_group_size, sub_group_size) != sub_group_size
         throw(ArgumentError("KernelInterface kernels are compiled for a sub-group size of $sub_group_size, got $(kwargs[:sub_group_size])"))
     end
     host = if sub_group_size > 0
-        zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs..., sub_group_size)
+        zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs..., sub_group_size,
+                   narrow_on_spill = true)
     else
         zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs...)
     end
@@ -208,7 +210,8 @@ end
         module_props = oneAPI.oneL0.module_properties(dev)
         # the sub-group width that `kernel_function` compiles for: 32, like a CUDA warp, if
         # the device supports it, and 0 if the device has no sub-groups. Only widths of up to
-        # 64, so that `KI.sub_group_ballot` (a `UInt64` mask) covers every lane.
+        # 64, so that `KI.sub_group_ballot` (a `UInt64` mask) covers every lane. Kernels that
+        # can't observe the width may be compiled for a narrower one.
         sg_sizes = filter(<=(64), props.subGroupSizes)
         sub_group_size = 32 in sg_sizes ? 32 : maximum(sg_sizes; init = 0)
         limits = (; max_work_group_size = props.maxTotalGroupSize,
