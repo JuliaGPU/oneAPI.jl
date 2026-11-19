@@ -352,34 +352,37 @@ end
 # that they are compiled once rather than for every kernel
 function zefunction_link(source::Core.MethodInstance; kwargs...)
     Base.@lock zefunction_lock begin
-        ctx = context()
-        dev = device()
-        config = compiler_config(dev; kwargs...)::oneAPICompilerConfig
-        job = CompilerJob(source, config)
-
-        res = compile_or_lookup(job)::oneAPIResults
-
-        # Resolve the ZeKernel for the active context and device. Linear scan over the
-        # session-local cache; almost always n=1, so this is one `===`/`==` compare.
-        fun = nothing
-        @inbounds for (cached_ctx, cached_dev, cached_kernel) in res.kernels
-            if cached_ctx == ctx && cached_dev == dev
-                fun = cached_kernel
-                break
-            end
-        end
-        if fun === nothing
-            fun = link_kernel(res.image::Vector{UInt8}, res.entry::String, ctx, dev)
-            # Don't cache session-local kernel handles while precompiling: the results
-            # struct is serialized into the package image along with its CodeInstance,
-            # and the handles would come back dangling.
-            if ccall(:jl_generating_output, Cint, ()) != 1
-                push!(res.kernels, (ctx, dev, fun))
-            end
-        end
-
-        return fun::ZeKernel
+        fun, _ = link_job(source, context(), device(); kwargs...)
+        return fun
     end
+end
+
+function link_job(source::Core.MethodInstance, ctx::ZeContext, dev::ZeDevice; kwargs...)
+    config = compiler_config(dev; kwargs...)::oneAPICompilerConfig
+    job = CompilerJob(source, config)
+
+    res = compile_or_lookup(job)::oneAPIResults
+
+    # Resolve the ZeKernel for the active context and device. Linear scan over the
+    # session-local cache; almost always n=1, so this is one `===`/`==` compare.
+    fun = nothing
+    @inbounds for (cached_ctx, cached_dev, cached_kernel) in res.kernels
+        if cached_ctx == ctx && cached_dev == dev
+            fun = cached_kernel
+            break
+        end
+    end
+    if fun === nothing
+        fun = link_kernel(res.image::Vector{UInt8}, res.entry::String, ctx, dev)
+        # Don't cache session-local kernel handles while precompiling: the results
+        # struct is serialized into the package image along with its CodeInstance,
+        # and the handles would come back dangling.
+        if ccall(:jl_generating_output, Cint, ()) != 1
+            push!(res.kernels, (ctx, dev, fun))
+        end
+    end
+
+    return fun::ZeKernel, res
 end
 
 # Look up cached compile artifacts for `job`, compiling on miss. Storage is managed
