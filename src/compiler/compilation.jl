@@ -263,8 +263,9 @@ function compile_to_obj(@nospecialize(job::CompilerJob))
 end
 
 # link the SPIR-V bytes into a session-local `ZeKernel` on the given context and device.
-function link_kernel(image::Vector{UInt8}, entry::String, ctx::ZeContext, dev::ZeDevice)
-    mod = ZeModule(ctx, dev, image)
+function link_kernel(image::Vector{UInt8}, entry::String, ctx::ZeContext, dev::ZeDevice;
+                     log::Bool=true)
+    mod = ZeModule(ctx, dev, image; log)
     kernel = kernels(mod)[entry]
 
     # Kernels receive their arrays as `oneDeviceArray` structs, so to Level Zero every USM

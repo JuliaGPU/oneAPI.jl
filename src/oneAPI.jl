@@ -63,6 +63,7 @@ include("array.jl")
 
 # compiler implementation
 include("compiler/compilation.jl")
+include("compiler/arguments.jl")
 include("compiler/execution.jl")
 include("compiler/exceptions.jl")
 include("compiler/reflection.jl")
