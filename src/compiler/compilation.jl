@@ -12,9 +12,10 @@ const oneAPICompilerJob = CompilerJob{SPIRVCompilerTarget,oneAPICompilerParams}
 
 Cached compilation results for a oneAPI kernel job, managed by
 `GPUCompiler.cached_results`. Fields are populated through the compile pipeline:
-`image` (SPIR-V bytes) + `entry` after codegen, and `kernels` after the session-local
-link onto a Level Zero module. The first two are session-portable (cached through
-precompilation); `kernels` is session-local and never populated during precompilation.
+`image` (SPIR-V bytes), `entry` and `exception_sites` after codegen, and `kernels` after the
+session-local link onto a Level Zero module. The first three are session-portable (cached
+through precompilation); `kernels` is session-local and never populated during
+precompilation.
 `image === nothing` identifies a job that has not been compiled yet.
 
 `kernels` is a small linear cache of `(ZeContext, ZeDevice, ZeKernel)` tuples. The cache
@@ -27,11 +28,14 @@ workload that bounces between a handful of contexts or devices.
 mutable struct oneAPIResults
     image::Union{Nothing, Vector{UInt8}}                    # SPIR-V binary
     entry::Union{Nothing, String}
+    exception_sites::Vector{GPUCompiler.ExceptionSite}
     kernels::Vector{Tuple{ZeContext, ZeDevice, ZeKernel}}   # session-local; linear-scanned
-    oneAPIResults() = new(nothing, nothing, Tuple{ZeContext, ZeDevice, ZeKernel}[])
+    oneAPIResults() = new(nothing, nothing, GPUCompiler.ExceptionSite[],
+                          Tuple{ZeContext, ZeDevice, ZeKernel}[])
 end
 
 GPUCompiler.runtime_module(::oneAPICompilerJob) = oneAPI
+GPUCompiler.uses_exception_sites(::oneAPICompilerJob) = true
 
 GPUCompiler.kernel_state_type(::oneAPICompilerJob) = KernelState
 
@@ -249,23 +253,26 @@ end
     CompilerConfig(target, params; kernel, name, always_inline, debug_level)
 end
 
-# run inference + LLVM codegen + SPIR-V emission. returns `(image, entry)`, both
-# session-portable so they survive precompilation when stored on a cached `CodeInstance`.
+# run inference + LLVM codegen + SPIR-V emission. returns `(image, entry, exception_sites)`,
+# all session-portable so they survive precompilation when stored on a cached `CodeInstance`.
 function compile_to_obj(@nospecialize(job::CompilerJob))
     # TODO: on 1.9, this actually creates a context. cache those.
     return JuliaContext() do ctx
         asm, meta = GPUCompiler.compile(:obj, job)
         # the IR belongs to us: dispose of it, or it leaks along with the context
         @dispose ir = meta.ir begin
-            (image = asm, entry = meta.entry.name)
+            (image = asm, entry = meta.entry.name, meta.exception_sites)
         end
     end
 end
 
 # link the SPIR-V bytes into a session-local `ZeKernel` on the given context and device.
-function link_kernel(image::Vector{UInt8}, entry::String, ctx::ZeContext, dev::ZeDevice)
+function link_kernel(image::Vector{UInt8}, entry::String,
+                     exception_sites::Vector{GPUCompiler.ExceptionSite},
+                     ctx::ZeContext, dev::ZeDevice)
     mod = ZeModule(ctx, dev, image)
     kernel = kernels(mod)[entry]
+    kernel.exception_sites = exception_sites
 
     # Kernels receive their arrays as `oneDeviceArray` structs, so to Level Zero every USM
     # pointer they dereference is an indirect access. Without declaring that, the driver

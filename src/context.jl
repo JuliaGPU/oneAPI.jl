@@ -296,8 +296,11 @@ mutable struct oneStream
     scratch_hwm::Int
     const priority::oneL0.ze_command_queue_priority_t
 
-    # where kernels report exceptions, see `check_exception!`
+    # where kernels report exceptions, and the kernels launched since it was last checked,
+    # which identify the exception (see `check_exception!`), protected by `lock`
     const exceptions::ReportSlot
+    const launched::Base.IdSet{ZeKernel}
+    last_launched::Union{Nothing, ZeKernel}
 end
 
 function create_stream(ctx::ZeContext, dev::ZeDevice,
@@ -324,7 +327,8 @@ function create_stream(ctx::ZeContext, dev::ZeDevice,
     slot = allocate_report_slot(ctx, dev, list)
     s = oneStream(ctx, dev, list, ReentrantLock(),
                   batching, nothing, Batch[], Batch[], 0, nothing, true, nothing, DataRef[],
-                  Batch[], nothing, nothing, false, 0, priority, slot)
+                  Batch[], nothing, nothing, false, 0, priority, slot,
+                  Base.IdSet{ZeKernel}(), nothing)
     finalizer(release_report_slot, s)
     return register_stream!(ctx, dev, s)
 end

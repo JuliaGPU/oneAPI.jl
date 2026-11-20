@@ -102,14 +102,14 @@ julia> a = oneArray{Int}(undef, 1);
 julia> @oneapi kernel(a)
 
 julia> synchronize()
-ERROR: KernelException: A BoundsError was thrown on Intel(R) Arc(TM) A770 Graphics: Out-of-bounds array access
+ERROR: KernelException: A BoundsError was thrown by work-item 1×1×1 in work-group 1×1×1 on Intel(R) Arc(TM) A770 Graphics: Out-of-bounds array access
 For more details, run Julia with `-g2`, or launch the kernel with `@oneapi debug_level=2`.
 ```
 
 The amount of detail depends on the debug level the kernel is compiled with, which defaults
-to Julia's `-g` level. At level 0 only the fact that an exception was thrown is reported; at
-level 1 (the default) also its type and reason; at level 2 also the work-item that threw it
-and a backtrace. Only one exception is reported per synchronization. If the task that
+to Julia's `-g` level. At level 0 only the fact that an exception was thrown, and by which
+work-item, is reported; at level 1 (the default) also its type and reason; at level 2 also a
+backtrace. Only one exception is reported per synchronization. If the task that
 launched the kernel finishes without synchronizing, the exception is reported by the next
 `synchronize()` of another task, unless something waited for the kernel's results first.
 Exceptions in kernels launched on an explicitly created `ZeCommandQueue` are not reported.
