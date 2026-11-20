@@ -35,11 +35,18 @@ oneAPI_Level_Zero_Headers_jll = "f4bc562b-d309-54f8-9efb-476e56f0410d"
 oneAPI_Level_Zero_Loader_jll = "13eca655-d68d-5b81-8367-6d99d727ab01"
 oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
 
+[weakdeps]
+EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
+
+[extensions]
+EnzymeCoreExt = "EnzymeCore"
+
 [compat]
 AbstractFFTs = "1.5.0"
 Adapt = "4"
 CEnum = "0.5, 1"
 Crayons = "4"
+EnzymeCore = "0.8"
 GPUArrays = "12.1"
 GPUCompiler = "2.23"
 GPUToolbox = "3.5"
