@@ -12,8 +12,8 @@ const oneAPICompilerJob = CompilerJob{SPIRVCompilerTarget,oneAPICompilerParams}
 
 Cached compilation results for a oneAPI kernel job, managed by
 `GPUCompiler.cached_results`. Fields are populated through the compile pipeline:
-`image` (SPIR-V bytes), `entry` and `exception_sites` after codegen, and `kernels` after the
-session-local link onto a Level Zero module. The first three are session-portable (cached
+`image` (SPIR-V bytes), `entry`, `dynamic_localmemory` and `exception_sites` after codegen,
+and `kernels` after the session-local link onto a Level Zero module. The former are session-portable (cached
 through precompilation); `kernels` is session-local and never populated during
 precompilation.
 `image === nothing` identifies a job that has not been compiled yet.
@@ -28,9 +28,10 @@ workload that bounces between a handful of contexts or devices.
 mutable struct oneAPIResults
     image::Union{Nothing, Vector{UInt8}}                    # SPIR-V binary
     entry::Union{Nothing, String}
+    dynamic_localmemory::Bool                               # has the arguments for it
     exception_sites::Vector{GPUCompiler.ExceptionSite}
     kernels::Vector{Tuple{ZeContext, ZeDevice, ZeKernel}}   # session-local; linear-scanned
-    oneAPIResults() = new(nothing, nothing, GPUCompiler.ExceptionSite[],
+    oneAPIResults() = new(nothing, nothing, false, GPUCompiler.ExceptionSite[],
                           Tuple{ZeContext, ZeDevice, ZeKernel}[])
 end
 
@@ -84,6 +85,33 @@ function GPUCompiler.finish_module!(job::oneAPICompilerJob, mod::LLVM.Module,
                   ConstantInt(Int32(5))]))
 
     return entry
+end
+
+function GPUCompiler.finish_linked_module!(job::oneAPICompilerJob, mod::LLVM.Module)
+    for f in GPUCompiler.kernels(mod)
+        add_dynamic_localmemory!(job, mod, f)
+    end
+    return
+end
+
+const dynamic_localmemory_attr = "julia.oneapi.dynamic_localmemory"
+
+# Give a kernel that uses dynamic local memory the arguments for it: a pointer to the local
+# memory, followed by the size the launch asked for. Launches have to set these, so note
+# that the kernel has them. They are added one by one, and both whenever the kernel uses
+# either, so that they are always the last two arguments in that order.
+function add_dynamic_localmemory!(job::oneAPICompilerJob, mod::LLVM.Module, f::LLVM.Function)
+    args = (
+        (; name = "dynamic_localmemory", typ = LLVMPtr{UInt8, AS.Workgroup}),
+        (; name = "dynamic_localmemory_size", typ = Int),
+    )
+    any(arg -> haskey(mod.functions, "julia.oneapi.$(arg.name)"), args) || return f
+    for arg in args
+        additional_arg_intr(mod, convert(LLVMType, arg.typ), arg.name)
+        f = GPUCompiler.add_input_arguments!(job, mod, f, Dict("julia.oneapi.$(arg.name)" => arg))
+    end
+    push!(f.function_attributes, StringAttribute(dynamic_localmemory_attr, ""))
+    return f
 end
 
 function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
@@ -253,15 +281,16 @@ end
     CompilerConfig(target, params; kernel, name, always_inline, debug_level)
 end
 
-# run inference + LLVM codegen + SPIR-V emission. returns `(image, entry, exception_sites)`,
-# all session-portable so they survive precompilation when stored on a cached `CodeInstance`.
+# run inference + LLVM codegen + SPIR-V emission. returns `(image, entry, dynamic_localmemory,
+# exception_sites)`, all session-portable so they survive precompilation when stored on a cached `CodeInstance`.
 function compile_to_obj(@nospecialize(job::CompilerJob))
     # TODO: on 1.9, this actually creates a context. cache those.
     return JuliaContext() do ctx
         asm, meta = GPUCompiler.compile(:obj, job)
         # the IR belongs to us: dispose of it, or it leaks along with the context
         @dispose ir = meta.ir begin
-            (image = asm, entry = meta.entry.name, meta.exception_sites)
+            dynamic_localmemory = haskey(meta.entry.function_attributes, dynamic_localmemory_attr)
+            (image = asm, entry = meta.entry.name, dynamic_localmemory, meta.exception_sites)
         end
     end
 end
@@ -269,10 +298,11 @@ end
 # link the SPIR-V bytes into a session-local `ZeKernel` on the given context and device.
 function link_kernel(image::Vector{UInt8}, entry::String,
                      exception_sites::Vector{GPUCompiler.ExceptionSite},
-                     ctx::ZeContext, dev::ZeDevice)
+                     ctx::ZeContext, dev::ZeDevice, dynamic_localmemory::Bool=false)
     mod = ZeModule(ctx, dev, image)
     kernel = kernels(mod)[entry]
     kernel.exception_sites = exception_sites
+    kernel.dynamic_localmemory = dynamic_localmemory
 
     # Kernels receive their arrays as `oneDeviceArray` structs, so to Level Zero every USM
     # pointer they dereference is an indirect access. Without declaring that, the driver

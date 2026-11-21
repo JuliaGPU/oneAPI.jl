@@ -5,7 +5,7 @@ export @oneapi, zefunction, kernel_convert
 
 const MACRO_KWARGS = [:launch]
 const COMPILER_KWARGS = [:kernel, :name, :always_inline, :atomics, :sub_group_size, :debug_level]
-const LAUNCH_KWARGS = [:groups, :items, :queue]
+const LAUNCH_KWARGS = [:groups, :items, :queue, :localmem]
 
 """
     @oneapi [kwargs...] kernel(args...)
@@ -45,6 +45,8 @@ launches the kernel on the GPU.
 - `queue=global_stream(...)`: Submission target — the task's `oneStream` by default. An
   explicit `ZeCommandQueue` is also accepted and submits each launch as a command list;
   exceptions thrown by such launches are not reported.
+- `localmem::Int=0`: Size in bytes of the block of dynamic local memory that every workgroup
+  gets, for kernels that use `KernelInterface.dynamic_localmemory`.
 
 # Examples
 
@@ -370,7 +372,7 @@ function zefunction_link(source::Core.MethodInstance; kwargs...)
         end
         if fun === nothing
             fun = link_kernel(res.image::Vector{UInt8}, res.entry::String,
-                              res.exception_sites, ctx, dev)
+                              res.exception_sites, ctx, dev, res.dynamic_localmemory)
             # Don't cache session-local kernel handles while precompiling: the results
             # struct is serialized into the package image along with its CodeInstance,
             # and the handles would come back dangling.
@@ -400,6 +402,7 @@ end
         res = @something res GPUCompiler.cached_results(oneAPIResults, job)
         res.image = compiled.image
         res.entry = compiled.entry
+        res.dynamic_localmemory = compiled.dynamic_localmemory
         res.exception_sites = compiled.exception_sites
     end
     return res
@@ -407,15 +410,40 @@ end
 
 @inline function onecall(kernel::ZeKernel, tt, args::Tuple; groups::ZeDim=1, items::ZeDim=1,
                          queue::Union{oneStream, ZeCommandQueue}=global_stream(context(), device()),
-                         roots=nothing)
+                         roots=nothing, localmem::Int=0)
     Base.@lock kernel begin
         # unrolled, as iterating a heterogeneous tuple would dispatch at run time
         ntuple(Val(length(args))) do i
             oneL0.arguments(kernel)[i] = args[i]
             return
         end
+        # (a kernel that doesn't use dynamic local memory ignores what the launch asks for)
+        kernel.dynamic_localmemory && set_dynamic_localmemory!(kernel, length(args), localmem)
         launch_kernel(kernel, groups, items, queue, roots)
     end
+end
+
+# Size the dynamic local memory of a kernel that uses it, for a launch asking for `localmem`
+# bytes: the arguments for it follow the `nargs` other ones (see `add_dynamic_localmemory!`).
+# Every launch has to, also one that asks for none. The allocation is larger than what was
+# asked for, so that the kernel can align the block (see `dynamic_localmemory`), which also
+# keeps it from being empty.
+@noinline function set_dynamic_localmemory!(kernel::ZeKernel, nargs::Int, localmem::Int)
+    localmem >= 0 ||
+        throw(ArgumentError("Dynamic local memory must not be negative, got $localmem bytes"))
+    # (queried before the argument is set, which the driver may count as well)
+    oneL0.local_mem_size(kernel)
+    set_local_memory_argument!(kernel, nargs + 1, localmem + DYNAMIC_LOCALMEMORY_ALIGNMENT)
+    oneL0.arguments(kernel)[nargs + 2] = localmem
+    return
+end
+
+# The most dynamic local memory a launch of `kernel` can ask for: the local memory of a
+# work-group, less what the kernel allocates statically and what aligning the block takes.
+function max_dynamic_localmemory(kernel::ZeKernel,
+                                 max_local_memory::Int=oneL0.compute_properties(kernel.mod.device).maxSharedLocalMemory)
+    available = max_local_memory - oneL0.local_mem_size(kernel) - DYNAMIC_LOCALMEMORY_ALIGNMENT
+    return max(available, 0)
 end
 
 # kept out of `onecall`, which is compiled for every kernel signature, as none of this
