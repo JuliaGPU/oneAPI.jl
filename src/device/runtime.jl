@@ -25,6 +25,50 @@ KernelState(exception_report::UInt64=UInt64(0), exception_claim::UInt64=UInt64(0
 @device_function @inline @generated kernel_state() = GPUCompiler.kernel_state_value(KernelState)
 
 
+## additional kernel arguments
+
+# Intrinsics that `finish_linked_module!` turns into additional arguments of the kernel,
+# which are passed on to the functions that use them.
+
+function additional_arg_intr(mod::LLVM.Module, T::LLVMType, name)
+    return get!(mod.functions, "julia.oneapi.$name") do
+        intr = LLVM.Function(mod, "julia.oneapi.$name", LLVM.FunctionType(T))
+        intr.memory_effects = MemoryEffects(:none)
+        intr
+    end
+end
+
+@llvmgenerated builder function additional_arg_value(::Type{T}, ::Val{name})::T where {T, name}
+    intr = additional_arg_intr(current_module(builder), convert(LLVMType, T), name)
+    call!(builder, intr.function_type, intr, Value[], String(name))
+end
+
+
+## dynamic local memory
+
+# The block of local memory whose size is chosen at launch (see `KI.dynamic_localmemory`) is
+# a kernel argument that points to local memory, which Level Zero allocates when the launch
+# sets the size of the argument. A second argument has the size the launch asked for. Only
+# kernels that use the block have these arguments, see `add_dynamic_localmemory!`.
+
+# what the block is aligned to
+const DYNAMIC_LOCALMEMORY_ALIGNMENT = 16
+
+# Nothing specifies how the driver aligns the memory of a local memory argument, so launches
+# allocate `DYNAMIC_LOCALMEMORY_ALIGNMENT` bytes more than they were asked for, and the
+# block starts at the first aligned address.
+@device_function @inline function dynamic_localmemory()
+    ptr = additional_arg_value(LLVMPtr{UInt8, AS.Workgroup}, Val(:dynamic_localmemory))
+    mask = (DYNAMIC_LOCALMEMORY_ALIGNMENT - 1) % UInt
+    padding = (-reinterpret(UInt, ptr)) & mask
+    return ptr + (padding % Int)
+end
+
+# the bytes of dynamic local memory the launch asked for
+@device_function @inline dynamic_localmemory_size() =
+    additional_arg_value(Int, Val(:dynamic_localmemory_size))
+
+
 ## dynamic memory allocation
 
 # Julia's boxed objects use address-space-0 pointers, which SPIR-V maps to private

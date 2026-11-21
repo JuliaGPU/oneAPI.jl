@@ -65,6 +65,70 @@ end
     @test_throws ArgumentError kernel(A; ndrange=4, groups=2)
 end
 
+function ki_dynamic_localmem!(out)
+    n = KI.get_local_size().x
+    i = KI.get_local_id().x
+    static = KI.localmemory(Int32, 3)
+    x = KI.dynamic_localmemory(Int32, n)
+    @inbounds begin
+        x[i] = i
+        static[1] = n
+    end
+    KI.barrier()
+    @inbounds if i == 1
+        out[1] = x[n] + static[1]
+        out[2] = KI.dynamic_localmemory_size()
+        out[3] = reinterpret(UInt, pointer(x)) % 16
+    end
+    return
+end
+
+@testset "dynamic local memory" begin
+    backend = oneAPIBackend()
+    @test KI.supports_dynamic_localmemory(backend)
+    max_local_memory = oneL0.compute_properties(oneAPI.device()).maxSharedLocalMemory
+
+    out = oneAPI.zeros(Int, 3)
+    kernel = KI.@launch backend launch=false ki_dynamic_localmem!(out)
+    fun = kernel.kern.host.fun
+    @test fun.dynamic_localmemory
+
+    # the kernel's static local memory, and what aligning the block takes, come out of what
+    # the device has
+    static = oneL0.properties(fun).localMemSize
+    @test static > 0
+    limit = KI.max_dynamic_localmemory(kernel)
+    @test limit == max_local_memory - static - oneAPI.DYNAMIC_LOCALMEMORY_ALIGNMENT
+
+    # the size is the one that was asked for, up to the limit, and the block is aligned
+    # whatever static local memory the kernel has besides it
+    n = 8
+    for localmem in (n * sizeof(Int32), n * sizeof(Int32) + 1, limit)
+        fill!(out, -1)
+        kernel(out; workgroupsize=n, localmem)
+        @test Array(out) == [2n, localmem, 0]
+    end
+    @test_throws ArgumentError kernel(out; workgroupsize=n, localmem=limit + 1)
+
+    # launches that set the size don't change what a kernel reports as static
+    @test oneL0.properties(fun).localMemSize == static
+
+    # kernels that don't use the block don't have the arguments for it, and ignore the size
+    A = oneAPI.zeros(Int, 4)
+    plain = KI.@launch backend launch=false ki_fill!(A)
+    @test !plain.kern.host.fun.dynamic_localmemory
+    @test oneL0.properties(plain.kern.host.fun).numKernelArgs + 2 ==
+        oneL0.properties(KI.@launch(backend, launch=false, ki_dynamic_localmem!(A)).kern.host.fun).numKernelArgs
+    plain(A; ndrange=4, localmem=64)
+    @test Array(A) == 1:4
+
+    # oneAPI's own launches take the size as well
+    fill!(out, -1)
+    @oneapi items=n localmem=64 ki_dynamic_localmem!(out)
+    @test Array(out) == [2n, 64, 0]
+    @test_throws ArgumentError @oneapi items=n localmem=-1 ki_dynamic_localmem!(out)
+end
+
 @testset "versioninfo" begin
     @test occursin("oneAPI.jl", sprint(KI.versioninfo, oneAPIBackend()))
 end

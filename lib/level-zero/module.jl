@@ -91,8 +91,16 @@ mutable struct ZeKernel
     # MAX_GROUP_SIZE extension. Read on every KernelInterface launch.
     max_group_size::Int
 
+    # cached localMemSize, the bytes of local memory the kernel allocates statically, seeded
+    # by `properties`; -1 while unqueried.
+    local_mem_size::Int
+
     # the throw sites of the kernel's code, which the exceptions it reports refer to
     exception_sites::Vector{ExceptionSite}
+
+    # whether the last two arguments are the kernel's dynamic local memory and its size,
+    # which launches have to set (see `oneAPI.set_dynamic_localmemory!`)
+    dynamic_localmemory::Bool
 
     function ZeKernel(mod, name)
         GC.@preserve name begin
@@ -100,7 +108,7 @@ mutable struct ZeKernel
             handle_ref = Ref{ze_kernel_handle_t}()
             zeKernelCreate(mod, desc_ref, handle_ref)
         end
-        obj = new(mod, handle_ref[], ReentrantLock(), -1, -1, ExceptionSite[])
+        obj = new(mod, handle_ref[], ReentrantLock(), -1, -1, -1, ExceptionSite[], false)
 
         finalizer(obj) do obj
             zeKernelDestroy(obj)
@@ -206,7 +214,7 @@ end
 
 ## arguments
 
-export arguments
+export arguments, set_local_memory_argument!
 
 struct ZeKernelArgumentList
     kernel::ZeKernel
@@ -227,6 +235,19 @@ end
 # kept out of `setindex!`, which is compiled for every argument type
 @noinline function set_argument_value!(kernel::ZeKernel, index::Int, size::Int, ptr::Ptr{Cvoid})
     zeKernelSetArgumentValue(kernel, index-1, size, ptr)
+end
+
+"""
+    set_local_memory_argument!(kernel::ZeKernel, index::Integer, bytes::Integer)
+
+Size the local memory that argument `index` of `kernel` points to, a pointer to memory that
+is shared by the work-items of a work-group. Such an argument doesn't take a value: its size
+is the number of bytes of local memory that the driver allocates for every work-group of
+the launches that follow (`zeKernelSetArgumentValue`: "If argument is SLM (size), then SLM
+size in bytes for this resource is provided as argument size and argument value is null").
+"""
+function set_local_memory_argument!(kernel::ZeKernel, index::Integer, bytes::Integer)
+    zeKernelSetArgumentValue(kernel, index-1, bytes, C_NULL)
 end
 
 
@@ -287,6 +308,7 @@ function properties(kernel::ZeKernel)
 
     props = props_ref[]
     kernel.spill = Int(props.spillMemSize)
+    kernel.local_mem_size = Int(props.localMemSize)
     kernel.max_group_size = max_group_size_props_ref === nothing ? 0 :
         Int(max_group_size_props_ref[].maxGroupSize)
     return (
@@ -314,6 +336,12 @@ end
 function spill_mem_size(kernel::ZeKernel)
     s = kernel.spill
     return s >= 0 ? s : Int(properties(kernel).spillMemSize)
+end
+
+# Cached access to the bytes of local memory a kernel allocates statically.
+function local_mem_size(kernel::ZeKernel)
+    s = kernel.local_mem_size
+    return s >= 0 ? s : Int(properties(kernel).localMemSize)
 end
 
 # Cached access to a kernel's maxGroupSize, `missing` without the MAX_GROUP_SIZE extension.

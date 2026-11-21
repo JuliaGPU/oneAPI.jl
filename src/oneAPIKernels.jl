@@ -33,6 +33,7 @@ KI.synchronize(::oneAPIBackend) = oneAPI.oneL0.synchronize()
 KI.supports_float64(::oneAPIBackend) = device_limits().supports_float64
 KI.supports_unified(::oneAPIBackend) = true
 KI.supports_atomics(::oneAPIBackend) = true
+KI.supports_dynamic_localmemory(::oneAPIBackend) = true
 KI.supports_subgroups(::oneAPIBackend) = device_limits().sub_group_size > 0
 # Intel's GPU compiler forms sub-groups from consecutive work-items (which the KernelInterface
 # testsuite checks), and they execute independently
@@ -137,7 +138,8 @@ function KI.launch(obj::KI.Kernel{oneAPIBackend}, groups::Dims{3}, items::Dims{3
         throw(ArgumentError("KernelInterface kernels take `numgroups`, `workgroupsize` or `ndrange`, not `items` or `groups`"))
     end
     # kernels are compiled for a context and device, and by default launched on the task's
-    # stream for the active ones
+    # stream for the active ones. `localmem`, which only launches asking for dynamic local
+    # memory pass, is one of the launch options (see `oneAPI.set_dynamic_localmemory!`).
     (; f, host) = obj.kern
     check_target(host.fun.mod, get(kwargs, :queue, nothing))
     oneAPI.launch_managed(host, f, args; items, groups, kwargs...)
@@ -164,9 +166,17 @@ function KI.max_work_group_size(kernel::KI.Kernel{oneAPIBackend})::Int
     max_group_size === missing || return max_group_size
     return device_limits(fun.mod.device).max_work_group_size
 end
+
+# what the device has, less the kernel's static local memory
+KI.max_dynamic_localmemory(kernel::KI.Kernel{oneAPIBackend})::Int =
+    let fun = kernel.kern.host.fun
+        oneAPI.max_dynamic_localmemory(fun, device_limits(fun.mod.device).max_local_memory)
+    end
+
+# (the amount of local memory doesn't limit the work-group size)
 function KI.launch_configuration(
         kernel::KI.Kernel{oneAPIBackend}; nitems::Union{Integer, Nothing} = nothing,
-        max_work_group_size::Integer = typemax(Int)
+        max_work_group_size::Integer = typemax(Int), localmem = nothing
     )
     items = min(oneAPI.launch_configuration(kernel.kern.host), max_work_group_size)
     if kernel.backend.prefer_blocks && nitems !== nothing
@@ -184,6 +194,7 @@ end
 const DeviceLimits = @NamedTuple{
     max_work_group_size::Int, max_work_group_dims::NTuple{3, Int}, max_num_groups::NTuple{3, Int},
     sub_group_size::Int, supports_float16::Bool, supports_float64::Bool,
+    max_local_memory::Int,
 }
 const DeviceLimitsDict = Base.ImmutableDict{oneAPI.oneL0.ZeDevice, DeviceLimits}
 mutable struct DeviceLimitsCache
@@ -216,7 +227,8 @@ end
                     max_num_groups = (props.maxGroupCountX, props.maxGroupCountY, props.maxGroupCountZ),
                     sub_group_size,
                     supports_float16 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP16 != 0,
-                    supports_float64 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0)::DeviceLimits
+                    supports_float64 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0,
+                    max_local_memory = props.maxSharedLocalMemory)::DeviceLimits
         @atomic :release device_limits_cache.limits = DeviceLimitsDict(cache, dev, limits)
         return limits
     end
@@ -283,6 +295,17 @@ end
     ptr = oneAPI.emit_localmemory(T, Val(prod(Dims)))
     oneDeviceArray(Dims, ptr)
 end
+
+# every array is in the one block that the launch sized (see `oneAPI.dynamic_localmemory`)
+@device_override Base.@propagate_inbounds function KI.dynamic_localmemory(
+        ::Type{T}, dims::Dims{N}, offset::Int
+    ) where {T, N}
+    KI.check_dynamic_localmemory(T, dims, offset)
+    ptr = reinterpret(Core.LLVMPtr{T, oneAPI.AS.Workgroup}, oneAPI.dynamic_localmemory() + offset)
+    return oneDeviceArray{T, N, oneAPI.AS.Workgroup}(dims, ptr)
+end
+
+@device_override @inline KI.dynamic_localmemory_size() = oneAPI.dynamic_localmemory_size()
 
 
 ## Synchronization and Printing
