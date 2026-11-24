@@ -673,3 +673,23 @@ for elty in (:ComplexF32, :ComplexF64)
         LinearAlgebra.LAPACK.syevd!(jobz::Char, uplo::Char, A::oneStridedMatrix{$elty}) = oneMKL.heevd!(jobz, uplo, A)
     end
 end
+
+# `eigen` and `eigvals` of a symmetric or Hermitian matrix. The stdlib's default driver is
+# `LAPACK.syevr!`, which oneMKL does not have, and its host method reads the matrix element
+# by element. These use the divide-and-conquer driver (`syevd`, `heevd`) whatever `alg`
+# (Julia 1.12 and later) names, as `LAPACK.syev!` above does. It returns the eigenvalues
+# in ascending order, the stdlib's order.
+const oneRealHermSymComplexHerm = LinearAlgebra.RealHermSymComplexHerm{<:Union{Float32, Float64}, <:oneStridedMatrix}
+
+function LinearAlgebra.eigen!(A::oneRealHermSymComplexHerm; alg = nothing,
+                              sortby::Union{Function, Nothing} = nothing)
+    W, V = LinearAlgebra.LAPACK.syevd!('V', A.uplo, A.data)
+    return LinearAlgebra.Eigen(LinearAlgebra.sorteig!(W, V, sortby)...)
+end
+
+function LinearAlgebra.eigvals!(A::oneRealHermSymComplexHerm; alg = nothing,
+                                sortby::Union{Function, Nothing} = nothing)
+    W = LinearAlgebra.LAPACK.syevd!('N', A.uplo, A.data)
+    sortby === nothing || sort!(W, by = sortby)
+    return W
+end
