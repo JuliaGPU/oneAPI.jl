@@ -1728,6 +1728,15 @@ end
     @test occursin("An ArgumentError was thrown by", msg)
     @test occursin(": shared reason", msg)
 
+    # integer exponentiation with a negative power
+    pow!(a, p) = (@inbounds a[1] = a[1]^p; return)
+    a = oneArray([2])
+    @oneapi debug_level=1 pow!(a, -1)
+    err = kernel_exception()
+    @test err.name == "DomainError"
+    @test err.reason == "Cannot raise an integer to a negative power"
+    @test Array(a) == [2]
+
     if VERSION < v"1.12-"
         negate!(a) = (@inbounds a[1] = -a[1]; return)
         a = oneArray([typemin(Int)//1])
