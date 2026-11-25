@@ -131,7 +131,13 @@ function allocate_report_slot(ctx::ZeContext, dev::ZeDevice, list)
 end
 
 release_report_slot(ctx::ZeContext, dev::ZeDevice, slot::ReportSlot) =
-    with_pool_lock(() -> push!(free_report_slots[(ctx, dev)], slot))
+    with_pool_lock() do
+        # the slabs are forgotten when the precompilation workload resets its state, and
+        # streams it created can be finalized later
+        free = get(free_report_slots, (ctx, dev), nothing)
+        free === nothing || push!(free, slot)
+        return
+    end
 
 # Called when a stream is collected. Its kernels may still be executing, and writing the
 # report, in which case the slot is leaked, as is the command list (see its finalizer).

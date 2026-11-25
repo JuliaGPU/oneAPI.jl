@@ -12,6 +12,11 @@ end
     # decide for other precompilation processes, and only applies while precompiling
     @test oneAPI.precompile_probe[] === nothing
     @test !oneAPI.can_precompile()
+
+    # nor is the context the workload freed memory in, whose handle is null once loaded.
+    # checked in a fresh process, as freeing memory here replaces it.
+    script = "using oneAPI; exit(oneAPI.oneL0.deferred_frees.context.value === nothing ? 0 : 1)"
+    @test success(`$(Base.julia_cmd()) --project=$(Base.active_project()) -e $script`)
 end
 
 

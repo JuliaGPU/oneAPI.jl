@@ -101,9 +101,10 @@ end
         empty!(stagings)
         empty!(staged_devices)
         empty!(eltype_support_cache)
-        empty!(free_report_slots)
+        with_pool_lock(() -> empty!(free_report_slots))
         empty!(_compiler_configs)
         empty!(oneL0.extension_properties_cache)
+        Base.@atomic oneL0.deferred_frees.context = WeakRef()
         Base.@atomic oneAPIKernels.device_limits_cache.limits = oneAPIKernels.DeviceLimitsDict()
         empty!(oneAPIKernels.pending_events)
         _allocated_bytes[] = 0
