@@ -1,3 +1,12 @@
+# GPUToolbox's shared overrides throw through this function, with constant arguments that
+# let them report like `@gputhrow`
+@device_override @generated function GPUToolbox.Overlays.device_throw(::Type{E}, ::Val{reason}) where {E<:Exception, reason}
+    return quote
+        $(Expr(:meta, :noinline))
+        @gputhrow $(String(nameof(E))) $(String(reason))
+    end
+end
+
 # math.jl
 @device_override @noinline Base.Math.throw_complex_domainerror(f::Symbol, x) =
     @gputhrow "DomainError" "This operation requires a complex input to return a complex result"
