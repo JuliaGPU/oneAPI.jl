@@ -90,8 +90,9 @@ end
 
 function GPUCompiler.finish_ir!(job::oneAPICompilerJob, mod::LLVM.Module,
                                 entry::LLVM.Function)
-    # Initialize the heap before SPIR-V lowering converts the state to a reference.
-    job.config.kernel && add_heap!(mod, entry)
+    # GPUCompiler adds the kernel state parameter during optimization. Initialize the heap
+    # before SPIR-V lowering converts the state to a reference.
+    job.config.kernel && job.config.optimize && add_heap!(mod, entry)
 
     entry = invoke(GPUCompiler.finish_ir!,
                    Tuple{CompilerJob{SPIRVCompilerTarget}, typeof(mod), typeof(entry)},
@@ -102,22 +103,28 @@ end
 
 # Reserve a private arena only when device code reads the heap pointer. At this point,
 # GPUCompiler has threaded the state through callees as a leading by-value argument.
+#
+# The LLVM types are taken from that argument rather than converted from `KernelState`:
+# with GPUCompiler's llvmgpu toolchain the IR can belong to libLLVMGPU, a newer LLVM than
+# Julia's, whose context Julia's code generator cannot create types in.
 function add_heap!(mod::LLVM.Module, entry::LLVM.Function)
-    T_state = convert(LLVMType, KernelState)
     heap_field = Base.fieldindex(KernelState, :heap) - 1
+    params = entry.parameters
+    T_state = isempty(params) ? nothing : params[1].value_type
+    if !(T_state isa LLVM.StructType &&
+         length(T_state.elements) == fieldcount(KernelState) &&
+         T_state.elements[heap_field+1] isa LLVM.PointerType)
+        error("kernel `$(entry.name)` does not take the kernel state as its first argument")
+    end
     uses_heap(mod, T_state, heap_field) || return false
 
-    params = entry.parameters
-    if isempty(params) || params[1].value_type != T_state
-        error("kernel `$(entry.name)` allocates but has no kernel state to hold the heap")
-    end
     state = params[1]
     # collect the users now, before the insertvalue below becomes one of them
     users = collect(state.users)
 
-    T_size = convert(LLVMType, Csize_t)
+    T_size = LLVM.IntType(8 * sizeof(Csize_t))
     T_heap = LLVM.StructType([T_size, T_size, LLVM.ArrayType(LLVM.Int8Type(), HEAP_SIZE)])
-    T_ptr = convert(LLVMType, fieldtype(KernelState, :heap))
+    T_ptr = T_state.elements[heap_field+1]
     @dispose builder = IRBuilder() begin
         position!(builder, LLVM.at_begin(entry.entry))
 
@@ -258,13 +265,8 @@ end
 # run inference + LLVM codegen + SPIR-V emission. returns `(image, entry, exception_sites)`,
 # all session-portable so they survive precompilation when stored on a cached `CodeInstance`.
 function compile_to_obj(@nospecialize(job::CompilerJob))
-    # TODO: on 1.9, this actually creates a context. cache those.
-    return JuliaContext() do ctx
-        asm, meta = GPUCompiler.compile(:obj, job)
-        # the IR belongs to us: dispose of it, or it leaks along with the context
-        @dispose ir = meta.ir begin
-            (image = asm, entry = meta.entry.name, meta.exception_sites)
-        end
+    return GPUCompiler.compile(:obj, job) do asm, meta
+        (image = asm, entry = meta.entry.name, meta.exception_sites)
     end
 end
 
