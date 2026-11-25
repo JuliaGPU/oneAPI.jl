@@ -180,6 +180,7 @@ function initialize(; quiet::Bool=false)
     # Driver handles are process-local, so nothing keyed on one may survive into another
     # process through a precompiled image.
     empty!(extension_properties_cache)
+    @atomic deferred_frees.context = WeakRef()
 
     # Resolve the LTS master switch up front, before the driver-availability early
     # returns below: it gates codegen and behavior and must be set even on hosts
