@@ -1,16 +1,17 @@
+# GPUToolbox's shared overrides throw through this function, with constant arguments that
+# let them report like `@gputhrow`
+@device_override @generated function GPUToolbox.Overlays.device_throw(::Type{E}, ::Val{reason}) where {E<:Exception, reason}
+    return quote
+        $(Expr(:meta, :noinline))
+        @gputhrow $(String(nameof(E))) $(String(reason))
+    end
+end
+
 # math.jl
 @device_override @noinline Base.Math.throw_complex_domainerror(f::Symbol, x) =
     @gputhrow "DomainError" "This operation requires a complex input to return a complex result"
 @device_override @noinline Base.Math.throw_exp_domainerror(x) =
     @gputhrow "DomainError" "Exponentiation yielding a complex result requires a complex argument"
-
-# intfuncs.jl
-@device_override @noinline Base.throw_domerr_powbysq(::Any, p) =
-    @gputhrow "DomainError" "Cannot raise an integer to a negative power"
-@device_override @noinline Base.throw_domerr_powbysq(::Integer, p) =
-    @gputhrow "DomainError" "Cannot raise an integer to a negative power"
-@device_override @noinline Base.throw_domerr_powbysq(::AbstractMatrix, p) =
-    @gputhrow "DomainError" "Cannot raise an integer to a negative power"
 
 # checked.jl
 @device_override @noinline Base.Checked.throw_overflowerr_binaryop(op, x, y) =
