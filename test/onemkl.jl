@@ -2112,6 +2112,23 @@ end
             end
         end
 
+        @testset "eigen -- eigvals" begin
+            @testset "$wrapper, uplo = $uplo" for wrapper in (elty <: Real ? (Symmetric, Hermitian) : (Hermitian,)),
+                                                  uplo in (:L, :U)
+                A = rand(elty,n,n)
+                B = A + A'
+                d_B = oneMatrix(B)
+                F = eigen(wrapper(d_B, uplo))
+                @test F.values isa oneVector{real(elty)}
+                @test F.vectors isa oneMatrix{elty}
+                @test collect(F.values) ≈ eigvals(wrapper(B, uplo))
+                @test B ≈ collect(F.vectors * Diagonal(F.values) * F.vectors')
+                # the input is left as it was
+                @test collect(d_B) == B
+                @test collect(eigvals(wrapper(d_B, uplo))) ≈ eigvals(wrapper(B, uplo))
+            end
+        end
+
         @testset "sygvd! -- hegvd!" begin
             A = rand(elty,m,m)
             B = rand(elty,m,m)
