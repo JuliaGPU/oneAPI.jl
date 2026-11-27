@@ -1,5 +1,6 @@
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
+AcceleratedKernels = "6a4ca0a5-0e36-4168-a932-d9be78d558f1"
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 BFloat16s = "ab4f0b2a-ad5b-11e8-123f-65d77653426b"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -29,6 +30,10 @@ oneAPI = "8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"
 oneAPI_Support_jll = "b049733a-a71d-5ed3-8eba-7d323ac00b36"
 
 [sources]
+AcceleratedKernels = {url = "https://github.com/JuliaGPU/AcceleratedKernels.jl", rev = "tb/ki-0.5"}
+GPUArrays = {url = "https://github.com/JuliaGPU/GPUArrays.jl", rev = "tb/ki-0.5"}
+KernelAbstractions = {url = "https://github.com/JuliaGPU/KernelAbstractions.jl", rev = "tb/sub-group-request"}
+KernelInterface = {url = "https://github.com/JuliaGPU/KernelAbstractions.jl", rev = "tb/sub-group-request", subdir = "lib/KernelInterface"}
 oneAPI = {path = ".."}
 
 [compat]
