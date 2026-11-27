@@ -33,7 +33,7 @@ KI.synchronize(::oneAPIBackend) = oneAPI.oneL0.synchronize()
 KI.supports_float64(::oneAPIBackend) = device_limits().supports_float64
 KI.supports_unified(::oneAPIBackend) = true
 KI.supports_atomics(::oneAPIBackend) = true
-KI.supports_subgroups(::oneAPIBackend) = device_limits().sub_group_size > 0
+KI.supports_subgroups(::oneAPIBackend) = !isempty(device_limits().sub_group_sizes)
 # Intel's GPU compiler forms sub-groups from consecutive work-items (which the KernelInterface
 # testsuite checks), and they execute independently
 KI.supports_linear_subgroups(backend::oneAPIBackend) = KI.supports_subgroups(backend)
@@ -114,16 +114,24 @@ struct oneAPIKernel{F, H <: oneAPI.HostKernel}
     host::H
 end
 
-function KI.kernel_function(backend::oneAPIBackend, f::F, tt::TT=Tuple{}; name = nothing, kwargs...) where {F,TT}
-    # compile for the sub-group width that `KI.sub_group_size` promises
-    sub_group_size = KI.sub_group_size(backend)
-    if get(kwargs, :sub_group_size, sub_group_size) != sub_group_size
-        throw(ArgumentError("KernelInterface kernels are compiled for a sub-group size of $sub_group_size, got $(kwargs[:sub_group_size])"))
-    end
-    host = if sub_group_size > 0
-        zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs..., sub_group_size)
+function KI.kernel_function(backend::oneAPIBackend, f::F, tt::TT=Tuple{};
+                             name = nothing, sub_group_size = nothing, kwargs...) where {F,TT}
+    sizes = KI.sub_group_sizes(backend)
+    # without a request, kernels are compiled for the first of `KI.sub_group_sizes` rather
+    # than for the width IGC picks, which is often too narrow (SIMD8 on Xe-LP and Xe-HPG) or
+    # too wide (SIMD32 kernels that spill on Xe-HPC). a request for that width passes the
+    # same keyword arguments, so it doesn't compile the kernel a second time.
+    if sub_group_size === nothing
+        host = if isempty(sizes)
+            zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs...)
+        else
+            zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs...,
+                       sub_group_size = first(sizes))
+        end
     else
-        zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs...)
+        check_sub_group_size(sizes, sub_group_size)
+        host = zefunction(kernel_convert(f), tt; name, backend.always_inline, kwargs...,
+                          sub_group_size = Int(sub_group_size))
     end
     kern = oneAPIKernel(f, host)
     KI.Kernel{oneAPIBackend, typeof(kern)}(backend, kern)
@@ -183,7 +191,7 @@ end
 # adding a device replaces the immutable dictionary under a lock.
 const DeviceLimits = @NamedTuple{
     max_work_group_size::Int, max_work_group_dims::NTuple{3, Int}, max_num_groups::NTuple{3, Int},
-    sub_group_size::Int, supports_float16::Bool, supports_float64::Bool,
+    sub_group_sizes::Tuple{Vararg{Int}}, supports_float16::Bool, supports_float64::Bool,
 }
 const DeviceLimitsDict = Base.ImmutableDict{oneAPI.oneL0.ZeDevice, DeviceLimits}
 mutable struct DeviceLimitsCache
@@ -206,17 +214,19 @@ end
 
         props = oneAPI.oneL0.compute_properties(dev)
         module_props = oneAPI.oneL0.module_properties(dev)
-        # the sub-group width that `kernel_function` compiles for: 32, like a CUDA warp, if
-        # the device supports it, and 0 if the device has no sub-groups. Only widths of up to
-        # 64, so that `KI.sub_group_ballot` (a `UInt64` mask) covers every lane.
+        # the sub-group widths kernels can request: only those of up to 64, so that
+        # `KI.sub_group_ballot` (a `UInt64` mask) covers every lane. the first, which
+        # `kernel_function` compiles for without a request, is 32, like a CUDA warp, if the
+        # device supports it, or else the widest.
         sg_sizes = filter(<=(64), props.subGroupSizes)
-        sub_group_size = 32 in sg_sizes ? 32 : maximum(sg_sizes; init = 0)
-        limits = (; max_work_group_size = props.maxTotalGroupSize,
+        W = 32 in sg_sizes ? 32 : maximum(sg_sizes; init = 0)
+        sub_group_sizes = W == 0 ? () : (W, filter(!=(W), sg_sizes)...)
+        limits = DeviceLimits((; max_work_group_size = props.maxTotalGroupSize,
                     max_work_group_dims = (props.maxGroupSizeX, props.maxGroupSizeY, props.maxGroupSizeZ),
                     max_num_groups = (props.maxGroupCountX, props.maxGroupCountY, props.maxGroupCountZ),
-                    sub_group_size,
+                    sub_group_sizes,
                     supports_float16 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP16 != 0,
-                    supports_float64 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0)::DeviceLimits
+                    supports_float64 = module_props.flags & oneAPI.oneL0.ZE_DEVICE_MODULE_FLAG_FP64 != 0))
         @atomic :release device_limits_cache.limits = DeviceLimitsDict(cache, dev, limits)
         return limits
     end
@@ -224,7 +234,13 @@ end
 KI.max_work_group_size(::oneAPIBackend)::Int = device_limits().max_work_group_size
 KI.max_work_group_dims(::oneAPIBackend)::NTuple{3, Int} = device_limits().max_work_group_dims
 KI.max_num_groups(::oneAPIBackend)::NTuple{3, Int} = device_limits().max_num_groups
-KI.sub_group_size(::oneAPIBackend)::Int = device_limits().sub_group_size
+KI.sub_group_sizes(::oneAPIBackend)::Tuple{Vararg{Int}} = device_limits().sub_group_sizes
+
+@noinline function check_sub_group_size(sizes, width)
+    width in sizes ||
+        throw(ArgumentError("Sub-group size $(repr(width)) is not supported by this device, which supports $sizes"))
+    return
+end
 # Level Zero calls Xe cores sub-slices
 function KI.multiprocessor_count(::oneAPIBackend)::Int
     props = oneAPI.oneL0.properties(device())
